@@ -239,6 +239,21 @@ HackerOs.Platform.Blazor.Shell.AppLauncher.OnAppSelected.get -> Microsoft.AspNet
 HackerOs.Platform.Blazor.Shell.AppLauncher.OnAppSelected.set -> void
 HackerOs.Platform.Blazor.Shell.AppLauncher.OnClose.get -> Microsoft.AspNetCore.Components.EventCallback
 HackerOs.Platform.Blazor.Shell.AppLauncher.OnClose.set -> void
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.BrowserHostAccessibilityProbe(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.Changed -> System.Action?
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.Current.get -> HackerOs.Platform.Core.Appearance.HostAccessibilitySignals!
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.InitializeAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.OnHostAccessibilityChanged(HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.RawSignals! signals) -> void
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.RawSignals
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.RawSignals.ForcedColors.get -> bool
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.RawSignals.ForcedColors.init -> void
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.RawSignals.PrefersMoreContrast.get -> bool
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.RawSignals.PrefersMoreContrast.init -> void
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.RawSignals.PrefersReducedMotion.get -> bool
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.RawSignals.PrefersReducedMotion.init -> void
+HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.RawSignals.RawSignals(bool PrefersMoreContrast, bool ForcedColors, bool PrefersReducedMotion) -> void
 HackerOs.Platform.Blazor.Shell.BrowserPlatformEnvironmentProbe
 HackerOs.Platform.Blazor.Shell.BrowserPlatformEnvironmentProbe.BrowserPlatformEnvironmentProbe(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
 HackerOs.Platform.Blazor.Shell.BrowserPlatformEnvironmentProbe.Changed -> System.Action?

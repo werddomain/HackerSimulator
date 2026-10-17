@@ -149,12 +149,11 @@
                         </div>
                     </div>
                 }
-                <div class="setting-group">
-                    <h4>@L["Appearance.Animations.Title"] <SettingOriginBadge Source="@SourceOf(AnimationsKey)" IsLocked="@IsLocked(AnimationsKey)" /></h4>
-                    <MudSwitch T="bool" Value="@_appearanceSettings.AnimationsEnabled" ValueChanged="ToggleAnimations" Color="Color.Primary"
-                               Disabled="@IsBlocked(AnimationsKey)"
-                               Label="@L["Appearance.Animations.Label"]" />
-                </div>
+            </MudTabPanel>
+
+            @* ADR 0105: high contrast, text size and "reduce animations" (which replaced the Appearance switch). *@
+            <MudTabPanel Text="@L["Tab.Accessibility"]" Icon="@Icons.Material.Filled.Accessibility">
+                <AccessibilityPanel />
             </MudTabPanel>
 
             <MudTabPanel Text="@L["Tab.Language"]" Icon="@Icons.Material.Filled.Translate">

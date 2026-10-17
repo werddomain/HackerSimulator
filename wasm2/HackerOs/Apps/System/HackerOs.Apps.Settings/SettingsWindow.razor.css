@@ -51,7 +51,7 @@
 }
 
 .setting-desc {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-secondary, #a8bac4);
     margin-bottom: 12px;
 }
@@ -185,7 +185,7 @@
     color: var(--hos-success, #42d392);
     padding: 4px 8px;
     border-radius: var(--hos-radius-sm, 0.25rem);
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .system-info-box {
@@ -425,7 +425,7 @@
     align-items: center;
     gap: 8px;
     margin: 12px 0;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--hos-text-primary, #e6f1f2);
     cursor: pointer;
 }
@@ -456,7 +456,7 @@
 }
 
 .sync-conflict-date {
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-text-secondary, #a8bac4);
 }
 

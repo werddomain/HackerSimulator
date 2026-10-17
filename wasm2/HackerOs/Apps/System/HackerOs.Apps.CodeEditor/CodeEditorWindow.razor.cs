@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Accessibility;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Components;
 using HackerOs.AppSdk.FileView;
@@ -131,11 +132,25 @@ public partial class CodeEditorWindow
         {
             try
             {
+                // ADR 0105: Monaco draws its own text, so it takes the session's accessibility
+                // preferences (high-contrast theme, text size, steady cursor) itself.
+                HackAccessibilityPreferences accessibility = await AppContext.Accessibility.GetPreferencesAsync(AppContext.CancellationToken);
                 _dotNetReference = DotNetObjectReference.Create(this);
                 _module = await JavaScript.InvokeAsync<IJSObjectReference>(
                     "import", "./_content/HackerOs.Apps.CodeEditor/CodeEditorWindow.razor.js");
                 _editor = await _module.InvokeAsync<IJSObjectReference>(
-                    "createEditor", _editorHost, _dotNetReference, new { minimap = _minimap, ariaLabel = L["Editor.AriaLabel"].Value });
+                    "createEditor",
+                    _editorHost,
+                    _dotNetReference,
+                    new
+                    {
+                        minimap = _minimap,
+                        ariaLabel = L["Editor.AriaLabel"].Value,
+                        highContrast = accessibility.HighContrast,
+                        textScale = accessibility.TextScale,
+                        reducedMotion = accessibility.ReducedMotion
+                    });
+                AppContext.Accessibility.Changed += OnAccessibilityChanged;
                 _workbench = await _module.InvokeAsync<IJSObjectReference>(
                     "attachWorkbench", _root, _dotNetReference);
                 _editorSyncRequired = true;
@@ -1249,9 +1264,35 @@ public partial class CodeEditorWindow
         _ => "plainText"
     };
 
+    /// <summary>The session's accessibility preferences changed (ADR 0105): Monaco takes them at once.</summary>
+    private void OnAccessibilityChanged(object? sender, EventArgs args) => _ = InvokeAsync(async () =>
+    {
+        IJSObjectReference? editor = _editor;
+        if (editor is null)
+        {
+            return;
+        }
+
+        try
+        {
+            HackAccessibilityPreferences preferences = await AppContext.Accessibility.GetPreferencesAsync(CancellationToken.None);
+            await editor.InvokeVoidAsync("setAccessibility", new
+            {
+                highContrast = preferences.HighContrast,
+                textScale = preferences.TextScale,
+                reducedMotion = preferences.ReducedMotion
+            });
+        }
+        catch (Exception exception) when (exception is JSException or JSDisconnectedException or ObjectDisposedException or TaskCanceledException)
+        {
+            // The editor went away meanwhile.
+        }
+    });
+
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        AppContext.Accessibility.Changed -= OnAccessibilityChanged;
         _recoveryDebounce?.Cancel();
         _recoveryDebounce?.Dispose();
         if (!_recoveryClearedOnClose)

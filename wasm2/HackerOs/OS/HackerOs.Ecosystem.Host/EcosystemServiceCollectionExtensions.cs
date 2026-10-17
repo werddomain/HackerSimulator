@@ -593,6 +593,8 @@ public static class EcosystemServiceCollectionExtensions
             webDatabases: provider.GetRequiredService<HackerOs.Platform.Core.WebData.IWebSiteDatabaseStore>(),
             // HackKeyring (ADR 0100 section 2): the session user's keyring, per app.
             keyring: provider.GetRequiredService<UserKeyringService>(),
+            // HackAccessibility (ADR 0105 section 3): the session's effective accessibility preferences.
+            accessibility: provider.GetRequiredService<HackerOs.Platform.Core.Appearance.AccessibilityPreferenceService>(),
             administration: new SystemAdministrationGatewayServices(
                 () => provider.GetRequiredService<IOsSettingsService>(),
                 () => provider.GetRequiredService<AppPermissionAdministration>(),
@@ -802,6 +804,10 @@ public static class EcosystemServiceCollectionExtensions
         // IJSRuntime scoping note.
         services.AddScoped<UiPlatformPreferenceService>();
         services.AddScoped<HackerOs.Platform.Core.Appearance.ThemePreferenceService>();
+        // ADR 0105: accessibility.config resolved against the host's media queries (browser probe,
+        // so Scoped like the environment probe above).
+        services.AddScoped<HackerOs.Platform.Core.Appearance.IHostAccessibilityProbe, BrowserHostAccessibilityProbe>();
+        services.AddScoped<HackerOs.Platform.Core.Appearance.AccessibilityPreferenceService>();
         // ADR 0103: user themes of /etc/hackeros/themes and ~/.config/hackeros/themes.
         services.AddScoped<HackerOs.Platform.Core.Appearance.UserThemeCatalogService>(provider =>
             new HackerOs.Platform.Core.Appearance.UserThemeCatalogService(

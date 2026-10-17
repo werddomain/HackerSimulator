@@ -21,6 +21,7 @@
 @inject WebCryptoPasswordHasher PasswordHasher
 @inject UiPlatformPreferenceService PlatformPreference
 @inject ThemePreferenceService ThemePreference
+@inject AccessibilityPreferenceService Accessibility
 @inject UserThemeCatalogService UserThemes
 @inject HackerOs.Platform.Core.Clipboard.HostClipboardBridge HostClipboard
 @inject HackerOs.Platform.Core.Globalization.SessionLocaleService SessionLocale
@@ -30,7 +31,9 @@
             Tokens="@ActiveTheme.UserTheme?.Tokens"
             Platform="@ActiveThemePlatform"
             AccentId="@ThemePreference.Current.AccentId"
-            AnimationsEnabled="@ThemePreference.Current.AnimationsEnabled">
+            AnimationsEnabled="@(!Accessibility.Effective.ReducedMotion)"
+            HighContrast="@Accessibility.Effective.HighContrast"
+            TextScale="@Accessibility.Effective.TextScale">
 <main class="ecosystem-host">
     <MudThemeProvider Theme="_theme" IsDarkMode="true" />
     <MudPopoverProvider />
@@ -237,6 +240,8 @@
         PlatformPreference.Changed += OnPlatformPreferenceChanged;
         ThemePreference.Changed += OnThemePreferenceChanged;
         UserThemes.Changed += OnThemePreferenceChanged;
+        // ADR 0105: high contrast, text size and reduced motion (which also covers animationsEnabled).
+        Accessibility.Changed += OnThemePreferenceChanged;
         // ADR 0104: this component outlives every session; its sign-in screens follow the system
         // language at boot and after a sign-out, and the user's language once signed in.
         SessionLocale.Changed += OnSessionLocaleChanged;
@@ -258,6 +263,7 @@
         PlatformPreference.Changed -= OnPlatformPreferenceChanged;
         ThemePreference.Changed -= OnThemePreferenceChanged;
         UserThemes.Changed -= OnThemePreferenceChanged;
+        Accessibility.Changed -= OnThemePreferenceChanged;
         SessionLocale.Changed -= OnSessionLocaleChanged;
     }
 
@@ -296,6 +302,8 @@
             await SessionLocale.UseSystemLocaleAsync();
             await PlatformPreference.InitializeAsync();
             await ThemePreference.InitializeAsync();
+            // After the appearance: animationsEnabled = false counts as reducedMotion = on.
+            await Accessibility.InitializeAsync();
             await UserThemes.InitializeAsync();
             // Shares clipboard text with the real machine (ADR 0065); never fails the boot.
             await HostClipboard.StartAsync();

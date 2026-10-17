@@ -106,6 +106,44 @@ monaco.editor.defineTheme("hackeros-dark", {
   }
 });
 
+// ADR 0105: HackerOS's high-contrast editor theme, over Monaco's own hc-black (black background,
+// white text, yellow focus and cursor), matching the shell's high-contrast layer.
+monaco.editor.defineTheme("hackeros-high-contrast", {
+  base: "hc-black",
+  inherit: true,
+  rules: [
+    { token: "comment", foreground: "d6d6d6", fontStyle: "italic" },
+    { token: "keyword", foreground: "66ccff" },
+    { token: "string", foreground: "ffff80" },
+    { token: "number", foreground: "ffb380" },
+    { token: "type", foreground: "00ff9c" }
+  ],
+  colors: {
+    "editor.background": "#000000",
+    "editor.foreground": "#ffffff",
+    "editorCursor.foreground": "#ffff00",
+    "editorLineNumber.foreground": "#d6d6d6",
+    "editorLineNumber.activeForeground": "#ffff00",
+    "focusBorder": "#ffff00",
+    "contrastBorder": "#ffffff",
+    "contrastActiveBorder": "#ffff00"
+  }
+});
+
+/** The editor settings that depend on the session's accessibility preferences (ADR 0105). */
+function accessibilityOptions(options) {
+  const scale = options?.textScale > 0 ? options.textScale : 1;
+  const reduced = !!options?.reducedMotion;
+  return {
+    theme: options?.highContrast ? "hackeros-high-contrast" : "hackeros-dark",
+    fontSize: Math.round((options?.fontSize ?? 14) * scale),
+    lineHeight: Math.round(21 * scale),
+    smoothScrolling: !reduced,
+    cursorBlinking: reduced ? "solid" : "smooth",
+    cursorSmoothCaretAnimation: reduced ? "off" : "on"
+  };
+}
+
 /**
  * Creates the editor in `host`. Each open document (tab) gets its own Monaco model, so undo
  * history, cursor and scroll position stay with the tab, as in VS Code. C# drives it with
@@ -119,20 +157,21 @@ export function createCodeEditor(host, dotNet, options) {
   let suppressChange = false;
   let disposed = false;
 
+  const accessibility = accessibilityOptions(options);
   const editor = monaco.editor.create(host, {
     model: null,
-    theme: "hackeros-dark",
+    theme: accessibility.theme,
     automaticLayout: true,
     minimap: { enabled: true, renderCharacters: false },
     fontFamily: options?.fontFamily || "'Cascadia Mono', 'Fira Code', Consolas, monospace",
-    fontSize: options?.fontSize ?? 14,
-    lineHeight: 21,
+    fontSize: accessibility.fontSize,
+    lineHeight: accessibility.lineHeight,
     tabSize: 2,
     wordWrap: "off",
     scrollBeyondLastLine: true,
-    smoothScrolling: true,
-    cursorBlinking: "smooth",
-    cursorSmoothCaretAnimation: "on",
+    smoothScrolling: accessibility.smoothScrolling,
+    cursorBlinking: accessibility.cursorBlinking,
+    cursorSmoothCaretAnimation: accessibility.cursorSmoothCaretAnimation,
     renderLineHighlight: "all",
     bracketPairColorization: { enabled: true },
     guides: { indentation: true, bracketPairs: true },
@@ -286,6 +325,14 @@ export function createCodeEditor(host, dotNet, options) {
       if (typeof next.minimap === "boolean") options.minimap = { enabled: next.minimap, renderCharacters: false };
       if (typeof next.wordWrap === "boolean") options.wordWrap = next.wordWrap ? "on" : "off";
       editor.updateOptions(options);
+    },
+    /** Applies new accessibility preferences (ADR 0105): theme, font size, cursor and scrolling. */
+    setAccessibility(preferences) {
+      if (disposed) return;
+      const next = accessibilityOptions({ ...preferences, fontSize: options?.fontSize });
+      monaco.editor.setTheme(next.theme);
+      const { theme, ...rest } = next;
+      editor.updateOptions(rest);
     },
     layout() {
       if (!disposed) editor.layout();

@@ -41,7 +41,7 @@
     color: var(--hos-btn-color, var(--hos-text-primary, #33ff33));
     cursor: pointer;
     padding: 4px 10px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-family: inherit;
     font-weight: var(--hos-btn-font-weight, 500);
     transition: background var(--hos-transition-fast, 0.15s),
@@ -79,7 +79,7 @@
     color: var(--hos-input-color, var(--hos-text-primary, #33ff33));
     padding: var(--hos-input-padding, 4px 8px);
     font-family: inherit;
-    font-size: 12px;
+    font-size: 0.75rem;
     border-radius: var(--hos-input-radius, var(--hos-radius-sm, 3px));
     box-shadow: var(--hos-input-shadow, none);
     outline: none;
@@ -99,7 +99,7 @@
     cursor: pointer;
     padding: 4px 12px;
     font-family: inherit;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 700;
     border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 3px));
     transition: filter var(--hos-transition-fast, 0.15s);
@@ -156,7 +156,7 @@
     display: flex;
     align-items: center;
     padding: 0 6px;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-muted, #8fbf8f);
 }
 
@@ -183,7 +183,7 @@
     border-radius: 8px;
     background: var(--hos-danger, #ff5555);
     color: #ffffff;
-    font-size: 10px;
+    font-size: 0.625rem;
     line-height: 16px;
 }
 
@@ -229,7 +229,7 @@
 }
 
 .loading-label {
-    font-size: 13px;
+    font-size: 0.8125rem;
     opacity: 0.7;
 }
 
@@ -246,18 +246,18 @@
 }
 
 .error-icon {
-    font-size: 64px;
+    font-size: 4rem;
     color: var(--hos-error, #ff3333);
 }
 
 .error-title {
-    font-size: 24px;
+    font-size: 1.5rem;
     margin: 0;
     color: var(--hos-text-primary, #33ff33);
 }
 
 .error-url {
-    font-size: 13px;
+    font-size: 0.8125rem;
     opacity: 0.6;
     word-break: break-all;
     max-width: 480px;
@@ -265,13 +265,13 @@
 }
 
 .error-code {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-error, #ff3333);
     font-family: var(--hos-font-mono, monospace);
 }
 
 .error-hint {
-    font-size: 13px;
+    font-size: 0.8125rem;
     opacity: 0.5;
     max-width: 400px;
     color: var(--hos-text-muted, #6f838d);
@@ -285,7 +285,7 @@
     cursor: pointer;
     padding: 8px 20px;
     font-family: inherit;
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 700;
     border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 3px));
     transition: filter var(--hos-transition-fast, 0.15s);
@@ -308,7 +308,7 @@
 }
 
 .new-tab-title {
-    font-size: 32px;
+    font-size: 2rem;
     margin: 0;
     letter-spacing: 2px;
     color: var(--hos-accent, #33ff33);
@@ -316,7 +316,7 @@
 }
 
 .new-tab-subtitle {
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--hos-text-secondary, #a8bac4);
     opacity: 0.7;
 }
@@ -338,7 +338,7 @@
     cursor: pointer;
     padding: 6px 16px;
     font-family: inherit;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: var(--hos-btn-font-weight, 500);
     transition: background var(--hos-transition-fast, 0.15s),
                 color var(--hos-transition-fast, 0.15s);
@@ -354,7 +354,7 @@
 .browser-statusbar {
     flex-shrink: 0;
     padding: 4px 8px;
-    font-size: 11px;
+    font-size: 0.6875rem;
     background: var(--hos-toolbar-bg, var(--hos-bg-surface, #111));
     border-top: var(--hos-toolbar-border, 1px solid var(--hos-border-subtle, #2a2a2a));
     color: var(--hos-text-secondary, #a8bac4);
@@ -392,14 +392,14 @@
 }
 
 .detached-icon {
-    font-size: 56px;
+    font-size: 3.5rem;
     color: var(--hos-accent, #33ff33);
     text-shadow: 0 0 18px color-mix(in srgb, var(--hos-accent, #33ff33) 60%, transparent);
 }
 
 .detached-title {
     margin: 0;
-    font-size: 18px;
+    font-size: 1.125rem;
     color: var(--hos-text-primary, #33ff33);
 }
 
@@ -410,7 +410,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--hos-text-muted, #8fbf8f);
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .detached-actions {
@@ -443,7 +443,7 @@
     gap: 8px;
     overflow: hidden;
     white-space: nowrap;
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .surface-title {

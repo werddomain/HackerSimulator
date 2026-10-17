@@ -5,7 +5,7 @@
 @implements IAsyncDisposable
 @implements IWindowCloseGuard
 
-<div class="paint-root" @ref="_root" tabindex="-1" @onkeydown="HandleKeyDownAsync">
+<div class="@RootClass" @ref="_root" tabindex="-1" @onkeydown="HandleKeyDownAsync">
     <header class="paint-titlebar">
         <span class="paint-title" id="paint-title">@WindowTitle</span>
         @if (_busyMessage is not null)

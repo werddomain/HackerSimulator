@@ -18,7 +18,7 @@
     justify-content: space-between;
     align-items: baseline;
     gap: 8px;
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .hos-chart-title {
@@ -76,7 +76,7 @@
 .hos-chart-axis {
     display: flex;
     justify-content: space-between;
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--hos-text-muted, #6e7681);
 }
 
@@ -87,7 +87,7 @@
     margin: 2px 0 0;
     padding: 0;
     list-style: none;
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .hos-chart-legend-item {

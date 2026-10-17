@@ -275,6 +275,8 @@
 
         try
         {
+            HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences accessibility =
+                await AppContext.Accessibility.GetPreferencesAsync(AppContext.CancellationToken);
             _dotNetReference = DotNetObjectReference.Create(this);
             _module = await JavaScript.InvokeAsync<IJSObjectReference>(
                 "import", "./_content/HackerOs.AppSdk.Terminal/TerminalPanel.razor.js");
@@ -282,7 +284,15 @@
                 "mountTerminal",
                 _surfaceRef,
                 _dotNetReference,
-                new { useVirtualKeyboard = UseVirtualKeyboard, ariaLabel = L["Panel.InputLabel"].Value });
+                new
+                {
+                    useVirtualKeyboard = UseVirtualKeyboard,
+                    ariaLabel = L["Panel.InputLabel"].Value,
+                    highContrast = accessibility.HighContrast,
+                    reducedMotion = accessibility.ReducedMotion
+                });
+            // ADR 0105: a terminal draws its own grid, so it follows the preferences itself.
+            AppContext.Accessibility.Changed += OnAccessibilityChanged;
         }
         catch (Exception)
         {
@@ -1186,6 +1196,34 @@
         _fullScreenSession?.UpdateViewport(columns, rows);
     }
 
+    /// <summary>
+    /// The session's accessibility preferences changed (ADR 0105): the emulator takes the new text
+    /// size, palette and cursor. A failure only leaves the old look.
+    /// </summary>
+    private void OnAccessibilityChanged(object? sender, EventArgs args) => _ = InvokeAsync(async () =>
+    {
+        IJSObjectReference? terminal = _terminal;
+        if (terminal is null || _disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences preferences =
+                await AppContext.Accessibility.GetPreferencesAsync(CancellationToken.None);
+            await terminal.InvokeVoidAsync("applyAccessibility", new
+            {
+                highContrast = preferences.HighContrast,
+                reducedMotion = preferences.ReducedMotion
+            });
+        }
+        catch (Exception exception) when (exception is JSException or JSDisconnectedException or ObjectDisposedException or TaskCanceledException)
+        {
+            // The terminal went away meanwhile.
+        }
+    });
+
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
@@ -1195,6 +1233,7 @@
         }
 
         _disposed = true;
+        AppContext.Accessibility.Changed -= OnAccessibilityChanged;
         _activeCts?.Cancel();
         // Closing the panel ends its shell's process and every command still running in it.
         if (_shell is not null)

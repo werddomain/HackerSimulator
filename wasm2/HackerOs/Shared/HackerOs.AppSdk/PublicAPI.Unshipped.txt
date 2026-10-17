@@ -42,6 +42,22 @@ const HackerOs.AppSdk.WebData.HackWebDbOperationKinds.Get = "get" -> string!
 const HackerOs.AppSdk.WebData.HackWebDbOperationKinds.GetAll = "getAll" -> string!
 const HackerOs.AppSdk.WebData.HackWebDbOperationKinds.GetAllKeys = "getAllKeys" -> string!
 const HackerOs.AppSdk.WebData.HackWebDbOperationKinds.Put = "put" -> string!
+HackerOs.AppSdk.Accessibility.DefaultAppAccessibilityGateway
+HackerOs.AppSdk.Accessibility.DefaultAppAccessibilityGateway.Changed -> System.EventHandler?
+HackerOs.AppSdk.Accessibility.DefaultAppAccessibilityGateway.GetPreferencesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences!>
+HackerOs.AppSdk.Accessibility.HackAccessibility
+HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences
+HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences.HackAccessibilityPreferences(bool HighContrast, double TextScale, bool ReducedMotion) -> void
+HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences.HighContrast.get -> bool
+HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences.HighContrast.init -> void
+HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences.ReducedMotion.get -> bool
+HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences.ReducedMotion.init -> void
+HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences.Scale(double pixels) -> int
+HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences.TextScale.get -> double
+HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences.TextScale.init -> void
+HackerOs.AppSdk.Accessibility.IAppAccessibilityGateway
+HackerOs.AppSdk.Accessibility.IAppAccessibilityGateway.Changed -> System.EventHandler?
+HackerOs.AppSdk.Accessibility.IAppAccessibilityGateway.GetPreferencesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences!>
 HackerOs.AppSdk.Administration.HackAppPermissionInfo
 HackerOs.AppSdk.Administration.HackAppPermissionInfo.AppId.get -> string!
 HackerOs.AppSdk.Administration.HackAppPermissionInfo.AppId.init -> void
@@ -574,6 +590,7 @@ HackerOs.AppSdk.IAppConsoleGateway.In.get -> System.IO.TextReader!
 HackerOs.AppSdk.IAppConsoleGateway.IsAttached.get -> bool
 HackerOs.AppSdk.IAppConsoleGateway.Out.get -> System.IO.TextWriter!
 HackerOs.AppSdk.IAppExecutionContext
+HackerOs.AppSdk.IAppExecutionContext.Accessibility.get -> HackerOs.AppSdk.Accessibility.IAppAccessibilityGateway!
 HackerOs.AppSdk.IAppExecutionContext.AppManagement.get -> HackerOs.AppSdk.Apps.IAppManagementGateway!
 HackerOs.AppSdk.IAppExecutionContext.CancellationToken.get -> System.Threading.CancellationToken
 HackerOs.AppSdk.IAppExecutionContext.Capabilities.get -> HackerOs.Simulation.Abstractions.Gateways.ICapabilityChecker!
@@ -1612,6 +1629,11 @@ override HackerOs.AppSdk.ServiceProcess.HackServiceController.ToString() -> stri
 override HackerOs.AppSdk.Shell.HackCredential.ToString() -> string!
 override HackerOs.AppSdk.WebData.HackWebDbJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
 override sealed HackerOs.AppSdk.WebServerAppBase.RunCoreAsync(HackerOs.AppSdk.IAppExecutionContext! context, System.Threading.CancellationToken sessionCancellationToken) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Accessibility.DefaultAppAccessibilityGateway.Instance.get -> HackerOs.AppSdk.Accessibility.DefaultAppAccessibilityGateway!
+static HackerOs.AppSdk.Accessibility.HackAccessibility.GetPreferencesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences!>!
+static HackerOs.AppSdk.Accessibility.HackAccessibility.PreferencesChanged -> System.EventHandler?
+static HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences.Default.get -> HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences!
+static HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences.TextScales.get -> System.Collections.Generic.IReadOnlyList<double>!
 static HackerOs.AppSdk.Administration.HackPermissionAdministration.GetOverviewAsync(HackerOs.AppSdk.IAppExecutionContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackAppPermissionInfo!>!>!
 static HackerOs.AppSdk.Administration.HackPermissionAdministration.GetOverviewAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackAppPermissionInfo!>!>!
 static HackerOs.AppSdk.Administration.HackPermissionAdministration.GetPolicyAsync(HackerOs.AppSdk.IAppExecutionContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Administration.HackDangerousCapabilityPolicy>!

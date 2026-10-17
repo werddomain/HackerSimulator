@@ -41,7 +41,7 @@
     border: var(--hos-btn-border, 1px solid var(--hos-border, #2a2a2a));
     color: var(--hos-btn-color, var(--hos-text-primary, #33ff33));
     font-family: inherit;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: var(--hos-btn-font-weight, 500);
     padding: var(--hos-btn-padding, 4px 10px);
     border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 3px));
@@ -71,13 +71,13 @@
 }
 
 .tool-label {
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-text-secondary, #a8bac4);
     opacity: 0.8;
 }
 
 .zoom-label, .size-label {
-    font-size: 11px;
+    font-size: 0.6875rem;
     min-width: 36px;
     color: var(--hos-text-primary, #f4f7f8);
 }
@@ -130,7 +130,7 @@
     display: flex;
     gap: 16px;
     padding: 4px 10px;
-    font-size: 11px;
+    font-size: 0.6875rem;
     background: var(--hos-toolbar-bg, var(--hos-bg-surface, #111));
     border-top: var(--hos-toolbar-border, 1px solid var(--hos-border-subtle, #2a2a2a));
     color: var(--hos-text-secondary, #a8bac4);
@@ -196,4 +196,23 @@
 
 @media (prefers-reduced-motion: reduce) {
     .paint-busy { animation: none; }
+}
+
+/* ADR 0105, through HackAccessibility: the session's reduced-motion preference stills the busy
+   marker, and high contrast draws a solid frame and a visible grid around the picture (the picture
+   itself keeps its colours). */
+.is-reduced-motion .paint-busy {
+    animation: none;
+}
+
+.is-high-contrast .canvas-frame {
+    box-shadow: none;
+    outline: 2px solid var(--hos-border, #ffffff);
+    outline-offset: 2px;
+}
+
+.is-high-contrast .paint-viewport.grid-overlay {
+    background-image:
+        linear-gradient(to right, rgb(255 255 255 / 45%) 1px, transparent 1px),
+        linear-gradient(to bottom, rgb(255 255 255 / 45%) 1px, transparent 1px);
 }

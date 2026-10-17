@@ -39,6 +39,20 @@ public partial class ThemeScope : ComponentBase, IAsyncDisposable
     public bool AnimationsEnabled { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets whether the high-contrast layer (ADR 0105 section 2) covers the theme: it redefines
+    /// the color, border and focus tokens of every theme, user themes included.
+    /// </summary>
+    [Parameter]
+    public bool HighContrast { get; set; }
+
+    /// <summary>
+    /// Gets or sets the text size factor of ADR 0105: <c>1.0</c>, <c>1.25</c>, <c>1.5</c> or <c>2.0</c>.
+    /// Platform text sizes are in <c>rem</c>, so the scope scales the document's root font size.
+    /// </summary>
+    [Parameter]
+    public double TextScale { get; set; } = 1.0;
+
+    /// <summary>
     /// Gets or sets the tokens of a user theme to apply over <see cref="ThemeId"/>, or
     /// <see langword="null"/> for the built-in theme alone. Unknown tokens and invalid values are
     /// ignored; animation tokens are ignored while <see cref="AnimationsEnabled"/> is false.
@@ -65,7 +79,7 @@ public partial class ThemeScope : ComponentBase, IAsyncDisposable
             throw new ArgumentOutOfRangeException(nameof(Platform));
         }
 
-        _renderState = ThemeRenderState.Create(ThemeId, Platform, AccentId, AnimationsEnabled);
+        _renderState = ThemeRenderState.Create(ThemeId, Platform, AccentId, AnimationsEnabled, HighContrast, TextScale);
         _tokenProperties = ThemeTokenApplier.Build(Tokens, AnimationsEnabled);
     }
 

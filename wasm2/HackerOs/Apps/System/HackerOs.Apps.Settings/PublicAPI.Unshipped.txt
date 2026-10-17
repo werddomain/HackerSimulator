@@ -1,4 +1,7 @@
 #nullable enable
+HackerOs.Apps.Settings.AccessibilityPanel
+HackerOs.Apps.Settings.AccessibilityPanel.AccessibilityPanel() -> void
+HackerOs.Apps.Settings.AccessibilityPanel.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Apps.Settings.AppDetailsPanel
 HackerOs.Apps.Settings.AppDetailsPanel.AppDetailsPanel() -> void
 HackerOs.Apps.Settings.AppDetailsPanel.AppId.get -> string!

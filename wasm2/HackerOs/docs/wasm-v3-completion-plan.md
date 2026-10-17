@@ -206,7 +206,7 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 - [x] `v3/10-server-proxy` ([`server-network-relay.md`](server-network-relay.md), ADR 0108)
 - [ ] `v3/11-apps`
 - [x] `v3/12-localization` (ADR 0104, ADR 0111, [`localization.md`](localization.md))
-- [ ] `v3/13-accessibility`
+- [x] `v3/13-accessibility` ([`accessibility.md`](accessibility.md), ADR 0112)
 - [ ] `v3/14-trimming`
 - [ ] `v3/15-sdk-freeze`
 - [ ] `v3/16-final`

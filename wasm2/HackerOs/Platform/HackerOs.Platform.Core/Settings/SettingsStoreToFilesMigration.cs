@@ -100,6 +100,8 @@ public sealed class SettingsStoreToFilesMigration : IUserProfileInitializer
         foreach (OsSettingsDocument document in new[]
                  {
                      AppearanceSettingsDocuments.Document,
+                     // ADR 0105: high contrast, text size and reduced motion, all following the host.
+                     AccessibilitySettingsDocuments.Document,
                      UiPlatformPreferenceSettingsDocuments.Document,
                      PolicySettingsDocuments.Document,
                      Clipboard.ClipboardSettingsDocuments.Document

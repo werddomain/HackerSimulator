@@ -6,14 +6,14 @@
 
 h3 {
     margin: 0 0 8px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--hos-accent, #42d392);
 }
 
 .net-note {
-    font-size: 11px;
+    font-size: 0.6875rem;
     text-transform: none;
     letter-spacing: 0;
     color: var(--hos-text-muted, #6e7681);

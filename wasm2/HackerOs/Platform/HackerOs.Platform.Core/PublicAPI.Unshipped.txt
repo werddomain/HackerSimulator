@@ -6,6 +6,9 @@ abstract HackerOs.Platform.Core.FileSystem.Virtual.VirtualFileSystemProvider.Sta
 abstract HackerOs.Platform.Core.Network.Websites.SimulatedWebsiteControllerBase.PrimaryHostname.get -> string!
 abstract HackerOs.Platform.Core.Network.Websites.SimulatedWebsiteControllerBase.SiteName.get -> string!
 abstract HackerOs.Platform.Core.Network.Websites.SimulatedWebsiteControllerBase.Theme.get -> string!
+const HackerOs.Platform.Core.Appearance.AccessibilitySettingsDocuments.HighContrastKey = "highContrast" -> string!
+const HackerOs.Platform.Core.Appearance.AccessibilitySettingsDocuments.ReducedMotionKey = "reducedMotion" -> string!
+const HackerOs.Platform.Core.Appearance.AccessibilitySettingsDocuments.TextScaleKey = "textScale" -> string!
 const HackerOs.Platform.Core.Appearance.AppearanceSettingsDocuments.AccentKey = "accent" -> string!
 const HackerOs.Platform.Core.Appearance.AppearanceSettingsDocuments.AnimationsKey = "animationsEnabled" -> string!
 const HackerOs.Platform.Core.Appearance.AppearanceSettingsDocuments.DesktopThemeKey = "desktopThemeId" -> string!
@@ -188,11 +191,50 @@ HackerOs.Platform.Core.AppCatalogRejection.Manifest.get -> HackerOs.App.Abstract
 HackerOs.Platform.Core.AppCatalogRejection.Manifest.init -> void
 HackerOs.Platform.Core.AppCatalogRejection.Message.get -> string!
 HackerOs.Platform.Core.AppCatalogRejection.Message.init -> void
+HackerOs.Platform.Core.Appearance.AccessibilityMode
+HackerOs.Platform.Core.Appearance.AccessibilityMode.Auto = 0 -> HackerOs.Platform.Core.Appearance.AccessibilityMode
+HackerOs.Platform.Core.Appearance.AccessibilityMode.Off = 2 -> HackerOs.Platform.Core.Appearance.AccessibilityMode
+HackerOs.Platform.Core.Appearance.AccessibilityMode.On = 1 -> HackerOs.Platform.Core.Appearance.AccessibilityMode
+HackerOs.Platform.Core.Appearance.AccessibilityPreferenceService
+HackerOs.Platform.Core.Appearance.AccessibilityPreferenceService.AccessibilityPreferenceService(HackerOs.Platform.Core.Settings.IOsSettingsService! settings, HackerOs.Platform.Core.Appearance.ThemePreferenceService! appearance, HackerOs.Platform.Core.Appearance.IHostAccessibilityProbe! host) -> void
+HackerOs.Platform.Core.Appearance.AccessibilityPreferenceService.Changed -> System.Action?
+HackerOs.Platform.Core.Appearance.AccessibilityPreferenceService.Dispose() -> void
+HackerOs.Platform.Core.Appearance.AccessibilityPreferenceService.Effective.get -> HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences!
+HackerOs.Platform.Core.Appearance.AccessibilityPreferenceService.InitializeAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Appearance.AccessibilityPreferenceService.RefreshAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Appearance.AccessibilityPreferenceService.Settings.get -> HackerOs.Platform.Core.Appearance.AccessibilitySettings!
+HackerOs.Platform.Core.Appearance.AccessibilityPreferenceService.Snapshot.get -> HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot?
+HackerOs.Platform.Core.Appearance.AccessibilitySettings
+HackerOs.Platform.Core.Appearance.AccessibilitySettings.AccessibilitySettings(HackerOs.Platform.Core.Appearance.AccessibilityMode HighContrast, double TextScale, HackerOs.Platform.Core.Appearance.AccessibilityMode ReducedMotion) -> void
+HackerOs.Platform.Core.Appearance.AccessibilitySettings.HighContrast.get -> HackerOs.Platform.Core.Appearance.AccessibilityMode
+HackerOs.Platform.Core.Appearance.AccessibilitySettings.HighContrast.init -> void
+HackerOs.Platform.Core.Appearance.AccessibilitySettings.ReducedMotion.get -> HackerOs.Platform.Core.Appearance.AccessibilityMode
+HackerOs.Platform.Core.Appearance.AccessibilitySettings.ReducedMotion.init -> void
+HackerOs.Platform.Core.Appearance.AccessibilitySettings.TextScale.get -> double
+HackerOs.Platform.Core.Appearance.AccessibilitySettings.TextScale.init -> void
+HackerOs.Platform.Core.Appearance.AccessibilitySettingsDocuments
 HackerOs.Platform.Core.Appearance.AppearanceSettingsCodec
 HackerOs.Platform.Core.Appearance.AppearanceSettingsDocuments
 HackerOs.Platform.Core.Appearance.AppearanceSettingsValidator
 HackerOs.Platform.Core.Appearance.AppearanceSettingsValidator.AppearanceSettingsValidator() -> void
 HackerOs.Platform.Core.Appearance.AppearanceSettingsValidator.Validate(string! content) -> System.Collections.Generic.IReadOnlyList<string!>!
+HackerOs.Platform.Core.Appearance.HostAccessibilitySignals
+HackerOs.Platform.Core.Appearance.HostAccessibilitySignals.ForcedColors.get -> bool
+HackerOs.Platform.Core.Appearance.HostAccessibilitySignals.ForcedColors.init -> void
+HackerOs.Platform.Core.Appearance.HostAccessibilitySignals.HostAccessibilitySignals(bool PrefersMoreContrast, bool ForcedColors, bool PrefersReducedMotion) -> void
+HackerOs.Platform.Core.Appearance.HostAccessibilitySignals.PrefersMoreContrast.get -> bool
+HackerOs.Platform.Core.Appearance.HostAccessibilitySignals.PrefersMoreContrast.init -> void
+HackerOs.Platform.Core.Appearance.HostAccessibilitySignals.PrefersReducedMotion.get -> bool
+HackerOs.Platform.Core.Appearance.HostAccessibilitySignals.PrefersReducedMotion.init -> void
+HackerOs.Platform.Core.Appearance.IHostAccessibilityProbe
+HackerOs.Platform.Core.Appearance.IHostAccessibilityProbe.Changed -> System.Action?
+HackerOs.Platform.Core.Appearance.IHostAccessibilityProbe.Current.get -> HackerOs.Platform.Core.Appearance.HostAccessibilitySignals!
+HackerOs.Platform.Core.Appearance.IHostAccessibilityProbe.InitializeAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Appearance.NoHostAccessibilityProbe
+HackerOs.Platform.Core.Appearance.NoHostAccessibilityProbe.Changed -> System.Action?
+HackerOs.Platform.Core.Appearance.NoHostAccessibilityProbe.Current.get -> HackerOs.Platform.Core.Appearance.HostAccessibilitySignals!
+HackerOs.Platform.Core.Appearance.NoHostAccessibilityProbe.InitializeAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Appearance.NoHostAccessibilityProbe.NoHostAccessibilityProbe() -> void
 HackerOs.Platform.Core.Appearance.ThemePreferenceService
 HackerOs.Platform.Core.Appearance.ThemePreferenceService.Changed -> System.Action?
 HackerOs.Platform.Core.Appearance.ThemePreferenceService.Current.get -> HackerOs.Theming.Abstractions.ThemePreferences!
@@ -571,7 +613,7 @@ HackerOs.Platform.Core.Execution.AppEventGateway.Subscribe<TEvent>(System.Action
 HackerOs.Platform.Core.Execution.AppEventGateway.Subscribe<TPayload>(HackerOs.Simulation.Abstractions.Events.TopicName topic, System.Action<HackerOs.Simulation.Abstractions.Events.TopicMessage<TPayload>!>! handler) -> System.IDisposable!
 HackerOs.Platform.Core.Execution.AppEventGateway.SubscribeChannel<TPayload>(HackerOs.Simulation.Abstractions.Events.TopicName topic, int? boundedCapacity = null) -> HackerOs.Simulation.Abstractions.Events.ITopicChannelSubscription<TPayload>!
 HackerOs.Platform.Core.Execution.AppExecutionContextFactory
-HackerOs.Platform.Core.Execution.AppExecutionContextFactory.AppExecutionContextFactory(HackerOs.App.Abstractions.Policy.ICapabilityGrantRepository! grantRepository, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemService! fileSystem, HackerOs.Simulation.Abstractions.Events.IEventBus! eventBus, HackerOs.Simulation.Abstractions.Events.ITopicMessageBus! topicBus, HackerOs.Simulation.Abstractions.Notifications.INotificationQueue! notifications, HackerOs.Simulation.Abstractions.Diagnostics.IDiagnosticSink! diagnostics, HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, HackerOs.Simulation.Abstractions.Processes.IProcessManager! processManager, System.Func<HackerOs.Platform.Core.Intents.AppIntentDispatcher!>? intentDispatcherProvider = null, HackerOs.Platform.Core.Diagnostics.LogFileWriter? logWriter = null, HackerOs.Simulation.Abstractions.Processes.IProcessEnvironmentTable? environments = null, System.Func<string!>? machineName = null, HackerOs.Platform.Core.Execution.AppCatalogGatewayServices? appCatalog = null, HackerOs.Simulation.Abstractions.Network.ISimulatedNetworkService? network = null, HackerOs.Platform.Core.ServerConnection.IServerConnectionService? serverConnection = null, HackerOs.Platform.Core.ServerConnection.IProxyClient? proxy = null, System.Func<HackerOs.Platform.Core.Shell.ShellHostService!>? shellHostProvider = null, HackerOs.Platform.Core.Execution.SystemMetricsServices? metrics = null, HackerOs.Platform.Core.Clipboard.SystemClipboard? clipboard = null, HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices? administration = null, HackerOs.Platform.Core.Network.Local.LocalNetworkServices? localNetwork = null, HackerOs.Platform.Core.WebData.IWebSiteDatabaseStore? webDatabases = null, HackerOs.Platform.Core.Keyring.UserKeyringService? keyring = null) -> void
+HackerOs.Platform.Core.Execution.AppExecutionContextFactory.AppExecutionContextFactory(HackerOs.App.Abstractions.Policy.ICapabilityGrantRepository! grantRepository, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemService! fileSystem, HackerOs.Simulation.Abstractions.Events.IEventBus! eventBus, HackerOs.Simulation.Abstractions.Events.ITopicMessageBus! topicBus, HackerOs.Simulation.Abstractions.Notifications.INotificationQueue! notifications, HackerOs.Simulation.Abstractions.Diagnostics.IDiagnosticSink! diagnostics, HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, HackerOs.Simulation.Abstractions.Processes.IProcessManager! processManager, System.Func<HackerOs.Platform.Core.Intents.AppIntentDispatcher!>? intentDispatcherProvider = null, HackerOs.Platform.Core.Diagnostics.LogFileWriter? logWriter = null, HackerOs.Simulation.Abstractions.Processes.IProcessEnvironmentTable? environments = null, System.Func<string!>? machineName = null, HackerOs.Platform.Core.Execution.AppCatalogGatewayServices? appCatalog = null, HackerOs.Simulation.Abstractions.Network.ISimulatedNetworkService? network = null, HackerOs.Platform.Core.ServerConnection.IServerConnectionService? serverConnection = null, HackerOs.Platform.Core.ServerConnection.IProxyClient? proxy = null, System.Func<HackerOs.Platform.Core.Shell.ShellHostService!>? shellHostProvider = null, HackerOs.Platform.Core.Execution.SystemMetricsServices? metrics = null, HackerOs.Platform.Core.Clipboard.SystemClipboard? clipboard = null, HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices? administration = null, HackerOs.Platform.Core.Network.Local.LocalNetworkServices? localNetwork = null, HackerOs.Platform.Core.WebData.IWebSiteDatabaseStore? webDatabases = null, HackerOs.Platform.Core.Keyring.UserKeyringService? keyring = null, HackerOs.Platform.Core.Appearance.AccessibilityPreferenceService? accessibility = null) -> void
 HackerOs.Platform.Core.Execution.AppExecutionContextFactory.Create(HackerOs.App.Abstractions.AppManifest! manifest, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal! principal, HackerOs.Simulation.Abstractions.Processes.ProcessRecord! process, System.Collections.Generic.IReadOnlySet<string!>! grantedCapabilities, System.Guid? instanceId = null, bool isRootElevated = false, HackerOs.App.Abstractions.OneShotElevationGrantSet? oneShotElevation = null) -> HackerOs.AppSdk.IAppExecutionContext!
 HackerOs.Platform.Core.Execution.AppFileSystemGateway
 HackerOs.Platform.Core.Execution.AppFileSystemGateway.AppFileSystemGateway(HackerOs.Simulation.Abstractions.FileSystem.IFileSystemService! fileSystem, HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, HackerOs.App.Abstractions.AppOperationContext! operationContext, System.Collections.Generic.IReadOnlyList<string!>! groupIds, HackerOs.Simulation.Abstractions.FileSystem.FileSystemSelectedResourceHandle? selectedHandle = null, System.Action<HackerOs.Simulation.Abstractions.FileSystem.FileSystemError!>? notifyPermissionError = null, HackerOs.Simulation.Abstractions.Processes.IKernelMemoryLedger? kernelMemory = null) -> void
@@ -2233,11 +2275,20 @@ static HackerOs.Platform.Core.AppCatalog.Build(System.Collections.Generic.IEnume
 static HackerOs.Platform.Core.AppCatalog.Build(System.Collections.Generic.IEnumerable<HackerOs.App.Abstractions.AppManifest!>! manifests, System.Collections.Generic.IEnumerable<string!>! systemAppIds) -> HackerOs.Platform.Core.AppCatalogBuildResult!
 static HackerOs.Platform.Core.AppCatalog.Build(System.Collections.Generic.IEnumerable<HackerOs.App.Abstractions.AppManifest!>! manifests, System.Collections.Generic.IEnumerable<string!>! systemAppIds, HackerOs.App.Abstractions.SemanticVersion sdkVersion) -> HackerOs.Platform.Core.AppCatalogBuildResult!
 static HackerOs.Platform.Core.AppCatalog.BuildFromBuiltInApplications(System.Collections.Generic.IEnumerable<HackerOs.App.Abstractions.BuiltInApplication!>! applications) -> HackerOs.Platform.Core.AppCatalogBuildResult!
+static HackerOs.Platform.Core.Appearance.AccessibilitySettings.Default.get -> HackerOs.Platform.Core.Appearance.AccessibilitySettings!
+static HackerOs.Platform.Core.Appearance.AccessibilitySettingsDocuments.Document.get -> HackerOs.Platform.Core.Settings.OsSettingsDocument!
+static HackerOs.Platform.Core.Appearance.AccessibilitySettingsDocuments.FormatMode(HackerOs.Platform.Core.Appearance.AccessibilityMode mode) -> string!
+static HackerOs.Platform.Core.Appearance.AccessibilitySettingsDocuments.FormatTextScale(double scale) -> string!
+static HackerOs.Platform.Core.Appearance.AccessibilitySettingsDocuments.Resolve(HackerOs.Platform.Core.Appearance.AccessibilitySettings! settings, HackerOs.Platform.Core.Appearance.HostAccessibilitySignals! host, bool animationsEnabled) -> HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences!
+static HackerOs.Platform.Core.Appearance.AccessibilitySettingsDocuments.Schema.get -> HackerOs.Simulation.Abstractions.Settings.SettingsSchema!
+static HackerOs.Platform.Core.Appearance.AccessibilitySettingsDocuments.TextScaleValues.get -> System.Collections.Generic.IReadOnlyList<string!>!
+static HackerOs.Platform.Core.Appearance.AccessibilitySettingsDocuments.ToSettings(HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot! snapshot) -> HackerOs.Platform.Core.Appearance.AccessibilitySettings!
 static HackerOs.Platform.Core.Appearance.AppearanceSettingsCodec.Encode(HackerOs.Theming.Abstractions.ThemePreferences! preferences) -> string!
 static HackerOs.Platform.Core.Appearance.AppearanceSettingsCodec.TryDecode(string! content, out HackerOs.Theming.Abstractions.ThemePreferences! preferences) -> bool
 static HackerOs.Platform.Core.Appearance.AppearanceSettingsDocuments.Document.get -> HackerOs.Platform.Core.Settings.OsSettingsDocument!
 static HackerOs.Platform.Core.Appearance.AppearanceSettingsDocuments.Schema.get -> HackerOs.Simulation.Abstractions.Settings.SettingsSchema!
 static HackerOs.Platform.Core.Appearance.AppearanceSettingsDocuments.ToPreferences(HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot! snapshot) -> HackerOs.Theming.Abstractions.ThemePreferences!
+static HackerOs.Platform.Core.Appearance.HostAccessibilitySignals.None.get -> HackerOs.Platform.Core.Appearance.HostAccessibilitySignals!
 static HackerOs.Platform.Core.Apps.AppInstallationResult.Failed(string! error) -> HackerOs.Platform.Core.Apps.AppInstallationResult!
 static HackerOs.Platform.Core.Apps.AppsConfigDocument.ExpandDependencies(HackerOs.Platform.Core.AppCatalog! catalog, string! appId) -> System.Collections.Generic.HashSet<string!>!
 static HackerOs.Platform.Core.Apps.AppsConfigDocument.ExpandDependents(HackerOs.Platform.Core.AppCatalog! catalog, System.Collections.Generic.IEnumerable<string!>! roots) -> System.Collections.Generic.HashSet<string!>!

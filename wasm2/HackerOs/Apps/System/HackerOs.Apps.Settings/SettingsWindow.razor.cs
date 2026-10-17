@@ -13,7 +13,7 @@ using Microsoft.Extensions.Localization;
 namespace HackerOs.Apps.Settings;
 
 /// <summary>
-/// The Settings app's window: appearance, language, file associations, granted capabilities, permissions,
+/// The Settings app's window: appearance, accessibility, language, file associations, granted capabilities, permissions,
 /// installed apps, optional server connection, backup and system (restart, factory reset).
 /// </summary>
 /// <remarks>
@@ -78,11 +78,11 @@ public partial class SettingsWindow : IAsyncDisposable
     private IReadOnlyList<HackSyncConflict> _conflicts = [];
 
     /// <summary>
-    /// Index of the "Application" tab, the last one (ADR 0096 §4): after Appearance, Language, File
+    /// Index of the "Application" tab, the last one (ADR 0096 §4): after Appearance, Accessibility, Language, File
     /// Associations, Capability Grants, Permissions, Installed Apps, Server Connection,
     /// Synchronization, Backup (only when the host supports it) and About System.
     /// </summary>
-    private int AppPageTabIndex => HackerOs.AppSdk.Administration.HackSystemBackup.IsSupportedFor(AppContext) ? 10 : 9;
+    private int AppPageTabIndex => HackerOs.AppSdk.Administration.HackSystemBackup.IsSupportedFor(AppContext) ? 11 : 10;
 
     private IStringLocalizer<Strings>? _localizer;
 
@@ -252,9 +252,6 @@ public partial class SettingsWindow : IAsyncDisposable
 
     private Task ChangeAccent(string accentId) => PersistAppearanceAsync(
         _appearanceSettings with { AccentId = accentId }, AccentKey, accentId);
-
-    private Task ToggleAnimations(bool value) => PersistAppearanceAsync(
-        _appearanceSettings with { AnimationsEnabled = value }, AnimationsKey, value);
 
     private static string ThemeOptionClass(string themeId, string selectedThemeId) =>
         string.Equals(themeId, selectedThemeId, StringComparison.Ordinal)

@@ -42,14 +42,50 @@ const ANSI_PALETTE = {
   brightWhite: "#ffffff"
 };
 
+// ADR 0105: the high-contrast palette. Every colour reads at 7:1 or more on the black background
+// of the high-contrast layer (black itself stays dim: it is the "invisible" colour of ANSI art).
+const HIGH_CONTRAST_PALETTE = {
+  black: "#4d4d4d",
+  red: "#ff7070",
+  green: "#00ff9c",
+  yellow: "#ffff00",
+  blue: "#66ccff",
+  magenta: "#ff8cff",
+  cyan: "#00ffff",
+  white: "#ffffff",
+  brightBlack: "#b3b3b3",
+  brightRed: "#ff9e9e",
+  brightGreen: "#7dffc9",
+  brightYellow: "#ffff80",
+  brightBlue: "#99ddff",
+  brightMagenta: "#ffb3ff",
+  brightCyan: "#80ffff",
+  brightWhite: "#ffffff"
+};
+
 function cssValue(style, name, fallback) {
   const value = style.getPropertyValue(name).trim();
   return value.length > 0 ? value : fallback;
 }
 
-function themeFor(host) {
+function themeFor(host, highContrast) {
   const style = getComputedStyle(host);
   const accent = cssValue(style, "--hos-accent", "#42d392");
+  if (highContrast) {
+    return {
+      ...HIGH_CONTRAST_PALETTE,
+      background: "#000000",
+      foreground: "#ffffff",
+      cursor: "#ffff00",
+      cursorAccent: "#000000",
+      selectionBackground: "#ffff00",
+      selectionForeground: "#000000",
+      scrollbarSliderBackground: "rgba(255, 255, 255, 0.5)",
+      scrollbarSliderHoverBackground: "rgba(255, 255, 0, 0.7)",
+      scrollbarSliderActiveBackground: "#ffff00"
+    };
+  }
+
   return {
     ...ANSI_PALETTE,
     background: cssValue(style, "--hos-bg-base", "#0d1114"),
@@ -114,15 +150,17 @@ function isHostShortcut(event) {
  */
 export function createTerminal(host, dotNet, options) {
   const style = getComputedStyle(host);
+  // ADR 0105: the panel's font size is in rem, so it already carries the text size; the
+  // high-contrast palette and the steady cursor come from the session's accessibility preferences.
   const terminal = new Terminal({
-    cursorBlink: true,
+    cursorBlink: !options?.reducedMotion,
     cursorStyle: "block",
     fontFamily: style.fontFamily || "monospace",
     fontSize: Number.parseFloat(style.fontSize) || 14,
     lineHeight: 1.2,
     scrollback: options?.scrollback ?? 5000,
     allowProposedApi: false,
-    theme: themeFor(host)
+    theme: themeFor(host, !!options?.highContrast)
   });
   const fit = new FitAddon();
   terminal.loadAddon(fit);
@@ -202,6 +240,28 @@ export function createTerminal(host, dotNet, options) {
   });
 
   return {
+    /**
+     * Applies new accessibility preferences (ADR 0105): the font size is re-read from the panel
+     * (its rem size follows the text size), then the palette and the cursor; the grid is refitted.
+     * Run two frames later so the theme scope's new attributes are already styled.
+     */
+    applyAccessibility(preferences) {
+      if (disposed) {
+        return;
+      }
+
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (disposed) {
+          return;
+        }
+
+        const current = getComputedStyle(host);
+        terminal.options.fontSize = Number.parseFloat(current.fontSize) || 14;
+        terminal.options.cursorBlink = !preferences?.reducedMotion;
+        terminal.options.theme = themeFor(host, !!preferences?.highContrast);
+        resize();
+      }));
+    },
     write(data) {
       if (!disposed && data) {
         terminal.write(data);

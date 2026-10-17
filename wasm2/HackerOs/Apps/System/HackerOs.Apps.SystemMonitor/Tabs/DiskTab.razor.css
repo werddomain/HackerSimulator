@@ -6,7 +6,7 @@
 
 h3 {
     margin: 0 0 8px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--hos-accent, #42d392);
@@ -26,12 +26,12 @@ h3 {
 }
 
 .disk-drive-name {
-    font-size: 18px;
+    font-size: 1.125rem;
     font-weight: 700;
 }
 
 .disk-drive-format {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-muted, #6e7681);
 }
 
@@ -65,7 +65,7 @@ h3 {
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 4px 12px;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-secondary, #8b949e);
 }
 

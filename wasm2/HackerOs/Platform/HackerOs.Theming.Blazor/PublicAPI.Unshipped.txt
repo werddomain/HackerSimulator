@@ -20,8 +20,12 @@ HackerOs.Theming.Blazor.ThemeScope.AnimationsEnabled.set -> void
 HackerOs.Theming.Blazor.ThemeScope.ChildContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
 HackerOs.Theming.Blazor.ThemeScope.ChildContent.set -> void
 HackerOs.Theming.Blazor.ThemeScope.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Theming.Blazor.ThemeScope.HighContrast.get -> bool
+HackerOs.Theming.Blazor.ThemeScope.HighContrast.set -> void
 HackerOs.Theming.Blazor.ThemeScope.Platform.get -> HackerOs.Theming.Abstractions.ThemePlatform
 HackerOs.Theming.Blazor.ThemeScope.Platform.set -> void
+HackerOs.Theming.Blazor.ThemeScope.TextScale.get -> double
+HackerOs.Theming.Blazor.ThemeScope.TextScale.set -> void
 HackerOs.Theming.Blazor.ThemeScope.ThemeId.get -> string!
 HackerOs.Theming.Blazor.ThemeScope.ThemeId.set -> void
 HackerOs.Theming.Blazor.ThemeScope.ThemeScope() -> void

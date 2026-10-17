@@ -149,6 +149,11 @@ qui a le focus. Une lettre est reconnue par sa touche physique quand Alt change 
   Agrandir/Restaurer, Réduire, Déplacer, Redimensionner, Ancrer à gauche/droite, Plein écran,
   Fermer. Flèches, Entrée et Échap y fonctionnent.
 - **Fermer** suit le chemin du bouton Fermer (`IWindowCloseGuard` compris).
+- **Focus clavier** : la fenêtre qui devient la fenêtre active (sélecteur, fermeture de celle du
+  dessus, barre des tâches) reçoit aussi le focus clavier : le dernier contrôle qui l'avait dans
+  cette fenêtre, sinon son premier élément focalisable, sinon la fenêtre elle-même. Rien ne bouge
+  si le focus y est déjà (clic, app qui se focalise seule). `WindowHost` le fait au rendu
+  (`WindowHost.razor.js`, chantier `v3/13`).
 
 ### Architecture
 

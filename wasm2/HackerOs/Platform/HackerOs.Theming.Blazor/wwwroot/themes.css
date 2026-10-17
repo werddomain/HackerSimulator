@@ -1419,3 +1419,200 @@
         --hos-transition-normal: 0ms;
     }
 }
+
+/*
+ * ADR 0105: accessibility preferences, applied by ThemeScope's data attributes.
+ *
+ * Reduced motion. data-motion="reduced" already zeroes the theme's transition tokens above; this
+ * also stops the animations and transitions components declare with literal durations (a pulsing
+ * busy marker, a window opening). The 0.01 ms keeps animationend/transitionend firing for code
+ * that waits on them.
+ */
+:where([data-motion="reduced"], [data-hos-motion="reduced"]) *,
+:where([data-motion="reduced"], [data-hos-motion="reduced"]) *::before,
+:where([data-motion="reduced"], [data-hos-motion="reduced"]) *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
+/*
+ * Text size. Platform text sizes are in rem: the scope's factor becomes the document's root font
+ * size, so every rem-sized text grows while px-sized layout (window frames, borders) stays put.
+ * --hos-text-scale exposes the factor to components that size text by script.
+ */
+:where([data-text-scale]) { --hos-text-scale: 1; }
+:where([data-text-scale="125"]) { --hos-text-scale: 1.25; }
+:where([data-text-scale="150"]) { --hos-text-scale: 1.5; }
+:where([data-text-scale="200"]) { --hos-text-scale: 2; }
+:root:has(.theme-scope[data-text-scale="125"]) { font-size: 125%; }
+:root:has(.theme-scope[data-text-scale="150"]) { font-size: 150%; }
+:root:has(.theme-scope[data-text-scale="200"]) { font-size: 200%; }
+
+/*
+ * High contrast. Laid over every theme, built-in or user (ADR 0103): the declarations are
+ * !important, so neither a theme's own rules nor a user theme's tokens (set inline on the scope)
+ * can take it back, and nested theme previews follow it too. Black surfaces, white text: body
+ * text reaches 21:1 and the dimmest text (muted) stays above 7:1; the focus ring is yellow and
+ * 3 px wide.
+ */
+:where([data-contrast="high"]),
+:where([data-contrast="high"]) :where([data-theme], [data-hos-theme]) {
+    --hos-color-scheme: dark !important;
+    --hos-bg-base: #000000 !important;
+    --hos-bg-surface: #000000 !important;
+    --hos-bg-elevated: #0d0d0d !important;
+    --hos-bg-overlay: rgb(0 0 0 / 88%) !important;
+    --hos-bg-surface-dim: #000000 !important;
+    --hos-text-primary: #ffffff !important;
+    --hos-text-secondary: #f2f2f2 !important;
+    --hos-text-muted: #d6d6d6 !important;
+    --hos-text-primary-rgb: 255, 255, 255 !important;
+    --hos-text-secondary-rgb: 242, 242, 242 !important;
+    --hos-text-muted-rgb: 214, 214, 214 !important;
+    --hos-text-inverse: #000000 !important;
+    --hos-text-accent: #00ff9c !important;
+    --hos-border-subtle: #bfbfbf !important;
+    --hos-border: #ffffff !important;
+    --hos-border-color: #ffffff !important;
+    --hos-border-rgb: 255, 255, 255 !important;
+    --hos-border-strong: #ffffff !important;
+    --hos-focus-ring: #ffff00 !important;
+    --hos-accent: #00ff9c !important;
+    --hos-accent-rgb: 0, 255, 156 !important;
+    --hos-accent-hover: #7dffc9 !important;
+    --hos-accent-subtle: #003d26 !important;
+    --hos-accent-glow: transparent !important;
+    --hos-success: #00ff9c !important;
+    --hos-warning: #ffd23f !important;
+    --hos-error: #ff7070 !important;
+    --hos-info: #66ccff !important;
+    --hos-success-rgb: 0, 255, 156 !important;
+    --hos-warning-rgb: 255, 210, 63 !important;
+    --hos-error-rgb: 255, 112, 112 !important;
+    --hos-info-rgb: 102, 204, 255 !important;
+    --hos-shadow-sm: none !important;
+    --hos-shadow-md: none !important;
+    --hos-shadow-lg: none !important;
+    --hos-inset-highlight: none !important;
+
+    --hos-btn-bg: #000000 !important;
+    --hos-btn-hover-bg: #1a1a1a !important;
+    --hos-btn-active-bg: #003d26 !important;
+    --hos-btn-color: #ffffff !important;
+    --hos-btn-hover-color: #ffffff !important;
+    --hos-btn-active-color: #ffffff !important;
+    --hos-btn-border: 2px solid #ffffff !important;
+    --hos-btn-hover-border: #ffff00 !important;
+    --hos-btn-active-border: #00ff9c !important;
+    --hos-btn-shadow: none !important;
+    --hos-btn-active-shadow: none !important;
+    --hos-btn-primary-bg: #00ff9c !important;
+    --hos-btn-primary-hover-bg: #7dffc9 !important;
+    --hos-btn-primary-active-bg: #00ff9c !important;
+    --hos-btn-primary-color: #000000 !important;
+    --hos-btn-primary-border: 2px solid #00ff9c !important;
+    --hos-btn-primary-hover-border: #ffff00 !important;
+    --hos-btn-primary-shadow: none !important;
+    --hos-btn-danger-bg: #000000 !important;
+    --hos-btn-danger-hover-bg: #330000 !important;
+    --hos-btn-danger-active-bg: #ff7070 !important;
+    --hos-btn-danger-color: #ff7070 !important;
+    --hos-btn-danger-border: 2px solid #ff7070 !important;
+
+    --hos-input-bg: #000000 !important;
+    --hos-input-color: #ffffff !important;
+    --hos-input-border: 2px solid #ffffff !important;
+    --hos-input-focus-border: #ffff00 !important;
+    --hos-input-focus-ring: 0 0 0 3px #ffff00 !important;
+    --hos-input-shadow: none !important;
+    --hos-input-placeholder: #d6d6d6 !important;
+
+    --hos-toolbar-bg: #000000 !important;
+    --hos-toolbar-border: 1px solid #ffffff !important;
+    --hos-card-bg: #000000 !important;
+    --hos-card-border: 1px solid #ffffff !important;
+    --hos-card-shadow: none !important;
+    --hos-table-header-bg: #000000 !important;
+    --hos-table-header-color: #ffffff !important;
+    --hos-table-border: 1px solid #ffffff !important;
+    --hos-table-row-hover-bg: #1a1a1a !important;
+    --hos-table-row-selected-bg: #003d26 !important;
+    --hos-table-row-selected-color: #ffffff !important;
+    --hos-badge-bg: #000000 !important;
+    --hos-badge-color: #ffffff !important;
+
+    --hos-desktop-background: #000000 !important;
+    --hos-desktop-grid-image: none !important;
+    --hos-window-background: #000000 !important;
+    --hos-window-content-background: #000000 !important;
+    --hos-window-text: #ffffff !important;
+    --hos-window-border: 2px solid #ffffff !important;
+    --hos-window-focused-border: #ffff00 !important;
+    --hos-window-shadow: none !important;
+    --hos-window-focused-shadow: 0 0 0 1px #ffff00 !important;
+    --hos-window-backdrop-filter: none !important;
+    --hos-titlebar-background: #000000 !important;
+    --hos-titlebar-focused-background: #003d26 !important;
+    --hos-titlebar-border: 1px solid #ffffff !important;
+    --hos-titlebar-text: #ffffff !important;
+    --hos-titlebar-focused-text: #ffffff !important;
+    --hos-window-icon-background: #000000 !important;
+    --hos-window-icon-border: 1px solid #ffffff !important;
+    --hos-window-control-background: #000000 !important;
+    --hos-window-control-hover-background: #1a1a1a !important;
+    --hos-window-control-color: #ffffff !important;
+    --hos-window-control-hover-color: #ffff00 !important;
+    --hos-window-control-border: 1px solid #ffffff !important;
+    --hos-window-control-shadow: none !important;
+    --hos-window-control-icon-opacity: 1 !important;
+    --hos-window-close-background: #000000 !important;
+    --hos-window-close-hover-background: #330000 !important;
+    --hos-window-close-color: #ff7070 !important;
+    --hos-window-close-border: 1px solid #ff7070 !important;
+    --hos-window-maximize-background: #000000 !important;
+    --hos-window-maximize-hover-background: #1a1a1a !important;
+
+    --hos-taskbar-background: #000000 !important;
+    --hos-taskbar-border: 2px solid #ffffff !important;
+    --hos-taskbar-shadow: none !important;
+    --hos-taskbar-backdrop-filter: none !important;
+    --hos-taskbar-button-background: #000000 !important;
+    --hos-taskbar-button-hover-background: #1a1a1a !important;
+    --hos-taskbar-button-active-background: #003d26 !important;
+    --hos-taskbar-button-border: 1px solid #ffffff !important;
+    --hos-taskbar-button-hover-border: #ffff00 !important;
+    --hos-taskbar-button-active-border: #00ff9c !important;
+    --hos-taskbar-button-color: #ffffff !important;
+    --hos-taskbar-button-active-color: #ffffff !important;
+    --hos-taskbar-button-shadow: none !important;
+    --hos-taskbar-active-indicator: #00ff9c !important;
+    --hos-taskbar-launcher-background: #000000 !important;
+    --hos-taskbar-launcher-active-background: #003d26 !important;
+    --hos-taskbar-launcher-color: #00ff9c !important;
+    --hos-launcher-background: #000000 !important;
+    --hos-launcher-sidebar-background: #000000 !important;
+    --hos-launcher-header-background: #000000 !important;
+    --hos-launcher-border: #ffffff !important;
+    --hos-launcher-shadow: none !important;
+
+    --hos-mobile-surface-background: #000000 !important;
+    --hos-mobile-nav-background: #000000 !important;
+    --hos-mobile-nav-border: 2px solid #ffffff !important;
+    --hos-mobile-nav-color: #ffffff !important;
+    --hos-mobile-nav-hover-background: #1a1a1a !important;
+    --hos-mobile-shade-grabber: #ffffff !important;
+    --hos-mobile-shade-grabber-hover: #ffff00 !important;
+    --hos-mobile-shade-backdrop: rgb(0 0 0 / 80%) !important;
+    --hos-mobile-shade-panel-background: #000000 !important;
+
+    color-scheme: dark;
+    color: #ffffff;
+}
+
+/* A visible 3 px focus indicator on everything focusable, whatever a component's own outline. */
+:where([data-contrast="high"]) :focus-visible {
+    outline: 3px solid #ffff00 !important;
+    outline-offset: 2px !important;
+}

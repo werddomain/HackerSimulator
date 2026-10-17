@@ -21,6 +21,7 @@ migration, en lecture seule.
 | Politique (`policy.config`) | `/etc/hackeros/policy.config` | aucune (document `SystemOnly`) |
 | Politique des capacités dangereuses (`security.config`, ADR 0049) | `/etc/hackeros/security.config` | aucune (document `SystemOnly`) |
 | Décisions sur les capacités dangereuses (ADR 0049) | `/etc/hackeros/app-permissions.config` (`allow`/`deny`) | `~/.config/hackeros/app-permissions.config` (`deny` seulement) |
+| Accessibilité (`highContrast`, `textScale`, `reducedMotion`, ADR 0105, voir [`accessibility.md`](accessibility.md)) | `/etc/hackeros/accessibility.config` (aussi lu par l'écran de connexion) | `~/.config/hackeros/accessibility.config` |
 | Associations de fichiers | `/etc/hackeros/file-associations.json` | `~/.config/hackeros/file-associations.json` |
 | Raccourcis du gestionnaire de fenêtres (`[linux]`, `[fallback]`, ADR 0095, voir [`window-model.md`](window-model.md)) | `/etc/hackeros/keybindings.config` | `~/.config/hackeros/keybindings.config` |
 | Géométrie des fenêtres | aucune | `~/.local/state/hackeros/windows/<appId>.config` |
@@ -137,7 +138,7 @@ await appearance.SetAsync("accent", "cyan");                       // ~/.config/
 await appearance.SetManyAsync(values, SettingLayer.System);        // /etc/hackeros : sudo ou approbation
 ```
 
-- Documents ouverts : `appearance`, `ui-platform-preference`, `security`,
+- Documents ouverts : `appearance`, `accessibility` (ADR 0105), `ui-platform-preference`, `security`,
   `policy`, `clipboard` (ADR 0065) (`OsSettingsDocumentRegistry`, Platform Core). Un autre id lève
   `ArgumentException`.
 - Dans `appearance`, `desktopThemeId` et `mobileThemeId` sont des chaînes

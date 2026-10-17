@@ -30,7 +30,7 @@
 
 .sim-page-title {
     margin: 0;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 700;
     opacity: 0.5;
     letter-spacing: 1px;
@@ -61,7 +61,7 @@
 
 .sim-hero-headline {
     margin: 0;
-    font-size: 36px;
+    font-size: 2.25rem;
     font-weight: 900;
     letter-spacing: 3px;
     color: var(--sim-accent, #33ff33);
@@ -70,7 +70,7 @@
 
 .sim-hero-subtitle {
     margin: 8px 0 0;
-    font-size: 14px;
+    font-size: 0.875rem;
     opacity: 0.6;
 }
 
@@ -98,7 +98,7 @@
 .sim-nav-link {
     color: var(--sim-fg, #33ff33);
     text-decoration: none;
-    font-size: 13px;
+    font-size: 0.8125rem;
     padding: 4px 12px;
     border-radius: 3px;
     cursor: pointer;
@@ -123,7 +123,7 @@
 
 .sim-form-title {
     margin: 0;
-    font-size: 18px;
+    font-size: 1.125rem;
     color: var(--sim-accent, #33ff33);
 }
 
@@ -140,7 +140,7 @@
 }
 
 .sim-field label {
-    font-size: 12px;
+    font-size: 0.75rem;
     opacity: 0.7;
     letter-spacing: 0.5px;
 }
@@ -151,7 +151,7 @@
     color: var(--sim-fg, #33ff33);
     padding: 8px 10px;
     font-family: inherit;
-    font-size: 13px;
+    font-size: 0.8125rem;
     border-radius: 3px;
     outline: none;
     width: 100%;
@@ -174,7 +174,7 @@
     cursor: pointer;
     padding: 10px 20px;
     font-family: inherit;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 700;
     border-radius: 3px;
     letter-spacing: 0.5px;
@@ -209,7 +209,7 @@
     right: 8px;
     background: var(--sim-accent, #33ff33);
     color: var(--sim-bg, #0d0d0d);
-    font-size: 10px;
+    font-size: 0.625rem;
     font-weight: 700;
     padding: 2px 6px;
     border-radius: 2px;
@@ -217,12 +217,12 @@
 
 .sim-product-title {
     font-weight: 700;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--sim-accent, #33ff33);
 }
 
 .sim-product-desc {
-    font-size: 12px;
+    font-size: 0.75rem;
     opacity: 0.65;
     line-height: 1.4;
 }
@@ -230,7 +230,7 @@
 .sim-product-price {
     font-weight: 700;
     color: #ff9900;
-    font-size: 14px;
+    font-size: 0.875rem;
     margin-top: auto;
 }
 
@@ -238,14 +238,14 @@
 
 .sim-table-title {
     margin: 0 0 10px;
-    font-size: 16px;
+    font-size: 1rem;
     color: var(--sim-accent, #33ff33);
 }
 
 .sim-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 .sim-table th,
@@ -258,7 +258,7 @@
 .sim-table th {
     color: var(--sim-accent, #33ff33);
     font-weight: 700;
-    font-size: 11px;
+    font-size: 0.6875rem;
     letter-spacing: 0.5px;
     text-transform: uppercase;
     opacity: 0.8;
@@ -274,7 +274,7 @@
     padding: 10px 20px;
     background: rgba(0,0,0,0.3);
     font-weight: 700;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--sim-accent, #33ff33);
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -302,12 +302,12 @@
 .sim-thread-title {
     flex: 1;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--sim-fg, #33ff33);
 }
 
 .sim-thread-meta {
-    font-size: 11px;
+    font-size: 0.6875rem;
     opacity: 0.5;
     white-space: nowrap;
 }
@@ -331,18 +331,18 @@
 }
 
 .sim-email-subject {
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--sim-fg, #33ff33);
 }
 
 .sim-email-sender {
-    font-size: 11px;
+    font-size: 0.6875rem;
     opacity: 0.6;
     margin-top: 2px;
 }
 
 .sim-email-snippet {
-    font-size: 12px;
+    font-size: 0.75rem;
     opacity: 0.5;
     margin-top: 4px;
     white-space: nowrap;
@@ -354,7 +354,7 @@
 /* ── Unknown section placeholder ─────────────────────────────────────────── */
 
 .sim-unknown {
-    font-size: 12px;
+    font-size: 0.75rem;
     opacity: 0.4;
     font-style: italic;
 }

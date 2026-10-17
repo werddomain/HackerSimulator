@@ -61,7 +61,7 @@
 
     <div class="proc-content @(DetailProcess is not null ? "with-detail" : null)">
         <div class="proc-table-wrapper" tabindex="0" data-sysmon-selectable @onkeydown="OnKeyDownAsync">
-            <table class="sysmon-table proc-table" aria-multiselectable="true">
+            <table class="sysmon-table proc-table" role="grid" aria-multiselectable="true">
                 <thead>
                     <tr>
                         @foreach ((ProcessColumn column, string labelKey, bool numeric) in Columns)

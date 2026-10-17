@@ -6,7 +6,7 @@
     border-top: 2px solid var(--hos-accent, #1f6feb);
     background: var(--hos-bg-base, #0d1117);
     color: var(--hos-text-primary, #c9d1d9);
-    font: 12px/1.4 'Cascadia Code', Consolas, monospace;
+    font: 0.75rem/1.4 'Cascadia Code', Consolas, monospace;
 }
 
 .devtools-bar {
@@ -62,7 +62,7 @@
     color: var(--hos-text-muted, #8b949e);
     cursor: pointer;
     padding: 0 8px;
-    font-size: 14px;
+    font-size: 0.875rem;
 }
 
 .devtools-action:hover,

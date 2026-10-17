@@ -48,6 +48,30 @@ public sealed class ThemeComponentRenderTests
             StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(false, 1.0, "standard", "100")]
+    [InlineData(true, 1.25, "high", "125")]
+    [InlineData(false, 1.5, "standard", "150")]
+    [InlineData(true, 2.0, "high", "200")]
+    // A factor outside ADR 0105's list renders at 100 %.
+    [InlineData(false, 3.0, "standard", "100")]
+    public async Task ThemeScope_renders_the_accessibility_attributes(
+        bool highContrast, double textScale, string expectedContrast, string expectedScale)
+    {
+        FrameCapturingRenderer renderer = new(EmptyServices());
+        ThemeScope scope = new()
+        {
+            HighContrast = highContrast,
+            TextScale = textScale,
+            ChildContent = _ => { }
+        };
+
+        ArrayRange<RenderTreeFrame> frames = await renderer.RenderAsync(scope);
+
+        AssertAttribute(frames, "data-contrast", expectedContrast);
+        AssertAttribute(frames, "data-text-scale", expectedScale);
+    }
+
     [Fact]
     public async Task ThemeScope_rejects_a_theme_from_the_wrong_form_factor()
     {
