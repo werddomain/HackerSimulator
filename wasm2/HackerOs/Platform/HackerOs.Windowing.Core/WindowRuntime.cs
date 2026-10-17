@@ -53,6 +53,7 @@ public sealed class WindowRuntime
             CancelWindowCloseCommand close => CancelClose(close.WindowId),
             ForceWindowCloseCommand close => ForceClose(close.WindowId),
             ChangeViewportCommand viewport => ChangeViewport(viewport.WorkArea),
+            SetWindowTitleCommand title => ChangeTitle(title.WindowId, title.Title),
             null => throw new ArgumentNullException(nameof(command)),
             _ => throw new ArgumentOutOfRangeException(nameof(command), command, "Unknown window command."),
         };
@@ -65,6 +66,16 @@ public sealed class WindowRuntime
 
         return events;
     }
+
+    /// <summary>
+    /// Replaces the displayed title of <paramref name="windowId"/> (ADR 0117 §3). The title is cleaned
+    /// with <see cref="WindowTitles.Sanitize"/>; an unchanged title produces no event.
+    /// </summary>
+    /// <param name="windowId">The window to rename.</param>
+    /// <param name="title">The new title; must not be empty once cleaned.</param>
+    /// <returns>A <see cref="WindowTitleChangedEvent"/>, or nothing when the title did not change.</returns>
+    public IReadOnlyList<WindowEvent> SetTitle(WindowId windowId, string title) =>
+        Apply(new SetWindowTitleCommand(windowId, title));
 
     private IReadOnlyList<WindowEvent> Create(WindowRuntimeState initialState)
     {
@@ -256,6 +267,24 @@ public sealed class WindowRuntime
         return [new WindowViewportChangedEvent(workArea, Windows)];
     }
 
+    private IReadOnlyList<WindowEvent> ChangeTitle(WindowId id, string requestedTitle)
+    {
+        string title = WindowTitles.Sanitize(requestedTitle);
+        if (title.Length == 0)
+        {
+            throw new ArgumentException("A window title cannot be empty.", nameof(requestedTitle));
+        }
+
+        WindowRuntimeState current = Get(id);
+        if (string.Equals(current.Title, title, StringComparison.Ordinal))
+        {
+            return [];
+        }
+
+        _windows[id] = Copy(current, title: title);
+        return [new WindowTitleChangedEvent(id, current.Title, title)];
+    }
+
     private IReadOnlyList<WindowEvent> FocusTopVisible(WindowId excludedId)
     {
         WindowRuntimeState? next = _windows.Values
@@ -312,12 +341,13 @@ public sealed class WindowRuntime
         bool replaceRestoreBounds = false,
         int? zOrder = null,
         WindowVisualState? visualState = null,
-        bool? isFocused = null) =>
+        bool? isFocused = null,
+        string? title = null) =>
         new(
             state.Id,
             state.AppId,
             state.OwnerInstanceId,
-            state.Title,
+            title ?? state.Title,
             state.IconAssetPath,
             bounds ?? state.Bounds,
             replaceRestoreBounds ? restoreBounds : state.RestoreBounds,

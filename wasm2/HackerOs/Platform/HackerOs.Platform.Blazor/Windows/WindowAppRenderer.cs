@@ -42,9 +42,35 @@ public sealed class WindowAppRenderer : ComponentBase, IDisposable
     [Parameter]
     public WindowAppEventDispatcher? WindowEvents { get; set; }
 
+    /// <summary>
+    /// Gets or sets the factory of the app's window gateway (ADR 0117 §2), through which
+    /// <see cref="WindowAppBase.SetWindowTitleAsync"/> renames this window. Optional: without it the
+    /// app's title stays inside the app.
+    /// </summary>
+    [Parameter]
+    public AppWindowGatewayFactory? WindowGateways { get; set; }
+
+    private IAppWindowGateway? _windowGateway;
+    private WindowId _windowGatewayId;
+
     /// <inheritdoc />
-    protected override void OnParametersSet() =>
+    /// <remarks>
+    /// The gateway is created here, before the app component is instantiated, so it reaches the app
+    /// with its first parameters and a title set in its initialization is shown with the window.
+    /// </remarks>
+    protected override void OnParametersSet()
+    {
         WindowAppRenderValidator.Validate(Window, Descriptor, AppContext);
+        if (WindowGateways is null)
+        {
+            _windowGateway = null;
+        }
+        else if (_windowGateway is null || _windowGatewayId != Window.Id)
+        {
+            _windowGateway = WindowGateways.Create(Window.Id, AppContext.Manifest);
+            _windowGatewayId = Window.Id;
+        }
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -62,6 +88,22 @@ public sealed class WindowAppRenderer : ComponentBase, IDisposable
     }
 
     private void RenderApp(RenderTreeBuilder builder)
+    {
+        if (_windowGateway is null)
+        {
+            RenderEntryPoint(builder);
+            return;
+        }
+
+        // ADR 0117 §2: the window's own gateway, fixed for the window's lifetime like the context.
+        builder.OpenComponent<CascadingValue<IAppWindowGateway>>(0);
+        builder.AddComponentParameter(1, nameof(CascadingValue<IAppWindowGateway>.Value), _windowGateway);
+        builder.AddComponentParameter(2, nameof(CascadingValue<IAppWindowGateway>.IsFixed), true);
+        builder.AddComponentParameter(3, nameof(CascadingValue<IAppWindowGateway>.ChildContent), (RenderFragment)RenderEntryPoint);
+        builder.CloseComponent();
+    }
+
+    private void RenderEntryPoint(RenderTreeBuilder builder)
     {
         builder.OpenComponent(0, Descriptor.EntryPointType);
         builder.AddComponentParameter(1, nameof(WindowAppBase.AppContext), AppContext);

@@ -460,6 +460,16 @@ l'état `IsWindowActive`, `WindowState`, `WindowSize`. Les types `HackWindowStat
 `HackerOs.App.Abstractions`. Aucune app n'injecte de service pour les recevoir :
 l'OS les appelle. Voir [`window-model.md`](window-model.md).
 
+### Titre de fenêtre (ADR 0117, ADR 0123, SDK 1.1)
+
+`WindowAppBase.SetWindowTitleAsync(title)` remplace le titre de la fenêtre de
+l'instance (aucune capacité), `WindowTitle` le lit et
+`FormatWindowTitle(document, modified)` compose `document — App` avec le nom
+traduit de l'app. La plateforme donne à chaque fenêtre une `IAppWindowGateway`
+par valeur en cascade fixe, jamais par injection : une app n'atteint que sa
+propre fenêtre et le SDK ne référence aucun type `HackerOs.Windowing.*`
+(ADR 0055). Voir [`window-model.md`](window-model.md) §4.
+
 ### API ajoutées après la phase 4 (ADR 0061 à 0065)
 
 Ces API suivent les mêmes règles (façade ou passerelle, capacité déclarée dans

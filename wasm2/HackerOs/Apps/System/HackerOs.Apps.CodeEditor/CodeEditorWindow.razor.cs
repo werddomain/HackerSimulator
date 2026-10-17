@@ -101,6 +101,8 @@ public partial class CodeEditorWindow
     /// <inheritdoc />
     protected override async Task OnAppInitializedAsync()
     {
+        // ADR 0117 §2: named before the window is first shown.
+        await SetWindowTitleAsync(DocumentWindowTitle());
         CodeEditorRecoveryResult recovery = await _recoveryStore!.LoadAsync(AppContext.CancellationToken);
         if (recovery.HasSession)
         {
@@ -128,6 +130,9 @@ public partial class CodeEditorWindow
     /// <inheritdoc />
     protected override async Task OnAppAfterRenderAsync(bool firstRender)
     {
+        // Switching tabs, opening a folder, editing and saving all end in a render.
+        await SetWindowTitleAsync(DocumentWindowTitle());
+
         if (firstRender)
         {
             try
@@ -1182,16 +1187,21 @@ public partial class CodeEditorWindow
         _statusIsError = false;
     }
 
-    private string WindowTitle()
+    /// <summary>
+    /// The window title (ADR 0117 §4), as VS Code builds it: the active tab's file, then the open
+    /// folder, then the app's name (<c>*Program.cs — src — Code Editor</c>), with <c>*</c> while
+    /// that file has unsaved changes.
+    /// </summary>
+    private string DocumentWindowTitle()
     {
-        string? document = ActiveDocument?.Title;
+        CodeEditorDocument? document = ActiveDocument;
         string? folder = _workspace?.Name;
         return (document, folder) switch
         {
-            (null, null) => L["App.Name"],
-            (null, _) => L["Title.Folder", folder],
-            (_, null) => L["Title.Document", document],
-            _ => L["Title.DocumentFolder", document, folder]
+            (null, null) => FormatWindowTitle(null),
+            (null, _) => FormatWindowTitle(folder),
+            (_, null) => FormatWindowTitle(document.Title, IsDirty(document)),
+            _ => FormatWindowTitle($"{document.Title} — {folder}", IsDirty(document))
         };
     }
 

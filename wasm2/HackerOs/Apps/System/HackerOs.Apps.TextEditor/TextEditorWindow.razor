@@ -197,6 +197,8 @@
     {
         _doc = new TextEditorDocument(L);
         _fileSystem = AppContext.FileSystem;
+        // ADR 0117 §4: "notes.txt — Text Editor", named before the window is first shown.
+        await SetWindowTitleAsync(DocumentWindowTitle);
 
         // Accept the file to open (P2-TEXT-002): an explicit host parameter, otherwise the first
         // launch argument, which is how an open-file intent (File Explorer double-click, `open`)
@@ -247,8 +249,17 @@
         }
     }
 
+    /// <summary>
+    /// The window title (ADR 0117 §4): <c>notes.txt — Text Editor</c>, with <c>*</c> in front while
+    /// the text has unsaved changes.
+    /// </summary>
+    private string DocumentWindowTitle => FormatWindowTitle(_doc.Title, _doc.IsDirty);
+
     protected override async Task OnAppAfterRenderAsync(bool firstRender)
     {
+        // Opening, editing and saving all end in a render: the window title follows them here.
+        await SetWindowTitleAsync(DocumentWindowTitle);
+
         if (firstRender)
         {
             try

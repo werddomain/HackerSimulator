@@ -1,1 +1,8 @@
 #nullable enable
+HackerOs.Platform.Blazor.Windows.AppWindowGatewayFactory
+HackerOs.Platform.Blazor.Windows.AppWindowGatewayFactory.AppWindowGatewayFactory(HackerOs.Windowing.Core.WindowRuntime! runtime) -> void
+HackerOs.Platform.Blazor.Windows.AppWindowGatewayFactory.AppWindowGatewayFactory(HackerOs.Windowing.Core.WindowRuntime! runtime, HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator! launchCoordinator) -> void
+HackerOs.Platform.Blazor.Windows.AppWindowGatewayFactory.Create(HackerOs.Windowing.Abstractions.WindowId windowId, HackerOs.App.Abstractions.AppManifest! manifest) -> HackerOs.AppSdk.Blazor.IAppWindowGateway!
+HackerOs.Platform.Blazor.Windows.WindowAppRenderer.WindowGateways.get -> HackerOs.Platform.Blazor.Windows.AppWindowGatewayFactory?
+HackerOs.Platform.Blazor.Windows.WindowAppRenderer.WindowGateways.set -> void
+HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.DefaultTitle(HackerOs.App.Abstractions.AppManifest! manifest) -> string!

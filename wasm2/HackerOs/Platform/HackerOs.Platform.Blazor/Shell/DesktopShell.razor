@@ -20,6 +20,7 @@
 @inject WindowCloseGuardRegistry CloseGuards
 @inject AppBackHandlerRegistry BackHandlers
 @inject WindowAppEventDispatcher WindowEvents
+@inject AppWindowGatewayFactory WindowGateways
 @inject WindowKeyboardCommands KeyboardCommands
 @inject ISessionService SessionService
 @inject ISimulationClock SimulationClock
@@ -52,7 +53,8 @@
                                        AppContext="context"
                                        CloseGuards="CloseGuards"
                                        BackHandlers="BackHandlers"
-                                       WindowEvents="WindowEvents" />
+                                       WindowEvents="WindowEvents"
+                                       WindowGateways="WindowGateways" />
                 }
                 else
                 {

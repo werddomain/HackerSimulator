@@ -12,6 +12,8 @@ mise en œuvre de l'[ADR 0095](adr/0095-window-events-sizes-and-keyboard.md).
 - Le gestionnaire de fenêtres se pilote au clavier comme un bureau Linux : changer de fenêtre,
   fermer, menu de fenêtre, déplacer et redimensionner au clavier, réduire, agrandir, ancrer à
   gauche ou à droite, plein écran.
+- Une app fenêtrée écrit le titre de sa fenêtre (`document — App`), affiché par le gestionnaire de
+  fenêtres (ADR 0117, §4).
 
 ## 1. Événements de fenêtre (ADR 0095 §1)
 
@@ -167,6 +169,67 @@ qui a le focus. Une lettre est reconnue par sa touche physique quand Alt change 
   combinaisons envoyées par le C#, appelle le C# et bloque la touche ; il gère le plein écran et
   le verrouillage du clavier.
 
+## 4. Titre de fenêtre (ADR 0117, ADR 0123)
+
+Chantier `v3.1/3-window-title` de la [série v3.1](v3-1-series-plan.md).
+
+### Pour l'app
+
+L'app écrit **tout** son titre, comme un client X11 écrit `_NET_WM_NAME` ; le gestionnaire de
+fenêtres l'affiche tel quel dans la barre de titre, la barre des tâches, le sélecteur `` Alt+` ``,
+les récents du bureau mobile et le nom accessible du cadre (`aria-labelledby`).
+
+| Membre de `WindowAppBase` | Rôle |
+| --- | --- |
+| `WindowTitle` | Titre affiché ; le nom de l'app dans la langue du bureau tant que l'app n'a rien posé. |
+| `SetWindowTitleAsync(string? title, CancellationToken)` | Remplace le titre de **cette** fenêtre. `null`, vide ou blanc rend le nom de l'app. Aucune capacité. |
+| `FormatWindowTitle(string? document, bool modified = false)` | Compose la convention des apps de base : `document — App`, `*` en tête si `modified`, le nom seul sans document. |
+
+```razor
+@inherits WindowAppBase
+
+@code {
+    protected override Task OnAppInitializedAsync() => SetWindowTitleAsync(FormatWindowTitle(_name, _dirty)).AsTask();
+
+    // Ouvrir, modifier, enregistrer finissent par un rendu : le titre suit ici. Redemander le même
+    // titre ne fait rien.
+    protected override Task OnAppAfterRenderAsync(bool firstRender) =>
+        SetWindowTitleAsync(FormatWindowTitle(_name, _dirty)).AsTask();
+}
+```
+
+- Le titre est nettoyé : caractères de contrôle retirés, espaces aux extrémités coupés, au plus
+  256 caractères (coupé avec `…`, jamais au milieu d'une paire de substitution).
+- Posé dans `OnAppInitialized[Async]`, il est affiché avec la fenêtre, sans clignotement.
+- Les fenêtres détachées suivies par `TrackDisplaySurface` prennent le même titre une fois que l'app
+  en a posé un.
+- Les fenêtres sensibles de l'OS (agent d'authentification, approbation d'une capacité dangereuse)
+  sont dessinées par l'OS, hors des fenêtres d'app, et ne prennent jamais un titre d'app ; la barre
+  des tâches montre l'icône de l'app propriétaire à côté du titre.
+- Une app sans interface (`Terminal`, `Service`) n'a pas cette API.
+
+### Architecture
+
+- `WindowRuntime.SetTitle(windowId, title)` (Windowing.Core) applique `SetWindowTitleCommand`,
+  nettoie le titre avec `WindowTitles.Sanitize` (Windowing.Abstractions) et publie
+  `WindowTitleChangedEvent` ; un titre inchangé ne produit rien. Les surfaces relisent
+  `WindowRuntimeState.Title` à chaque `StateChanged`.
+- `AppWindowGatewayFactory` (Platform.Blazor, enregistrée par `AddHackerOsEcosystem`) crée une
+  `IAppWindowGateway` par fenêtre, liée à son `WindowId`. `WindowAppRenderer` la reçoit
+  (`WindowGateways`, passé par `DesktopShell` et `MobileShell`) et la donne à l'app par un
+  `CascadingValue` fixe : l'app ne peut atteindre que sa propre fenêtre.
+- Le titre par défaut vient de `WindowLaunchCoordinator.DefaultTitle(manifest)` (nom traduit).
+
+### Apps de base
+
+| App | Titre |
+| --- | --- |
+| Hack Paint | `photo.png — Hack Paint`, `*` si l'image est modifiée ; le nom quitte la barre d'outils. |
+| Éditeur de texte | `*notes.txt — Éditeur de texte` ; le bandeau de l'app garde son affichage. |
+| Éditeur de code | Onglet actif, puis dossier ouvert : `*Program.cs — src — Éditeur de code`. |
+| Éditeur de thèmes | `*Nom — Éditeur de thèmes` (aussi dans sa barre d'outils). |
+| Explorateur de fichiers | `Documents — Explorateur de fichiers`, `/` à la racine, la corbeille quand elle est affichée. |
+
 ## Décisions de mise en œuvre
 
 - **Plein écran ajouté** (`toggle-fullscreen`, `Alt+F11`, entrée du menu) : le verrouillage du
@@ -193,6 +256,11 @@ qui a le focus. Une lettre est reconnue par sa touche physique quand Alt change 
 - `WindowRuntimeTests` (Windowing.Core) : fin de redimensionnement, minimum qui déborde, réduction
   en arrière-plan.
 - Validateur, sérialiseur, mappeur et schéma (App.Abstractions).
+- `WindowAppBaseWindowTitleTests` (SDK Blazor), `WindowTitleTests` (Windowing.Core),
+  `AppWindowGatewayFactoryTests` (Platform.Blazor) : titre posé avant le premier rendu, même titre
+  ignoré, nettoyage, retour au nom de l'app, une seule fenêtre visée, fenêtre fermée, surfaces.
+- E2E `HackPaintWindowTitleTests` (UI.E2E) : `Untitled — Hack Paint`, `*` après un trait, nom du
+  fichier après « Enregistrer sous » dans la barre de titre et la barre des tâches.
 - E2E `WindowKeyboardCommandsTests` (UI.E2E) : `` Alt+` `` change de fenêtre et `Alt+Q` ferme la
   fenêtre active dans un onglet Chromium.
 
@@ -210,3 +278,12 @@ qui a le focus. Une lettre est reconnue par sa touche physique quand Alt change 
 - [x] App d'exemple WindowApp : tailles déclarées et journal des événements.
 - [x] Tests unitaires et E2E.
 - [x] Documentation et index.
+
+### Chantier `v3.1/3-window-title`
+
+- [x] Commande `SetWindowTitleCommand`, événement `WindowTitleChangedEvent`, `WindowTitles.Sanitize`.
+- [x] `IAppWindowGateway`, `AppWindowGatewayFactory`, cascade dans `WindowAppRenderer` (bureau et mobile).
+- [x] `WindowTitle`, `SetWindowTitleAsync`, `FormatWindowTitle` dans `WindowAppBase` ; surfaces détachées suivies.
+- [x] Hack Paint, éditeur de texte, éditeur de code, éditeur de thèmes, explorateur.
+- [x] Tests unitaires et E2E.
+- [x] ADR 0123, documentation, référence du SDK et index.

@@ -53,8 +53,11 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
     [Inject]
     private IJSRuntime JsRuntime { get; set; } = default!;
 
-    /// <summary>Gets the window title: <c>name.png — Hack Paint</c>, prefixed with <c>*</c> while unsaved.</summary>
-    internal string WindowTitle => PaintTitle.Format(_path?.Value, _state.IsDirty, Untitled);
+    /// <summary>
+    /// Gets the window title (ADR 0103 §1, ADR 0117 §4): <c>name.png — Hack Paint</c>, prefixed with
+    /// <c>*</c> while unsaved. Shown by the window manager, not inside the app.
+    /// </summary>
+    internal string DocumentTitle => PaintTitle.Format(_path?.Value, _state.IsDirty, Untitled);
 
     private bool IsBusy => _busyMessage is not null;
 
@@ -66,8 +69,14 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
     }
 
     /// <inheritdoc />
+    /// <remarks>Names the window before it is first shown (ADR 0117 §2).</remarks>
+    protected override Task OnAppInitializedAsync() => SetWindowTitleAsync(DocumentTitle).AsTask();
+
+    /// <inheritdoc />
     protected override async Task OnAppAfterRenderAsync(bool firstRender)
     {
+        // Every change of file or of saved state ends in a render: the title follows it here.
+        await SetWindowTitleAsync(DocumentTitle);
         if (firstRender)
         {
             _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/HackerOs.Apps.HackPaint/HackPaintWindow.razor.js");

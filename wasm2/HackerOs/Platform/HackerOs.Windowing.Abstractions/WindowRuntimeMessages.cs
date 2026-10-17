@@ -43,6 +43,15 @@ public sealed record ForceWindowCloseCommand(WindowId WindowId) : WindowCommand;
 /// <summary>Reports a new desktop work area that may constrain every window.</summary>
 public sealed record ChangeViewportCommand(WindowBounds WorkArea) : WindowCommand;
 
+/// <summary>
+/// Replaces a window's displayed title (ADR 0117 §3), like an X11 client writing
+/// <c>_NET_WM_NAME</c>: the runtime cleans it with <see cref="WindowTitles.Sanitize"/> and shows it
+/// as given, without adding the app's name.
+/// </summary>
+/// <param name="WindowId">The window to rename.</param>
+/// <param name="Title">The new title; must not be empty once cleaned.</param>
+public sealed record SetWindowTitleCommand(WindowId WindowId, string Title) : WindowCommand;
+
 /// <summary>Base contract for an immutable fact emitted after a window transition.</summary>
 public abstract record WindowEvent;
 
@@ -77,6 +86,9 @@ public sealed record WindowCloseCancelledEvent(WindowId WindowId) : WindowEvent;
 
 /// <summary>Reports final removal from the runtime.</summary>
 public sealed record WindowClosedEvent(WindowId WindowId, bool WasForced) : WindowEvent;
+
+/// <summary>Reports that a window's displayed title changed (ADR 0117 §3).</summary>
+public sealed record WindowTitleChangedEvent(WindowId WindowId, string PreviousTitle, string Title) : WindowEvent;
 
 /// <summary>Reports a work-area change and the resulting window snapshots.</summary>
 public sealed record WindowViewportChangedEvent(WindowBounds WorkArea, IReadOnlyList<WindowRuntimeState> Windows) : WindowEvent;

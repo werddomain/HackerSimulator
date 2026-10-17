@@ -33,8 +33,11 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
     /// <summary>The Theme Editor's texts in its own process's language (ADR 0104).</summary>
     private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
 
-    /// <summary>Gets the window title: <c>name — Theme Editor</c>, prefixed with <c>*</c> while unsaved.</summary>
-    internal string WindowTitle =>
+    /// <summary>
+    /// Gets the window title (ADR 0117 §4): <c>name — Theme Editor</c>, prefixed with <c>*</c> while
+    /// unsaved. The window manager shows it; the toolbar repeats it.
+    /// </summary>
+    internal string DocumentTitle =>
         $"{(_document.IsDirty ? "*" : string.Empty)}{L["Title.Format", DisplayName]}";
 
     /// <summary>The theme's name, or "Untitled" in the app's language while it has none.</summary>
@@ -50,6 +53,7 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
     protected override async Task OnAppInitializedAsync()
     {
         _document = new ThemeEditorDocument(L);
+        await SetWindowTitleAsync(DocumentTitle);
         await RefreshLibraryAsync();
 
         // A .theme file opened from the File Explorer, "Open with" or `theme-editor <file>`.
@@ -58,6 +62,10 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
             await LoadAsync(launchFile, AppContext.FileSystem);
         }
     }
+
+    /// <inheritdoc />
+    /// <remarks>Opening, editing and saving all end in a render: the window title follows them here.</remarks>
+    protected override Task OnAppAfterRenderAsync(bool firstRender) => SetWindowTitleAsync(DocumentTitle).AsTask();
 
     /// <summary>Re-reads the installed themes when the window comes back to the front (a theme copied meanwhile shows up).</summary>
     protected override Task OnWindowActivatedAsync() => RefreshLibraryAsync();

@@ -222,6 +222,7 @@ public abstract partial class WindowAppBase
             _width = surface.Width;
             _height = surface.Height;
             surface.Changed += OnChanged;
+            _owner.OnSurfaceTrackingChanged(this, tracked: true);
             if (surface.State == DisplaySurfaceState.Open && surface.HasFocus)
             {
                 _hasFocus = true;
@@ -252,6 +253,27 @@ public abstract partial class WindowAppBase
             }
         }
 
+        /// <summary>
+        /// Gives the surface's browser window the app's title (ADR 0117 §3). A surface that just
+        /// closed or a browser that refuses is logged, never thrown at the app.
+        /// </summary>
+        public async Task ApplyTitleAsync(string title)
+        {
+            if (_disposed || _surface.State != DisplaySurfaceState.Open)
+            {
+                return;
+            }
+
+            try
+            {
+                await _surface.SetTitleAsync(title);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                _owner.LogSurfaceTitleFailure(exception);
+            }
+        }
+
         public void Dispose()
         {
             if (_disposed)
@@ -261,6 +283,7 @@ public abstract partial class WindowAppBase
 
             _disposed = true;
             _surface.Changed -= OnChanged;
+            _owner.OnSurfaceTrackingChanged(this, tracked: false);
             if (_hasFocus)
             {
                 _hasFocus = false;
