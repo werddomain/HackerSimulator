@@ -1,0 +1,34 @@
+@model IReadOnlyList<Person>
+@{
+    ViewData.Title = "People";
+    string? query = ViewData["Query"] as string;
+}
+<section class="panel">
+    <h1>People</h1>
+    <p>The server renders the result of the search; with script, <code>people.js</code> filters as you type
+       by calling <code>GET /api/people?q=</code>.</p>
+    <form method="get" action="@Url.Action("Index", "People")" class="search" id="people-search" data-api="@Url.Content("~/api/people")">
+        <input type="search" name="q" value="@query" placeholder="name, team, role or handle" aria-label="Search" id="people-query" />
+        <button type="submit" class="button">Search</button>
+    </form>
+    <p class="muted" id="people-count">@Model.Count result(s)</p>
+    <table class="grid">
+        <thead><tr><th>Name</th><th>Role</th><th>Team</th><th>Ext.</th><th>Chat</th></tr></thead>
+        <tbody id="people-rows">
+            @foreach (Person person in Model)
+            {
+                <tr>
+                    <td>@person.Name</td>
+                    <td>@person.Role</td>
+                    <td><span class="tag">@person.Team</span></td>
+                    <td><code>@person.Extension</code></td>
+                    <td>@@@person.Handle</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</section>
+
+@section Scripts {
+    <script src="@Url.Content("~/js/people.js")"></script>
+}

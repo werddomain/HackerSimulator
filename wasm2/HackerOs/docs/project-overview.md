@@ -105,7 +105,7 @@ navigateur est ici.
 |---|---|
 | `Apps/System/` | Les 13 apps fenêtrées de base : Terminal, File Explorer, Text Editor, Code Editor, Settings, System Monitor (gestionnaire de tâches), Error Log Viewer, Diagnostic, Browser, Calculator, HackPaint, Icon Viewer, Web Server Manager (avec le service `hackwebd`, [`static-sites.md`](static-sites.md)). |
 | `Apps/Commands/HackerOs.Commands` | Les 63 commandes du shell dans un seul projet (`ls`, `cat`, `cd`, `cp`, `mv`, `rm`, `grep`, `nano`, `sudo`, `ping`, `curl`, `nmap`, et depuis l'ADR 0064 `sort`, `cut`, `zip`, `top`, `htop`, `systemctl`, `ip`, `test`, `read`… : [`linux-commands.md`](linux-commands.md)), une classe `[AppManifest]` par commande (ADR 0051) ; elles tournent dans le pool de Web Workers sauf les 14 qui touchent le shell ou l'écran (ADR 0070). |
-| `Apps/Samples/` | Apps d'exemple, une par genre (fenêtre, commande, service, plateforme, site Blazor) ; elles ne sont pas installées dans l'hôte, sauf `HackerOs.Samples.BlazorSite` (`http://blazor-sample.hack/`), app cachée installée pour que le navigateur puisse la servir (ADR 0084). |
+| `Apps/Samples/` | Apps d'exemple, une par genre (fenêtre, commande, service, plateforme, site Blazor, site ASP.Hack complet) ; elles ne sont pas installées dans l'hôte, sauf les deux sites `HackerOs.Samples.BlazorSite` (`http://blazor-sample.hack/`, ADR 0084) et `HackerOs.Samples.Intranet` (`http://intranet.hack/`, ADR 0087, [guide ASP.Hack](asp-hack-developer-guide.md)), apps cachées installées pour que le navigateur puisse les servir. |
 
 Une app est **système** quand l'hôte la déclare ainsi sur sa `ProjectReference`
 (`IsSystemApp="true"`) : elle n'est pas désinstallable et reçoit d'office ses

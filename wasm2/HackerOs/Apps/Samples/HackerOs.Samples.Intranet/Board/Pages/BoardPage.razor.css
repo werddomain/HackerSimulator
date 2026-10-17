@@ -1,0 +1,118 @@
+.board-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.board-toolbar h1 {
+    margin: 0;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: 24px;
+}
+
+.board-add {
+    display: flex;
+    gap: 8px;
+}
+
+.board-add input {
+    width: 280px;
+    padding: 7px 10px;
+    border: 1px solid #23362b;
+    border-radius: 4px;
+    background: #070a08;
+    color: #d5e8dc;
+    font-family: "JetBrains Mono", Consolas, monospace;
+}
+
+.board-button {
+    padding: 7px 16px;
+    border: 1px solid #1f8f51;
+    border-radius: 4px;
+    background: rgba(57, 255, 136, 0.12);
+    color: #39ff88;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    cursor: pointer;
+}
+
+.board-button:disabled,
+.board-icon:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.board-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.board-column {
+    min-height: 240px;
+    padding: 12px;
+    border: 1px solid #23362b;
+    border-radius: 8px;
+    background: #111814;
+}
+
+.board-column h2 {
+    display: flex;
+    justify-content: space-between;
+    margin: 0 0 12px;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: 14px;
+    text-transform: uppercase;
+    color: #39ff88;
+}
+
+.board-count {
+    color: #7f9a89;
+}
+
+.board-card {
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    border: 1px solid #23362b;
+    border-radius: 6px;
+    background: #16211b;
+}
+
+.board-card-title {
+    color: #d5e8dc;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.board-card-title:hover {
+    color: #39ff88;
+}
+
+.board-card-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.board-icon {
+    border: 1px solid #23362b;
+    border-radius: 4px;
+    background: transparent;
+    color: #7f9a89;
+    cursor: pointer;
+}
+
+.board-icon.danger {
+    color: #ff5d5d;
+}
+
+.board-muted {
+    margin: 4px 0;
+    color: #7f9a89;
+    font-size: 12px;
+}
+
+.board-error {
+    color: #ff5d5d;
+}

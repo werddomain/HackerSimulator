@@ -166,4 +166,4 @@ Aucune. Les deux dernières ont été tranchées par Benoit le 2026-10-16 (déci
 - [x] `web/8-cshtml-views` ([`asp-hack-cshtml-views.md`](asp-hack-cshtml-views.md), ADR 0086 : preuve réussie, pas de moteur interprété)
 - [x] `web/9-blazor-sites` ([`blazor-sites.md`](blazor-sites.md), ADR 0084)
 - [x] `web/10-detached-window` ([`detached-display-windows.md`](detached-display-windows.md), ADR 0081)
-- [ ] `web/11-sample-final`
+- [x] `web/11-sample-final` ([`asp-hack-developer-guide.md`](asp-hack-developer-guide.md), ADR 0087 : exemple Intranet, liens `target` des sites Blazor, vues compilables dans une app livrée, `TryValidateModel` ; la base `HackWebDb` de l'ADR 0073 §3, les journaux de débogage d'un site et la saisie semi-automatique restent à faire)
