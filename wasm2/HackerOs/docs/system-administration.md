@@ -23,7 +23,7 @@ Core ni Infrastructure.Browser.
 | Platform Core (passerelles) | `Platform/HackerOs.Platform.Core/Administration/` : `AppSystemSettingsGateway`, `AppPermissionAdministrationGateway`, `AppServerConnectionGateway`, `AppSystemPowerGateway`, `AppStorageDiagnosticsGateway`, `AppSystemBackupGateway`, `AdministratorGate`, `SystemAdministrationGatewayServices` |
 | Platform Core (services) | `Power/SystemPowerService.cs` (séquence d'arrêt, `RestartAfterAsync`), `Backup/SystemBackupService.cs`, `Settings/OsSettingsDocumentRegistry.cs`, `Policy/AppPermissionAdministration.cs` (`ApplyMachineDecisionAsync`, `ApplyPolicyAsync`) |
 | Hôte Ecosystem | `Administration/BrowserSystemPowerDevice.cs` (`location.reload`, suppression de la base IndexedDB), `Administration/BrowserSystemBackupDevice.cs` (export, téléchargement, sélecteur de l'hôte), `Administration/IndexedDbStorageInspector.cs` (adaptateur de `IndexedDbInspectorService`) |
-| SDK Blazor | `Interop/BrowserClipboard.cs` et `wwwroot/clipboard.js` (presse-papiers de l'hôte), `[Obsolete]` depuis l'ADR 0065 : Diagnostic copie par `HackClipboard`, que l'OS recopie vers l'hôte ([`clipboard.md`](clipboard.md)) |
+| SDK Blazor | `Interop/BrowserClipboard.cs` et `wwwroot/clipboard.js` (presse-papiers de l'hôte), `[Obsolete]` depuis l'ADR 0065 puis retirés au gel du SDK 1.0 (ADR 0114) : Diagnostic copie par `HackClipboard`, que l'OS recopie vers l'hôte ([`clipboard.md`](clipboard.md)) |
 
 `AppExecutionContextFactory` reçoit un `SystemAdministrationGatewayServices`
 (résolutions paresseuses) et crée, pour chaque instance, les six passerelles

@@ -236,7 +236,8 @@ dotnet test HackerOs.sln
 | `Tests/HackerOs.Samples.Intranet.Tests` | Exemple Intranet en mémoire (`HackWebHost.CreateApplication`) : vues `.cshtml` et `.razor`, `wwwroot`, session, anti-falsification, CRUD par formulaires, API REST, page hôte du tableau Blazor. Le parcours dans Chromium est `BrowserIntranetTests` (UI E2E). |
 | `Tests/HackerOs.Tools.ManifestGenerator.Tests` | Builds MSBuild réels des projets `Tests/ManifestGenerator.Fixtures.*` : génération, agrégation, frontière du SDK. Plus lents. |
 | `Tests/HackerOs.E2E.Tests`, `HackerOs.UI.E2E.Tests`, `HackerOs.Pwa.E2E.Tests` | Playwright contre l'OS lancé dans Chromium. Pièges connus : [`old/common-pitfalls.md`](old/common-pitfalls.md) §4 à §6. |
-| `Tests/HackerOs.Templates.E2E.Tests` | Modèles `dotnet new` (ADR 0098 §6) : empaquette tout avec `build/pack-local.sh` (ou prend le flux de `HACKEROS_LOCAL_FEED`), génère et compile chaque modèle hors du dépôt avec un cache NuGet isolé, puis lance l'hôte généré dans Chromium avec une app fenêtrée et une commande générées. |
+| `Tests/HackerOs.Templates.E2E.Tests` | Modèles `dotnet new` (ADR 0098 §6) : empaquette tout avec `build/pack-local.sh` (ou prend le flux de `HACKEROS_LOCAL_FEED`), génère et compile chaque modèle hors du dépôt avec un cache NuGet isolé, puis lance l'hôte généré dans Chromium avec une app fenêtrée et une commande générées, et un autre avec l'app compilée contre le SDK 1.0.0 (ADR 0114). |
+| `Tests/HackerOs.SdkCompatibility.Tests` | App compilée contre le SDK 1.0.0, gardée dans `Tests/fixtures/sdk-compat` (ADR 0114 §4) : catalogue, références, compilation JIT de chaque méthode et exécution de la commande contre le SDK courant. Sans navigateur, lancé par `dotnet test HackerOs.sln`. |
 | `Tests/HackerOs.HostSmoke.Tests` | Démarrage d'un hôte déjà lancé, piloté par `build/verify-hosts.sh` (voir plus haut) ; « skipped » sans `HACKEROS_SMOKE_URL`. |
 
 Tester un seul projet ou un seul test :

@@ -4,14 +4,14 @@
     HackerOs.App.Build, HackerOs.Ecosystem.Host, templates). Imported by Directory.Build.props, so
     every project of the solution carries it; Platform/Packaging.props inherits it.
 
-    Until the SDK 1.0 freeze (chantier v3/15): 0.9.0-preview.<n>. Each chantier that changes a
-    published API raises <n> by one in this file. At the freeze: 1.0.0, then SemVer (ADR 0019):
-    minor for an addition, major for a breaking change.
+    Before the SDK 1.0 freeze: 0.9.0-preview.<n>. Since the freeze (chantier v3/15, ADR 0114):
+    SemVer (ADR 0019) - patch with no API change, minor for an addition, major for a breaking
+    change of the SDK. PublicAPI.Unshipped.txt of each library says which one a release needs.
 
     The App SDK version an app is compiled against comes from this number (HackerOsSdk.Version), and
     the manifest generator writes it as the app's sdkCompatibility.minimumVersion (ADR 0098 §3).
   -->
   <PropertyGroup>
-    <HackerOsVersion>0.9.0-preview.1</HackerOsVersion>
+    <HackerOsVersion>1.0.0</HackerOsVersion>
   </PropertyGroup>
 </Project>

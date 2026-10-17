@@ -1,0 +1,2 @@
+# ADR 0114: the compatibility fixture packages are committed (the root .gitignore drops *.nupkg and packages/).
+!packages/*.nupkg

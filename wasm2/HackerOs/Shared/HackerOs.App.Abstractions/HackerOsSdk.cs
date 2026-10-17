@@ -24,7 +24,7 @@ namespace HackerOs.App.Abstractions;
 public static class HackerOsSdk
 {
     /// <summary>
-    /// Gets the SemVer version of the App SDK of this process, e.g. <c>0.9.0-preview.1</c>, without
+    /// Gets the SemVer version of the App SDK of this process, e.g. <c>1.0.0</c>, without
     /// build metadata (the source revision SourceLink appends after <c>+</c>).
     /// </summary>
     public static string Version { get; } = ReadVersion(typeof(HackerOsSdk).Assembly);
