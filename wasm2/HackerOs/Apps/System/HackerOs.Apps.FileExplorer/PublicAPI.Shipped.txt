@@ -41,6 +41,8 @@ HackerOs.Apps.FileExplorer.FilePropertiesDialog.Path.set -> void
 HackerOs.Apps.FileExplorer.OpenWithDialog
 HackerOs.Apps.FileExplorer.OpenWithDialog.AvailableApps.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Apps.HackAppInfo!>!
 HackerOs.Apps.FileExplorer.OpenWithDialog.AvailableApps.set -> void
+HackerOs.Apps.FileExplorer.OpenWithDialog.Extension.get -> string?
+HackerOs.Apps.FileExplorer.OpenWithDialog.Extension.set -> void
 HackerOs.Apps.FileExplorer.OpenWithDialog.FilePath.get -> string!
 HackerOs.Apps.FileExplorer.OpenWithDialog.FilePath.set -> void
 HackerOs.Apps.FileExplorer.OpenWithDialog.OpenWithDialog() -> void
@@ -74,6 +76,7 @@ override HackerOs.Apps.FileExplorer.FileExplorerApp.PublisherId.get -> string!
 override HackerOs.Apps.FileExplorer.FileExplorerApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 override HackerOs.Apps.FileExplorer.FileExplorerDialogBase.SetParametersAsync(Microsoft.AspNetCore.Components.ParameterView parameters) -> System.Threading.Tasks.Task!
 override HackerOs.Apps.FileExplorer.FileExplorerWindow.OnAppAfterRender(bool firstRender) -> void
+override HackerOs.Apps.FileExplorer.FileExplorerWindow.OnAppAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override HackerOs.Apps.FileExplorer.FileExplorerWindow.OnAppInitialized() -> void
 override HackerOs.Apps.FileExplorer.FileExplorerWindow.OnAppInitializedAsync() -> System.Threading.Tasks.Task!
 override HackerOs.Apps.FileExplorer.FileExplorerWindow.OnAppStopRequestedAsync(HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs! e) -> System.Threading.Tasks.Task!

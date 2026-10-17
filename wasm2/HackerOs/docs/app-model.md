@@ -68,7 +68,7 @@ public sealed class TextEditorApp : AppDefinition
 - `sdkCompatibility` (ADR 0098 §3) : par défaut, `minimumVersion` est la version
   du SDK contre laquelle l'app a été compilée. Le générateur la lit dans
   l'`AssemblyInformationalVersion` de la `HackerOs.App.Abstractions.dll`
-  référencée par l'app (par exemple `1.0.0`, voir
+  référencée par l'app (par exemple `1.1.0`, voir
   [`sdk-packages.md`](sdk-packages.md)) et la passe à
   `ToManifest(definition, sdkMinimumVersion)` ; `ToManifest(definition)` prend
   `HackerOsSdk.Version`, la version du SDK chargé. Une app qui veut une plage

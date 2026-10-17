@@ -155,6 +155,10 @@ HackerOs.Commands.Nslookup.NslookupApp
 HackerOs.Commands.Nslookup.NslookupApp.NslookupApp() -> void
 HackerOs.Commands.Nslookup.NslookupCommand
 HackerOs.Commands.Nslookup.NslookupCommand.NslookupCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
+HackerOs.Commands.Passwd.PasswdApp
+HackerOs.Commands.Passwd.PasswdApp.PasswdApp() -> void
+HackerOs.Commands.Passwd.PasswdCommand
+HackerOs.Commands.Passwd.PasswdCommand.PasswdCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
 HackerOs.Commands.Ping.PingApp
 HackerOs.Commands.Ping.PingApp.PingApp() -> void
 HackerOs.Commands.Ping.PingCommand
@@ -263,6 +267,10 @@ HackerOs.Commands.Whoami.WhoamiApp
 HackerOs.Commands.Whoami.WhoamiApp.WhoamiApp() -> void
 HackerOs.Commands.Whoami.WhoamiCommand
 HackerOs.Commands.Whoami.WhoamiCommand.WhoamiCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
+HackerOs.Commands.XdgMime.XdgMimeApp
+HackerOs.Commands.XdgMime.XdgMimeApp.XdgMimeApp() -> void
+HackerOs.Commands.XdgMime.XdgMimeCommand
+HackerOs.Commands.XdgMime.XdgMimeCommand.XdgMimeCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
 HackerOs.Commands.XdgOpen.XdgOpenApp
 HackerOs.Commands.XdgOpen.XdgOpenApp.XdgOpenApp() -> void
 HackerOs.Commands.XdgOpen.XdgOpenCommand
@@ -703,6 +711,17 @@ override HackerOs.Commands.Nslookup.NslookupApp.PublisherId.get -> string!
 override HackerOs.Commands.Nslookup.NslookupApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 override HackerOs.Commands.Nslookup.NslookupApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
 override HackerOs.Commands.Nslookup.NslookupCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
+override HackerOs.Commands.Passwd.PasswdApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Commands.Passwd.PasswdApp.Description.get -> string!
+override HackerOs.Commands.Passwd.PasswdApp.EntryPoint.get -> System.Type!
+override HackerOs.Commands.Passwd.PasswdApp.Id.get -> string!
+override HackerOs.Commands.Passwd.PasswdApp.Kind.get -> HackerOs.App.Abstractions.AppKind
+override HackerOs.Commands.Passwd.PasswdApp.LaunchVisibility.get -> HackerOs.App.Abstractions.AppLaunchVisibility
+override HackerOs.Commands.Passwd.PasswdApp.Name.get -> string!
+override HackerOs.Commands.Passwd.PasswdApp.PublisherId.get -> string!
+override HackerOs.Commands.Passwd.PasswdApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
+override HackerOs.Commands.Passwd.PasswdApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
+override HackerOs.Commands.Passwd.PasswdCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
 override HackerOs.Commands.Ping.PingApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
 override HackerOs.Commands.Ping.PingApp.Category.get -> string!
 override HackerOs.Commands.Ping.PingApp.Description.get -> string!
@@ -999,6 +1018,17 @@ override HackerOs.Commands.Whoami.WhoamiApp.PublisherId.get -> string!
 override HackerOs.Commands.Whoami.WhoamiApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 override HackerOs.Commands.Whoami.WhoamiApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
 override HackerOs.Commands.Whoami.WhoamiCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
+override HackerOs.Commands.XdgMime.XdgMimeApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Commands.XdgMime.XdgMimeApp.Description.get -> string!
+override HackerOs.Commands.XdgMime.XdgMimeApp.EntryPoint.get -> System.Type!
+override HackerOs.Commands.XdgMime.XdgMimeApp.Id.get -> string!
+override HackerOs.Commands.XdgMime.XdgMimeApp.Kind.get -> HackerOs.App.Abstractions.AppKind
+override HackerOs.Commands.XdgMime.XdgMimeApp.LaunchVisibility.get -> HackerOs.App.Abstractions.AppLaunchVisibility
+override HackerOs.Commands.XdgMime.XdgMimeApp.Name.get -> string!
+override HackerOs.Commands.XdgMime.XdgMimeApp.PublisherId.get -> string!
+override HackerOs.Commands.XdgMime.XdgMimeApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
+override HackerOs.Commands.XdgMime.XdgMimeApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
+override HackerOs.Commands.XdgMime.XdgMimeCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
 override HackerOs.Commands.XdgOpen.XdgOpenApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
 override HackerOs.Commands.XdgOpen.XdgOpenApp.Description.get -> string!
 override HackerOs.Commands.XdgOpen.XdgOpenApp.EntryPoint.get -> System.Type!

@@ -73,14 +73,42 @@ jusqu'à ce que la ligne soit sélectionnée. C'était l'échec « hors ligne »
 relevé sur `v3/base` depuis `v3/12`. Sans IPv6, la suite se replie sur
 `127.0.0.2` depuis `v3/7` ([`pwa-cache-recovery.md`](pwa-cache-recovery.md)).
 
+## Série v3.1 et SDK 1.1
+
+La série v3.1 ([`v3-1-series-plan.md`](v3-1-series-plan.md)) est fusionnée
+dans `v3.1/base` : géométrie des fenêtres (PR #170, #173), titre de fenêtre
+(PR #174), fusion de `v3/base` avec `passwd` et les associations par
+utilisateur (PR #175), puis publication du SDK **1.1.0** (`v3.1/4-sdk-1-1` :
+`Unshipped` versé dans `Shipped`, voir [`sdk-packages.md`](sdk-packages.md#sdk-11)).
+L'app de compatibilité compilée en 1.0.0 se charge et tourne sur l'OS 1.1.
+
+Vérification complète refaite le 2026-10-17 sur la branche du chantier (même
+conteneur, .NET SDK 10.0.402) :
+
+| Étape | Résultat |
+|---|---|
+| `dotnet build HackerOs.sln`, Debug puis Release | réussi, 0 avertissement, 0 erreur |
+| Tests unitaires et d'intégration, 40 projets (`--no-build -c Debug`) | 3 510 réussis, 0 échec (dont `HackerOs.SdkCompatibility.Tests` 5/5) |
+| `HackerOs.E2E.Tests` | 16/16 |
+| `HackerOs.UI.E2E.Tests` | 27/27 |
+| `HackerOs.Templates.E2E.Tests` (dont l'hôte qui charge l'app 1.0.0) | 6/6 |
+| `HackerOs.Pwa.E2E.Tests` | 6/6 |
+| `build/publish-trimmed.sh` | PASS : 134 fichiers `.wasm`, 26,6 Mio (8,0 Mio Brotli), chaque app fenêtrée, pool de workers, Intranet, site Blazor, redémarrage hors ligne |
+| `build/verify-hosts.sh` (trois hôtes) | PASS : Ecosystem (trois modes de mesure), `test/test`, `HackerOs.Server` |
+
+Pendant la fusion de `v3/base`, l'escalade de `kill -9` a échoué une fois
+(test instable connu, voir plus bas) ; elle passe dans la série complète.
+
 ## Ce qui reste ouvert
 
 ### Lacunes connues
 
-La série v3.1 ([`v3-1-series-plan.md`](v3-1-series-plan.md)) traite la
-géométrie des fenêtres (ADR 0116) et le titre de fenêtre (ADR 0117, SDK 1.1) ;
-les associations par utilisateur et `passwd` sont faits par les fils `v3/4`
-et `v3/8` dans `v3/base`.
+La série v3.1 ([`v3-1-series-plan.md`](v3-1-series-plan.md)) a traité la
+géométrie des fenêtres (ADR 0116, 0122) et le titre de fenêtre (ADR 0117,
+0123) ; les associations par utilisateur (ADR 0121) et `passwd` (ADR 0120) ont
+été faits par les fils `v3/4` et `v3/8` dans `v3/base`, puis ramenés dans
+`v3.1/base` (PR #175). Le SDK 1.1.0 les publie tous (voir « Série v3.1 »
+plus bas).
 
 | Lacune | Origine | Effet |
 |---|---|---|
@@ -89,9 +117,9 @@ et `v3/8` dans `v3/base`.
 | ~~Pas de couche utilisateur pour les associations de fichiers et de schémas.~~ Comblée par `v3/4b` (ADR 0121, [`user-file-associations.md`](user-file-associations.md)). « Afficher dans le dossier » demande la capacité `apps.launch`. | `v3/4` | Fermée pour les associations. |
 | `hackwebd` démarre à la connexion, pas au boot. | `v3/5` | Question ouverte ; un passage au boot demande son ADR. |
 | `hackbackup` exige `sudo` ; une restauration en mode fusion redémarre aussi la machine ; pas de fixture IndexedDB v1 (jamais commitée). | `v3/7` | Documenté dans [`system-backup.md`](system-backup.md). |
-| Pas de commande `passwd` ni de réinitialisation d'un mot de passe par un administrateur ; les points d'entrée du trousseau sont prêts. | `v3/8` | Question ouverte (défaut : plus tard). |
+| ~~Pas de commande `passwd` ni de réinitialisation d'un mot de passe par un administrateur.~~ Comblée par `v3/8` (PR #172, ADR 0120, [`sensitive-settings.md`](sensitive-settings.md)). | `v3/8` | Fermée. |
 | Sur un même appareil, le curseur de synchronisation est commun à tous les utilisateurs. | `v3/9` | Documenté dans [`synchronization.md`](synchronization.md). |
-| Le SDK n'a pas d'API pour changer le titre d'une fenêtre ; Hack Paint affiche le nom du fichier dans l'app. | `v3/11` | Corrigé par `v3.1/3-window-title` (ADR 0117, 0123) : `SetWindowTitleAsync` dans `PublicAPI.Unshipped.txt`, publié avec la 1.1 par `v3.1/4-sdk-1-1`. |
+| Le SDK n'a pas d'API pour changer le titre d'une fenêtre ; Hack Paint affiche le nom du fichier dans l'app. | `v3/11` | Corrigé par `v3.1/3-window-title` (ADR 0117, 0123) : `SetWindowTitleAsync`, publié dans le SDK 1.1.0 par `v3.1/4-sdk-1-1`. Fermée. |
 | Les menus internes de Monaco (Code Editor) restent en anglais. | `v3/12` | Question ouverte (défaut : anglais). |
 | Une app compilée contre `0.9.0-preview` est refusée par l'OS 1.0. | `v3/15` | Voulu (autre version majeure) ; le dépôt du jeu reconstruit ses apps contre 1.0.0. |
 | Installation d'apps au runtime. | plan, question 1 | Reportée à un plan à part. |
@@ -103,10 +131,10 @@ donnent dans le fil du chantier.
 
 | Chantier | Question | Défaut appliqué |
 |---|---|---|
-| `v3/4` | Ajouter des associations de fichiers propres à chaque utilisateur ? (Plus tard / Maintenant / Système seulement, avec un ADR qui corrige l'ADR 0096) | Plus tard |
+| ~~`v3/4`~~ | ~~Ajouter des associations de fichiers propres à chaque utilisateur ?~~ Répondue par Benoit : faites (PR #171, ADR 0121). | — |
 | `v3/5` | `hackwebd` doit-il démarrer au boot ? (Garder à la connexion / Boot + recharge des sites utilisateur / Boot + seconde instance sous l'utilisateur) | Garder à la connexion |
 | `v3/5` | Comment créer le compte de service `hackeros-svc` ? (Compte intégré / Magasin d'utilisateurs IndexedDB / Magasin + `/etc/passwd` généré) | Compte intégré (ADR 0107) |
-| `v3/8` | Ajouter `passwd` et la réinitialisation par un administrateur ? (Plus tard / Dans `v3/8` / Dans `v3/16`) | Plus tard |
+| ~~`v3/8`~~ | ~~Ajouter `passwd` et la réinitialisation par un administrateur ?~~ Répondue par Benoit : faits (PR #172, ADR 0120). | — |
 | `v3/10` | D'où le serveur tient-il l'accord `network.real.access` d'une app ? (Liste du serveur / Accords poussés par l'OS / Vrai réseau coupé pour toutes les apps) | Liste du serveur (`Proxy:GrantedApps`) |
 | `v3/12` | 1. Nom français « Gestionnaire de serveur web » (garder / nom anglais) ; 2. boutons d'accès d'un site au stockage (suivent la langue / forcer le français) ; 3. menus de Monaco (anglais / pack de langue, plusieurs centaines de Kio) ; 4. noms des thèmes intégrés (anglais / traduits) | 1A 2A 3A 4A |
 | `v3/13` | 1. La page Accessibilité modifie l'utilisateur seul ou aussi « Tous les utilisateurs » ; 2. le contraste élevé recouvre les aperçus de thèmes ; 3. « Réduire les animations » en Auto/Activé/Désactivé ou simple interrupteur | 1A 2A 3A |
@@ -144,3 +172,4 @@ migration :
 - [x] Lancer les suites E2E en série, la porte de fusion (`build/publish-trimmed.sh`, compatibilité du SDK) et `build/verify-hosts.sh` (trois hôtes).
 - [x] Ajouter le statut final à `doc/wasm/wasm-v3-migration-analyse.md` (section 24).
 - [x] Mettre à jour `old/implementation-status.md`, `project-overview.md`, `sdk-reference.md`, le plan et l'index.
+- [x] Série v3.1 (`v3.1/4-sdk-1-1`) : lacunes fermées marquées, questions répondues, vérification complète refaite après le SDK 1.1.

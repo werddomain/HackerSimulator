@@ -208,6 +208,10 @@ HackerOs.AppSdk.Blazor.IAppBackHandler
 HackerOs.AppSdk.Blazor.IAppBackHandler.CanNavigateBack.get -> bool
 HackerOs.AppSdk.Blazor.IAppBackHandler.CanNavigateBackChanged -> System.Action?
 HackerOs.AppSdk.Blazor.IAppBackHandler.NavigateBackAsync(HackerOs.AppSdk.Blazor.AppBackRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.AppBackResult!>
+HackerOs.AppSdk.Blazor.IAppWindowGateway
+HackerOs.AppSdk.Blazor.IAppWindowGateway.DefaultTitle.get -> string!
+HackerOs.AppSdk.Blazor.IAppWindowGateway.SetTitleAsync(string? title, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string!>
+HackerOs.AppSdk.Blazor.IAppWindowGateway.Title.get -> string!
 HackerOs.AppSdk.Blazor.IDialogService
 HackerOs.AppSdk.Blazor.IDialogService.ChooseAppAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.AppChooserDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.AppChooserDialogResult!>
 HackerOs.AppSdk.Blazor.IDialogService.CredentialPromptAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.CredentialPromptDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.CredentialPromptDialogResult!>
@@ -377,6 +381,7 @@ HackerOs.AppSdk.Blazor.WindowAppBase.ElevationVerifier.get -> HackerOs.App.Abstr
 HackerOs.AppSdk.Blazor.WindowAppBase.ElevationVerifier.set -> void
 HackerOs.AppSdk.Blazor.WindowAppBase.FileDialogs.get -> HackerOs.AppSdk.Blazor.IFileDialogService!
 HackerOs.AppSdk.Blazor.WindowAppBase.FileDialogs.set -> void
+HackerOs.AppSdk.Blazor.WindowAppBase.FormatWindowTitle(string? document, bool modified = false) -> string!
 HackerOs.AppSdk.Blazor.WindowAppBase.IsWindowActive.get -> bool
 HackerOs.AppSdk.Blazor.WindowAppBase.LaunchArguments.get -> System.Collections.Generic.IReadOnlyList<string!>!
 HackerOs.AppSdk.Blazor.WindowAppBase.LaunchFile.get -> HackerOs.App.Abstractions.VirtualPath?
@@ -387,11 +392,13 @@ HackerOs.AppSdk.Blazor.WindowAppBase.OpenFileAsync(HackerOs.AppSdk.Blazor.OpenFi
 HackerOs.AppSdk.Blazor.WindowAppBase.SaveFileAsync(HackerOs.AppSdk.Blazor.SaveFileDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.SaveFileDialogResult!>
 HackerOs.AppSdk.Blazor.WindowAppBase.SelectFolderAsync(HackerOs.AppSdk.Blazor.SelectFolderDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.SelectFolderDialogResult!>
 HackerOs.AppSdk.Blazor.WindowAppBase.SendIntentAsync(string! intentId, string? payloadJson = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+HackerOs.AppSdk.Blazor.WindowAppBase.SetWindowTitleAsync(string? title, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.AppSdk.Blazor.WindowAppBase.TextInput(string! title, string! content, string? defaultValue = null, string? placeholder = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.TextInputDialogResult!>
 HackerOs.AppSdk.Blazor.WindowAppBase.TrackDisplaySurface(HackerOs.AppSdk.Blazor.Display.IDisplaySurface! surface) -> System.IDisposable!
 HackerOs.AppSdk.Blazor.WindowAppBase.WindowAppBase() -> void
 HackerOs.AppSdk.Blazor.WindowAppBase.WindowSize.get -> HackerOs.AppSdk.Blazor.HackWindowSize?
 HackerOs.AppSdk.Blazor.WindowAppBase.WindowState.get -> HackerOs.AppSdk.Blazor.HackWindowState
+HackerOs.AppSdk.Blazor.WindowAppBase.WindowTitle.get -> string!
 HackerOs.AppSdk.Blazor._Imports
 HackerOs.AppSdk.Blazor._Imports.Execute() -> void
 HackerOs.AppSdk.Blazor._Imports._Imports() -> void

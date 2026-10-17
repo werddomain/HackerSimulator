@@ -18,6 +18,8 @@ HackerOs.AppSdk.Terminal.TerminalFullScreenSession.Viewport.get -> HackerOs.AppS
 HackerOs.AppSdk.Terminal.TerminalHistory
 HackerOs.AppSdk.Terminal.TerminalInputReader
 HackerOs.AppSdk.Terminal.TerminalInputReader.CloseInput() -> void
+HackerOs.AppSdk.Terminal.TerminalInputReader.EchoEnabled.get -> bool
+HackerOs.AppSdk.Terminal.TerminalInputReader.EchoEnabled.set -> void
 HackerOs.AppSdk.Terminal.TerminalInputReader.IsWaiting.get -> bool
 HackerOs.AppSdk.Terminal.TerminalInputReader.Push(string! text) -> void
 HackerOs.AppSdk.Terminal.TerminalInputReader.PushEndOfInput() -> void

@@ -96,7 +96,7 @@ public override WindowOptions? Window => new()
 ```
 
 `WindowOptions.RememberGeometry` est un ajout du SDK 1.1
-(`PublicAPI.Unshipped.txt` de `HackerOs.App.Abstractions`). Le générateur écrit
+(`PublicAPI.Shipped.txt` de `HackerOs.App.Abstractions` depuis `v3.1/4-sdk-1-1`). Le générateur écrit
 `window.rememberGeometry` dans `manifest.json` seulement quand il vaut `false` :
 les manifestes des apps qui gardent le défaut restent identiques octet pour
 octet. Le schéma v1 l'accepte comme champ facultatif, le désérialiseur strict
@@ -122,8 +122,9 @@ aussi.
   (window-model.md). Une fenêtre normale qui couvre exactement la moitié gauche ou
   droite de la zone de travail est traitée comme ancrée et n'est pas enregistrée.
 - **`SaveAsync` sans `isEligible`** : c'est le coordinateur qui décide quelles
-  fenêtres suivre (`Track`) ; la ligne retirée est marquée `*REMOVED*` dans
-  `PublicAPI.Unshipped.txt` de Platform.Blazor (hors promesse du SDK, ADR 0114 §2).
+  fenêtres suivre (`Track`) ; la ligne retirée a été marquée `*REMOVED*` dans
+  `PublicAPI.Unshipped.txt` de Platform.Blazor (hors promesse du SDK, ADR 0114 §2),
+  puis appliquée à la publication de la 1.1 (« Ruptures hors SDK » de [`sdk-packages.md`](sdk-packages.md#ruptures-hors-sdk)).
 - **Échecs journalisés** : `WindowGeometryPersistence` écrit un avertissement
   quand le fichier ne peut être lu ou écrit, puis continue.
 - **Contenu comparé avant écriture** : fermer une fenêtre dont la taille n'a pas

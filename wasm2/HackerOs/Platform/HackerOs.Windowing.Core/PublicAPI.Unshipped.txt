@@ -1,2 +1,1 @@
 #nullable enable
-HackerOs.Windowing.Core.WindowRuntime.SetTitle(HackerOs.Windowing.Abstractions.WindowId windowId, string! title) -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowEvent!>!

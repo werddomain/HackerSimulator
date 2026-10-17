@@ -5,7 +5,8 @@
 Le guide d'un dépôt qui **utilise** HackerOS sans en copier le code : le dépôt
 du jeu (ADR 0092), ou tout projet qui veut ses propres apps et son propre hôte
 d'OS. Il part du SDK 1.0, gelé par le chantier `v3/15`
-([ADR 0114](adr/0114-sdk-1-0-freeze.md)).
+([ADR 0114](adr/0114-sdk-1-0-freeze.md)) ; la version courante est la **1.1.0**
+(série v3.1, [ADR 0117](adr/0117-sdk-window-title-and-sdk-1-1.md) §5, voir « Ce que la 1.1 ajoute »).
 
 Détails des paquets et du mode paquet de `HackerOs.App.Build` :
 [`sdk-packages.md`](sdk-packages.md). Écrire une app (API, exemples) :
@@ -31,7 +32,7 @@ nuget.org). Dans un clone de HackerOS, sur la version voulue :
 ```bash
 git -C ../HackerSimulator checkout <tag ou branche>
 ../HackerSimulator/wasm2/HackerOs/build/pack-local.sh      # ou pack-local.ps1
-# -> ../HackerSimulator/wasm2/HackerOs/artifacts/local-nupkg/*.1.0.0.nupkg
+# -> ../HackerSimulator/wasm2/HackerOs/artifacts/local-nupkg/*.1.1.0.nupkg
 ```
 
 `--output <dossier>` écrit ailleurs (par exemple un dossier partagé de votre
@@ -77,7 +78,7 @@ que celle-ci :
 ```xml
 <Project>
   <PropertyGroup>
-    <HackerOsVersion>1.0.0</HackerOsVersion>
+    <HackerOsVersion>1.1.0</HackerOsVersion>
   </PropertyGroup>
 </Project>
 ```
@@ -85,7 +86,7 @@ que celle-ci :
 ## 4. Créer les projets
 
 ```bash
-dotnet new install ../HackerSimulator/wasm2/HackerOs/artifacts/local-nupkg/HackerOs.Templates.1.0.0.nupkg
+dotnet new install ../HackerSimulator/wasm2/HackerOs/artifacts/local-nupkg/HackerOs.Templates.1.1.0.nupkg
 dotnet new hackeros-window  -n Contoso.Notes -o src/Contoso.Notes --appId com.contoso.notes --publisherId pub.contoso
 dotnet new hackeros-command -n Contoso.Hello -o src/Contoso.Hello --appId com.contoso.hello --publisherId pub.contoso
 dotnet new hackeros-service -n Contoso.Sync  -o src/Contoso.Sync  --appId com.contoso.sync  --publisherId pub.contoso
@@ -171,6 +172,31 @@ statique ; le service worker ne s'enregistre que hors de `localhost`. Voir
 4. Les manifestes régénérés portent le nouveau minimum : une app reconstruite
    ne se charge plus sur un OS plus ancien.
 
+### Ce que la 1.1 ajoute
+
+Une mineure : une app compilée contre 1.0.0 tourne sans changement sur l'OS
+1.1 (vérifié par l'app figée de `Tests/fixtures/sdk-compat`). Pour utiliser les
+ajouts, passer `HackerOsVersion` à `1.1.0` et reconstruire ; l'app exige alors
+un OS 1.1 ou plus récent.
+
+- **Titre de fenêtre** : `WindowAppBase.SetWindowTitleAsync`, `WindowTitle`,
+  `FormatWindowTitle("rapport.txt", modified: true)` → `*rapport.txt — Mon app`
+  (ADR 0117, 0123, [`window-model.md`](window-model.md) §4).
+- **Taille des fenêtres retenue** : `WindowOptions.RememberGeometry = false`
+  pour qu'une fenêtre ne reprenne pas sa dernière taille (ADR 0116, 0122,
+  [`window-geometry.md`](window-geometry.md)).
+- **Comptes et mots de passe** : `HackUserAccounts` (`ListAsync`,
+  `ChangePasswordAsync`, `ResetPasswordAsync` avec la capacité `users.manage`),
+  `TerminalExecutionContext.ReadSecretLineAsync` pour une saisie sans écho
+  (ADR 0120, [`sensitive-settings.md`](sensitive-settings.md)).
+- **Applications par défaut de l'utilisateur** : `HackApps.SetDefaultHandlerAsync`,
+  `ResetDefaultHandlerAsync`, `GetDefaultHandlersAsync` (ADR 0121,
+  [`user-file-associations.md`](user-file-associations.md)).
+
+La liste exacte et les ruptures hors SDK d'un hôte (trois changements de
+`HackerOs.Platform.Blazor` autour de la géométrie des fenêtres) sont dans
+[`sdk-packages.md`](sdk-packages.md#sdk-11).
+
 ## Décisions
 
 - **Un flux local plutôt que nuget.org** (ADR 0098 §2) : GitHub Packages
@@ -184,3 +210,4 @@ statique ; le service worker ne s'enregistre que hors de `localhost`. Voir
 - [x] Flux local, `nuget.config`, version épinglée.
 - [x] Modèles, hôte, apps en projets et en paquets.
 - [x] Tests, publication trimmée, montée de version.
+- [x] SDK 1.1 : version courante, ajouts et lien vers les ruptures hors SDK (`v3.1/4-sdk-1-1`).

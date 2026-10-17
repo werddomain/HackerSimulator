@@ -82,6 +82,7 @@ override HackerOs.Apps.HackPaint.HackPaintApp.PublisherId.get -> string!
 override HackerOs.Apps.HackPaint.HackPaintApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 override HackerOs.Apps.HackPaint.HackPaintApp.Window.get -> HackerOs.App.Abstractions.WindowOptions?
 override HackerOs.Apps.HackPaint.HackPaintWindow.OnAppAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override HackerOs.Apps.HackPaint.HackPaintWindow.OnAppInitializedAsync() -> System.Threading.Tasks.Task!
 static HackerOs.Apps.HackPaint.ImageFileFormat.MediaTypeOf(HackerOs.Apps.HackPaint.ImageFileKind kind) -> string!
 static HackerOs.Apps.HackPaint.ImageFileFormat.OpenExtensions.get -> System.Collections.Generic.IReadOnlyList<string!>!
 static HackerOs.Apps.HackPaint.ImageFileFormat.SaveKindFor(string! fileName) -> HackerOs.Apps.HackPaint.ImageFileKind

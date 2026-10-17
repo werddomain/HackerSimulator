@@ -367,12 +367,24 @@ HackerOs.Platform.Blazor.Windows.AppBackHandlerRegistry
 HackerOs.Platform.Blazor.Windows.AppBackHandlerRegistry.AppBackHandlerRegistry() -> void
 HackerOs.Platform.Blazor.Windows.AppBackHandlerRegistry.NavigateBackAsync(HackerOs.Windowing.Abstractions.WindowId windowId, HackerOs.AppSdk.Blazor.AppBackRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.AppBackResult!>
 HackerOs.Platform.Blazor.Windows.AppBackHandlerRegistry.Register(HackerOs.Windowing.Abstractions.WindowId windowId, HackerOs.AppSdk.Blazor.IAppBackHandler! handler) -> System.IDisposable!
+HackerOs.Platform.Blazor.Windows.AppWindowGatewayFactory
+HackerOs.Platform.Blazor.Windows.AppWindowGatewayFactory.AppWindowGatewayFactory(HackerOs.Windowing.Core.WindowRuntime! runtime) -> void
+HackerOs.Platform.Blazor.Windows.AppWindowGatewayFactory.AppWindowGatewayFactory(HackerOs.Windowing.Core.WindowRuntime! runtime, HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator! launchCoordinator) -> void
+HackerOs.Platform.Blazor.Windows.AppWindowGatewayFactory.Create(HackerOs.Windowing.Abstractions.WindowId windowId, HackerOs.App.Abstractions.AppManifest! manifest) -> HackerOs.AppSdk.Blazor.IAppWindowGateway!
 HackerOs.Platform.Blazor.Windows.BrowserWindowClientAreaProbe
 HackerOs.Platform.Blazor.Windows.BrowserWindowClientAreaProbe.BrowserWindowClientAreaProbe(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
 HackerOs.Platform.Blazor.Windows.BrowserWindowClientAreaProbe.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Platform.Blazor.Windows.BrowserWindowClientAreaProbe.MeasureAsync(HackerOs.Windowing.Abstractions.WindowId windowId) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.HackWindowSize?>
 HackerOs.Platform.Blazor.Windows.IWindowClientAreaProbe
 HackerOs.Platform.Blazor.Windows.IWindowClientAreaProbe.MeasureAsync(HackerOs.Windowing.Abstractions.WindowId windowId) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.HackWindowSize?>
+HackerOs.Platform.Blazor.Windows.SavedWindowGeometry
+HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.Height.get -> double
+HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.Height.init -> void
+HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.IsMaximized.get -> bool
+HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.IsMaximized.init -> void
+HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.SavedWindowGeometry(double Width, double Height, bool IsMaximized) -> void
+HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.Width.get -> double
+HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.Width.init -> void
 HackerOs.Platform.Blazor.Windows.WindowAppEventDispatcher
 HackerOs.Platform.Blazor.Windows.WindowAppEventDispatcher.Dispose() -> void
 HackerOs.Platform.Blazor.Windows.WindowAppEventDispatcher.Register(HackerOs.Windowing.Abstractions.WindowId windowId, HackerOs.AppSdk.Blazor.IWindowAppEventTarget! target) -> System.IDisposable!
@@ -394,6 +406,8 @@ HackerOs.Platform.Blazor.Windows.WindowAppRenderer.Window.set -> void
 HackerOs.Platform.Blazor.Windows.WindowAppRenderer.WindowAppRenderer() -> void
 HackerOs.Platform.Blazor.Windows.WindowAppRenderer.WindowEvents.get -> HackerOs.Platform.Blazor.Windows.WindowAppEventDispatcher?
 HackerOs.Platform.Blazor.Windows.WindowAppRenderer.WindowEvents.set -> void
+HackerOs.Platform.Blazor.Windows.WindowAppRenderer.WindowGateways.get -> HackerOs.Platform.Blazor.Windows.AppWindowGatewayFactory?
+HackerOs.Platform.Blazor.Windows.WindowAppRenderer.WindowGateways.set -> void
 HackerOs.Platform.Blazor.Windows.WindowCloseCoordinator
 HackerOs.Platform.Blazor.Windows.WindowCloseCoordinator.CloseAsync(HackerOs.Windowing.Abstractions.WindowId windowId, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<bool>>? confirmAsync = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowEvent!>!>!
 HackerOs.Platform.Blazor.Windows.WindowCloseCoordinator.WindowCloseCoordinator(HackerOs.Windowing.Core.WindowRuntime! runtime, HackerOs.Platform.Core.Lifecycle.AppLifecycleOrchestrator! lifecycle) -> void
@@ -402,9 +416,17 @@ HackerOs.Platform.Blazor.Windows.WindowCloseGuardRegistry.ConfirmCloseAsync(Hack
 HackerOs.Platform.Blazor.Windows.WindowCloseGuardRegistry.Register(HackerOs.Windowing.Abstractions.WindowId windowId, HackerOs.AppSdk.Blazor.IWindowCloseGuard! guard) -> System.IDisposable!
 HackerOs.Platform.Blazor.Windows.WindowCloseGuardRegistry.WindowCloseGuardRegistry() -> void
 HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence
-HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence.RestoreAsync(string! appId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Windowing.Abstractions.WindowBounds?>
-HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence.SaveAsync(string! appId, HackerOs.Windowing.Abstractions.WindowBounds bounds, bool isEligible, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence.RestoreAsync(string! appId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Platform.Blazor.Windows.SavedWindowGeometry?>
+HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence.SaveAsync(string! appId, HackerOs.Platform.Blazor.Windows.SavedWindowGeometry! geometry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
 HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence.WindowGeometryPersistence(HackerOs.Platform.Core.Settings.IOsSettingsService! settings) -> void
+HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence.WindowGeometryPersistence(HackerOs.Platform.Core.Settings.IOsSettingsService! settings, Microsoft.Extensions.Logging.ILogger<HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence!>? logger) -> void
+HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder
+HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder.Dispose() -> void
+HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder.ReadAsync(string! appId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Platform.Blazor.Windows.SavedWindowGeometry?>
+HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder.Track(HackerOs.Windowing.Abstractions.WindowId windowId, string! appId) -> void
+HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder.WhenIdleAsync() -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder.WindowGeometryRecorder(HackerOs.Windowing.Core.WindowRuntime! runtime, HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence! persistence) -> void
+HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder.WindowGeometryRecorder(HackerOs.Windowing.Core.WindowRuntime! runtime, HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence! persistence, System.TimeSpan debounce) -> void
 HackerOs.Platform.Blazor.Windows.WindowGeometrySettings
 HackerOs.Platform.Blazor.Windows.WindowKeyInput
 HackerOs.Platform.Blazor.Windows.WindowKeyInput.Alt.get -> bool
@@ -453,10 +475,12 @@ HackerOs.Platform.Blazor.Windows.WindowKeyboardMode.None = 0 -> HackerOs.Platfor
 HackerOs.Platform.Blazor.Windows.WindowKeyboardMode.Resizing = 3 -> HackerOs.Platform.Blazor.Windows.WindowKeyboardMode
 HackerOs.Platform.Blazor.Windows.WindowKeyboardMode.Switching = 1 -> HackerOs.Platform.Blazor.Windows.WindowKeyboardMode
 HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator
-HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.Present(HackerOs.App.Abstractions.AppManifest! manifest, HackerOs.Platform.Core.Lifecycle.AppLaunchResult! launch) -> bool
-HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.Present(HackerOs.App.Abstractions.AppManifest! manifest, HackerOs.Simulation.Abstractions.Processes.ProcessRecord! process) -> bool
+HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.DefaultTitle(HackerOs.App.Abstractions.AppManifest! manifest) -> string!
+HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.PresentAsync(HackerOs.App.Abstractions.AppManifest! manifest, HackerOs.Platform.Core.Lifecycle.AppLaunchResult! launch, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.PresentAsync(HackerOs.App.Abstractions.AppManifest! manifest, HackerOs.Simulation.Abstractions.Processes.ProcessRecord! process, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.WindowLaunchCoordinator(HackerOs.Windowing.Core.WindowRuntime! windows) -> void
-HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.WindowLaunchCoordinator(HackerOs.Windowing.Core.WindowRuntime! windows, HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Globalization.SessionLocaleService! locale) -> void
+HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.WindowLaunchCoordinator(HackerOs.Windowing.Core.WindowRuntime! windows, HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder! geometry) -> void
+HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.WindowLaunchCoordinator(HackerOs.Windowing.Core.WindowRuntime! windows, HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Globalization.SessionLocaleService! locale, HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder? geometry = null) -> void
 HackerOs.Platform.Blazor.Windows.WindowManagerOverlays
 HackerOs.Platform.Blazor.Windows.WindowManagerOverlays.Commands.get -> HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands!
 HackerOs.Platform.Blazor.Windows.WindowManagerOverlays.Commands.set -> void
@@ -491,6 +515,7 @@ const HackerOs.Platform.Blazor.Display.DisplaySurfaceService.NotificationSource 
 const HackerOs.Platform.Blazor.Sites.HackWebSiteHost.RendererArgument = "--type=renderer" -> string!
 const HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands.FineKeyboardStep = 1 -> double
 const HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands.KeyboardStep = 10 -> double
+const HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.CascadeStep = 28 -> double
 override HackerOs.Platform.Blazor.Dialogs.AppChooserDialog.OnInitialized() -> void
 override HackerOs.Platform.Blazor.Dialogs.FolderSelectDialog.OnParametersSet() -> void
 override HackerOs.Platform.Blazor.Dialogs.SaveFileDialog.OnParametersSet() -> void
@@ -514,10 +539,12 @@ static HackerOs.Platform.Blazor.Shell.MobileRecentProjection.BuildItems(System.C
 static HackerOs.Platform.Blazor.Windows.WindowAppEventDispatcher.EstimateClientSize(HackerOs.Windowing.Abstractions.WindowBounds bounds) -> HackerOs.AppSdk.Blazor.HackWindowSize
 static HackerOs.Platform.Blazor.Windows.WindowAppRenderValidator.Validate(HackerOs.Windowing.Abstractions.WindowRuntimeState! window, HackerOs.Platform.Core.Discovery.AppDescriptor! descriptor, HackerOs.AppSdk.IAppExecutionContext! appContext) -> void
 static HackerOs.Platform.Blazor.Windows.WindowGeometrySettings.GetFile(string! appId) -> HackerOs.Platform.Core.Settings.OsSettingsFile!
-static HackerOs.Platform.Blazor.Windows.WindowGeometrySettings.Parse(string? content) -> HackerOs.Windowing.Abstractions.WindowBounds?
-static HackerOs.Platform.Blazor.Windows.WindowGeometrySettings.Serialize(HackerOs.Windowing.Abstractions.WindowBounds bounds) -> string!
+static HackerOs.Platform.Blazor.Windows.WindowGeometrySettings.Parse(string? content) -> HackerOs.Platform.Blazor.Windows.SavedWindowGeometry?
+static HackerOs.Platform.Blazor.Windows.WindowGeometrySettings.Serialize(string! appId, HackerOs.Platform.Blazor.Windows.SavedWindowGeometry! geometry) -> string!
 static HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.InitialBounds(HackerOs.App.Abstractions.WindowOptions! options, int cascadeIndex, HackerOs.Windowing.Abstractions.WindowBounds workArea) -> HackerOs.Windowing.Abstractions.WindowBounds
+static HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.RestoredBounds(HackerOs.App.Abstractions.WindowOptions! options, double savedWidth, double savedHeight, int cascadeIndex, HackerOs.Windowing.Abstractions.WindowBounds workArea) -> HackerOs.Windowing.Abstractions.WindowBounds
 static HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.ToConstraints(HackerOs.App.Abstractions.WindowOptions! options) -> HackerOs.Windowing.Abstractions.WindowConstraints!
+static readonly HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder.DefaultDebounce -> System.TimeSpan
 ~override HackerOs.Platform.Blazor.Controls.PlatformComplexControlsProof.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Dialogs.AppChooserDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Dialogs.CredentialPromptDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
