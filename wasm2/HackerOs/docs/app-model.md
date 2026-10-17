@@ -167,7 +167,7 @@ de point d'entrée de `AppEntryPointDiscovery` passent.
 | Commande | Rôle |
 | --- | --- |
 | `generate --assembly <dll> --project <csproj> --stamp <fichier> [--dependencies <liste>]` | Appelée par MSBuild après la compilation d'une app. |
-| `aggregate --project <hôte.csproj> --apps <liste> --output <BuiltInApplications.json>` | Appelée par l'hôte (voir plus bas). |
+| `aggregate --project <hôte.csproj> --apps <liste> --output <BuiltInApplications.json> [--trimmer-roots <racines.xml>]` | Appelée par l'hôte (voir plus bas). |
 | `validate <manifest.json>` | Lecture stricte (schéma v1) et `AppManifestValidator` sur un fichier ; remplace l'ancien validateur. |
 
 Fonctionnement de `generate` :
@@ -359,7 +359,11 @@ la préparation des ressources et avant les cibles Blazor) :
    (`{"fr":{"name":…}}`, ADR 0104), que `AppCatalog.Localize` applique ;
 4. ajoute ce fichier en `EmbeddedResource` (`HackerOs.BuiltInApplications.json`) ;
 5. ajoute un `BlazorWebAssemblyLazyLoad` pour l'assembly de chaque app (en
-   retirant d'abord un éventuel doublon écrit à la main).
+   retirant d'abord un éventuel doublon écrit à la main) ;
+6. passe à ILLink le fichier `obj/<config>/<tfm>/HackerOs.TrimmerRoots.xml` que
+   la même commande écrit (`--trimmer-roots`) : chaque assembly nommée par un
+   manifeste y est gardée entière pour une publication trimmée (ADR 0106,
+   ADR 0113, [`trimmed-publish.md`](trimmed-publish.md)).
 
 Les apps installées en **paquet** (ADR 0098 §2) suivent le même chemin : chaque
 paquet d'app contient ses manifestes sous `hackeros/manifests/` et un fichier

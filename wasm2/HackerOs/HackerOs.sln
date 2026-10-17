@@ -229,6 +229,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.Apps.HackPaint.Tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.Apps.ThemeEditor.Tests", "Tests\HackerOs.Apps.ThemeEditor.Tests\HackerOs.Apps.ThemeEditor.Tests.csproj", "{7EC94304-4A44-4DA5-8E22-E47B461CDE27}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HackerOs.TrimmedPublish.E2E.Tests", "Tests\HackerOs.TrimmedPublish.E2E.Tests\HackerOs.TrimmedPublish.E2E.Tests.csproj", "{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1439,6 +1441,18 @@ Global
 		{7EC94304-4A44-4DA5-8E22-E47B461CDE27}.Release|x64.Build.0 = Release|Any CPU
 		{7EC94304-4A44-4DA5-8E22-E47B461CDE27}.Release|x86.ActiveCfg = Release|Any CPU
 		{7EC94304-4A44-4DA5-8E22-E47B461CDE27}.Release|x86.Build.0 = Release|Any CPU
+		{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5}.Debug|x64.Build.0 = Debug|Any CPU
+		{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5}.Debug|x86.Build.0 = Debug|Any CPU
+		{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5}.Release|x64.ActiveCfg = Release|Any CPU
+		{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5}.Release|x64.Build.0 = Release|Any CPU
+		{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5}.Release|x86.ActiveCfg = Release|Any CPU
+		{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1547,6 +1561,7 @@ Global
 		{03C27791-BA76-46F0-995E-39367BF41005} = {905B2783-9C43-92DA-30E4-6F9E435459FB}
 		{8114676C-2E9B-44CA-8ABF-EDF1823BC9A3} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{7EC94304-4A44-4DA5-8E22-E47B461CDE27} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{FCA3DDA8-5B71-468B-8FE8-FB5D45BEDDA5} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {339AC3E9-0C3E-4CCF-BC46-C1938BC52847}

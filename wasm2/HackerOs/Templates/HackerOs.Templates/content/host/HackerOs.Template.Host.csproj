@@ -5,7 +5,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
-    <PublishTrimmed>false</PublishTrimmed>
+    <!--
+      ADR 0106, ADR 0113: Release publish trims the framework and the other trimmable libraries; the
+      HackerOS packages and every app are kept whole (roots added by HackerOs.App.Build).
+    -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
     <!--
       HackerOS host (ADR 0047, ADR 0098 §2): the build aggregates the manifests of every app package
       below into this assembly, read back by HostAppCatalog.Load, and lazy-loads their assemblies.

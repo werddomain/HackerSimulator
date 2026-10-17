@@ -100,11 +100,11 @@ public sealed class HackWebSiteHost : IHackWebSiteHost
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026",
-        Justification = "Root components come from build-known manifests whose assemblies the host retains (PublishTrimmed is off).")]
+        Justification = "Root components come from build-known manifests whose assemblies a trimmed host keeps whole (ADR 0113: generated root descriptor).")]
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2072",
-        Justification = "Root components come from build-known manifests whose assemblies the host retains (PublishTrimmed is off).")]
+        Justification = "Root components come from build-known manifests whose assemblies a trimmed host keeps whole (ADR 0113: generated root descriptor).")]
     public async Task<HackWebSiteStart> StartAsync(HackWebSiteStartRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);

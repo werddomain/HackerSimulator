@@ -299,7 +299,7 @@ public sealed class WorkerProcessHost
     [UnconditionalSuppressMessage(
         "Trimming", "IL2067",
         Justification = "The entry-point type was resolved and validated by the OS's discovery against the host's " +
-            "explicit app allowlist; hosts publish untrimmed (P1-GATE-004).")]
+            "explicit app allowlist; a trimmed host keeps that assembly whole (ADR 0113: generated root descriptor).")]
     private static object CreateInstance(Type entryType, AppManifest manifest) =>
         Activator.CreateInstance(entryType, manifest)
         ?? throw new InvalidOperationException($"Could not create '{entryType.FullName}'.");

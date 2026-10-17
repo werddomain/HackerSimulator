@@ -75,7 +75,7 @@ recompiler : voir [`resource-accounting.md`](resource-accounting.md).
 | Hôte de débogage | `dotnet run --project test/test` | Débogueur WebAssembly du navigateur ou de l'IDE ([`old/webassembly-debugging.md`](old/webassembly-debugging.md)). `dotnet run --project test/test -- --test-demo` affiche le bouton qui crée les fichiers de test E2E ([`old/e2e-test-demo-mode.md`](old/e2e-test-demo-mode.md)). |
 | Serveur optionnel | `dotnet run --project Server/HackerOs.Server` | Synchronisation, comptes, relais réseau, et interface servie en `InteractiveServer`. |
 
-Publier la PWA :
+Publier la PWA (Release trimmée, voir [Publier en Release trimmée](#publier-en-release-trimmée)) :
 
 ```bash
 dotnet publish OS/HackerOs.Ecosystem -c Release -o artifacts/ecosystem
@@ -178,6 +178,36 @@ Variables facultatives : `HACKEROS_SMOKE_HOST` (nom affiché),
 (dossier des captures).
 
 Chaque PR `rebuild/5-*` colle la sortie de `build/verify-hosts.sh`.
+
+## Publier en Release trimmée
+
+`dotnet publish` de l'Ecosystem en Release est élagué par ILLink
+(`PublishTrimmed=true`, `TrimMode=partial`, ADR 0106 et 0113) : le framework est
+élagué, les assemblies HackerOS et les apps restent entières. Une commande
+publie, mesure et teste cette publication ([`trimmed-publish.md`](trimmed-publish.md)) :
+
+```bash
+build/publish-trimmed.sh             # publication, tailles, tests E2E de la publication
+build/publish-trimmed.sh --compare   # publie aussi sans trimming et affiche les deux tailles
+build/publish-trimmed.sh --skip-build
+```
+
+| Publication de l'Ecosystem (2026-10-17) | Fichiers `.wasm` | Taille | Brotli |
+|---|---|---|---|
+| avant `v3/14` (`PublishTrimmed=false`) | 273 | 50,9 Mio | 13,5 Mio |
+| après `v3/14` | 134 | 26,5 Mio | 8,0 Mio |
+
+Le script échoue sur toute alerte `IL…`, sert la publication sur `127.0.0.1`
+et sur `127.0.0.2` (pour le service worker) et lance
+`Tests/HackerOs.TrimmedPublish.E2E.Tests` (environ 2 min). C'est une porte de
+fusion locale depuis `v3/14`. Sans `HACKEROS_TRIMMED_URL`, la suite est ignorée
+par `dotnet test HackerOs.sln`.
+
+Piège : la conversion WebCIL du SDK est incrémentale par dates de fichiers ; une
+publication `-p:PublishTrimmed=false` faite après une publication trimmée peut
+reprendre les assemblies élaguées. Supprimer d'abord
+`OS/HackerOs.Ecosystem/obj/Release/net10.0/{linked,webcil,tmp-webcil}` (le script
+le fait).
 
 ## Produire les paquets locaux
 
@@ -384,6 +414,7 @@ dotnet test Tests/HackerOs.UI.E2E.Tests -c Release --no-build --filter "FullyQua
 - [x] `build/verify-hosts.sh` : les trois hôtes, les combinaisons des mesures, le test de démarrage (`rebuild/5-host-smoke`).
 - [x] Repli des suites Playwright sur le Chromium du conteneur et leur état dans un conteneur.
 - [x] Paquets locaux (`build/pack-local.sh`) et test des modèles (v3/6).
+- [x] Publication Release trimmée, tailles avant et après, `build/publish-trimmed.sh` (`v3/14`, ADR 0106 et 0113).
 - [x] Fixtures de montée de version IndexedDB (ADR 0099 §4, `v3/7`) :
   - [x] historique du schéma : v1 absente du dépôt, v2 jusqu'à `e46e897`, v3 en `7a20401` ;
   - [x] vidages v2 et v3 produits en démarrant l'OS de ces commits (`produce-fixture.js`) ;

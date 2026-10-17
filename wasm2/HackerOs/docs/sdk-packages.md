@@ -159,6 +159,12 @@ Le paquet est produit avec les deux mesures de ressources compilées
 | `hackeros-site` | site ASP.Hack (`WebAppDefinition`, `wwwroot/` embarqué) | `HackerOs.AppSdk.Web`, `HackerOs.App.Build` |
 | `hackeros-host` | hôte Blazor WebAssembly : `Program.cs`, `index.html`, `appsettings.json`, les apps de base en paquets (système comme dans l'Ecosystem) | `HackerOs.Ecosystem.Host`, `HackerOs.App.Build`, `HackerOs.Apps.*`, `HackerOs.Commands` |
 
+Les modèles d'app partent avec `IsTrimmable=true` ; `hackeros-host` publie en
+Release trimmée (`PublishTrimmed=true`, `TrimMode=partial`) et
+`HackerOs.App.Build` garde entiers les paquets `HackerOs.*` et chaque app
+installée, active l'analyse de trimming dans un projet d'app qui ne la règle
+pas (ADR 0106 §4, ADR 0113, [`trimmed-publish.md`](trimmed-publish.md)).
+
 Paramètres des modèles d'app : `--appId` (défaut `com.example.my-app`) et
 `--publisherId` (défaut `pub.example`) ; le nom du projet (`-n`) devient
 l'espace de noms et le nom affiché.

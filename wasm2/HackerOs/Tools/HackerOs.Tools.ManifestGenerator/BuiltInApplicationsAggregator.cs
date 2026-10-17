@@ -13,7 +13,11 @@ public sealed record AggregationInput(string ManifestPath, bool IsSystemApp, str
 /// <summary>Result of an aggregation: the document when valid, diagnostics otherwise.</summary>
 /// <param name="Json">Canonical <c>BuiltInApplications.json</c>, or <see langword="null"/> on error.</param>
 /// <param name="Diagnostics">Every problem found.</param>
-public sealed record AggregationResult(string? Json, IReadOnlyList<GeneratorDiagnostic> Diagnostics);
+/// <param name="TrimmerRoots">
+/// The ILLink root descriptor of the same apps (ADR 0106 §2, <see cref="TrimmerRootDescriptorWriter"/>),
+/// or <see langword="null"/> on error.
+/// </param>
+public sealed record AggregationResult(string? Json, IReadOnlyList<GeneratorDiagnostic> Diagnostics, string? TrimmerRoots = null);
 
 /// <summary>
 /// Builds a host's <c>BuiltInApplications.json</c> (ADR 0047 §3): re-reads and validates each
@@ -78,7 +82,10 @@ public static class BuiltInApplicationsAggregator
 
         return diagnostics.Count > 0
             ? new AggregationResult(null, diagnostics)
-            : new AggregationResult(BuiltInApplicationsJsonSerializer.SerializeCanonical(applications), []);
+            : new AggregationResult(
+                BuiltInApplicationsJsonSerializer.SerializeCanonical(applications),
+                [],
+                TrimmerRootDescriptorWriter.Build(applications.Select(item => item.Manifest)));
     }
 
     /// <summary>

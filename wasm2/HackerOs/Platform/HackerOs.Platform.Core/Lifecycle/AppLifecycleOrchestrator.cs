@@ -204,8 +204,8 @@ public sealed class AppLifecycleOrchestrator
     [UnconditionalSuppressMessage(
         "Trimming", "IL2072",
         Justification = "descriptor.EntryPointType was verified by AppEntryPointDiscovery against an " +
-            "explicit host assembly allowlist, never scanned; see P1-GATE-004 for the tracked follow-up " +
-            "to add matching trim root descriptors once a host publish step exists.")]
+            "explicit host assembly allowlist, never scanned; a trimmed host keeps that assembly whole " +
+            "(ADR 0113: generated root descriptor), constructors included.")]
     private object CreateAppInstance(AppDescriptor descriptor) =>
         _services is not null
             ? ActivatorUtilities.CreateInstance(_services, descriptor.EntryPointType, descriptor.Manifest)

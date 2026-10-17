@@ -133,7 +133,7 @@ Plus de détails sur les hôtes dans [`old/hosting-model.md`](old/hosting-model.
 | `Templates/HackerOs.Templates` | Modèles `dotnet new` : `hackeros-window`, `-command`, `-service`, `-site`, `-host` (ADR 0098 §6). |
 | `Tools/icon-import` | Script Node d'import des bibliothèques d'icônes. |
 | `Samples/HackerOs.Windowing.SampleHost` | Hôte d'exemple du gestionnaire de fenêtres seul. |
-| `Tests/` | Un projet de tests xUnit par projet de code, des tests d'intégration MSBuild du générateur, des suites E2E Playwright (`HackerOs.E2E.Tests`, `HackerOs.UI.E2E.Tests`, `HackerOs.Pwa.E2E.Tests`) le test de démarrage des trois hôtes (`HackerOs.HostSmoke.Tests`, lancé par `build/verify-hosts.sh`) et le test des modèles (`HackerOs.Templates.E2E.Tests`). `HackerOs.Tests.Support` fournit des faux contextes et passerelles ; `HackerOs.E2E.Support`, le lancement de Chromium commun aux suites Playwright. |
+| `Tests/` | Un projet de tests xUnit par projet de code, des tests d'intégration MSBuild du générateur, des suites E2E Playwright (`HackerOs.E2E.Tests`, `HackerOs.UI.E2E.Tests`, `HackerOs.Pwa.E2E.Tests`) le test de démarrage des trois hôtes (`HackerOs.HostSmoke.Tests`, lancé par `build/verify-hosts.sh`), le test de la publication trimmée (`HackerOs.TrimmedPublish.E2E.Tests`, lancé par `build/publish-trimmed.sh`) et le test des modèles (`HackerOs.Templates.E2E.Tests`). `HackerOs.Tests.Support` fournit des faux contextes et passerelles ; `HackerOs.E2E.Support`, le lancement de Chromium commun aux suites Playwright. |
 | `build/HackerOs.Apps.targets` | Cibles MSBuild du modèle d'app (génération, agrégation, frontière du SDK, empaquetage des manifestes). |
 | `build/Versions.props`, `build/pack-local.sh`/`.ps1` | Version unique de tout ce qui est publié et production des paquets locaux dans `artifacts/local-nupkg` ([`sdk-packages.md`](sdk-packages.md)). |
 
@@ -204,6 +204,7 @@ Documents : [`hack-file-api.md`](hack-file-api.md),
 | Règle | Où | Document |
 |---|---|---|
 | Avertissements traités comme erreurs, analyse de compatibilité avec le *trimming* | `Directory.Build.props` | — |
+| Publication Release trimmée de l'hôte : racines générées depuis les manifestes, assemblies `HackerOs.*` entières (ADR 0106, 0113) | `build/HackerOs.Apps.targets`, testée par `build/publish-trimmed.sh` | [`trimmed-publish.md`](trimmed-publish.md) |
 | Pas de CSS ni de JavaScript en ligne dans un `.razor` (ADR 0007) | cible `ValidateHackerOsRazorAssets`, `Directory.Build.targets` | [`AGENTS.md`](../../../AGENTS.md) |
 | Chaque projet sous `Apps/` a une classe `[AppManifest]` valide ; `manifest.json` est régénéré (`HOSAPP0001`…) | `build/HackerOs.Apps.targets` | [`app-model.md`](app-model.md) |
 | Une app n'utilise que le SDK (`HOSAPP0030`, `HOSAPP0031`, `HOSSDK0001`) | `build/HackerOs.Apps.targets` et générateur | [`app-sdk.md`](app-sdk.md) |

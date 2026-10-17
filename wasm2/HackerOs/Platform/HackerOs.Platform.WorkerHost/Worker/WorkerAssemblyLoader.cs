@@ -38,7 +38,8 @@ public class ResolvedAssemblyLoader : IWorkerAssemblyLoader
     [UnconditionalSuppressMessage(
         "Trimming", "IL2026",
         Justification = "The entry-point type was resolved and validated by the OS's discovery against the host's " +
-            "explicit app allowlist before it was handed to the worker; hosts publish untrimmed (P1-GATE-004).")]
+            "explicit app allowlist before it was handed to the worker; a trimmed host keeps that assembly whole " +
+            "(ADR 0113: generated root descriptor).")]
     protected static Type ResolveType(string assemblyFile, string typeName)
     {
         string name = Path.GetFileNameWithoutExtension(assemblyFile);
