@@ -1,5 +1,6 @@
 @namespace HackerOs.AppSdk.Terminal
 @using HackerOs.AppSdk
+@using HackerOs.AppSdk.Globalization
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
@@ -12,7 +13,7 @@
     the host can close its window. Shortcuts follow gnome-terminal.
 *@
 <div class="terminal-tabs" @ref="_rootRef" @onkeydown="HandleKeyDownAsync">
-    <div class="terminal-tab-strip" role="tablist" aria-label="Terminal tabs">
+    <div class="terminal-tab-strip" role="tablist" aria-label="@L["Tabs.Label"]">
         @foreach (TerminalTabState tab in _tabs.Tabs)
         {
             bool active = tab == _tabs.Active;
@@ -23,14 +24,14 @@
                         title="@tab.Title"
                         @onclick="() => ActivateAsync(tab)">@tab.Title</button>
                 <button class="terminal-tab-close"
-                        aria-label="Close tab @tab.Title"
-                        title="Close tab (Ctrl+Shift+W)"
+                        aria-label="@L["Tabs.CloseNamed", tab.Title]"
+                        title="@L["Tabs.CloseHint"]"
                         @onclick="() => CloseTabAsync(tab)">×</button>
             </div>
         }
         <button class="terminal-tab-add"
-                aria-label="New tab"
-                title="New tab (Ctrl+Shift+T)"
+                aria-label="@L["Tabs.New"]"
+                title="@L["Tabs.NewHint"]"
                 @onclick="() => OpenTabAsync()">+</button>
     </div>
     <div class="terminal-tab-panels">
@@ -52,6 +53,9 @@
     /// <summary>Gets or sets the host app's execution context; every tab's shell is a child of its process.</summary>
     [Parameter, EditorRequired]
     public IAppExecutionContext AppContext { get; set; } = default!;
+
+    /// <summary>Gets the tab strip's labels in the host app's language (ADR 0104).</summary>
+    private Microsoft.Extensions.Localization.IStringLocalizer<Strings> L => AppContext.GetLocalizer<Strings>();
 
     /// <summary>Gets or sets the app id of the hosting app, passed to each <see cref="TerminalPanel"/>.</summary>
     [Parameter]

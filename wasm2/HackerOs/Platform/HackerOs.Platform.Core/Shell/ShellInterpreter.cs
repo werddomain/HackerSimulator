@@ -140,7 +140,7 @@ public sealed partial class ShellInterpreter
         ShellParseResult parsed = ShellParser.Parse(commandLine);
         if (parsed.Error is { } syntaxError)
         {
-            await options.StandardError.WriteLineAsync($"hsh: {syntaxError.Message}").ConfigureAwait(false);
+            await options.StandardError.WriteLineAsync($"hsh: {syntaxError.Localize(ShellText.For(session))}").ConfigureAwait(false);
             session.LastExitCode = SyntaxErrorExitCode;
             return new ShellExecutionResult(SyntaxErrorExitCode, ShellFailure.Syntax, syntaxError, []);
         }
@@ -203,7 +203,7 @@ public sealed partial class ShellInterpreter
         ShellParseResult parsed = ShellParser.Parse(commandLine);
         if (parsed.Error is { } syntaxError)
         {
-            await error.WriteLineAsync($"hsh: {syntaxError.Message}").ConfigureAwait(false);
+            await error.WriteLineAsync($"hsh: {syntaxError.Localize(ShellText.For(session))}").ConfigureAwait(false);
             return SyntaxErrorExitCode;
         }
 
@@ -379,7 +379,7 @@ public sealed partial class ShellInterpreter
         }
         catch (ShellExpansionException exception)
         {
-            await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{exception.Message}").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{exception.Localize(exec.Text)}").ConfigureAwait(false);
             if (exec.Session.IsScript)
             {
                 // A non-interactive shell exits on an expansion error (POSIX 2.8.1).
@@ -604,7 +604,7 @@ public sealed partial class ShellInterpreter
     {
         if (exec.Session.CallDepth >= MaximumCallDepth)
         {
-            throw new ShellExpansionException("maximum nesting level exceeded");
+            throw new ShellExpansionException(new ShellLocalizedText("Shell.MaximumNestingLevel"));
         }
 
         StringWriter captured = new() { NewLine = "\n" };
@@ -709,7 +709,7 @@ public sealed partial class ShellInterpreter
             job.Reported = true;
             try
             {
-                await error.WriteLineAsync(FormatJob(job, ReferenceEquals(job, current))).ConfigureAwait(false);
+                await error.WriteLineAsync(FormatJob(job, ReferenceEquals(job, current), ShellText.For(session))).ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is IOException or ObjectDisposedException)
             {
@@ -721,14 +721,18 @@ public sealed partial class ShellInterpreter
     }
 
     /// <summary>Formats a job like bash's <c>jobs</c> and completion notices.</summary>
-    internal static string FormatJob(ShellJob job, bool current)
+    /// <param name="job">The job.</param>
+    /// <param name="current">Whether it is the current job (<c>+</c>).</param>
+    /// <param name="texts">The shell's texts (bash translates the job states); English when <see langword="null"/>.</param>
+    internal static string FormatJob(ShellJob job, bool current, Microsoft.Extensions.Localization.IStringLocalizer? texts = null)
     {
+        texts ??= ShellText.English;
         string state = job.State switch
         {
-            ShellJobState.Running => "Running",
-            ShellJobState.Terminated => "Terminated",
-            _ when job.ExitStatus is null or 0 => "Done",
-            _ => $"Exit {job.ExitStatus}"
+            ShellJobState.Running => texts["Job.Running"],
+            ShellJobState.Terminated => texts["Job.Terminated"],
+            _ when job.ExitStatus is null or 0 => texts["Job.Done"],
+            _ => texts["Job.Exit", job.ExitStatus]
         };
         string suffix = job.State == ShellJobState.Running ? " &" : string.Empty;
         return $"[{job.Id}]{(current ? '+' : '-')}  {state,-24}{job.Command}{suffix}";
@@ -816,6 +820,9 @@ public sealed partial class ShellInterpreter
         public required CancellationToken Token { get; init; }
 
         public required ControlState Control { get; init; }
+
+        /// <summary>Gets the shell's texts in its current language (<c>LANG</c> can change between commands).</summary>
+        public Microsoft.Extensions.Localization.IStringLocalizer Text => ShellText.For(Session);
 
         /// <summary>Inside an <c>if</c>/<c>while</c> condition: <c>set -e</c> does not apply.</summary>
         public bool InCondition { get; init; }

@@ -135,7 +135,8 @@ public sealed class HackSiteRouter : HackComponentBase, IDisposable
             {
                 builder.OpenElement(0, "p");
                 builder.AddAttribute(1, "role", "alert");
-                builder.AddContent(2, "Sorry, there's nothing at this address.");
+                // The default "not found" text speaks the site process's language (ADR 0104).
+                builder.AddContent(2, HackerOs.AppSdk.Globalization.HackLocalization.GetLocalizer<Strings>(AppContext)["Router.NotFound"].Value);
                 builder.CloseElement();
             }
 

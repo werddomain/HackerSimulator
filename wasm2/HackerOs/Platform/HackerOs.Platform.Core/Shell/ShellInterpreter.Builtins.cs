@@ -68,13 +68,13 @@ public sealed partial class ShellInterpreter
             case "break" or "continue":
                 if (!TryParseCount(arguments, out int levels))
                 {
-                    await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{name}: {arguments[0]}: loop count out of range").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.LoopCountOutOfRange", name, arguments[0]]).ConfigureAwait(false);
                     return 1;
                 }
 
                 if (exec.LoopDepth == 0)
                 {
-                    await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{name}: only meaningful in a `for', `while', or `until' loop").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.OnlyInLoop", name]).ConfigureAwait(false);
                     return 0;
                 }
 
@@ -85,14 +85,14 @@ public sealed partial class ShellInterpreter
             case "return":
                 if (!exec.CanReturn)
                 {
-                    await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}return: can only `return' from a function or sourced script").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.ReturnOutsideFunction"]).ConfigureAwait(false);
                     return 1;
                 }
 
                 int returned = session.LastExitCode;
                 if (arguments.Count > 0 && !TryParseStatus(arguments[0], out returned))
                 {
-                    await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}return: {arguments[0]}: numeric argument required").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.NumericArgumentRequired", "return", arguments[0]]).ConfigureAwait(false);
                     returned = 2;
                 }
 
@@ -104,7 +104,7 @@ public sealed partial class ShellInterpreter
                 int count = 1;
                 if (arguments.Count > 0 && (!int.TryParse(arguments[0], NumberStyles.None, CultureInfo.InvariantCulture, out count)))
                 {
-                    await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}shift: {arguments[0]}: numeric argument required").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.NumericArgumentRequired", "shift", arguments[0]]).ConfigureAwait(false);
                     return 1;
                 }
 
@@ -138,11 +138,11 @@ public sealed partial class ShellInterpreter
                 ShellJob? background = session.Jobs.Find(arguments.Count > 0 ? arguments[0] : "%%");
                 if (background is null)
                 {
-                    await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}bg: {(arguments.Count > 0 ? arguments[0] : "current")}: no such job").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.NoSuchJob", "bg", arguments.Count > 0 ? arguments[0] : exec.Text["Shell.CurrentJob"]]).ConfigureAwait(false);
                     return 1;
                 }
 
-                await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}bg: job {background.Id} already in background").ConfigureAwait(false);
+                await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.JobAlreadyInBackground", background.Id]).ConfigureAwait(false);
                 return 0;
 
             case "exec":
@@ -165,10 +165,10 @@ public sealed partial class ShellInterpreter
                 int typeStatus = 0;
                 foreach (string argument in arguments)
                 {
-                    string? description = Describe(session, argument, verbose: true);
+                    string? description = Describe(session, argument, verbose: true, exec.Text);
                     if (description is null)
                     {
-                        await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}type: {argument}: not found").ConfigureAwait(false);
+                        await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.NotFound", "type", argument]).ConfigureAwait(false);
                         typeStatus = 1;
                     }
                     else
@@ -190,7 +190,7 @@ public sealed partial class ShellInterpreter
         ShellSession session = exec.Session;
         if (session.CallDepth >= MaximumCallDepth)
         {
-            await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{function.Name}: maximum function nesting level exceeded ({MaximumCallDepth})").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.FunctionNestingExceeded", function.Name, MaximumCallDepth]).ConfigureAwait(false);
             return 1;
         }
 
@@ -258,7 +258,7 @@ public sealed partial class ShellInterpreter
                 char? flag = LongOptions.FirstOrDefault(pair => pair.Name == longName).Letter;
                 if (flag is null or '\0')
                 {
-                    await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}set: {longName}: invalid option name").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.InvalidOptionName", "set", longName]).ConfigureAwait(false);
                     return 2;
                 }
 
@@ -273,7 +273,7 @@ public sealed partial class ShellInterpreter
                 {
                     if (letter is not ('e' or 'u' or 'x' or 'f' or 'v' or 'C' or 'n' or 'a' or 'h' or 'm' or 'b'))
                     {
-                        await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}set: {argument[0]}{letter}: invalid option").ConfigureAwait(false);
+                        await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.InvalidOption", "set", $"{argument[0]}{letter}"]).ConfigureAwait(false);
                         return 2;
                     }
 
@@ -312,7 +312,7 @@ public sealed partial class ShellInterpreter
         ShellSession session = exec.Session;
         if (!session.InFunction)
         {
-            await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}local: can only be used in a function").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.LocalOutsideFunction"]).ConfigureAwait(false);
             return 1;
         }
 
@@ -323,7 +323,7 @@ public sealed partial class ShellInterpreter
             string name = equals < 0 ? argument : argument[..equals];
             if (!ShellParser.IsName(name))
             {
-                await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}local: `{argument}': not a valid identifier").ConfigureAwait(false);
+                await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.NotValidIdentifier", "local", argument]).ConfigureAwait(false);
                 status = 1;
                 continue;
             }
@@ -341,7 +341,7 @@ public sealed partial class ShellInterpreter
         ShellParseResult parsed = ShellParser.Parse(text);
         if (parsed.Error is { } error)
         {
-            await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}eval: {error.Message}").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.Error", "eval", error.Localize(exec.Text)]).ConfigureAwait(false);
             return SyntaxErrorExitCode;
         }
 
@@ -355,7 +355,7 @@ public sealed partial class ShellInterpreter
         {
             if (exec.Session.CallDepth >= MaximumCallDepth)
             {
-                await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}eval: maximum nesting level exceeded").ConfigureAwait(false);
+                await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.NestingExceeded", "eval"]).ConfigureAwait(false);
                 return 1;
             }
 
@@ -373,7 +373,7 @@ public sealed partial class ShellInterpreter
         ShellSession session = exec.Session;
         if (arguments.Count == 0)
         {
-            await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{name}: filename argument required").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.FilenameArgumentRequired", name]).ConfigureAwait(false);
             return 2;
         }
 
@@ -386,7 +386,7 @@ public sealed partial class ShellInterpreter
         ShellParseResult parsed = ShellParser.Parse(content);
         if (parsed.Error is { } error)
         {
-            await exec.Err.WriteLineAsync($"{arguments[0]}: line {LineOf(content, error.Offset)}: {error.Message}").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(exec.Text["Shell.ScriptLineError", arguments[0], LineOf(content, error.Offset), error.Localize(exec.Text)]).ConfigureAwait(false);
             return SyntaxErrorExitCode;
         }
 
@@ -407,7 +407,7 @@ public sealed partial class ShellInterpreter
         {
             if (session.CallDepth >= MaximumCallDepth)
             {
-                await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{name}: maximum nesting level exceeded").ConfigureAwait(false);
+                await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.NestingExceeded", name]).ConfigureAwait(false);
                 return 1;
             }
 
@@ -442,7 +442,7 @@ public sealed partial class ShellInterpreter
                     : jobs.Jobs.FirstOrDefault(candidate => candidate.Processes.Any(pid => pid.Value.ToString(CultureInfo.InvariantCulture) == argument));
                 if (job is null)
                 {
-                    await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}wait: {argument}: no such job").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.NoSuchJob", "wait", argument]).ConfigureAwait(false);
                     return 127;
                 }
 
@@ -468,7 +468,7 @@ public sealed partial class ShellInterpreter
         ShellJob? job = session.Jobs.Find(arguments.Count > 0 ? arguments[0] : "%%");
         if (job is null)
         {
-            await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}fg: {(arguments.Count > 0 ? arguments[0] : "current")}: no such job").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.NoSuchJob", "fg", arguments.Count > 0 ? arguments[0] : exec.Text["Shell.CurrentJob"]]).ConfigureAwait(false);
             return 1;
         }
 
@@ -508,7 +508,7 @@ public sealed partial class ShellInterpreter
         if (arguments.Count == 1)
         {
             // `trap - ` alone resets nothing in particular; `trap cmd` without a signal is an error in bash.
-            await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}trap: usage: trap [action] [EXIT|signal...]").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.TrapUsage"]).ConfigureAwait(false);
             return 2;
         }
 
@@ -538,7 +538,7 @@ public sealed partial class ShellInterpreter
                 {
                     if (verbose)
                     {
-                        await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}command: {name}: not found").ConfigureAwait(false);
+                        await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.NotFound", "command", name]).ConfigureAwait(false);
                     }
 
                     status = 1;
@@ -581,36 +581,41 @@ public sealed partial class ShellInterpreter
     }
 
     /// <summary>How <paramref name="name"/> would run, as <c>command -v</c> (short) or <c>type</c> (verbose) say it.</summary>
-    private string? Describe(ShellSession session, string name, bool verbose)
+    /// <param name="session">The shell.</param>
+    /// <param name="name">The name to describe.</param>
+    /// <param name="verbose">Whether to print the <c>type</c> sentence (translated) rather than the bare path.</param>
+    /// <param name="texts">The shell's texts for the verbose sentence; English when <see langword="null"/>.</param>
+    private string? Describe(ShellSession session, string name, bool verbose, Microsoft.Extensions.Localization.IStringLocalizer? texts = null)
     {
+        texts ??= ShellText.English;
         if (name is "if" or "then" or "else" or "elif" or "fi" or "for" or "while" or "until" or "do" or "done" or "case" or "esac" or "in" or "function")
         {
-            return verbose ? $"{name} is a shell keyword" : name;
+            return verbose ? texts["Shell.Type.Keyword", name] : name;
         }
 
         if (session.Functions.ContainsKey(name))
         {
-            return verbose ? $"{name} is a function" : name;
+            return verbose ? texts["Shell.Type.Function", name] : name;
         }
 
         if (IsSpecialBuiltin(name))
         {
-            return verbose ? $"{name} is a shell builtin" : name;
+            return verbose ? texts["Shell.Type.Builtin", name] : name;
         }
 
         if (Resolver.Resolve(name, []) is { } command && _enablement.IsEnabled(command.AppId))
         {
-            return verbose ? $"{name} is /usr/bin/{command.Manifest.Terminal!.Name} ({command.AppId})" : $"/usr/bin/{name}";
+            return verbose ? texts["Shell.Type.File", name, $"/usr/bin/{command.Manifest.Terminal!.Name} ({command.AppId})"] : $"/usr/bin/{name}";
         }
 
         if (ShellNames.Contains(name))
         {
-            return verbose ? $"{name} is /bin/{name}" : $"/bin/{name}";
+            return verbose ? texts["Shell.Type.File", name, $"/bin/{name}"] : $"/bin/{name}";
         }
 
         if (Resolver.ResolveApplication(name) is { } application && _enablement.IsEnabled(application.Id))
         {
-            return verbose ? $"{name} is the application {application.Name} ({application.Id})" : name;
+            return verbose ? texts["Shell.Type.Application", name, application.Name, application.Id] : name;
         }
 
         return name.Contains('/') ? name : null;

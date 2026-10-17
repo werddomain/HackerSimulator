@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Breadcrumb.Label" xml:space="preserve">
+    <value>Path</value>
+  </data>
+  <data name="Column.Modified" xml:space="preserve">
+    <value>Modified</value>
+  </data>
+  <data name="Column.Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Column.Size" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="Column.Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Menu.Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Menu.Cut" xml:space="preserve">
+    <value>Cut</value>
+  </data>
+  <data name="Menu.Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Menu.DeletePermanently" xml:space="preserve">
+    <value>Delete permanently</value>
+  </data>
+  <data name="Menu.Label" xml:space="preserve">
+    <value>File context menu</value>
+  </data>
+  <data name="Menu.NewFolder" xml:space="preserve">
+    <value>New Folder</value>
+  </data>
+  <data name="Menu.NewFolder.DefaultName" xml:space="preserve">
+    <value>New Folder</value>
+  </data>
+  <data name="Menu.Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="Menu.Paste" xml:space="preserve">
+    <value>Paste</value>
+  </data>
+  <data name="Menu.PasteInto" xml:space="preserve">
+    <value>Paste Into Folder</value>
+  </data>
+  <data name="Menu.Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Menu.Rename" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="Size.Bytes" xml:space="preserve">
+    <value>{0:0.#} B</value>
+  </data>
+  <data name="Size.Gigabytes" xml:space="preserve">
+    <value>{0:0.#} GB</value>
+  </data>
+  <data name="Size.Kilobytes" xml:space="preserve">
+    <value>{0:0.#} KB</value>
+  </data>
+  <data name="Size.Megabytes" xml:space="preserve">
+    <value>{0:0.#} MB</value>
+  </data>
+  <data name="Transfer.Error.AppNotAllowed" xml:space="preserve">
+    <value>this app is not allowed to write there</value>
+  </data>
+  <data name="Transfer.Error.CannotOpen" xml:space="preserve">
+    <value>cannot open '{0}': {1}</value>
+  </data>
+  <data name="Transfer.Error.CopyIntoItself" xml:space="preserve">
+    <value>cannot copy a folder into itself</value>
+  </data>
+  <data name="Transfer.Error.InvalidName" xml:space="preserve">
+    <value>invalid file name</value>
+  </data>
+  <data name="Transfer.Error.MoveIntoItself" xml:space="preserve">
+    <value>cannot move a folder into itself</value>
+  </data>
+  <data name="Transfer.Error.NameTaken" xml:space="preserve">
+    <value>the name is already taken</value>
+  </data>
+  <data name="Transfer.Error.NoLongerExists" xml:space="preserve">
+    <value>no longer exists</value>
+  </data>
+  <data name="Transfer.Error.PermissionDenied" xml:space="preserve">
+    <value>permission denied</value>
+  </data>
+  <data name="Transfer.Error.Protected" xml:space="preserve">
+    <value>protected system entry</value>
+  </data>
+  <data name="Transfer.Error.ReadOnly" xml:space="preserve">
+    <value>read-only file system</value>
+  </data>
+  <data name="Transfer.Error.Stopped" xml:space="preserve">
+    <value>stopped before this item</value>
+  </data>
+  <data name="Transfer.Error.TooLarge" xml:space="preserve">
+    <value>larger than {0} MiB</value>
+  </data>
+  <data name="Transfer.Failure.Item" xml:space="preserve">
+    <value>'{0}': {1}</value>
+  </data>
+  <data name="Transfer.Failure.Many" xml:space="preserve">
+    <value>Could not {0} {1} items: {2}.</value>
+  </data>
+  <data name="Transfer.Failure.One" xml:space="preserve">
+    <value>Could not {0} {1}.</value>
+  </data>
+  <data name="Transfer.Verb.Copy" xml:space="preserve">
+    <value>copy</value>
+  </data>
+  <data name="Transfer.Verb.Move" xml:space="preserve">
+    <value>move</value>
+  </data>
+  <data name="Transfer.Verb.Trash" xml:space="preserve">
+    <value>move to the trash</value>
+  </data>
+  <data name="Transfer.Verb.Upload" xml:space="preserve">
+    <value>upload</value>
+  </data>
+  <data name="Type.Extension" xml:space="preserve">
+    <value>{0} File</value>
+  </data>
+  <data name="Type.File" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="Type.Folder" xml:space="preserve">
+    <value>Folder</value>
+  </data>
+</root>

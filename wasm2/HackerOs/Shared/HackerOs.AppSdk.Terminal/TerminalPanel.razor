@@ -3,6 +3,7 @@
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
 @using HackerOs.AppSdk.Components
+@using HackerOs.AppSdk.Globalization
 @using HackerOs.AppSdk.IO
 @using HackerOs.AppSdk.Shell
 @using HackerOs.AppSdk.VirtualKeyboard
@@ -39,6 +40,12 @@
     /// <summary>Gets or sets the host app's execution context (filesystem, cancellation, logging).</summary>
     [Parameter, EditorRequired]
     public IAppExecutionContext AppContext { get; set; } = default!;
+
+    /// <summary>
+    /// Gets the terminal's own texts (banner, status lines, labels) in the host app's language
+    /// (ADR 0104); the shell prints its diagnostics in its own language.
+    /// </summary>
+    private Microsoft.Extensions.Localization.IStringLocalizer<Strings> L => AppContext.GetLocalizer<Strings>();
 
     /// <summary>
     /// Gets or sets the app id of the hosting app. Kept for compatibility: the shell's parent is
@@ -189,7 +196,7 @@
         {
             // The host lacks shell.host, or runs without a platform: show why, as a terminal whose
             // shell failed to exec prints the error and stays open.
-            _startError = $"hsh: cannot start the shell: {exception.Message}";
+            _startError = "hsh: " + L["Panel.StartFailed", exception.Message];
             AppContext.Logging.Log(DiagnosticSeverity.Error, _startError);
             WriteLine(_startError, TerminalAnsi.Error);
         }
@@ -275,7 +282,7 @@
                 "mountTerminal",
                 _surfaceRef,
                 _dotNetReference,
-                new { useVirtualKeyboard = UseVirtualKeyboard, ariaLabel = "Terminal command input" });
+                new { useVirtualKeyboard = UseVirtualKeyboard, ariaLabel = L["Panel.InputLabel"].Value });
         }
         catch (Exception)
         {
@@ -649,7 +656,7 @@
             return;
         }
 
-        WriteLine($"[hsh exited with status {_shell?.ExitStatus ?? 0}]", TerminalAnsi.Notice);
+        WriteLine(L["Panel.ShellExited", _shell?.ExitStatus ?? 0], TerminalAnsi.Notice);
     }
 
     private static bool TryMapToTerminalKey(VirtualKeyPressedEvent evt, out TerminalKeyEvent terminalKeyEvent)
@@ -715,7 +722,7 @@
         if (_shell is null || _shell.HasExited)
         {
             _continuation = null;
-            WriteLine(_startError ?? "hsh: the shell has exited", TerminalAnsi.Error);
+            WriteLine(_startError ?? "hsh: " + L["Panel.ShellGone"], TerminalAnsi.Error);
             ShowPrompt();
             return null;
         }
@@ -759,7 +766,7 @@
         }
         catch (ObjectDisposedException)
         {
-            WriteLine("hsh: the shell has exited", TerminalAnsi.Error);
+            WriteLine("hsh: " + L["Panel.ShellGone"], TerminalAnsi.Error);
             status = 1;
         }
         catch (OperationCanceledException)
@@ -770,7 +777,7 @@
         catch (Exception ex)
         {
             AppContext.Logging.Log(DiagnosticSeverity.Error, $"Shell fault: {ex.Message}");
-            WriteLine($"Fault: {ex.Message}", TerminalAnsi.Error);
+            WriteLine(L["Panel.Fault", ex.Message], TerminalAnsi.Error);
             status = 1;
         }
         finally
@@ -1016,7 +1023,7 @@
     private void WriteBanner()
     {
         Write(TerminalAnsi.Banner + BannerArt + "\n" + TerminalAnsi.Reset);
-        Write("HackerOS Terminal v1.0.0 — Type 'help' for available commands.\n\n");
+        Write(L["Panel.Welcome"] + "\n\n");
     }
 
     /// <summary>

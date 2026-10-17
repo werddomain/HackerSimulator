@@ -429,7 +429,8 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<StorageSpaceMonitor>(provider => new StorageSpaceMonitor(
             provider.GetRequiredService<IStorageCapacityProbe>(),
             provider.GetRequiredService<INotificationQueue>(),
-            () => provider.GetRequiredService<ISessionService>().CurrentPrincipal));
+            () => provider.GetRequiredService<ISessionService>().CurrentPrincipal,
+            language: () => provider.GetRequiredService<HackerOs.Platform.Core.Globalization.SessionLocaleService>().Culture));
         services.AddScoped<IStorageSpaceGuard>(provider => provider.GetRequiredService<StorageSpaceMonitor>());
 
         // User keyring (ADR 0100 section 2): ~/.local/share/keyrings/login.keyring, sealed with

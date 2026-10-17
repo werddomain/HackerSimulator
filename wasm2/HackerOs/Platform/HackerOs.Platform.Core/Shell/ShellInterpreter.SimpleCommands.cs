@@ -38,7 +38,7 @@ public sealed partial class ShellInterpreter
                 }
                 else
                 {
-                    await exec.Err.WriteLineAsync($"hsh: alias {aliasName}: only a simple command can be aliased").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync("hsh: " + exec.Text["Shell.AliasNotSimple", aliasName]).ConfigureAwait(false);
                     exec.Line.LastFailure = ShellFailure.Fault;
                     return 1;
                 }
@@ -179,7 +179,7 @@ public sealed partial class ShellInterpreter
             return await LaunchApplicationAsync(exec, application, name, arguments, assignments).ConfigureAwait(false);
         }
 
-        await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{name}: command not found").ConfigureAwait(false);
+        await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.CommandNotFound", name]).ConfigureAwait(false);
         exec.Line.LastFailure = resolution is null ? ShellFailure.CommandNotFound : ShellFailure.Disabled;
         return CommandNotFoundExitCode;
     }
@@ -295,15 +295,15 @@ public sealed partial class ShellInterpreter
                     return InterruptedExitCode;
                 }
             case AppLaunchStatus.NotFound or AppLaunchStatus.Disabled:
-                await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{name}: command not found").ConfigureAwait(false);
+                await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.CommandNotFound", name]).ConfigureAwait(false);
                 exec.Line.LastFailure = launch.Status == AppLaunchStatus.NotFound ? ShellFailure.CommandNotFound : ShellFailure.Disabled;
                 return CommandNotFoundExitCode;
             case AppLaunchStatus.ElevationDenied:
-                await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{name}: elevation denied").ConfigureAwait(false);
+                await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.ElevationDenied", name]).ConfigureAwait(false);
                 exec.Line.LastFailure = ShellFailure.ElevationDenied;
                 return 1;
             default:
-                await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{name}: {launch.ErrorMessage ?? launch.ErrorCode}").ConfigureAwait(false);
+                await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.Error", name, launch.ErrorMessage ?? launch.ErrorCode ?? string.Empty]).ConfigureAwait(false);
                 exec.Line.LastFailure = ShellFailure.Fault;
                 return 1;
         }
@@ -332,36 +332,37 @@ public sealed partial class ShellInterpreter
         }
 
         string name = arguments[0];
+        Microsoft.Extensions.Localization.IStringLocalizer texts = ShellText.For(session);
         if (IsSpecialBuiltin(name))
         {
-            await error.WriteLineAsync($"sudo: {name}: shell builtin").ConfigureAwait(false);
+            await error.WriteLineAsync("sudo: " + texts["Sudo.ShellBuiltin", name]).ConfigureAwait(false);
             return 1;
         }
 
         ShellCommandResolution? resolution = Resolver.Resolve(name, [.. arguments.Skip(1)]);
         if (resolution is null || !_enablement.IsEnabled(resolution.AppId))
         {
-            await error.WriteLineAsync($"sudo: {name}: command not found").ConfigureAwait(false);
+            await error.WriteLineAsync("sudo: " + texts["Shell.CommandNotFound", name]).ConfigureAwait(false);
             return 1;
         }
 
         if (DeclaresShellControl(resolution.Manifest))
         {
             // The target never reaches the shell: an elevated `cd` would have nothing to act on.
-            await error.WriteLineAsync($"sudo: {name}: shell builtin").ConfigureAwait(false);
+            await error.WriteLineAsync("sudo: " + texts["Sudo.ShellBuiltin", name]).ConfigureAwait(false);
             return 1;
         }
 
         if (options.CredentialPrompt is not { } prompt)
         {
-            await error.WriteLineAsync("sudo: a terminal is required to read the password").ConfigureAwait(false);
+            await error.WriteLineAsync("sudo: " + texts["Sudo.TerminalRequired"]).ConfigureAwait(false);
             return 1;
         }
 
-        ShellElevation? ticket = await prompt($"Run as root: {string.Join(" ", arguments)}", cancellationToken).ConfigureAwait(false);
+        ShellElevation? ticket = await prompt(texts["Sudo.RunAsRoot", string.Join(" ", arguments)], cancellationToken).ConfigureAwait(false);
         if (ticket is null)
         {
-            await error.WriteLineAsync("sudo: authentication failed").ConfigureAwait(false);
+            await error.WriteLineAsync("sudo: " + texts["Sudo.AuthenticationFailed"]).ConfigureAwait(false);
             return 1;
         }
 
@@ -391,6 +392,7 @@ public sealed partial class ShellInterpreter
         CancellationToken cancellationToken)
     {
         string name = resolution.CommandName;
+        Microsoft.Extensions.Localization.IStringLocalizer texts = ShellText.For(session);
         AppLaunchResult launch = await _orchestrator.LaunchAsync(
             new AppLaunchRequest(
                 resolution.AppId,
@@ -422,18 +424,18 @@ public sealed partial class ShellInterpreter
                     && launch.Process?.ExitReason is ProcessExitReason.Killed or ProcessExitReason.Timeout)
                 {
                     // Like bash for a job ended by SIGKILL (kill -9, or its worker was terminated, ADR 0070).
-                    await error.WriteLineAsync("Killed").ConfigureAwait(false);
+                    await error.WriteLineAsync(texts["Shell.Killed"]).ConfigureAwait(false);
                 }
 
                 return StageOutcome.Completed(launch.ExitCode ?? 0, denials, elevation is not null);
             case AppLaunchStatus.NotFound:
-                await error.WriteLineAsync($"{caller}: {name}: command not found").ConfigureAwait(false);
+                await error.WriteLineAsync($"{caller}: " + texts["Shell.CommandNotFound", name]).ConfigureAwait(false);
                 return StageOutcome.Failed(CommandNotFoundExitCode, ShellFailure.CommandNotFound);
             case AppLaunchStatus.Disabled:
-                await error.WriteLineAsync($"{caller}: {name}: command not found").ConfigureAwait(false);
+                await error.WriteLineAsync($"{caller}: " + texts["Shell.CommandNotFound", name]).ConfigureAwait(false);
                 return StageOutcome.Failed(CommandNotFoundExitCode, ShellFailure.Disabled);
             case AppLaunchStatus.ElevationDenied:
-                await error.WriteLineAsync($"{caller}: {name}: elevation denied").ConfigureAwait(false);
+                await error.WriteLineAsync($"{caller}: " + texts["Shell.ElevationDenied", name]).ConfigureAwait(false);
                 return StageOutcome.Failed(1, ShellFailure.ElevationDenied);
             default:
                 if (cancellationToken.IsCancellationRequested)
@@ -441,7 +443,7 @@ public sealed partial class ShellInterpreter
                     return StageOutcome.Failed(InterruptedExitCode, ShellFailure.None);
                 }
 
-                await error.WriteLineAsync($"{caller}: {name}: {launch.ErrorMessage ?? launch.ErrorCode}").ConfigureAwait(false);
+                await error.WriteLineAsync($"{caller}: " + texts["Shell.Error", name, launch.ErrorMessage ?? launch.ErrorCode ?? string.Empty]).ConfigureAwait(false);
                 return StageOutcome.Failed(1, ShellFailure.Fault);
         }
     }

@@ -1,4 +1,6 @@
 @namespace HackerOs.AppSdk.VirtualKeyboard
+@using HackerOs.AppSdk
+@using HackerOs.AppSdk.Globalization
 @implements IDisposable
 
 @*
@@ -7,27 +9,27 @@
     control never needs to fill an arbitrary focused text field (see package README), so it only
     needs to describe intent to the host via OnKeyPressed -- the host decides what a key means.
 *@
-<div class="virtual-keyboard" role="group" aria-label="Virtual keyboard">
+<div class="virtual-keyboard" role="group" aria-label="@L["Keyboard.Label"]">
     @if (Options.ShowModifierRow)
     {
         <div class="vk-row vk-row-modifiers">
-            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.Escape)">Esc</button>
-            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.Tab)">Tab</button>
+            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.Escape)">@L["Key.Escape"]</button>
+            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.Tab)">@L["Key.Tab"]</button>
             <button type="button"
                     class="vk-key vk-key-modifier @(_controlActive ? "is-active" : "")"
                     aria-pressed="@_controlActive.ToString().ToLowerInvariant()"
-                    @onclick="ToggleControl">@Options.ControlLabel</button>
+                    @onclick="ToggleControl">@Label(Options.ControlLabel, Defaults.ControlLabel, "Key.Control")</button>
             <button type="button"
                     class="vk-key vk-key-modifier @(_altActive ? "is-active" : "")"
                     aria-pressed="@_altActive.ToString().ToLowerInvariant()"
-                    @onclick="ToggleAlt">@Options.AltLabel</button>
+                    @onclick="ToggleAlt">@Label(Options.AltLabel, Defaults.AltLabel, "Key.Alt")</button>
             <button type="button" class="vk-key vk-key-wide"
                     @onpointerdown="() => StartRepeatAsync(VirtualKey.Delete)"
-                    @onpointerup="StopRepeat" @onpointerleave="StopRepeat" @onpointercancel="StopRepeat">Del</button>
-            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.Home)">Home</button>
-            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.End)">End</button>
-            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.PageUp)">PgUp</button>
-            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.PageDown)">PgDn</button>
+                    @onpointerup="StopRepeat" @onpointerleave="StopRepeat" @onpointercancel="StopRepeat">@L["Key.Delete"]</button>
+            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.Home)">@L["Key.Home"]</button>
+            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.End)">@L["Key.End"]</button>
+            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.PageUp)">@L["Key.PageUp"]</button>
+            <button type="button" class="vk-key vk-key-wide" @onclick="() => RaiseAsync(VirtualKey.PageDown)">@L["Key.PageDown"]</button>
         </div>
     }
 
@@ -56,7 +58,7 @@
         <button type="button"
                 class="vk-key vk-key-wide vk-key-modifier @(_shiftActive ? "is-active" : "")"
                 aria-pressed="@_shiftActive.ToString().ToLowerInvariant()"
-                @onclick="ToggleShift">@Options.ShiftLabel</button>
+                @onclick="ToggleShift">@Label(Options.ShiftLabel, Defaults.ShiftLabel, "Key.Shift")</button>
         @foreach (char c in "zxcvbnm")
         {
             <button type="button" class="vk-key" @onclick="() => RaiseCharacterAsync(c)">@DisplayChar(c)</button>
@@ -92,12 +94,26 @@
                     @onpointerdown="() => StartRepeatAsync(VirtualKey.ArrowRight)"
                     @onpointerup="StopRepeat" @onpointerleave="StopRepeat" @onpointercancel="StopRepeat">►</button>
         }
-        <button type="button" class="vk-key vk-key-space" @onclick="() => RaiseCharacterAsync(' ')">Space</button>
-        <button type="button" class="vk-key vk-key-wide vk-key-enter" @onclick="() => RaiseAsync(VirtualKey.Enter)">Enter</button>
+        <button type="button" class="vk-key vk-key-space" @onclick="() => RaiseCharacterAsync(' ')">@L["Key.Space"]</button>
+        <button type="button" class="vk-key vk-key-wide vk-key-enter" @onclick="() => RaiseAsync(VirtualKey.Enter)">@L["Key.Enter"]</button>
     </div>
 </div>
 
 @code {
+    private static readonly VirtualKeyboardOptions Defaults = new();
+
+    /// <summary>The app the keyboard serves, cascaded by the window host: its language labels the keys (ADR 0104).</summary>
+    [CascadingParameter]
+    private IAppExecutionContext? AppContext { get; set; }
+
+    /// <summary>Gets the key caps in the app's language, or the ambient app's without a cascaded one.</summary>
+    private Microsoft.Extensions.Localization.IStringLocalizer<Strings> L => AppContext is { } context
+        ? context.GetLocalizer<Strings>()
+        : HackLocalization.GetLocalizer<Strings>();
+
+    /// <summary>A modifier's cap: the host's label when it set one, the translated default otherwise.</summary>
+    private string Label(string configured, string defaultLabel, string key) =>
+        string.Equals(configured, defaultLabel, StringComparison.Ordinal) ? L[key] : configured;
     private const int MaxAutoRepeats = 40;
     private static readonly TimeSpan RepeatInterval = TimeSpan.FromMilliseconds(80);
 

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.IO;
 
 namespace HackerOs.AppSdk.Net.Hosting;
@@ -90,47 +91,68 @@ public static class HackWebSiteFile
     /// <summary>Validates a site for <paramref name="scope"/>; an empty list means it can be served.</summary>
     /// <param name="site">The site.</param>
     /// <param name="scope">Where it is (or will be) declared.</param>
-    /// <returns>One human-readable message per problem.</returns>
-    public static IReadOnlyList<string> Validate(HackWebSite site, HackWebSiteScope scope)
+    /// <returns>One human-readable message per problem, in English.</returns>
+    public static IReadOnlyList<string> Validate(HackWebSite site, HackWebSiteScope scope) => Validate(site, scope, context: null);
+
+    /// <summary>
+    /// Validates a site for <paramref name="scope"/>, with the messages in the language of
+    /// <paramref name="context"/>'s process (ADR 0104), for an app that shows them as form errors.
+    /// </summary>
+    /// <param name="site">The site.</param>
+    /// <param name="scope">Where it is (or will be) declared.</param>
+    /// <param name="context">The app showing the messages; English when <see langword="null"/>.</param>
+    /// <returns>One human-readable message per problem; an empty list means it can be served.</returns>
+    public static IReadOnlyList<string> Validate(HackWebSite site, HackWebSiteScope scope, IAppExecutionContext? context)
     {
         ArgumentNullException.ThrowIfNull(site);
+        Microsoft.Extensions.Localization.IStringLocalizer<Strings> text = HackLocalization.GetLocalizer<Strings>(context);
+        bool english = context is null
+            || HackLocale.ResolveLanguage(context.Environment.GetVariable).TwoLetterISOLanguageName == HackLocale.DefaultLanguage.TwoLetterISOLanguageName;
         List<string> errors = [];
         if (!IsValidName(site.Name))
         {
-            errors.Add($"'{site.Name}' is not a valid site name (letters, digits, '.', '-' and '_', at most {MaxNameLength})");
+            errors.Add(text["Site.InvalidName", site.Name, MaxNameLength]);
         }
 
         if (string.IsNullOrWhiteSpace(site.Root) || !site.Root.StartsWith('/'))
         {
-            errors.Add("the root must be an absolute directory path");
+            errors.Add(text["Site.RootNotAbsolute"]);
         }
         else if (site.Root.Trim('/').Length == 0 || site.Root.Split('/').Any(static segment => segment is "." or ".."))
         {
-            errors.Add($"'{site.Root}' cannot be a site root ('/' and '..' are refused)");
+            errors.Add(text["Site.RootRefused", site.Root]);
         }
 
         if (site.Bindings.Count == 0)
         {
-            errors.Add("a site needs at least one binding, such as 'http://localhost:8080/'");
+            errors.Add(text["Site.NoBinding"]);
         }
 
         HashSet<string> seen = new(StringComparer.Ordinal);
         foreach (string binding in site.Bindings)
         {
-            if (!TryParseBinding(binding, out WebBinding parsed, out string? error))
+            if (!WebAppUrls.TryParse(binding, allowWildcardHost: true, out WebBinding parsed, out string? error))
             {
-                errors.Add(error!);
+                // WebAppUrls (App Abstractions) words its reasons in English only: another language
+                // names the binding in its own words and quotes that reason.
+                errors.Add(english ? error! : text["Site.InvalidBinding", binding, error ?? string.Empty]);
+                continue;
+            }
+
+            if (parsed.Scheme != "http")
+            {
+                errors.Add(text["Site.HttpsBinding", binding]);
                 continue;
             }
 
             if (!seen.Add(parsed.ToString()))
             {
-                errors.Add($"the binding '{binding}' is listed twice");
+                errors.Add(text["Site.DuplicateBinding", binding]);
             }
 
             if (scope == HackWebSiteScope.User && parsed.IsPrivilegedPort)
             {
-                errors.Add($"port {parsed.Port} of '{binding}' is privileged: a user site binds ports {WebAppUrls.FirstUnprivilegedPort} and up (an administrator can declare it in {SystemSitesDirectory})");
+                errors.Add(text["Site.PrivilegedPort", parsed.Port, binding, WebAppUrls.FirstUnprivilegedPort, SystemSitesDirectory]);
             }
         }
 
@@ -138,7 +160,7 @@ public static class HackWebSiteFile
         {
             if (string.IsNullOrWhiteSpace(document) || document.Contains('/', StringComparison.Ordinal) || document is "." or "..")
             {
-                errors.Add($"'{document}' is not a default document file name");
+                errors.Add(text["Site.BadDefaultDocument", document]);
             }
         }
 
@@ -161,7 +183,7 @@ public static class HackWebSiteFile
 
         if (binding.Scheme != "http")
         {
-            error = $"'{value}': an https binding needs a server certificate, which hackwebd does not have yet";
+            error = HackLocalization.GetLocalizer<Strings>(null)["Site.HttpsBinding", value ?? string.Empty];
             return false;
         }
 

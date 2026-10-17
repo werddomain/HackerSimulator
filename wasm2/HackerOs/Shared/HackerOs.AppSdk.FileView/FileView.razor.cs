@@ -52,6 +52,18 @@ public partial class FileView : IAsyncDisposable
     [Parameter]
     public IAppFileSystemWatchGateway? Watch { get; set; }
 
+    /// <summary>
+    /// Gets or sets the app this view belongs to, cascaded by the window host: its process's language
+    /// is the language of the view's texts (ADR 0104). Without one, the ambient app's language applies.
+    /// </summary>
+    [CascadingParameter]
+    public IAppExecutionContext? AppContext { get; set; }
+
+    /// <summary>Gets the library's texts in the owning app's language, shared by the mode renderers.</summary>
+    internal Microsoft.Extensions.Localization.IStringLocalizer<Strings> L => AppContext is { } context
+        ? HackerOs.AppSdk.Globalization.HackLocalization.GetLocalizer<Strings>(context)
+        : HackerOs.AppSdk.Globalization.HackLocalization.GetLocalizer<Strings>();
+
     /// <summary>Optional scoped intent access, required only when <see cref="FolderActivation"/> is <see cref="FileViewFolderActivationMode.NewWindow"/>.</summary>
     [Parameter]
     public IAppIntentGateway? Intents { get; set; }
@@ -1141,11 +1153,13 @@ public partial class FileView : IAsyncDisposable
     /// </summary>
     internal async Task CreateFolderInteractiveAsync()
     {
-        string name = "New Folder";
+        // The default name follows the app's language, as Nautilus names it "Nouveau dossier" in French.
+        string baseName = L["Menu.NewFolder.DefaultName"];
+        string name = baseName;
         int suffix = 2;
         while (_items.Any(item => string.Equals(item.FileName, name, StringComparison.Ordinal)))
         {
-            name = $"New Folder ({suffix++})";
+            name = $"{baseName} ({suffix++})";
         }
 
         await CreateFolderAsync(name);

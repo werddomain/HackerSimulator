@@ -32,7 +32,7 @@ internal sealed class AppSystemPowerGateway : IAppSystemPowerGateway
     public async ValueTask RebootAsync(CancellationToken cancellationToken = default)
     {
         SystemPowerService power = Require();
-        string admin = await _gate.AuthenticateAsync("Restart this machine", "system.reboot", "machine", cancellationToken).ConfigureAwait(false);
+        string admin = await _gate.AuthenticateAsync(_gate.Text["Admin.Reboot"], "system.reboot", "machine", cancellationToken).ConfigureAwait(false);
         await power.RebootAsync(admin, _gate.Principal).ConfigureAwait(false);
     }
 
@@ -41,7 +41,7 @@ internal sealed class AppSystemPowerGateway : IAppSystemPowerGateway
     {
         SystemPowerService power = Require();
         string admin = await _gate.AuthenticateAsync(
-            "Erase this machine (every account, file and setting) and restart it",
+            _gate.Text["Admin.FactoryReset"],
             "system.factory-reset",
             "machine",
             cancellationToken).ConfigureAwait(false);

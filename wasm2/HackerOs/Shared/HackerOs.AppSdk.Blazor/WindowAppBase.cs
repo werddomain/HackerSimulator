@@ -32,6 +32,12 @@ public abstract partial class WindowAppBase : ComponentBase, IHandleEvent, IHand
     [EditorRequired]
     public IAppExecutionContext AppContext { get; set; } = default!;
 
+    /// <summary>
+    /// Gets the SDK's own texts (the dialogs this base class opens) in the language of the app's
+    /// process (ADR 0104); the app's own texts come from its own <c>Strings</c>.
+    /// </summary>
+    private Microsoft.Extensions.Localization.IStringLocalizer<Strings> SdkText => HackerOs.AppSdk.Globalization.HackLocalization.GetLocalizer<Strings>(AppContext);
+
     /// <summary>Gets or sets the ecosystem-owned file dialog service.</summary>
     [Inject]
     protected IFileDialogService FileDialogs { get; set; } = default!;
@@ -343,7 +349,7 @@ public abstract partial class WindowAppBase : ComponentBase, IHandleEvent, IHand
         }
 
         AppChooserDialogResult choice = await ChooseAppAsync(
-            result.CandidateAppIds, $"Choose the application that handles '{intentId}':", cancellationToken);
+            result.CandidateAppIds, SdkText["Intent.ChooseApp", intentId], cancellationToken);
         if (choice.Status != AppChooserStatus.Selected || choice.AppId is null)
         {
             return false;
@@ -372,7 +378,7 @@ public abstract partial class WindowAppBase : ComponentBase, IHandleEvent, IHand
                 : new AppChooserOption(id, id))];
         return await Dialogs.ChooseAppAsync(
             AppContext,
-            new AppChooserDialogRequest { Title = "Open with", Content = content, Candidates = options },
+            new AppChooserDialogRequest { Title = SdkText["Intent.OpenWith"], Content = content, Candidates = options },
             cancellationToken);
     }
 
@@ -441,9 +447,8 @@ public abstract partial class WindowAppBase : ComponentBase, IHandleEvent, IHand
             EnsureBasicDialogService();
             CredentialPromptDialogResult prompt = await Dialogs.CredentialPromptAsync(AppContext, new CredentialPromptDialogRequest
             {
-                Title = "Permission Denied — Request Approval?",
-                Description = $"'{Manifest.Name}' was denied access to '{e.Error.Path}'. " +
-                    "Enter an enabled Administrator's credentials to approve this one action."
+                Title = SdkText["Permission.Approval.Title"],
+                Description = SdkText["Permission.Approval.Description", Manifest.Name, e.Error.Path?.ToString() ?? string.Empty]
             });
 
             if (prompt.Status == CredentialPromptStatus.Submitted)
@@ -454,24 +459,24 @@ public abstract partial class WindowAppBase : ComponentBase, IHandleEvent, IHand
                 {
                     AppContext.OneShotElevation.Grant(e.Error.RequiredCapability, e.Error.Path);
                     await MessageBox(
-                        "Access Approved",
-                        "An administrator approved this action once. Please try the action again.",
+                        SdkText["Permission.Approved.Title"],
+                        SdkText["Permission.Approved.Message"],
                         MessageBoxType.Ok);
                     return;
                 }
             }
         }
 
-        await MessageBox("Permission Denied", DescribePermissionError(e.Error), MessageBoxType.Ok);
+        await MessageBox(SdkText["Permission.Denied.Title"], DescribePermissionError(e.Error), MessageBoxType.Ok);
     }
 
-    private static string DescribePermissionError(FileSystemError error) => error.Code switch
+    private string DescribePermissionError(FileSystemError error) => SdkText[error.Code switch
     {
-        FileSystemErrorCode.PermissionDenied => $"You don't have permission to access '{error.Path}'.",
-        FileSystemErrorCode.CapabilityDenied => $"This app isn't authorized to access '{error.Path}'.",
-        FileSystemErrorCode.AuthorityDenied => $"This operation on '{error.Path}' requires elevated authority.",
-        _ => $"Access to '{error.Path}' was denied."
-    };
+        FileSystemErrorCode.PermissionDenied => "Permission.Denied.User",
+        FileSystemErrorCode.CapabilityDenied => "Permission.Denied.Capability",
+        FileSystemErrorCode.AuthorityDenied => "Permission.Denied.Authority",
+        _ => "Permission.Denied.Other"
+    }, error.Path?.ToString() ?? string.Empty];
 
     private void EnsureFileDialogService()
     {

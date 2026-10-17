@@ -5,8 +5,37 @@ using HackerOs.AppSdk.IO;
 
 namespace HackerOs.Platform.Core.Shell;
 
-/// <summary>An expansion that stops the command (<c>${x:?msg}</c>, an unbound variable under <c>set -u</c>, bad arithmetic).</summary>
-public sealed class ShellExpansionException(string message) : Exception(message);
+/// <summary>
+/// An expansion that stops the command (<c>${x:?msg}</c>, an unbound variable under <c>set -u</c>,
+/// bad arithmetic). <see cref="Exception.Message"/> is English; the shell prints the
+/// <see cref="IShellLocalizableError.TextKey"/> text in its own language (ADR 0104).
+/// </summary>
+public sealed class ShellExpansionException : Exception, IShellLocalizableError
+{
+    /// <summary>Creates the error from a resource text.</summary>
+    /// <param name="text">The message as a resource key and its arguments.</param>
+    public ShellExpansionException(ShellLocalizedText text)
+        : base((text ?? throw new ArgumentNullException(nameof(text))).ToString())
+    {
+        TextKey = text.TextKey;
+        TextArguments = text.TextArguments;
+    }
+
+    /// <summary>Wraps an arithmetic error, keeping its text.</summary>
+    /// <param name="inner">The arithmetic error.</param>
+    public ShellExpansionException(ShellArithmeticException inner)
+        : base((inner ?? throw new ArgumentNullException(nameof(inner))).Message, inner)
+    {
+        TextKey = inner.TextKey;
+        TextArguments = inner.TextArguments;
+    }
+
+    /// <inheritdoc />
+    public string TextKey { get; }
+
+    /// <inheritdoc />
+    public IReadOnlyList<object> TextArguments { get; }
+}
 
 /// <summary>
 /// Word expansion in POSIX order (ADR 0064, superseding the "no word splitting" rule of ADR 0050
@@ -207,7 +236,7 @@ internal sealed class ShellExpander
         }
         catch (ShellArithmeticException exception)
         {
-            throw new ShellExpansionException(exception.Message);
+            throw new ShellExpansionException(exception);
         }
     }
 
@@ -229,7 +258,7 @@ internal sealed class ShellExpander
 
         if (value is null && checkUnset && _session.Options.Contains('u') && name is not ("@" or "*" or "!"))
         {
-            throw new ShellExpansionException($"{name}: unbound variable");
+            throw new ShellExpansionException(new ShellLocalizedText("Shell.UnboundVariable", name));
         }
 
         return value;
@@ -258,7 +287,7 @@ internal sealed class ShellExpander
 
                 if (!ShellParser.IsName(part.Name))
                 {
-                    throw new ShellExpansionException($"${part.Name}: cannot assign in this way");
+                    throw new ShellExpansionException(new ShellLocalizedText("Shell.CannotAssign", part.Name));
                 }
 
                 string assigned = await ExpandArgumentAsync(part).ConfigureAwait(false);
@@ -273,7 +302,9 @@ internal sealed class ShellExpander
                 }
 
                 string message = part.Argument is null ? string.Empty : await ExpandArgumentAsync(part);
-                throw new ShellExpansionException($"{part.Name}: {(message.Length > 0 ? message : value is null ? "parameter not set" : "parameter null or not set")}");
+                throw new ShellExpansionException(message.Length > 0
+                    ? new ShellLocalizedText("Shell.Error", part.Name, message)
+                    : new ShellLocalizedText(value is null ? "Shell.ParameterNotSet" : "Shell.ParameterNullOrNotSet", part.Name));
             default:
                 string pattern = part.Argument is null ? string.Empty : await ExpandPatternAsync(part.Argument).ConfigureAwait(false);
                 return ShellPattern.RemoveAffix(
