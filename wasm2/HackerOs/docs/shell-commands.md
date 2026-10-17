@@ -180,7 +180,7 @@ disparu.
 - `Tests/HackerOs.Commands.Tests/CoreCommandsTests.cs` et
   `Tests/HackerOs.Commands.Wave5.Tests/Wave5Tests.cs` : `cd`, `clear`, `help`
   avec `FakeShellSession` (`Tests/HackerOs.Tests.Support/`).
-- `Tests/HackerOs.Ecosystem.Tests` : 83 apps intégrées, 67 commandes (`stress` depuis `rebuild/5-worker-processes`, `ausearch` depuis `v3/8`, `xdg-open` depuis `v3/4`, `hackbackup` depuis `v3/7`).
+- `Tests/HackerOs.Ecosystem.Tests` : 84 apps intégrées, 67 commandes (`stress` depuis `rebuild/5-worker-processes`, `ausearch` depuis `v3/8`, `xdg-open` depuis `v3/4`, `hackbackup` depuis `v3/7`).
 
 ## Liste des tâches
 

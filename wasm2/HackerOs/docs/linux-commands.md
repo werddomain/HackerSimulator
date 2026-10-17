@@ -122,7 +122,7 @@ Plus de place : une écriture refusée affiche `No space left on device`
 - `Tests/HackerOs.Commands.Wave5.Tests` : `chmod`, `kill`, `sort`, `head`,
   `tail`, `mkdir` (`-p`, `-v`, dossier existant, fichier sur le chemin, `..`), `hackbackup` avec les passerelles factices.
 - `Tests/HackerOs.Commands.Tests/XdgOpenCommandTests.cs` : chemin relatif, dossier, fichier absent, aucune app, plusieurs apps, URI, schéma inconnu, ligne de commande, refus (`v3/4`). Le scénario de parité (`CommandParityTests`) compare la commande dans un Web Worker et sur le fil principal.
-- `Tests/HackerOs.Ecosystem.Tests` : 83 apps intégrées dont 67 commandes (`stress` ajoutée par `rebuild/5-worker-processes`, `nslookup` par `web/3`, `ausearch` par `v3/8-settings-security`, `xdg-open` par `v3/4`, `hackbackup` par `v3/7`).
+- `Tests/HackerOs.Ecosystem.Tests` : 84 apps intégrées dont 67 commandes (`stress` ajoutée par `rebuild/5-worker-processes`, `nslookup` par `web/3`, `ausearch` par `v3/8-settings-security`, `xdg-open` par `v3/4`, `hackbackup` par `v3/7`).
 - `Tests/HackerOs.Commands.Tests` : filtres d'`ausearch`.
 
 ## Liste des tâches

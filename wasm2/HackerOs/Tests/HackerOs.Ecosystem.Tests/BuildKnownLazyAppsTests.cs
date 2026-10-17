@@ -12,9 +12,9 @@ public sealed class BuildKnownLazyAppsTests
         AppCatalog catalog = BuildKnownLazyApps.Catalog;
 
         // 14 window apps (Theme Editor with ADR 0103), the hackwebd service (ADR 0077), the sample Blazor site (ADR 0084), the Intranet
-        // sample (web/11) and 66 commands (stress joined with ADR 0070, nslookup with ADR 0074,
-        // ausearch with ADR 0100, xdg-open with ADR 0096).
-        Assert.Equal(83, catalog.Manifests.Count);
+        // sample (web/11) and 67 commands (stress joined with ADR 0070, nslookup with ADR 0074,
+        // ausearch with ADR 0100, xdg-open with ADR 0096, hackbackup with ADR 0099).
+        Assert.Equal(84, catalog.Manifests.Count);
         // ADR 0064: the Linux commands added with the POSIX shell.
         foreach (string command in new[] { "locate", "zip", "unzip", "cut", "tee", "whoami", "df", "du", "top", "htop", "systemctl", "watch", "jobs", "wget", "ip", "netstat", "ln", "test", "read", "stress", "nslookup", "ausearch", "xdg-open" })
         {
