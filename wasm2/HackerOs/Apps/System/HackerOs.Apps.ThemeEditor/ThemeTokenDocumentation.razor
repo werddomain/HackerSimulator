@@ -3,13 +3,8 @@
    themes live, the value types and every token. *@
 <article class="theme-docs">
     <section>
-        <h3>Theme files</h3>
-        <p>
-            A theme is a text file ending in <code>.theme</code>. Save it in
-            <code>~/.config/hackeros/themes/</code> for yourself; an administrator can copy it to
-            <code>/etc/hackeros/themes/</code> for every user. The file is also the export: copy it,
-            send it, open it here.
-        </p>
+        <h3>@L["Docs.Files.Heading"]</h3>
+        <p>@Markup("Docs.Files.Intro")</p>
 <pre class="docs-sample">[theme]
 id = neon-crypt
 name = Neon Crypt
@@ -21,43 +16,42 @@ platforms = desktop, mobile
 --hos-accent = #39ff14
 --hos-font-mono = "JetBrains Mono", monospace</pre>
         <ul>
-            <li><code>id</code>: lowercase letters, digits and dashes; it cannot reuse a built-in theme or a theme of <code>/etc</code>.</li>
-            <li><code>base</code>: a built-in theme. A token you do not set keeps the base theme's value.</li>
-            <li><code>platforms</code>: <code>desktop</code>, <code>mobile</code> or both. On a form factor the base theme does not style, the tokens apply over that form factor's default theme.</li>
-            <li>Only the tokens below are read, and each value is checked against its type. An invalid line is ignored with a warning; there is no free CSS, no remote font or image and no script.</li>
+            <li>@Markup("Docs.Files.Id")</li>
+            <li>@Markup("Docs.Files.Base")</li>
+            <li>@Markup("Docs.Files.Platforms")</li>
+            <li>@Markup("Docs.Files.Tokens")</li>
         </ul>
     </section>
 
     <section>
-        <h3>Value types</h3>
+        <h3>@L["Docs.Types.Heading"]</h3>
         <dl class="docs-types">
-            <dt>Color</dt><dd><code>#39ff14</code>, <code>#39ff14cc</code>, <code>rgb(57 255 20)</code>, <code>rgb(57 255 20 / 40%)</code>, <code>hsl(110 100% 54%)</code> or a color name such as <code>teal</code>.</dd>
-            <dt>Length</dt><dd><code>0</code>, or a number with <code>px</code>, <code>rem</code>, <code>em</code>, <code>%</code>, <code>vh</code> or <code>vw</code>.</dd>
-            <dt>Duration</dt><dd><code>150ms</code> or <code>0.2s</code>, optionally followed by <code>ease</code>, <code>linear</code>, <code>ease-in</code>, <code>ease-out</code> or <code>ease-in-out</code>. Ignored when animations are turned off.</dd>
-            <dt>FontFamily</dt><dd>Names separated by commas: <code>"Fira Code", monospace</code>. Only fonts installed on the machine are used.</dd>
-            <dt>Number</dt><dd>A plain number: <code>600</code>, <code>0.8</code>.</dd>
+            @foreach (ThemeTokenType type in Enum.GetValues<ThemeTokenType>())
+            {
+                <dt>@Strings.TypeLabel(L, type)</dt><dd>@Markup($"Docs.Types.{type}")</dd>
+            }
         </dl>
     </section>
 
     @foreach (ThemeTokenGroup group in Enum.GetValues<ThemeTokenGroup>())
     {
         <section>
-            <h3>@group</h3>
+            <h3>@Strings.GroupLabel(L, group)</h3>
             <table class="docs-table">
                 <thead>
-                    <tr><th scope="col">Token</th><th scope="col">Type</th><th scope="col">What it changes</th><th scope="col">Example</th></tr>
+                    <tr><th scope="col">@L["Docs.Column.Token"]</th><th scope="col">@L["Docs.Column.Type"]</th><th scope="col">@L["Docs.Column.Changes"]</th><th scope="col">@L["Docs.Column.Example"]</th></tr>
                 </thead>
                 <tbody>
                     @foreach (ThemeTokenDefinition token in ThemeTokenCatalog.InGroup(group))
                     {
                         <tr>
                             <td><code>@token.Name</code><span class="docs-label">@token.Label</span></td>
-                            <td>@token.Type</td>
+                            <td>@Strings.TypeLabel(L, token.Type)</td>
                             <td>
                                 @token.Description
                                 @if (token.RgbCompanion is { } companion)
                                 {
-                                    <span class="docs-companion">Also sets <code>@companion</code>.</span>
+                                    <span class="docs-companion">@AlsoSets.Before<code>@companion</code>@AlsoSets.After</span>
                                 }
                             </td>
                             <td><code>@token.Example</code></td>
@@ -68,3 +62,18 @@ platforms = desktop, mobile
         </section>
     }
 </article>
+
+@code {
+    /// <summary>The Theme Editor's texts in the language of its process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => AppContext.GetLocalizer<Strings>();
+
+    // "Also sets {0}." split around the companion token's <code>.
+    private (string Before, string After) AlsoSets => Strings.Around(L["Docs.AlsoSets"]);
+
+    /// <summary>
+    /// A documentation sentence holding <c>&lt;code&gt;</c> markup. The text comes from this assembly's
+    /// own resources (never from a file or a user), so it is rendered as markup; the stylesheet styles
+    /// its <c>code</c> elements through <c>::deep</c>.
+    /// </summary>
+    private MarkupString Markup(string key) => new(L[key]);
+}

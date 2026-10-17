@@ -64,6 +64,27 @@ public sealed class BuiltInApplicationsJsonSerializerTests
     }
 
     [Fact]
+    public void The_optional_translations_round_trip_and_are_strict()
+    {
+        // ADR 0104 section 4: the host build copies each app's localization files into the document.
+        Dictionary<string, AppManifestText> localized = new() { ["fr"] = new("Calculatrice", "Calculatrice de bureau") };
+        string json = BuiltInApplicationsJsonSerializer.SerializeCanonical(
+        [
+            new BuiltInApplication(true, Manifest("org.hackeros.tests.alpha"), Localized: localized),
+            new BuiltInApplication(true, Manifest("org.hackeros.tests.beta"))
+        ]);
+
+        Assert.Contains("\"localized\":{\"fr\":{\"name\":\"Calculatrice\",\"description\":\"Calculatrice de bureau\"}}", json, StringComparison.Ordinal);
+        IReadOnlyList<BuiltInApplication> read = BuiltInApplicationsJsonSerializer.DeserializeStrict(json);
+        Assert.Equal(new AppManifestText("Calculatrice", "Calculatrice de bureau"), read[0].Localized!["fr"]);
+        Assert.True(read[1].Localized is null or { Count: 0 });
+        Assert.Equal(json, BuiltInApplicationsJsonSerializer.SerializeCanonical(read));
+        Assert.Throws<JsonException>(() => BuiltInApplicationsJsonSerializer.DeserializeStrict(
+            json.Replace("\"description\":\"Calculatrice de bureau\"", "\"description\":\"x\",\"title\":\"y\"", StringComparison.Ordinal)));
+        Assert.Throws<JsonException>(() => AppManifestTextJsonSerializer.DeserializeStrict("{\"name\":\"\",\"description\":\"x\"}"));
+    }
+
+    [Fact]
     public void Empty_document_is_valid() =>
         Assert.Empty(BuiltInApplicationsJsonSerializer.DeserializeStrict(BuiltInApplicationsJsonSerializer.SerializeCanonical([])));
 

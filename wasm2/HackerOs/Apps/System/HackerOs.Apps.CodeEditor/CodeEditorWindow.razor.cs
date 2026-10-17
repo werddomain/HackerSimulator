@@ -4,10 +4,12 @@ using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Components;
 using HackerOs.AppSdk.FileView;
 using HackerOs.AppSdk.FileView.Events;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.IO;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 
 namespace HackerOs.Apps.CodeEditor;
@@ -24,6 +26,11 @@ public partial class CodeEditorWindow
         Explorer,
         Search
     }
+
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The workbench's texts in its own process's language (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
 
     [Inject]
     private IJSRuntime JavaScript { get; set; } = default!;
@@ -99,12 +106,12 @@ public partial class CodeEditorWindow
             _session = CodeEditorSession.Restore(recovery.Session!);
             if (_session.Documents.Count > 0)
             {
-                SetStatus("Recovered unsaved editor session.", isError: false);
+                SetStatus(L["Status.Recovered"], isError: false);
             }
         }
         else if (recovery.Status is not (CodeEditorRecoveryStatus.Missing or CodeEditorRecoveryStatus.Cancelled))
         {
-            SetStatus(recovery.Error ?? "Editor recovery could not be loaded.", isError: true);
+            SetStatus(recovery.Error ?? L["Status.RecoveryLoadFailed"], isError: true);
         }
 
         // Explicit host parameter, otherwise the open-file intent's path (first launch argument).
@@ -128,7 +135,7 @@ public partial class CodeEditorWindow
                 _module = await JavaScript.InvokeAsync<IJSObjectReference>(
                     "import", "./_content/HackerOs.Apps.CodeEditor/CodeEditorWindow.razor.js");
                 _editor = await _module.InvokeAsync<IJSObjectReference>(
-                    "createEditor", _editorHost, _dotNetReference, new { minimap = _minimap });
+                    "createEditor", _editorHost, _dotNetReference, new { minimap = _minimap, ariaLabel = L["Editor.AriaLabel"].Value });
                 _workbench = await _module.InvokeAsync<IJSObjectReference>(
                     "attachWorkbench", _root, _dotNetReference);
                 _editorSyncRequired = true;
@@ -136,7 +143,7 @@ public partial class CodeEditorWindow
             }
             catch (Exception ex) when (ex is JSException or InvalidOperationException)
             {
-                SetStatus("Code editor assets could not be initialized.", isError: true);
+                SetStatus(L["Status.AssetsFailed"], isError: true);
             }
         }
 
@@ -199,7 +206,7 @@ public partial class CodeEditorWindow
         CodeEditorEditResult result = document.TryEdit(content);
         if (!result.Succeeded)
         {
-            SetStatus(result.Error ?? "Edit rejected.", isError: true);
+            SetStatus(result.Error ?? L["Status.EditRejected"], isError: true);
             _editorSyncRequired = true;
             await InvokeAsync(StateHasChanged);
         }
@@ -278,15 +285,15 @@ public partial class CodeEditorWindow
     {
         OpenFileDialogResult result = await base.OpenFileAsync(new OpenFileDialogRequest
         {
-            Title = "Open Source File",
+            Title = L["Dialog.OpenSourceFile"],
             InitialDirectory = _workspace?.Root,
             Filters =
             [
                 new FileDialogFilter(
-                    "Source and text files",
+                    L["Dialog.Filter.Source"],
                     [".cs", ".js", ".ts", ".html", ".css", ".json", ".md", ".txt"],
                     ["text/plain", "text/x-csharp", "text/javascript", "text/typescript", "text/html", "text/css", "application/json", "text/markdown"]),
-                new FileDialogFilter("All files", [], [])
+                new FileDialogFilter(L["Dialog.Filter.All"], [], [])
             ],
             RequestedAccess = SelectedFileAccess.ReadWrite
         }, AppContext.CancellationToken);
@@ -335,7 +342,7 @@ public partial class CodeEditorWindow
         {
             if (result.Status is not CodeEditorFileStatus.Cancelled)
             {
-                SetStatus(result.Error ?? "Unable to open file.", isError: true);
+                SetStatus(result.Error ?? L["Status.OpenFailed"], isError: true);
             }
 
             return;
@@ -345,7 +352,7 @@ public partial class CodeEditorWindow
         RequestEditorSync(focus);
         if (announce)
         {
-            SetStatus($"Opened {path.Value}.", isError: false);
+            SetStatus(L["Status.Opened", path.Value], isError: false);
         }
         else
         {
@@ -407,7 +414,7 @@ public partial class CodeEditorWindow
     {
         SaveFileDialogResult result = await base.SaveFileAsync(new SaveFileDialogRequest
         {
-            Title = "Save Source File",
+            Title = L["Dialog.SaveSourceFile"],
             InitialDirectory = document.Path is { } path ? CodeEditorWorkspace.ParentOf(path) : _workspace?.Root,
             SuggestedFileName = document.Path is null ? SuggestedFileName(document) : document.Title,
             ConfirmOverwrite = true
@@ -450,7 +457,7 @@ public partial class CodeEditorWindow
                 await _editor.InvokeVoidAsync("markSaved", document.Id.ToString(), savedContent);
             }
 
-            SetStatus($"Saved {path.Value}.", isError: false);
+            SetStatus(L["Status.Saved", path.Value], isError: false);
             if (isNewFile && _explorer is not null && _workspace?.Contains(path) == true)
             {
                 await _explorer.RefreshAsync();
@@ -458,7 +465,7 @@ public partial class CodeEditorWindow
         }
         else if (result.Status is not CodeEditorFileStatus.Cancelled)
         {
-            SetStatus(result.Error ?? "Save failed.", isError: true);
+            SetStatus(result.Error ?? L["Status.SaveFailed"], isError: true);
         }
 
         UpdateDirtyCount();
@@ -516,10 +523,10 @@ public partial class CodeEditorWindow
         {
             CodeEditorDocument document = _session.Documents.Single(item => item.Id == documentId);
             bool? discard = await MudDialogService.ShowMessageBoxAsync(
-                "Unsaved Changes",
-                $"Discard unsaved changes in '{document.Title}'?",
-                yesText: "Discard",
-                cancelText: "Cancel");
+                L["Dialog.UnsavedChanges.Title"],
+                L["Dialog.UnsavedChanges.Message", document.Title],
+                yesText: L["Dialog.Discard"],
+                cancelText: L["Dialog.Cancel"]);
             if (discard != true)
             {
                 return false;
@@ -586,7 +593,7 @@ public partial class CodeEditorWindow
             HackUser.Describe(AppContext).HomeDirectory);
         SelectFolderDialogResult result = await base.SelectFolderAsync(new SelectFolderDialogRequest
         {
-            Title = "Open Folder",
+            Title = L["Dialog.OpenFolder"],
             InitialDirectory = initialDirectory
         }, AppContext.CancellationToken);
 
@@ -714,9 +721,9 @@ public partial class CodeEditorWindow
         if (request.Permanent)
         {
             string question = items.Count == 1
-                ? $"Permanently delete '{items[0].FileName}'? This cannot be undone."
-                : $"Permanently delete these {items.Count} items? This cannot be undone.";
-            MessageBoxDialogResult answer = await base.MessageBox("Delete permanently", question, MessageBoxType.YesNo);
+                ? L["Dialog.Delete.One", items[0].FileName]
+                : L["Dialog.Delete.Many", items.Count];
+            MessageBoxDialogResult answer = await base.MessageBox(L["Dialog.Delete.Title"], question, MessageBoxType.YesNo);
             if (answer.Result != MessageBoxResult.Yes)
             {
                 return;
@@ -743,17 +750,17 @@ public partial class CodeEditorWindow
             }
             catch (UnauthorizedAccessException)
             {
-                failures.Add($"'{item.FileName}': permission denied");
+                failures.Add(L["Delete.PermissionDenied", item.FileName]);
             }
             catch (IOException ex)
             {
-                failures.Add($"'{item.FileName}': {ex.Message}");
+                failures.Add(L["Delete.Failure", item.FileName, ex.Message]);
             }
         }
 
         if (failures.Count > 0)
         {
-            SetStatus("Could not delete " + string.Join("; ", failures), isError: true);
+            SetStatus(L["Delete.Failed", string.Join("; ", failures)], isError: true);
         }
     }
 
@@ -902,12 +909,12 @@ public partial class CodeEditorWindow
             HackTerminalCommandResult result = await terminal.SetWorkingDirectoryAsync(directory);
             if (result.ExitStatus != 0)
             {
-                SetStatus($"Terminal: cannot change to {directory}.", isError: true);
+                SetStatus(L["Status.TerminalCd", directory], isError: true);
             }
         }
         catch (Exception exception) when (exception is InvalidOperationException or OperationCanceledException)
         {
-            SetStatus($"Terminal: {exception.Message}", isError: true);
+            SetStatus(L["Status.TerminalError", exception.Message], isError: true);
         }
     }
 
@@ -1005,10 +1012,10 @@ public partial class CodeEditorWindow
 
         string names = string.Join(", ", dirtyDocuments.Select(document => document.Title));
         bool? discard = await MudDialogService.ShowMessageBoxAsync(
-            "Unsaved Editor Documents",
-            $"Close and discard unsaved changes in: {names}?",
-            yesText: "Discard and Close",
-            cancelText: "Keep Editing");
+            L["Dialog.UnsavedDocuments.Title"],
+            L["Dialog.UnsavedDocuments.Message", names],
+            yesText: L["Dialog.DiscardAndClose"],
+            cancelText: L["Dialog.KeepEditing"]);
         cancellationToken.ThrowIfCancellationRequested();
         return discard == true && await ClearRecoveryForCloseAsync(cancellationToken);
     }
@@ -1068,7 +1075,7 @@ public partial class CodeEditorWindow
             if (result.Status is not (CodeEditorRecoveryStatus.Success or CodeEditorRecoveryStatus.Cancelled)
                 && !cancellationToken.IsCancellationRequested)
             {
-                await InvokeAsync(() => SetStatus(result.Error ?? "Editor recovery could not be saved.", isError: true));
+                await InvokeAsync(() => SetStatus(result.Error ?? L["Status.RecoverySaveFailed"], isError: true));
             }
         }
         finally
@@ -1093,7 +1100,7 @@ public partial class CodeEditorWindow
 
         if (result.Status is not CodeEditorRecoveryStatus.Cancelled)
         {
-            SetStatus(result.Error ?? "Editor recovery could not be cleared.", isError: true);
+            SetStatus(result.Error ?? L["Status.RecoveryClearFailed"], isError: true);
         }
 
         return false;
@@ -1166,10 +1173,10 @@ public partial class CodeEditorWindow
         string? folder = _workspace?.Name;
         return (document, folder) switch
         {
-            (null, null) => "Code Editor",
-            (null, _) => $"{folder} - Code Editor",
-            (_, null) => $"{document} - Code Editor",
-            _ => $"{document} - {folder} - Code Editor"
+            (null, null) => L["App.Name"],
+            (null, _) => L["Title.Folder", folder],
+            (_, null) => L["Title.Document", document],
+            _ => L["Title.DocumentFolder", document, folder]
         };
     }
 
@@ -1217,9 +1224,9 @@ public partial class CodeEditorWindow
             _ => "untitled.txt"
         };
 
-    private static string SyntaxModeLabel(CodeEditorSyntaxMode mode) => mode switch
+    private string SyntaxModeLabel(CodeEditorSyntaxMode mode) => mode switch
     {
-        CodeEditorSyntaxMode.PlainText => "Plain Text",
+        CodeEditorSyntaxMode.PlainText => L["Syntax.PlainText"],
         CodeEditorSyntaxMode.CSharp => "C#",
         CodeEditorSyntaxMode.JavaScript => "JavaScript",
         CodeEditorSyntaxMode.TypeScript => "TypeScript",

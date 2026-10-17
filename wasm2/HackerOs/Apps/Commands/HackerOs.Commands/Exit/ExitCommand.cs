@@ -1,6 +1,8 @@
 using System.Globalization;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Exit;
 
@@ -28,7 +30,7 @@ public sealed class ExitCommand : TerminalAppBase
 
         if (context.Shell is not { } shell)
         {
-            await context.StandardError.WriteLineAsync("exit: no shell session");
+            await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["NoShell"]);
             return 1;
         }
 
@@ -41,14 +43,14 @@ public sealed class ExitCommand : TerminalAppBase
         if (!int.TryParse(argument, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out int status))
         {
             // bash: "numeric argument required", then it exits anyway with 2.
-            await context.StandardError.WriteLineAsync($"exit: {argument}: numeric argument required");
+            await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["NumericRequired", argument]);
             return Exit(shell, NumericArgumentRequired);
         }
 
         if (context.Arguments.Count > 1)
         {
             // bash refuses and keeps the shell running.
-            await context.StandardError.WriteLineAsync("exit: too many arguments");
+            await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["TooManyArguments"]);
             return 1;
         }
 

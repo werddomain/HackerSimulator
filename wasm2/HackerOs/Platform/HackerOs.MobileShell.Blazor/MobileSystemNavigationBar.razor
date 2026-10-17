@@ -1,17 +1,18 @@
 @namespace HackerOs.MobileShell.Blazor
+@inject IServiceProvider LocalizationServices
 
-<nav class="mobile-nav-bar" aria-label="System navigation">
-    <button type="button" class="mobile-nav-button" aria-label="@Options.BackLabel" title="@Options.BackLabel" @onclick="HandleBack">
+<nav class="mobile-nav-bar" aria-label="@L["Navigation.Label"]">
+    <button type="button" class="mobile-nav-button" aria-label="@BackLabel" title="@BackLabel" @onclick="HandleBack">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <polygon points="16,4 6,12 16,20" />
         </svg>
     </button>
-    <button type="button" class="mobile-nav-button" aria-label="@Options.HomeLabel" title="@Options.HomeLabel" @onclick="HandleHome">
+    <button type="button" class="mobile-nav-button" aria-label="@HomeLabel" title="@HomeLabel" @onclick="HandleHome">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <circle cx="12" cy="12" r="8" />
         </svg>
     </button>
-    <button type="button" class="mobile-nav-button" aria-label="@Options.RecentLabel" title="@Options.RecentLabel" @onclick="HandleRecent">
+    <button type="button" class="mobile-nav-button" aria-label="@RecentLabel" title="@RecentLabel" @onclick="HandleRecent">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <rect x="5" y="5" width="14" height="14" />
         </svg>
@@ -35,4 +36,12 @@
     private void HandleBack() => Commands.RequestBack();
     private void HandleHome() => Commands.RequestHome();
     private void HandleRecent() => Commands.RequestRecent();
+
+    private string BackLabel => Options.BackLabel ?? L["Navigation.Back"];
+    private string HomeLabel => Options.HomeLabel ?? L["Navigation.Home"];
+    private string RecentLabel => Options.RecentLabel ?? L["Navigation.Recent"];
+
+    /// <summary>Gets the package's texts: the host's session language, or English without localization (ADR 0104).</summary>
+    private IStringLocalizer L => _localizer ??= PackageStringLocalizer.Resolve<Strings>(LocalizationServices);
+    private IStringLocalizer? _localizer;
 }

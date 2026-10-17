@@ -107,7 +107,7 @@ public sealed class CodeEditorRecoveryStore
         {
             return new CodeEditorRecoveryResult(
                 CodeEditorRecoveryStatus.Invalid,
-                Error: "Recovery data is not bounded UTF-8 text.");
+                Error: Strings.Ambient["Recovery.NotText"]);
         }
 
         FileMetadata metadata = (FileMetadata)handle.Entry.Metadata;
@@ -134,7 +134,7 @@ public sealed class CodeEditorRecoveryStore
             {
                 return new CodeEditorRecoveryResult(
                     CodeEditorRecoveryStatus.Invalid,
-                    Error: "Recovery data is incompatible with this user or schema.");
+                    Error: Strings.Ambient["Recovery.Incompatible"]);
             }
 
             _ = CodeEditorSession.Restore(envelope.Session);
@@ -142,11 +142,11 @@ public sealed class CodeEditorRecoveryStore
         }
         catch (JsonException)
         {
-            return new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Invalid, Error: "Recovery JSON is malformed.");
+            return new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Invalid, Error: Strings.Ambient["Recovery.Malformed"]);
         }
         catch (ArgumentException)
         {
-            return new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Invalid, Error: "Recovery content is invalid.");
+            return new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Invalid, Error: Strings.Ambient["Recovery.Invalid"]);
         }
     }
 
@@ -258,7 +258,7 @@ public sealed class CodeEditorRecoveryStore
             {
                 if (state.Value?.Metadata is not DirectoryMetadata)
                 {
-                    return new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Invalid, Error: "Recovery path is not a directory.");
+                    return new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Invalid, Error: Strings.Ambient["Recovery.NotDirectory"]);
                 }
 
                 current = next;
@@ -294,11 +294,11 @@ public sealed class CodeEditorRecoveryStore
     private static CodeEditorRecoveryResult Failure(FileSystemErrorCode? code) => code switch
     {
         FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied =>
-            new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Denied, Error: "Recovery access denied."),
+            new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Denied, Error: Strings.Ambient["Recovery.Denied"]),
         FileSystemErrorCode.RevisionConflict =>
-            new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Conflict, Error: "Recovery changed concurrently."),
+            new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Conflict, Error: Strings.Ambient["Recovery.Conflict"]),
         FileSystemErrorCode.Cancelled => new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Cancelled),
-        _ => new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Failed, Error: code?.ToString() ?? "Recovery operation failed.")
+        _ => new CodeEditorRecoveryResult(CodeEditorRecoveryStatus.Failed, Error: code?.ToString() ?? Strings.Ambient["Recovery.Failed"])
     };
 
     private static VirtualPath ParentOf(VirtualPath path)

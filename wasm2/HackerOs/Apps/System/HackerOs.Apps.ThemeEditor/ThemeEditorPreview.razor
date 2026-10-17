@@ -2,16 +2,16 @@
 @* Live preview of the edited theme (ADR 0103 §2.1): a sample desktop with a window, controls and a
    taskbar, drawn by a nested ThemeScope with the base theme and the edited tokens, so it uses the
    exact stylesheet and tokens the shell will use. *@
-<div class="preview-host" role="group" aria-label="Live preview">
+<div class="preview-host" role="group" aria-label="@L["Preview.Live"]">
     <ThemeScope ThemeId="@Resolved.BaseThemeId"
                 Platform="@Platform"
                 AccentId="@WellKnownAccentIds.Green"
                 AnimationsEnabled="@AnimationsEnabled"
                 Tokens="@Tokens">
         <div class="sample-desktop @(Platform == ThemePlatform.Mobile ? "is-mobile" : "is-desktop")">
-            <section class="sample-window" aria-label="Sample window">
+            <section class="sample-window" aria-label="@L["Preview.SampleWindow"]">
                 <header class="sample-titlebar">
-                    <span class="sample-title">@ThemeName — Sample</span>
+                    <span class="sample-title">@L["Preview.SampleTitle", ThemeName]</span>
                     <span class="sample-controls" aria-hidden="true">
                         <span class="sample-control">&#8211;</span>
                         <span class="sample-control">&#9633;</span>
@@ -19,33 +19,33 @@
                     </span>
                 </header>
                 <div class="sample-content">
-                    <h3 class="sample-heading">Primary text</h3>
-                    <p class="sample-secondary">Secondary text explains what a setting does.</p>
-                    <p class="sample-muted">Muted text for hints and disabled items.</p>
+                    <h3 class="sample-heading">@L["Preview.PrimaryText"]</h3>
+                    <p class="sample-secondary">@L["Preview.SecondaryText"]</p>
+                    <p class="sample-muted">@L["Preview.MutedText"]</p>
                     <div class="sample-row">
-                        <button type="button" class="sample-button is-primary">Primary</button>
-                        <button type="button" class="sample-button">Default</button>
-                        <button type="button" class="sample-button is-danger">Delete</button>
+                        <button type="button" class="sample-button is-primary">@L["Preview.Primary"]</button>
+                        <button type="button" class="sample-button">@L["Preview.Default"]</button>
+                        <button type="button" class="sample-button is-danger">@L["Preview.Delete"]</button>
                     </div>
-                    <input class="sample-input" aria-label="Sample input" value="~/projects/neon" readonly />
-                    <ul class="sample-list" aria-label="Sample list">
+                    <input class="sample-input" aria-label="@L["Preview.SampleInput"]" value="~/projects/neon" readonly />
+                    <ul class="sample-list" aria-label="@L["Preview.SampleList"]">
                         <li>notes.txt</li>
                         <li class="is-selected">theme.theme</li>
                         <li>wallpaper.png</li>
                     </ul>
                     <div class="sample-row">
-                        <span class="sample-badge is-success">Success</span>
-                        <span class="sample-badge is-warning">Warning</span>
-                        <span class="sample-badge is-error">Error</span>
-                        <span class="sample-badge is-info">Info</span>
+                        <span class="sample-badge is-success">@L["Preview.Success"]</span>
+                        <span class="sample-badge is-warning">@L["Preview.Warning"]</span>
+                        <span class="sample-badge is-error">@L["Preview.Error"]</span>
+                        <span class="sample-badge is-info">@L["Preview.Info"]</span>
                     </div>
                     <pre class="sample-mono">$ hackfetch --theme @ThemeName</pre>
                 </div>
             </section>
             <footer class="sample-taskbar" aria-hidden="true">
                 <span class="sample-launcher">H_</span>
-                <span class="sample-task is-active">Theme Editor</span>
-                <span class="sample-task">Terminal</span>
+                <span class="sample-task is-active">@L["Preview.TaskThemeEditor"]</span>
+                <span class="sample-task">@L["Preview.TaskTerminal"]</span>
                 <span class="sample-clock">13:37</span>
             </footer>
         </div>
@@ -56,9 +56,8 @@
     @if (Resolved.BaseThemeId != BaseThemeId)
     {
         <p class="preview-note">
-            On @(Platform == ThemePlatform.Mobile ? "mobile" : "the desktop"), the tokens apply over
-            @ThemeCatalog.Get(Resolved.BaseThemeId).DisplayName, since @ThemeCatalog.Get(BaseThemeId).DisplayName
-            styles the other form factor.
+            @L[Platform == ThemePlatform.Mobile ? "Preview.Note.Mobile" : "Preview.Note.Desktop",
+               ThemeCatalog.Get(Resolved.BaseThemeId).DisplayName, ThemeCatalog.Get(BaseThemeId).DisplayName]
         </p>
     }
 </div>
@@ -83,6 +82,9 @@
     /// <summary>Gets or sets whether animation tokens apply.</summary>
     [Parameter]
     public bool AnimationsEnabled { get; set; } = true;
+
+    /// <summary>The Theme Editor's texts in the language of its process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => AppContext.GetLocalizer<Strings>();
 
     // The same rule the shell applies (ResolvedTheme): a base of the other form factor is replaced
     // by that form factor's default theme.

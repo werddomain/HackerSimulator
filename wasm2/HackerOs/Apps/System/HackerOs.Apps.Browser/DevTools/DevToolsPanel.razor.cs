@@ -1,5 +1,7 @@
 using System.Globalization;
+using HackerOs.AppSdk.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.Browser.DevTools;
 
@@ -21,6 +23,10 @@ public sealed partial class DevToolsPanel : IDisposable
     private IReadOnlyList<NetworkLogEntry> _network = [];
     private IReadOnlyList<ConsoleLogEntry> _console = [];
     private int _errors;
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The panel's labels in the browser process's language (ADR 0104); console messages are not translated.</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
 
     /// <summary>The log of the tab.</summary>
     [Parameter, EditorRequired]

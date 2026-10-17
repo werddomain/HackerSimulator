@@ -21,17 +21,18 @@ public interface IMobileNavigationCommands
 }
 
 /// <summary>
-/// Host-supplied labels for the navigation bar's accessible button names, so a host isn't forced
-/// to accept hardcoded English strings (mirrors <c>HackerOs.Taskbar.Blazor</c>'s <c>TaskbarOptions</c>).
+/// Host-supplied labels for the navigation bar's accessible button names (mirrors
+/// <c>HackerOs.Taskbar.Blazor</c>'s <c>TaskbarOptions</c>). A label left <see langword="null"/> (the
+/// default) uses the package's own text, in the host's session language (ADR 0104).
 /// </summary>
 public sealed record MobileSystemNavigationBarOptions
 {
-    /// <summary>Gets the accessible label for the Back (triangle) button.</summary>
-    public string BackLabel { get; init; } = "Back";
+    /// <summary>Gets the accessible label for the Back (triangle) button; "Back" by default.</summary>
+    public string? BackLabel { get; init; }
 
-    /// <summary>Gets the accessible label for the Home (circle) button.</summary>
-    public string HomeLabel { get; init; } = "Home";
+    /// <summary>Gets the accessible label for the Home (circle) button; "Home" by default.</summary>
+    public string? HomeLabel { get; init; }
 
-    /// <summary>Gets the accessible label for the Recent (square) button.</summary>
-    public string RecentLabel { get; init; } = "Recent";
+    /// <summary>Gets the accessible label for the Recent (square) button; "Recent" by default.</summary>
+    public string? RecentLabel { get; init; }
 }

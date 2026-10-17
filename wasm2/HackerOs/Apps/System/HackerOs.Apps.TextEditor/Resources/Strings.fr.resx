@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Dialog.Cancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="Dialog.Conflict.Message" xml:space="preserve">
+    <value>Le fichier a été modifié par un autre processus depuis son dernier chargement. Utilisez « Enregistrer sous » pour en écrire une nouvelle copie, ou rechargez le fichier pour accepter les modifications externes.</value>
+  </data>
+  <data name="Dialog.Conflict.Title" xml:space="preserve">
+    <value>Conflit d'enregistrement</value>
+  </data>
+  <data name="Dialog.Ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Dialog.Open.Title" xml:space="preserve">
+    <value>Ouvrir un fichier texte</value>
+  </data>
+  <data name="Dialog.Save.Title" xml:space="preserve">
+    <value>Enregistrer le fichier texte</value>
+  </data>
+  <data name="Dialog.SaveFailed.Title" xml:space="preserve">
+    <value>Échec de l'enregistrement</value>
+  </data>
+  <data name="Dialog.Unsaved.Discard" xml:space="preserve">
+    <value>Abandonner</value>
+  </data>
+  <data name="Dialog.Unsaved.Message" xml:space="preserve">
+    <value>« {0} » contient des modifications non enregistrées. Les abandonner et continuer ?</value>
+  </data>
+  <data name="Dialog.Unsaved.Title" xml:space="preserve">
+    <value>Modifications non enregistrées</value>
+  </data>
+  <data name="Editor.AriaLabel" xml:space="preserve">
+    <value>Éditeur du contenu du document</value>
+  </data>
+  <data name="Error.Binary" xml:space="preserve">
+    <value>L'Éditeur de texte ne prend pas en charge les fichiers binaires.</value>
+  </data>
+  <data name="Error.DestinationNotFound" xml:space="preserve">
+    <value>Dossier de destination introuvable.</value>
+  </data>
+  <data name="Error.LoadCancelled" xml:space="preserve">
+    <value>Chargement annulé.</value>
+  </data>
+  <data name="Error.NotFile" xml:space="preserve">
+    <value>Le chemin n'est pas un fichier ordinaire.</value>
+  </data>
+  <data name="Error.NotFound" xml:space="preserve">
+    <value>Fichier introuvable.</value>
+  </data>
+  <data name="Error.PermissionDenied" xml:space="preserve">
+    <value>Permission refusée.</value>
+  </data>
+  <data name="Error.RevisionConflict" xml:space="preserve">
+    <value>Conflit de révision.</value>
+  </data>
+  <data name="Error.TooLarge" xml:space="preserve">
+    <value>Le fichier est trop volumineux ({0} Kio). L'Éditeur de texte accepte jusqu'à {1} Kio.</value>
+  </data>
+  <data name="Error.Unexpected" xml:space="preserve">
+    <value>Erreur inattendue : {0}</value>
+  </data>
+  <data name="Error.UnknownRead" xml:space="preserve">
+    <value>Erreur de lecture inconnue.</value>
+  </data>
+  <data name="Error.UnsupportedType" xml:space="preserve">
+    <value>Type de fichier « {0} » non pris en charge. L'Éditeur de texte n'ouvre que : {1}.</value>
+  </data>
+  <data name="Error.WriteFailed" xml:space="preserve">
+    <value>Échec de l'écriture.</value>
+  </data>
+  <data name="Filter.All" xml:space="preserve">
+    <value>Tous les fichiers</value>
+  </data>
+  <data name="Filter.Text" xml:space="preserve">
+    <value>Fichiers texte</value>
+  </data>
+  <data name="Find.AriaLabel" xml:space="preserve">
+    <value>Rechercher dans le document</value>
+  </data>
+  <data name="Find.Close" xml:space="preserve">
+    <value>Fermer la barre de recherche</value>
+  </data>
+  <data name="Find.InputAriaLabel" xml:space="preserve">
+    <value>Texte à rechercher</value>
+  </data>
+  <data name="Find.MatchCase" xml:space="preserve">
+    <value>Respecter la casse</value>
+  </data>
+  <data name="Find.MatchPosition" xml:space="preserve">
+    <value>Occurrence {0}/{1}</value>
+  </data>
+  <data name="Find.Matches.Many" xml:space="preserve">
+    <value>{0} occurrences</value>
+  </data>
+  <data name="Find.Matches.One" xml:space="preserve">
+    <value>{0} occurrence</value>
+  </data>
+  <data name="Find.Next" xml:space="preserve">
+    <value>Occurrence suivante (Entrée)</value>
+  </data>
+  <data name="Find.NoMatches" xml:space="preserve">
+    <value>Aucune occurrence</value>
+  </data>
+  <data name="Find.Placeholder" xml:space="preserve">
+    <value>Rechercher…</value>
+  </data>
+  <data name="Find.Previous" xml:space="preserve">
+    <value>Occurrence précédente (Maj+Entrée)</value>
+  </data>
+  <data name="Find.ReplaceAriaLabel" xml:space="preserve">
+    <value>Rechercher et remplacer dans le document</value>
+  </data>
+  <data name="Find.ToggleReplace" xml:space="preserve">
+    <value>Afficher ou masquer Remplacer (Ctrl+H)</value>
+  </data>
+  <data name="Find.WholeWord" xml:space="preserve">
+    <value>Mot entier</value>
+  </data>
+  <data name="Menu.AriaLabel" xml:space="preserve">
+    <value>Menu de l'éditeur de texte</value>
+  </data>
+  <data name="Menu.Edit" xml:space="preserve">
+    <value>Édition</value>
+  </data>
+  <data name="Menu.File" xml:space="preserve">
+    <value>Fichier</value>
+  </data>
+  <data name="Menu.Find" xml:space="preserve">
+    <value>Rechercher (Ctrl+F)</value>
+  </data>
+  <data name="Menu.New" xml:space="preserve">
+    <value>Nouveau</value>
+  </data>
+  <data name="Menu.Open" xml:space="preserve">
+    <value>Ouvrir…</value>
+  </data>
+  <data name="Menu.Replace" xml:space="preserve">
+    <value>Remplacer (Ctrl+H)</value>
+  </data>
+  <data name="Menu.Save" xml:space="preserve">
+    <value>Enregistrer</value>
+  </data>
+  <data name="Menu.SaveAs" xml:space="preserve">
+    <value>Enregistrer sous…</value>
+  </data>
+  <data name="Overlay.Loading" xml:space="preserve">
+    <value>Chargement du fichier…</value>
+  </data>
+  <data name="Overlay.Retry" xml:space="preserve">
+    <value>Réessayer</value>
+  </data>
+  <data name="Recovery.File" xml:space="preserve">
+    <value>Modifications non enregistrées de {0} récupérées – utilisez Enregistrer sous pour les conserver</value>
+  </data>
+  <data name="Recovery.Untitled" xml:space="preserve">
+    <value>Texte non enregistré de la dernière session récupéré – utilisez Enregistrer sous pour le conserver</value>
+  </data>
+  <data name="Replace.AllButton" xml:space="preserve">
+    <value>Tout remplacer</value>
+  </data>
+  <data name="Replace.AllTooltip" xml:space="preserve">
+    <value>Tout remplacer (Ctrl+Alt+Entrée)</value>
+  </data>
+  <data name="Replace.AriaLabel" xml:space="preserve">
+    <value>Remplacer par</value>
+  </data>
+  <data name="Replace.Button" xml:space="preserve">
+    <value>Remplacer</value>
+  </data>
+  <data name="Replace.Count.Many" xml:space="preserve">
+    <value>{0} remplacements</value>
+  </data>
+  <data name="Replace.Count.One" xml:space="preserve">
+    <value>{0} remplacement</value>
+  </data>
+  <data name="Replace.Placeholder" xml:space="preserve">
+    <value>Remplacer par…</value>
+  </data>
+  <data name="Replace.Tooltip" xml:space="preserve">
+    <value>Remplacer (Entrée)</value>
+  </data>
+  <data name="Status.AriaLabel" xml:space="preserve">
+    <value>Barre d'état de l'éditeur</value>
+  </data>
+  <data name="Status.Conflict" xml:space="preserve">
+    <value>⚡ Conflit détecté – utilisez Enregistrer sous</value>
+  </data>
+  <data name="Status.NewDocument" xml:space="preserve">
+    <value>Nouveau document</value>
+  </data>
+  <data name="Title.Recovered" xml:space="preserve">
+    <value>{0} (récupéré)</value>
+  </data>
+  <data name="Title.RecoveredUntitled" xml:space="preserve">
+    <value>Sans titre (récupéré)</value>
+  </data>
+  <data name="Title.Untitled" xml:space="preserve">
+    <value>Sans titre</value>
+  </data>
+</root>

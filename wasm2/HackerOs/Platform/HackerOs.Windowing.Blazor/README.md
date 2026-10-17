@@ -27,3 +27,11 @@ a window's content actually is.
 Pair this package with `HackerOs.Taskbar.Blazor` for a taskbar over the same
 runtime. See `HackerOs.Windowing.SampleHost` in the source repository for a
 complete, minimal host that uses only these packages.
+
+## Localization
+
+The package's texts (accessible labels, window buttons such as Minimize, Maximize, Restore, Close, Back) live in `Resources/Strings.resx`
+(English) and `Resources/Strings.fr.resx` (French), read through
+`HackerOs.Theming.Blazor.Localization.PackageStringLocalizer` (ADR 0104): a host that
+registers an `IStringLocalizer<T>` (HackerOS registers its session-language
+`SessionStringLocalizer<T>`) gets its language; a host without localization gets English.

@@ -1,6 +1,6 @@
 # Localisation (anglais et français)
 
-Décision : [ADR 0104](adr/0104-localization.md). Chantier : `v3/12-localization`
+Décisions : [ADR 0104](adr/0104-localization.md), ajustée par l'[ADR 0111](adr/0111-localization-implementation-adjustments.md). Chantier : `v3/12-localization`
 du [plan wasm v3](wasm-v3-completion-plan.md).
 
 ## But

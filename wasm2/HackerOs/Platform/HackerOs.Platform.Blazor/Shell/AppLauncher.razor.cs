@@ -6,6 +6,7 @@ using HackerOs.Platform.Core.Shell;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Platform.Blazor.Shell;
 
@@ -37,6 +38,10 @@ public partial class AppLauncher : ComponentBase, IDisposable
     [Inject]
     private HackerOs.Platform.Core.Globalization.SessionLocaleService Locale { get; set; } = null!;
 
+    /// <summary>Gets the launcher's texts, in the session language (ADR 0104).</summary>
+    [Inject]
+    private IStringLocalizer<Strings> L { get; set; } = null!;
+
     /// <summary>Gets the live enablement registry used to suppress disabled applications.</summary>
     [Inject]
     private IAppEnablementRegistry Enablement { get; set; } = null!;
@@ -64,9 +69,9 @@ public partial class AppLauncher : ComponentBase, IDisposable
 
     private bool CanManagePins => _principal is not null && !_isUpdatingPreferences;
 
-    private string PrincipalDisplayName => _principal?.DisplayName ?? "Local user";
+    private string PrincipalDisplayName => _principal?.DisplayName ?? L["Launcher.LocalUser"];
 
-    private string PrincipalLoginName => _principal is null ? "Offline session" : $"@{_principal.LoginName.Value}";
+    private string PrincipalLoginName => _principal is null ? L["Launcher.OfflineSession"] : $"@{_principal.LoginName.Value}";
 
     private AppManifest? FileExplorerApp => FindLaunchableApp(FileExplorerAppId);
 
@@ -77,7 +82,7 @@ public partial class AppLauncher : ComponentBase, IDisposable
         : null;
 
     private string SearchStatus => HasSearchQuery
-        ? $"{_projection.VisibleApps.Count} application{(_projection.VisibleApps.Count == 1 ? string.Empty : "s")} found."
+        ? L[_projection.VisibleApps.Count == 1 ? "Launcher.SearchStatus.One" : "Launcher.SearchStatus.Many", _projection.VisibleApps.Count]
         : string.Empty;
 
     /// <inheritdoc />
@@ -378,8 +383,16 @@ public partial class AppLauncher : ComponentBase, IDisposable
 
     private static string GetOptionId(AppManifest app) => $"launcher-option-{app.Id}";
 
-    private static string FormatCategory(string category) => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(
-        category.Replace('-', ' '));
+    /// <summary>
+    /// The display name of a manifest category: the well-known freedesktop-like categories are
+    /// translated (<c>Category.Utilities</c>…); any other id is shown title-cased, as before.
+    /// </summary>
+    private string FormatCategory(string category)
+    {
+        string titled = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(category.Replace('-', ' '));
+        LocalizedString text = L["Category." + titled.Replace(" ", string.Empty, StringComparison.Ordinal)];
+        return text.ResourceNotFound ? titled : text.Value;
+    }
 
     private static string GetAppIconName(AppManifest app)
     {

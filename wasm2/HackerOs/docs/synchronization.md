@@ -116,7 +116,10 @@ au plus, UTF-8 sans octet nul ; contenu distant d'au plus 1 Mio). Avec
 plusieurs fichiers, une ligne « Appliquer à tous » apparaît. « Plus tard » (ou
 Échap) ferme le dialogue, laisse les fichiers figés et envoie une notification
 qui renvoie à **Paramètres → Synchronisation**. Les choix qui demandent la
-version distante restent désactivés tant qu'elle n'est pas reçue.
+version distante restent désactivés tant qu'elle n'est pas reçue. Le dialogue
+suit la langue de la session (ADR 0104) : les libellés cités sont ceux d'une
+session française (« Keep mine », « Keep both », « Later »… en anglais), et la
+date et la taille (o/Kio/Mio, ou B/KiB/MiB) suivent sa culture `LC_TIME`.
 
 ### Synchro périodique (ADR 0101 §4)
 

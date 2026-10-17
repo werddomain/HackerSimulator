@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Basename;
 
@@ -13,6 +15,7 @@ public sealed class BasenameCommand(AppManifest manifest) : TerminalAppBase(mani
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         bool multiple = false;
         string? suffix = null;
         List<string> names = [];
@@ -36,7 +39,7 @@ public sealed class BasenameCommand(AppManifest manifest) : TerminalAppBase(mani
 
         if (names.Count == 0)
         {
-            await context.StandardError.WriteLineAsync("basename: missing operand");
+            await context.StandardError.WriteLineAsync(text["MissingOperand"]);
             return 1;
         }
 
@@ -44,7 +47,7 @@ public sealed class BasenameCommand(AppManifest manifest) : TerminalAppBase(mani
         {
             if (names.Count > 2)
             {
-                await context.StandardError.WriteLineAsync($"basename: extra operand '{names[2]}'");
+                await context.StandardError.WriteLineAsync(text["ExtraOperand", names[2]]);
                 return 1;
             }
 

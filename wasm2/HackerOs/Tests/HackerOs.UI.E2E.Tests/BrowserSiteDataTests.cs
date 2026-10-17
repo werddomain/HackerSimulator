@@ -92,9 +92,9 @@ public sealed class BrowserSiteDataTests(ITestOutputHelper output)
             await E2ESupport.OpenAppAsync(page, "IndexedDB Diagnostic", output);
             ILocator site = page.Locator(".diag-site-item", new() { HasText = "org.hackeros.samples.intranet" });
             // Not a system app: system.storage.inspect needs an administrator's approval (ADR 0050).
-            await page.GetByLabel("Nom d'administrateur").FillAsync(E2ESupport.LoginName, new() { Timeout = 20000 });
-            await page.GetByLabel("Mot de passe").FillAsync(E2ESupport.Password);
-            await page.GetByRole(AriaRole.Button, new() { Name = "Autoriser", Exact = true }).ClickAsync();
+            await page.GetByLabel("Administrator name", new() { Exact = true }).FillAsync(E2ESupport.LoginName, new() { Timeout = 20000 });
+            await page.GetByLabel("Password", new() { Exact = true }).FillAsync(E2ESupport.Password);
+            await page.GetByRole(AriaRole.Button, new() { Name = "Allow", Exact = true }).ClickAsync();
             try
             {
                 await site.ClickAsync(new() { Timeout = 20000 });

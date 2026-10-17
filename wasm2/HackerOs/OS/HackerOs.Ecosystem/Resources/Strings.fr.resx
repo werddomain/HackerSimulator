@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Boot.Validating" xml:space="preserve">
+    <value>Validation de l'écosystème local</value>
+  </data>
+  <data name="Common.Password" xml:space="preserve">
+    <value>Mot de passe</value>
+  </data>
+  <data name="Correlation" xml:space="preserve">
+    <value>Corrélation : {0}</value>
+  </data>
+  <data name="Fatal.BoundaryTitle" xml:space="preserve">
+    <value>HackerOS a rencontré une erreur</value>
+  </data>
+  <data name="Fatal.Recorded" xml:space="preserve">
+    <value>L'échec a été enregistré sans exposer de détails sensibles.</value>
+  </data>
+  <data name="Fatal.Title" xml:space="preserve">
+    <value>HackerOS n'a pas pu démarrer</value>
+  </data>
+  <data name="Login.Rejected" xml:space="preserve">
+    <value>Les identifiants locaux n'ont pas été acceptés.</value>
+  </data>
+  <data name="Login.Submit" xml:space="preserve">
+    <value>Ouvrir la session</value>
+  </data>
+  <data name="Login.Title" xml:space="preserve">
+    <value>Connexion</value>
+  </data>
+  <data name="Login.User" xml:space="preserve">
+    <value>Utilisateur local</value>
+  </data>
+  <data name="Progress.Completed" xml:space="preserve">
+    <value>Étapes de démarrage terminées</value>
+  </data>
+  <data name="Progress.Label" xml:space="preserve">
+    <value>Progression de l'ouverture de session</value>
+  </data>
+  <data name="Progress.Step.EnsureDataIntegrity" xml:space="preserve">
+    <value>Vérification de l'intégrité des données</value>
+  </data>
+  <data name="Progress.Step.LoadingProfile" xml:space="preserve">
+    <value>Chargement du profil</value>
+  </data>
+  <data name="Progress.Step.StartingSession" xml:space="preserve">
+    <value>Démarrage de la session</value>
+  </data>
+  <data name="Progress.Subtitle" xml:space="preserve">
+    <value>Initialisation de la session en cours</value>
+  </data>
+  <data name="Recovery.Body" xml:space="preserve">
+    <value>Le démarrage reste suspendu pour protéger les données enregistrées.</value>
+  </data>
+  <data name="Recovery.Label" xml:space="preserve">
+    <value>Environnement de récupération</value>
+  </data>
+  <data name="Recovery.Retry" xml:space="preserve">
+    <value>Réessayer</value>
+  </data>
+  <data name="Recovery.Title" xml:space="preserve">
+    <value>Le stockage local est indisponible</value>
+  </data>
+  <data name="Setup.ConfirmPassword" xml:space="preserve">
+    <value>Confirmer le mot de passe</value>
+  </data>
+  <data name="Setup.DisplayName" xml:space="preserve">
+    <value>Nom affiché</value>
+  </data>
+  <data name="Setup.Intro" xml:space="preserve">
+    <value>Initialisez ce profil HackerOS local.</value>
+  </data>
+  <data name="Setup.LoginName" xml:space="preserve">
+    <value>Nom d'utilisateur</value>
+  </data>
+  <data name="Setup.PasswordRules" xml:space="preserve">
+    <value>Les mots de passe doivent être identiques et contenir au moins huit caractères.</value>
+  </data>
+  <data name="Setup.ReservedLogin" xml:space="preserve">
+    <value>« {0} » est réservé aux services du système.</value>
+  </data>
+  <data name="Setup.Submit" xml:space="preserve">
+    <value>Créer le profil local</value>
+  </data>
+  <data name="Setup.Title" xml:space="preserve">
+    <value>Créer l'administrateur</value>
+  </data>
+  <data name="Update.Ready" xml:space="preserve">
+    <value>Une mise à jour de HackerOS est prête.</value>
+  </data>
+  <data name="Update.Restart" xml:space="preserve">
+    <value>Redémarrer pour mettre à jour</value>
+  </data>
+</root>

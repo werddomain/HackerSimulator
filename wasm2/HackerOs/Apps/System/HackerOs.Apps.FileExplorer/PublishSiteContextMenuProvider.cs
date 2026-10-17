@@ -2,6 +2,7 @@ using HackerOs.AppSdk.FileView;
 using HackerOs.AppSdk.FileView.ContextMenu;
 using HackerOs.AppSdk.FileView.Icons;
 using HackerOs.AppSdk.Icons;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.FileExplorer;
 
@@ -16,11 +17,14 @@ public sealed class PublishSiteContextMenuProvider : IFileViewContextMenuProvide
     public const string WebServerManagerAppId = "org.hackeros.web-server-manager";
 
     private readonly Func<string, string, Task> _launch;
+    private readonly IStringLocalizer _text;
 
     /// <param name="launch">Starts an app with one argument (the explorer's <c>LaunchWithAsync</c>).</param>
-    public PublishSiteContextMenuProvider(Func<string, string, Task> launch)
+    /// <param name="text">The explorer's texts in its language (ADR 0104), for the menu label.</param>
+    public PublishSiteContextMenuProvider(Func<string, string, Task> launch, IStringLocalizer text)
     {
         _launch = launch ?? throw new ArgumentNullException(nameof(launch));
+        _text = text ?? throw new ArgumentNullException(nameof(text));
     }
 
     /// <inheritdoc />
@@ -39,7 +43,7 @@ public sealed class PublishSiteContextMenuProvider : IFileViewContextMenuProvide
 
         items.InsertAfter("open", new FileViewMenuItem(
             "publish-site",
-            "Publish as a web site…",
+            _text["Menu.PublishSite"],
             ShellIconDescriptor.Vector(IconLibrary.Lucide, "globe"),
             () => _launch(WebServerManagerAppId, item.FullPath.Value)));
     }

@@ -4,14 +4,14 @@
     <div class="token-head">
         <label class="token-label" for="@InputId">@Token.Label</label>
         <code class="token-name">@Token.Name</code>
-        <span class="token-type">@Token.Type</span>
+        <span class="token-type">@Strings.TypeLabel(L, Token.Type)</span>
     </div>
     <div class="token-inputs">
         @if (Token.Type == ThemeTokenType.Color)
         {
             <input type="color"
                    class="token-swatch"
-                   aria-label="@($"Pick {Token.Label}")"
+                   aria-label="@L["Field.Pick", Token.Label]"
                    value="@(ThemeTokenValidator.ToHexColor(Value ?? Token.Example) ?? "#000000")"
                    @onchange="OnPickedAsync" />
         }
@@ -19,12 +19,12 @@
                class="token-input"
                type="text"
                spellcheck="false"
-               placeholder="@($"Base theme value (e.g. {Token.Example})")"
+               placeholder="@L["Field.Placeholder", Token.Example]"
                value="@Value"
                aria-invalid="@(Error is null ? "false" : "true")"
                aria-describedby="@($"{InputId}-help")"
                @onchange="OnTypedAsync" />
-        <button type="button" class="token-reset" title="Use the base theme's value" disabled="@(Value is null)" @onclick="ResetAsync">Reset</button>
+        <button type="button" class="token-reset" title="@L["Field.ResetTooltip"]" disabled="@(Value is null)" @onclick="ResetAsync">@L["Field.Reset"]</button>
     </div>
     <p id="@($"{InputId}-help")" class="token-help">
         @if (Error is not null)
@@ -54,6 +54,9 @@
     /// <summary>Gets or sets the callback receiving a new value (<see langword="null"/> to reset).</summary>
     [Parameter]
     public EventCallback<string?> ValueChanged { get; set; }
+
+    /// <summary>The Theme Editor's texts in the language of its process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => AppContext.GetLocalizer<Strings>();
 
     private string InputId => $"token{Token.Name}";
 

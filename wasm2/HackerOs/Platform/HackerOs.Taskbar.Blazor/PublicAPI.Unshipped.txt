@@ -16,6 +16,7 @@ HackerOs.Taskbar.Blazor.ITaskbarSessionCommands
 HackerOs.Taskbar.Blazor.ITaskbarSessionCommands.RequestLogout() -> void
 HackerOs.Taskbar.Blazor.ITaskbarStatusSource
 HackerOs.Taskbar.Blazor.ITaskbarStatusSource.Changed -> System.Action?
+HackerOs.Taskbar.Blazor.ITaskbarStatusSource.FormatCulture.get -> System.Globalization.CultureInfo!
 HackerOs.Taskbar.Blazor.ITaskbarStatusSource.UtcNow.get -> System.DateTimeOffset
 HackerOs.Taskbar.Blazor.ITaskbarWindowSource
 HackerOs.Taskbar.Blazor.ITaskbarWindowSource.Changed -> System.Action?
@@ -40,7 +41,7 @@ HackerOs.Taskbar.Blazor.Taskbar.Taskbar() -> void
 HackerOs.Taskbar.Blazor.Taskbar.WindowSource.get -> HackerOs.Taskbar.Blazor.ITaskbarWindowSource?
 HackerOs.Taskbar.Blazor.Taskbar.WindowSource.set -> void
 HackerOs.Taskbar.Blazor.TaskbarOptions
-HackerOs.Taskbar.Blazor.TaskbarOptions.LauncherLabel.get -> string!
+HackerOs.Taskbar.Blazor.TaskbarOptions.LauncherLabel.get -> string?
 HackerOs.Taskbar.Blazor.TaskbarOptions.LauncherLabel.init -> void
 HackerOs.Taskbar.Blazor.TaskbarOptions.LauncherMark.get -> string!
 HackerOs.Taskbar.Blazor.TaskbarOptions.LauncherMark.init -> void

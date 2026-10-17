@@ -15,28 +15,28 @@
     cut/copy and drag-and-drop are FileView's own; deletion is handed to the window (trash).
 *@
 <div class="explorer">
-    <div class="view-title">Explorer</div>
+    <div class="view-title">@L["Explorer.Title"]</div>
 
     @if (Workspace is null)
     {
         <div class="explorer-empty">
-            <p>You have not yet opened a folder.</p>
-            <button type="button" class="primary-button" @onclick="OnOpenFolder">Open Folder</button>
-            <p class="hint">Opening a folder lists its files here, lets you create files and folders, and enables search across all its files (Ctrl+Shift+F) and quick open (Ctrl+P).</p>
+            <p>@L["Explorer.NoFolder"]</p>
+            <button type="button" class="primary-button" @onclick="OnOpenFolder">@L["Explorer.OpenFolder"]</button>
+            <p class="hint">@L["Explorer.Hint"]</p>
         </div>
     }
     else
     {
         <div class="folder-header" title="@Workspace.Root.Value">
             <span class="folder-name">@Workspace.Name</span>
-            <span class="folder-actions" role="toolbar" aria-label="Explorer actions">
-                <button type="button" class="icon-button" id="explorer-new-file" title="New File..." aria-label="New File" @onclick="() => BeginCreate(CreationKind.File, null)">
+            <span class="folder-actions" role="toolbar" aria-label="@L["Explorer.Actions"]">
+                <button type="button" class="icon-button" id="explorer-new-file" title="@L["Explorer.NewFile.Title"]" aria-label="@L["Explorer.NewFile"]" @onclick="() => BeginCreate(CreationKind.File, null)">
                     <HackerIcon Library="IconLibrary.Lucide" Name="file-plus" Size="16" />
                 </button>
-                <button type="button" class="icon-button" id="explorer-new-folder" title="New Folder..." aria-label="New Folder" @onclick="() => BeginCreate(CreationKind.Folder, null)">
+                <button type="button" class="icon-button" id="explorer-new-folder" title="@L["Explorer.NewFolder.Title"]" aria-label="@L["Explorer.NewFolder"]" @onclick="() => BeginCreate(CreationKind.Folder, null)">
                     <HackerIcon Library="IconLibrary.Lucide" Name="folder-plus" Size="16" />
                 </button>
-                <button type="button" class="icon-button" title="Refresh Explorer" aria-label="Refresh Explorer" @onclick="RefreshAsync">
+                <button type="button" class="icon-button" title="@L["Explorer.Refresh"]" aria-label="@L["Explorer.Refresh"]" @onclick="RefreshAsync">
                     <HackerIcon Library="IconLibrary.Lucide" Name="refresh-cw" Size="16" />
                 </button>
             </span>
@@ -48,15 +48,15 @@
                 <HackerIcon Library="IconLibrary.Lucide" Name="@(_creating == CreationKind.File ? "file" : "folder")" Size="16" />
                 <input @ref="_createInput"
                        class="create-input @(_createError is null ? null : "has-error")"
-                       aria-label="@(_creating == CreationKind.File ? "New file name" : "New folder name")"
-                       placeholder="@(_creating == CreationKind.File ? "file name" : "folder name")"
+                       aria-label="@(_creating == CreationKind.File ? L["Explorer.NewFileName"] : L["Explorer.NewFolderName"])"
+                       placeholder="@(_creating == CreationKind.File ? L["Explorer.FileNamePlaceholder"] : L["Explorer.FolderNamePlaceholder"])"
                        @bind="_createName"
                        @bind:event="oninput"
                        @onkeydown="OnCreateKeyDown"
                        @onkeyup="OnCreateKeyUpAsync"
                        @onblur="OnCreateBlurAsync" />
             </div>
-            <div class="create-target">in @Workspace.RelativePathOf(_createDirectory) @(_createDirectory == Workspace.Root ? "(root)" : null)</div>
+            <div class="create-target">@(_createDirectory == Workspace.Root ? L["Explorer.CreateTargetRoot", Workspace.RelativePathOf(_createDirectory)] : L["Explorer.CreateTarget", Workspace.RelativePathOf(_createDirectory)])</div>
             @if (_createError is not null)
             {
                 <div class="create-error" role="alert">@_createError</div>

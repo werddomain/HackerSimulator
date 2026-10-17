@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Errno.FileExists" xml:space="preserve">
+    <value>File exists</value>
+  </data>
+  <data name="Errno.FileTooLarge" xml:space="preserve">
+    <value>File too large</value>
+  </data>
+  <data name="Errno.InvalidPath" xml:space="preserve">
+    <value>Invalid path</value>
+  </data>
+  <data name="Errno.IsDirectory" xml:space="preserve">
+    <value>Is a directory</value>
+  </data>
+  <data name="Errno.NoSpace" xml:space="preserve">
+    <value>No space left on device</value>
+  </data>
+  <data name="Errno.NotDirectory" xml:space="preserve">
+    <value>Not a directory</value>
+  </data>
+  <data name="Errno.NotEmpty" xml:space="preserve">
+    <value>Directory not empty</value>
+  </data>
+  <data name="Errno.NotFound" xml:space="preserve">
+    <value>No such file or directory</value>
+  </data>
+  <data name="Errno.NotPermitted" xml:space="preserve">
+    <value>Operation not permitted</value>
+  </data>
+  <data name="Errno.NotSupported" xml:space="preserve">
+    <value>Operation not supported</value>
+  </data>
+  <data name="Errno.PermissionDenied" xml:space="preserve">
+    <value>Permission denied</value>
+  </data>
+  <data name="FileError" xml:space="preserve">
+    <value>{0}: {1}: {2}</value>
+  </data>
+</root>
