@@ -1,1 +1,40 @@
 #nullable enable
+const HackerOs.AppSdk.Administration.HackUserAccounts.MaximumPasswordLength = 256 -> int
+const HackerOs.AppSdk.Administration.HackUserAccounts.MinimumPasswordLength = 8 -> int
+HackerOs.AppSdk.Administration.HackUserAccount
+HackerOs.AppSdk.Administration.HackUserAccount.Authority.get -> HackerOs.App.Abstractions.AppAuthority
+HackerOs.AppSdk.Administration.HackUserAccount.Authority.init -> void
+HackerOs.AppSdk.Administration.HackUserAccount.DisplayName.get -> string!
+HackerOs.AppSdk.Administration.HackUserAccount.DisplayName.init -> void
+HackerOs.AppSdk.Administration.HackUserAccount.HackUserAccount(string! LoginName, string! DisplayName, HackerOs.App.Abstractions.AppAuthority Authority, bool IsEnabled, bool HasPassword, System.DateTimeOffset UpdatedAtUtc, bool IsCurrentUser) -> void
+HackerOs.AppSdk.Administration.HackUserAccount.HasPassword.get -> bool
+HackerOs.AppSdk.Administration.HackUserAccount.HasPassword.init -> void
+HackerOs.AppSdk.Administration.HackUserAccount.IsAdministrator.get -> bool
+HackerOs.AppSdk.Administration.HackUserAccount.IsCurrentUser.get -> bool
+HackerOs.AppSdk.Administration.HackUserAccount.IsCurrentUser.init -> void
+HackerOs.AppSdk.Administration.HackUserAccount.IsEnabled.get -> bool
+HackerOs.AppSdk.Administration.HackUserAccount.IsEnabled.init -> void
+HackerOs.AppSdk.Administration.HackUserAccount.LoginName.get -> string!
+HackerOs.AppSdk.Administration.HackUserAccount.LoginName.init -> void
+HackerOs.AppSdk.Administration.HackUserAccount.UpdatedAtUtc.get -> System.DateTimeOffset
+HackerOs.AppSdk.Administration.HackUserAccount.UpdatedAtUtc.init -> void
+HackerOs.AppSdk.Administration.HackUserAccounts
+HackerOs.AppSdk.Administration.IAppUserAccountsGateway
+HackerOs.AppSdk.Administration.IAppUserAccountsGateway.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+HackerOs.AppSdk.Administration.IAppUserAccountsGateway.ListAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackUserAccount!>!>
+HackerOs.AppSdk.Administration.IAppUserAccountsGateway.ResetPasswordAsync(string! loginName, string? newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+HackerOs.AppSdk.IAppExecutionContext.UserAccounts.get -> HackerOs.AppSdk.Administration.IAppUserAccountsGateway!
+HackerOs.AppSdk.ITerminalInputMode
+HackerOs.AppSdk.ITerminalInputMode.EchoEnabled.get -> bool
+HackerOs.AppSdk.ITerminalInputMode.EchoEnabled.set -> void
+HackerOs.AppSdk.TerminalExecutionContext.ReadSecretLineAsync(string! prompt, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string?>
+static HackerOs.AppSdk.Administration.HackUserAccounts.ChangePasswordAsync(HackerOs.AppSdk.IAppExecutionContext! context, string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Administration.HackUserAccounts.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Administration.HackUserAccounts.ListAsync(HackerOs.AppSdk.IAppExecutionContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackUserAccount!>!>!
+static HackerOs.AppSdk.Administration.HackUserAccounts.ListAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackUserAccount!>!>!
+static HackerOs.AppSdk.Administration.HackUserAccounts.RemovePasswordAsync(HackerOs.AppSdk.IAppExecutionContext! context, string! loginName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Administration.HackUserAccounts.RemovePasswordAsync(string! loginName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Administration.HackUserAccounts.ResetPasswordAsync(HackerOs.AppSdk.IAppExecutionContext! context, string! loginName, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Administration.HackUserAccounts.ResetPasswordAsync(string! loginName, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Administration.HackUserAccounts.ValidateNewPassword(string? newPassword) -> string?
+static HackerOs.AppSdk.UnsupportedAdministrationGateways.UserAccounts.get -> HackerOs.AppSdk.Administration.IAppUserAccountsGateway!

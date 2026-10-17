@@ -339,6 +339,10 @@
                     }
                 </div>
             </MudTabPanel>
+            <MudTabPanel Text="@L["Tab.Users"]" Icon="@Icons.Material.Filled.People">
+                <UsersPanel />
+            </MudTabPanel>
+
             @if (HackerOs.AppSdk.Administration.HackSystemBackup.IsSupportedFor(AppContext))
             {
                 <MudTabPanel Text="@L["Tab.Backup"]" Icon="@Icons.Material.Filled.Backup">

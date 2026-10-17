@@ -115,6 +115,16 @@ public sealed partial class IndexedDbLocalUserRepository : ILocalUserRepository,
     }
 
     /// <inheritdoc />
+    public ValueTask<LocalUser> SetCredentialAsync(
+        LocalUserId id,
+        LocalPasswordCredential? credential,
+        CancellationToken cancellationToken = default) =>
+        MutateAsync(
+            id,
+            user => user with { Credential = credential is null ? null : LocalCredentialRecord.FromDomain(credential) },
+            cancellationToken);
+
+    /// <inheritdoc />
     public ValueTask DisposeAsync() => _adapter.DisposeAsync();
 
     private async ValueTask<LocalUser?> FindOneAsync(

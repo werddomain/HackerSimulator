@@ -849,4 +849,88 @@
   <data name="Tab.Synchronization" xml:space="preserve">
     <value>Synchronisation</value>
   </data>
+  <data name="Tab.Users" xml:space="preserve">
+    <value>Utilisateurs</value>
+  </data>
+  <data name="Users.List.Title" xml:space="preserve">
+    <value>Comptes</value>
+  </data>
+  <data name="Users.List.Description" xml:space="preserve">
+    <value>Les comptes locaux de cette machine. P : mot de passe défini, NP : aucun mot de passe, L : compte désactivé, comme les montre {0} -S. Dans le terminal, {0} change votre mot de passe et {1} celui d'un autre compte.</value>
+  </data>
+  <data name="Users.List.Empty" xml:space="preserve">
+    <value>Aucun compte à afficher.</value>
+  </data>
+  <data name="Users.Badge.Administrator" xml:space="preserve">
+    <value>administrateur</value>
+  </data>
+  <data name="Users.Badge.You" xml:space="preserve">
+    <value>vous</value>
+  </data>
+  <data name="Users.State.Password" xml:space="preserve">
+    <value>Mot de passe défini</value>
+  </data>
+  <data name="Users.State.NoPassword" xml:space="preserve">
+    <value>Aucun mot de passe</value>
+  </data>
+  <data name="Users.State.Locked" xml:space="preserve">
+    <value>Compte désactivé</value>
+  </data>
+  <data name="Users.Own.Title" xml:space="preserve">
+    <value>Changer mon mot de passe</value>
+  </data>
+  <data name="Users.Own.Description" xml:space="preserve">
+    <value>Votre trousseau est re-chiffré avec le nouveau mot de passe : les secrets enregistrés restent lisibles.</value>
+  </data>
+  <data name="Users.Own.Submit" xml:space="preserve">
+    <value>Changer le mot de passe</value>
+  </data>
+  <data name="Users.Own.Done" xml:space="preserve">
+    <value>Mot de passe mis à jour.</value>
+  </data>
+  <data name="Users.Field.Current" xml:space="preserve">
+    <value>Mot de passe actuel</value>
+  </data>
+  <data name="Users.Field.New" xml:space="preserve">
+    <value>Nouveau mot de passe</value>
+  </data>
+  <data name="Users.Field.Confirm" xml:space="preserve">
+    <value>Confirmer le nouveau mot de passe</value>
+  </data>
+  <data name="Users.Field.Account" xml:space="preserve">
+    <value>Compte</value>
+  </data>
+  <data name="Users.Reset.Title" xml:space="preserve">
+    <value>Réinitialiser le mot de passe d'un autre compte</value>
+  </data>
+  <data name="Users.Reset.Description" xml:space="preserve">
+    <value>Un administrateur confirme dans la fenêtre de l'OS (capacité {1}). Le trousseau du compte ne s'ouvre pas avec le nouveau mot de passe : il est mis de côté sous {0} et ses secrets enregistrés sont perdus pour ce compte.</value>
+  </data>
+  <data name="Users.Reset.Submit" xml:space="preserve">
+    <value>Réinitialiser le mot de passe</value>
+  </data>
+  <data name="Users.Reset.Remove" xml:space="preserve">
+    <value>Retirer le mot de passe</value>
+  </data>
+  <data name="Users.Reset.Done" xml:space="preserve">
+    <value>Mot de passe de {0} réinitialisé.</value>
+  </data>
+  <data name="Users.Reset.Removed" xml:space="preserve">
+    <value>Mot de passe de {0} retiré : le compte s'ouvre sans mot de passe.</value>
+  </data>
+  <data name="Users.Error.CannotList" xml:space="preserve">
+    <value>Impossible de lire les comptes : {0}</value>
+  </data>
+  <data name="Users.Error.WrongCurrent" xml:space="preserve">
+    <value>Le mot de passe actuel est faux. Mot de passe inchangé.</value>
+  </data>
+  <data name="Users.Error.Failed" xml:space="preserve">
+    <value>Mot de passe inchangé : {0}</value>
+  </data>
+  <data name="Users.Error.TooShort" xml:space="preserve">
+    <value>Le mot de passe doit avoir au moins {0} caractères.</value>
+  </data>
+  <data name="Users.Error.Mismatch" xml:space="preserve">
+    <value>Les deux mots de passe ne correspondent pas.</value>
+  </data>
 </root>

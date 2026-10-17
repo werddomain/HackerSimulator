@@ -42,6 +42,12 @@
   <data name="Admin.Reboot" xml:space="preserve">
     <value>Restart this machine</value>
   </data>
+  <data name="Admin.RemovePassword" xml:space="preserve">
+    <value>Remove the password of account {0} (its keyring will be set aside)</value>
+  </data>
+  <data name="Admin.ResetPassword" xml:space="preserve">
+    <value>Reset the password of account {0} (its keyring will be set aside)</value>
+  </data>
   <data name="Admin.RestoreMerge" xml:space="preserve">
     <value>Merge the backup '{0}' into this machine and restart it</value>
   </data>
@@ -197,6 +203,12 @@
   </data>
   <data name="Capability.keyring.read-all.Title" xml:space="preserve">
     <value>Read the whole keyring</value>
+  </data>
+  <data name="Capability.users.manage.Risk" xml:space="preserve">
+    <value>Reset or remove another account's password, and so open their session.</value>
+  </data>
+  <data name="Capability.users.manage.Title" xml:space="preserve">
+    <value>Manage account passwords</value>
   </data>
   <data name="Capability.network.listen.Title" xml:space="preserve">
     <value>Listen on a network port</value>

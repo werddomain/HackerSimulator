@@ -2,6 +2,7 @@ using HackerOs.Platform.Core.Backup;
 using HackerOs.Platform.Core.Elevation;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Power;
+using HackerOs.Platform.Core.Sessions;
 using HackerOs.Platform.Core.Settings;
 
 namespace HackerOs.Platform.Core.Administration;
@@ -29,4 +30,12 @@ public sealed record SystemAdministrationGatewayServices(
     Func<SystemPowerService>? Power = null,
     Func<IStorageInspector>? Storage = null,
     Func<IAdministratorAuthenticationAgent>? AuthenticationAgent = null,
-    Func<SystemBackupService>? Backup = null);
+    Func<SystemBackupService>? Backup = null)
+{
+    /// <summary>
+    /// Gets the password service behind <c>HackUserAccounts</c> (ADR 0120); <see langword="null"/> on a
+    /// host without local accounts. An <c>init</c> property rather than a parameter keeps the record's
+    /// constructor of SDK 1.0 unchanged.
+    /// </summary>
+    public Func<LocalPasswordService>? Passwords { get; init; }
+}

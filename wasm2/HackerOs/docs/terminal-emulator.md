@@ -86,6 +86,14 @@ interrompt. Ce que la commande n'a pas lu revient à l'invite suivante comme
 frappe anticipée (4096 touches au plus) : `sleep 5` puis `ls` + Entrée tapé
 pendant l'attente lance `ls` ensuite, comme sous Linux.
 
+Une commande peut couper l'écho, comme le drapeau `ECHO` de `termios` (ADR
+0120 §4) : `TerminalInputReader` implémente `ITerminalInputMode`, et
+`TerminalExecutionContext.ReadSecretLineAsync(invite)` met `EchoEnabled` à
+`false` le temps d'une ligne, comme `getpass(3)`. La discipline de ligne
+(`HandleInputKey`) n'affiche alors ni les caractères ni leur effacement
+(Retour arrière, Ctrl+U) ; Entrée passe toujours à la ligne. `passwd` lit
+ainsi les mots de passe.
+
 Une commande inachevée (`for f in *; do` + Entrée, guillemet ouvert, `|`
 final, here-document) affiche l'invite de continuation `>` de bash (`PS2`) :
 le terminal le demande au shell par `IHackShell.NeedsMoreInput`, accumule les
@@ -172,4 +180,5 @@ retour), terminal intégré de l'éditeur de code.
 - [x] Tests unitaires, vérification dans un navigateur.
 - [x] Entrée standard des commandes en mode canonique (`TerminalInputReader`, ADR 0064).
 - [x] Couleurs dans les cadres plein écran ; `nano` aux raccourcis de GNU nano (ADR 0064).
+- [x] Écho coupé pour les mots de passe (`ITerminalInputMode`, `ReadSecretLineAsync`, ADR 0120).
 - [x] ADR 0061, cette page, index.

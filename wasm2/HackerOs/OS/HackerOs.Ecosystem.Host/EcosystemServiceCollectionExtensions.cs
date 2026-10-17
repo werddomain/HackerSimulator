@@ -444,6 +444,19 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IAuditLog>(),
             provider.GetService<ILogger<UserKeyringService>>()));
 
+        // passwd and the Settings "Users" tab (ADR 0120): new credentials hashed through Web Crypto
+        // like at login, the login keyring re-sealed or set aside, every attempt in auth.log.
+        services.AddScoped<LocalPasswordService>(provider =>
+        {
+            WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
+            return new LocalPasswordService(
+                provider.GetRequiredService<ILocalUserRepository>(),
+                provider.GetRequiredService<IAuditLog>(),
+                provider.GetRequiredService<UserKeyringService>(),
+                asyncHasher: (password, salt, iterations, length, ct) =>
+                    hasher.DeriveKeyAsync(password, salt, iterations, length, ct));
+        });
+
         services.AddScoped<ISessionService>(provider =>
         {
             WebCryptoPasswordHasher hasher = provider.GetRequiredService<WebCryptoPasswordHasher>();
@@ -610,7 +623,10 @@ public static class EcosystemServiceCollectionExtensions
                 () => provider.GetRequiredService<SystemPowerService>(),
                 () => provider.GetRequiredService<IStorageInspector>(),
                 () => provider.GetRequiredService<IAdministratorAuthenticationAgent>(),
-                OperatingSystem.IsBrowser() ? () => provider.GetRequiredService<SystemBackupService>() : null)));
+                OperatingSystem.IsBrowser() ? () => provider.GetRequiredService<SystemBackupService>() : null)
+            {
+                Passwords = () => provider.GetRequiredService<LocalPasswordService>(),
+            }));
         services.AddScoped<HackerOs.Platform.Core.Clipboard.SystemClipboard>(provider =>
             new HackerOs.Platform.Core.Clipboard.SystemClipboard(
                 provider.GetRequiredService<IEventBus>(),

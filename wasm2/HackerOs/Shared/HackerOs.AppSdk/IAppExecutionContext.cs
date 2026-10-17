@@ -294,6 +294,13 @@ public interface IAppExecutionContext
     IAppSystemBackupGateway SystemBackup => UnsupportedAdministrationGateways.SystemBackup;
 
     /// <summary>
+    /// Gets this instance's local accounts gateway, behind <see cref="HackUserAccounts"/> (ADR 0120;
+    /// own password without capability, another account's with <c>users.manage</c> plus an
+    /// administrator). Defaults to an unsupported gateway; the trusted platform factory overrides it.
+    /// </summary>
+    IAppUserAccountsGateway UserAccounts => UnsupportedAdministrationGateways.UserAccounts;
+
+    /// <summary>
     /// Gets this instance's ability to host interactive shells (<c>shell.host</c>, ADR 0056
     /// section 7), read by <see cref="Shell.HackShell"/>. Defaults to an unsupported gateway so
     /// existing <see cref="IAppExecutionContext"/> implementations that predate this member keep
@@ -374,6 +381,21 @@ public static class UnsupportedAdministrationGateways
 
     /// <summary>Unsupported <see cref="IAppSystemBackupGateway"/>.</summary>
     public static IAppSystemBackupGateway SystemBackup { get; } = new UnsupportedSystemBackup();
+
+    /// <summary>Unsupported <see cref="IAppUserAccountsGateway"/>.</summary>
+    public static IAppUserAccountsGateway UserAccounts { get; } = new UnsupportedUserAccounts();
+
+    private sealed class UnsupportedUserAccounts : IAppUserAccountsGateway
+    {
+        public ValueTask<IReadOnlyList<HackUserAccount>> ListAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask ChangePasswordAsync(string currentPassword, string newPassword, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask ResetPasswordAsync(string loginName, string? newPassword, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
 
     private sealed class UnsupportedSystemSettings : IAppSystemSettingsGateway
     {

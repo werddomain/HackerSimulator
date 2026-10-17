@@ -168,6 +168,13 @@ public static class AppCapabilities
     public const string KeyringReadAll = "keyring.read-all";
 
     /// <summary>
+    /// Reset or remove another account's password through <c>HackUserAccounts</c> (ADR 0120), as
+    /// <c>sudo passwd NAME</c> does. Dangerous: whoever resets a password can log in as that user,
+    /// and the user's keyring is set aside; every call also needs an administrator.
+    /// </summary>
+    public const string UsersManage = "users.manage";
+
+    /// <summary>
     /// Exact classification of every catalog capability (ADR 0049 section 1). The catalog is the
     /// key set of this table, so a capability cannot be added without choosing its risk.
     /// </summary>
@@ -255,7 +262,11 @@ public static class AppCapabilities
         Dangerous(
             KeyringReadAll,
             "Lire tout le trousseau",
-            "Lire les mots de passe, jetons et clés que toutes vos applications ont enregistrés.")
+            "Lire les mots de passe, jetons et clés que toutes vos applications ont enregistrés."),
+        Dangerous(
+            UsersManage,
+            "Gérer les mots de passe des comptes",
+            "Réinitialiser ou retirer le mot de passe d'un autre compte, et donc ouvrir sa session.")
     }.ToFrozenDictionary(description => description.Capability, StringComparer.Ordinal);
 
     private static readonly FrozenSet<string> KnownIdentifiers = Descriptions.Keys.ToFrozenSet(StringComparer.Ordinal);
