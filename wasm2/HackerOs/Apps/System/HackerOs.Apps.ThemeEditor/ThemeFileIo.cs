@@ -2,13 +2,16 @@ using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.Theming.Abstractions;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.ThemeEditor;
 
 /// <summary>
 /// Reads and writes <c>.theme</c> files through a filesystem gateway: the app's own (home folder)
-/// or one carrying the handle a file dialog issued for a file elsewhere (open or export).
+/// or one carrying the handle a file dialog issued for a file elsewhere (open or export). Its messages
+/// are in the language of the process running the call (ADR 0104), English outside any app.
 /// </summary>
 public static class ThemeFileIo
 {
@@ -32,7 +35,7 @@ public static class ThemeFileIo
         await using FileSystemContentReadHandle handle = result.Value;
         if (handle.Entry.Metadata is FileMetadata metadata && metadata.Length > ThemeFile.MaxFileBytes)
         {
-            return (null, $"A theme file is at most {ThemeFile.MaxFileBytes / 1024} KiB.");
+            return (null, Text["Error.FileTooLarge", ThemeFile.MaxFileBytes / 1024]);
         }
 
         using StreamReader reader = new(handle.Content, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
@@ -66,12 +69,15 @@ public static class ThemeFileIo
         return written.Succeeded ? null : Describe(written.Transaction.Error?.Code);
     }
 
+    /// <summary>The texts in the language of the running process, read at each call.</summary>
+    private static IStringLocalizer<Strings> Text => HackLocalization.GetLocalizer<Strings>();
+
     private static string Describe(FileSystemErrorCode? code) => code switch
     {
-        FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied => "Permission denied.",
-        FileSystemErrorCode.NotFound => "File not found.",
-        FileSystemErrorCode.NotFile => "The path is not a regular file.",
-        null => "Unknown error.",
+        FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied => Text["Error.PermissionDenied"],
+        FileSystemErrorCode.NotFound => Text["Error.NotFound"],
+        FileSystemErrorCode.NotFile => Text["Error.NotFile"],
+        null => Text["Error.Unknown"],
         _ => code.Value.ToString()
     };
 

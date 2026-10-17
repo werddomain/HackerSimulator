@@ -141,6 +141,21 @@ système) pour lister `/etc/hackeros/themes`. Fenêtre 1180 × 760, minimum
 - Un `.theme` ouvert par l'explorateur (« Ouvrir avec ») ou passé en argument
   au lancement est chargé au démarrage.
 
+### Langues (ADR 0104)
+
+Barre d'outils, panneau d'identité, onglets, aperçu, champs de jeton,
+documentation et messages viennent de `Resources/Strings.resx` /
+`Strings.fr.resx`. `ThemeEditorDocument` reçoit le localiseur de la fenêtre
+(nom par défaut « Mon … », problèmes qui empêchent l'enregistrement). Les
+phrases de la documentation contiennent du `<code>` et sont rendues comme
+balisage depuis les ressources de l'assembly (jamais depuis un fichier), d'où
+le `::deep code` de `ThemeTokenDocumentation.razor.css`. Restent en anglais,
+car ils viennent de `HackerOs.Theming.Abstractions` : le libellé et la
+description de chaque jeton (`ThemeTokenCatalog`), le nom des thèmes intégrés
+(`ThemeCatalog`) et les diagnostics de `ThemeFile`/`ThemeTokenValidator`. Le
+contenu d'un fichier `.theme` (clés, valeurs, `platforms = desktop, mobile`)
+n'est jamais traduit.
+
 ## Décisions clés
 
 - Les fichiers sont lus et écrits par la passerelle de fichiers de l'app

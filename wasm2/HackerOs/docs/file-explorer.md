@@ -131,6 +131,28 @@ chemin. `FileView.RevealAsync(path)` fait le
 travail : navigation vers le parent, sélection, puis `revealItem` de
 `FileView.razor.js` (`scrollIntoView` puis focus).
 
+## Langues (ADR 0104)
+
+Tous les textes de l'explorateur (barres d'outils, Emplacements, Corbeille,
+dialogues Ouvrir avec / Propriétés / conflit de noms, menus contextuels,
+messages d'erreur, résumés de transfert) viennent de `Resources/Strings.resx`
+(anglais) et `Resources/Strings.fr.resx` (français), lus par
+`AppContext.GetLocalizer<Strings>()` dans la langue du processus. Le nom de
+l'app est traduit par `Resources/AppManifest.fr.resx`.
+
+- Le résumé d'échec d'un transfert est construit par la fenêtre
+  (`Transfer.<Copy|Move|Trash|Upload>.One/Many`) à partir de
+  `FileTransferResult.Failures` ; la raison de chaque échec vient du SDK
+  `FileView`.
+- Dates (colonne « Supprimé le » de la Corbeille, « Modifié » des Propriétés)
+  et tailles suivent `AppContext.FormatCulture` (`LC_TIME`, `LANG`) : date et
+  heure courtes de la locale, unités `o/Ko/Mo/Go` en français.
+- Les noms de fichiers et de dossiers ne sont jamais traduits (`NewFile.txt`,
+  `Archive.zip`, `~/.local/share/Trash`) ; seul le nom proposé pour un nouveau
+  dossier l'est, comme « Dossier sans titre » sous GNOME.
+- `ZipFileContextMenuProvider` et `PublishSiteContextMenuProvider` reçoivent le
+  localiseur de la fenêtre pour le libellé de leur entrée de menu.
+
 ## Décisions clés
 
 - **Un presse-papiers par session, dans Platform Core.** Comme la sélection

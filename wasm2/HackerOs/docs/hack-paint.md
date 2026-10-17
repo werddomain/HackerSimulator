@@ -51,12 +51,21 @@ images du système de fichiers simulé.
 | `PaintFileStore` | lecture (`ReadAsync`, `Inspect`) et écriture (`WriteAsync`) par la passerelle de fichiers de l'app |
 | `PaintCanvasState` | pixels RGBA, historique, `IsDirty`/`MarkSaved` |
 | `HackPaintWindow.razor(.cs)` | fenêtre, dialogues du SDK (`OpenFileAsync`, `SaveFileAsync`), garde de fermeture |
-| `HackPaintWindow.razor.js` | dessin sur le canvas ; `decodeImage` (`createImageBitmap` → RGBA) et `encodeImage` (`toBlob`) ; jamais d'accès aux fichiers |
+| `HackPaintWindow.razor.js` | dessin sur le canvas ; `decodeImage` (`createImageBitmap` → RGBA, erreurs rendues comme codes `decode-failed` / `too-large` que le C# traduit) et `encodeImage` (`toBlob`) ; jamais d'accès aux fichiers |
 
 Les octets sont lus et écrits en C# par `IAppFileSystemGateway`, comme
 l'éditeur de texte : un fichier choisi dans un dialogue hors du dossier
 personnel n'est accessible que par le jeton remis par le dialogue, que `HackFile`
 ne sait pas porter. Le JS ne reçoit que des octets et rend des pixels.
+
+## Langues (ADR 0104)
+
+Barre d'outils, barre d'état, dialogues et erreurs viennent de
+`Resources/Strings.resx` / `Strings.fr.resx`. `PaintFileStore` écrit ses
+messages dans la langue du processus qui l'appelle
+(`HackLocalization.GetLocalizer<Strings>()`) ; le module JavaScript ne renvoie
+que des codes d'erreur. Le titre garde le nom de produit « Hack Paint » ; seul
+« Untitled » devient « Sans titre ».
 
 ## Tâches
 
