@@ -136,7 +136,7 @@ public interface IShellSession
         CancellationToken cancellationToken);
 }
 
-/// <summary>One installed command, as listed by <see cref="IShellSession.GetCommands"/> for <c>help</c>.</summary>
+/// <summary>One installed command, as listed by <see cref="IShellSession.GetCommands()"/> for <c>help</c>.</summary>
 /// <param name="Name">The command name typed in the shell.</param>
 /// <param name="Aliases">Other names declared by the command's manifest.</param>
 /// <param name="Usage">Usage line from the manifest.</param>

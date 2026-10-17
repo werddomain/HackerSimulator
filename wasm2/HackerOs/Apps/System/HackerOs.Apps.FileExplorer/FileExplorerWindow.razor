@@ -880,7 +880,7 @@
 
     /// <summary>
     /// The failure summary of a transfer in the explorer's language, worded like
-    /// <see cref="FileTransferResult.DescribeFailures"/>: <c>Could not copy 'a': reason.</c>, or the
+    /// <see cref="FileTransferResult.DescribeFailures(string)"/>: <c>Could not copy 'a': reason.</c>, or the
     /// count and the list when several items failed; <see langword="null"/> when nothing failed.
     /// </summary>
     private string? DescribeFailures(FileTransferResult result, TransferVerb verb)

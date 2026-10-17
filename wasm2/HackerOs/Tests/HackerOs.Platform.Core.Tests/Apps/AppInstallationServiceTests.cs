@@ -294,7 +294,7 @@ public sealed class AppInstallationServiceTests
         Description = name,
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", $"{id}.EntryPoint"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         Dependencies = dependencies

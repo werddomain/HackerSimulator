@@ -71,7 +71,7 @@ public sealed class BuildKnownLazyAppDescriptorRegistryTests
         Description = "Validates build-known lazy descriptor discovery.",
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest($"{typeof(TestWindow).Assembly.GetName().Name}.dll", typeof(TestWindow).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = new AppResourceProfileManifest(0, 0, 0, 0, 0, 0, 0, 0)
     };

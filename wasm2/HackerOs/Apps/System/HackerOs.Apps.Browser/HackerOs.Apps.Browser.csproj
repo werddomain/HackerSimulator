@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <Import Project="../../../Platform/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.Apps.Browser</PackageId>
+    <Description>The base HackerOS web browser app, to include in an OS host (ProjectReference or PackageReference, optionally IsSystemApp).</Description>
+    <PackageTags>hackeros;app</PackageTags>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

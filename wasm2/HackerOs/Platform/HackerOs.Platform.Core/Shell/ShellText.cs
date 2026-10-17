@@ -34,7 +34,7 @@ internal static class ShellText
     /// <summary>
     /// Translates the reason of a <c>Hack*</c> file API failure (the <c>strerror</c> text a shell
     /// prints after <c>hsh: &lt;path&gt;: </c>), as glibc translates <c>strerror</c> in the
-    /// process's locale. Mirrors <see cref="HackerOs.AppSdk.ShellErrorText.Describe"/>, whose
+    /// process's locale. Mirrors <see cref="HackerOs.AppSdk.ShellErrorText.Describe(System.Exception)"/>, whose
     /// English texts are the neutral resources.
     /// </summary>
     /// <param name="exception">The failure.</param>

@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="../Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.Platform.WorkerHost</PackageId>
+    <Description>Headless HackerOS processes (commands, services) in Web Workers: worker pool, remote execution context and watchdog.</Description>
+    <PackageTags>hackeros;platform;web-workers</PackageTags>
+  </PropertyGroup>
+
   <!--
     ADR 0070/0071: headless processes (commands, services) in Web Workers.
     - Worker side: the OS inside a worker. A remote IAppExecutionContext whose gateways turn every

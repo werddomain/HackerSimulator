@@ -8,6 +8,7 @@
     <Nullable>enable</Nullable>
     <PackageId>HackerOs.Windowing.Core</PackageId>
     <Description>Headless, renderer-independent window manager engine: applies HackerOs.Windowing.Abstractions commands to authoritative window state (focus, z-order, geometry, modality, lifecycle) and emits deterministic events.</Description>
+    <PackageTags>hackeros;windowing;blazor;desktop-shell</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

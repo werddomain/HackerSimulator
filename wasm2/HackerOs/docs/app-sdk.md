@@ -95,6 +95,7 @@ permis : c'est le code du SDK qui fait l'appel.
 |---|---|---|---|
 | Références d'une app | cible `ValidateHackerOsSdkBoundary` de `build/HackerOs.Apps.targets` | avant `ResolveProjectReferences`, donc avant la compilation | `HOSAPP0030` |
 | Références d'une bibliothèque SDK | même cible | idem | `HOSSDK0001` |
+| Paquets `HackerOs.*` d'une app ou d'une bibliothèque SDK (ADR 0098 §2), directs ou transitifs | cible `_ValidateHackerOsPackageBoundary` | après `ResolveAssemblyReferences` : chaque référence de compilation venue d'un paquet `HackerOs.*` doit être permise (app : `*.Abstractions`, `HackerOs.AppSdk*`, `HackerOs.Theming.Blazor`, `HackerOs.App.Build`, `HackerOs.Apps.*`, `HackerOs.Commands` ; bibliothèque SDK : `*.Abstractions` et SDK) | `HOSAPP0030` / `HOSSDK0001` |
 | Injection | `SdkBoundaryInspector` du générateur de manifeste (`Tools/HackerOs.Tools.ManifestGenerator`) | après la compilation, avec la génération de `manifest.json` ; en cas d'erreur, rien n'est écrit | `HOSAPP0031` |
 | `IJSRuntime` | test de sources `SdkBoundarySourceTests` (`Tests/HackerOs.Ecosystem.Tests`) | `dotnet test` | échec du test |
 
@@ -107,6 +108,11 @@ App.csproj : error HOSAPP0031: [My.App.MyWindow] [Inject] property 'Sessions' in
 ```
 
 Le générateur relance l'inspection quand `HackerOs.Apps.targets` change.
+
+Hors du dépôt (paquet `HackerOs.App.Build`, voir [`sdk-packages.md`](sdk-packages.md)),
+la règle des `ProjectReference` ne s'applique pas (elle est écrite en chemins du
+dépôt) ; c'est la règle des paquets qui protège la frontière, et l'inspection de
+l'injection (`HOSAPP0031`) tourne de la même façon.
 
 Ces trois vérifications sont toujours des **erreurs** : aucun projet ne peut les
 ramener à des avertissements. Le rôle d'un projet vient de son emplacement
@@ -253,7 +259,10 @@ await HackAppManagement.ReinstallAsync("org.hackeros.calculator", HackInstallSco
 - **Capacité `apps.manage`** (dangereuse) pour tous les membres. Paramètres la
   déclare désormais.
 - `HackAppInstallState` : `Installed` (y compris une app système, signalée par
-  `App.IsSystemApp`), `UninstalledForUser`, `UninstalledForMachine`.
+  `App.IsSystemApp`), `UninstalledForUser`, `UninstalledForMachine`,
+  `Incompatible` (refusée au chargement : version du SDK, ADR 0098 §3) et
+  `Damaged` (ressource altérée, ADR 0098 §5) ; `HackAppInstallInfo.Problem`
+  donne alors la raison, affichée par Paramètres.
 - Portée `Machine` : l'agent d'authentification de l'OS demande un
   administrateur ([`admin-authentication-agent.md`](admin-authentication-agent.md)),
   puis l'OS écrit `/etc/hackeros/apps.config` lui-même. Refus ou annulation :

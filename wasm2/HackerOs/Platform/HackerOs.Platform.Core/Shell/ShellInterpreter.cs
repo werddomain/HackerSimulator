@@ -81,7 +81,7 @@ public sealed partial class ShellInterpreter
     /// <summary>
     /// Gets the installed commands, ordered by name: the catalog's terminal apps, the shell itself
     /// (<c>sh</c>) and its special built-ins. What <c>help</c> lists through
-    /// <see cref="IShellSession.GetCommands"/> and what the terminal completes (ADR 0051, section 2).
+    /// <see cref="IShellSession.GetCommands()"/> and what the terminal completes (ADR 0051, section 2).
     /// </summary>
     /// <param name="culture">
     /// Language of the descriptions and usages (ADR 0104 section 4): the catalog's translations of

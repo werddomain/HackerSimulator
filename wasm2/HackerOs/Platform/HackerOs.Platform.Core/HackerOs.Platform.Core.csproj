@@ -1,4 +1,12 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="../Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.Platform.Core</PackageId>
+    <Description>HackerOS platform core: app catalog, process manager, policy, shell, settings and logs as files, gateways behind the SDK. For composing an OS host.</Description>
+    <PackageTags>hackeros;platform</PackageTags>
+  </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\HackerOs.App.Abstractions\HackerOs.App.Abstractions.csproj" />

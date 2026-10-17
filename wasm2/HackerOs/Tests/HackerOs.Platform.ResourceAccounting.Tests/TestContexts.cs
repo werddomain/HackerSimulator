@@ -17,7 +17,7 @@ internal static class TestContexts
             Description = "Resource accounting test process.",
             Kind = AppKind.Terminal,
             EntryPoint = new AppEntryPointManifest("HackerOs.Platform.ResourceAccounting.Tests", "Test"),
-            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
             Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
             Resources = AppResourceProfileManifest.None
         },

@@ -401,7 +401,7 @@ public sealed class AppManifestValidatorTests
         Description = "Edits text files in the HackerOS virtual filesystem.",
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.TextEditorApp"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("editors", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         Capabilities = [AppCapabilities.FileSystemUserSelectedRead, AppCapabilities.FileSystemUserSelectedWrite]

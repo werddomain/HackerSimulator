@@ -22,8 +22,10 @@ namespace HackerOs.Commands.Grep;
 /// </remarks>
 public sealed class GrepCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public GrepCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)

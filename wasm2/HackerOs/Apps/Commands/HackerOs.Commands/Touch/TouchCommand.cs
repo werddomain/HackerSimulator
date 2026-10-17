@@ -13,8 +13,10 @@ namespace HackerOs.Commands.Touch;
 /// </summary>
 public sealed class TouchCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public TouchCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)

@@ -13,8 +13,10 @@ namespace HackerOs.Commands.Diff;
 /// </summary>
 public sealed class DiffCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public DiffCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)

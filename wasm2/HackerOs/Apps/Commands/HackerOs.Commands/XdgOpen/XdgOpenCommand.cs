@@ -21,6 +21,8 @@ namespace HackerOs.Commands.XdgOpen;
 /// </remarks>
 public sealed partial class XdgOpenCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
+    /// <param name="manifest">This command's manifest.</param>
     public XdgOpenCommand(AppManifest manifest) : base(manifest) { }
 
     /// <inheritdoc />

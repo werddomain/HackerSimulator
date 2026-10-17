@@ -136,6 +136,66 @@ public sealed class AppCatalogTests
         Assert.Equal(["org.hackeros.paint", "org.hackeros.terminal"], result.Catalog.ActivationOrder);
     }
 
+    [Fact]
+    public void Build_moves_an_app_built_for_another_sdk_to_rejected_without_failing()
+    {
+        AppManifest current = CreateManifest("org.hackeros.files");
+        AppManifest newer = CreateManifest("org.hackeros.newer") with { SdkCompatibility = new AppSdkCompatibilityManifest("0.9.0-preview.9") };
+        AppManifest otherMajor = CreateManifest("org.hackeros.legacy") with { SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0") };
+
+        AppCatalogBuildResult result = AppCatalog.Build([current, newer, otherMajor], [], SemanticVersion.Parse("0.9.0-preview.2"));
+
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors));
+        Assert.Equal(["org.hackeros.files"], result.Catalog!.Manifests.Keys);
+        Assert.Equal(["org.hackeros.legacy", "org.hackeros.newer"], result.Catalog.Rejected.Select(item => item.AppId));
+        Assert.All(result.Catalog.Rejected, item => Assert.Equal("catalog.sdk.incompatible", item.Code));
+        Assert.Contains("0.9.0-preview.9", result.Catalog.Rejected[1].Message);
+    }
+
+    [Fact]
+    public void Build_rejects_the_dependents_of_a_refused_app_and_keeps_optional_ones()
+    {
+        AppManifest newer = CreateManifest("org.hackeros.newer") with { SdkCompatibility = new AppSdkCompatibilityManifest("0.9.0-preview.9") };
+        AppManifest needs = CreateManifest("org.hackeros.needs", dependencies: [new AppDependencyManifest("org.hackeros.newer", "1.0.0")]);
+        AppManifest needsNeeds = CreateManifest("org.hackeros.needs-needs", dependencies: [new AppDependencyManifest("org.hackeros.needs", "1.0.0")]);
+        AppManifest optional = CreateManifest("org.hackeros.optional", dependencies: [new AppDependencyManifest("org.hackeros.newer", "1.0.0", Optional: true)]);
+
+        AppCatalogBuildResult result = AppCatalog.Build([newer, needs, needsNeeds, optional], ["org.hackeros.needs"], SemanticVersion.Parse("0.9.0-preview.2"));
+
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors));
+        Assert.Equal(["org.hackeros.optional"], result.Catalog!.Manifests.Keys);
+        Assert.Equal(
+            [("org.hackeros.needs", "catalog.dependency.unavailable"), ("org.hackeros.needs-needs", "catalog.dependency.unavailable"), ("org.hackeros.newer", "catalog.sdk.incompatible")],
+            result.Catalog.Rejected.Select(item => (item.AppId, item.Code)));
+        // The host's system flag is kept for display: Settings shows a refused system app as such.
+        Assert.True(result.Catalog.IsSystemApp("org.hackeros.needs"));
+    }
+
+    [Fact]
+    public void Build_gives_a_duplicate_command_to_the_system_app_then_to_the_first_activated()
+    {
+        AppManifest first = CreateCommand("org.hackeros.a-tool", "tool", ["t"]);
+        AppManifest second = CreateCommand("org.hackeros.b-tool", "tool", ["bt"]);
+        AppManifest system = CreateCommand("org.hackeros.z-tool", "t", []);
+
+        AppCatalogBuildResult result = AppCatalog.Build([first, second, system], ["org.hackeros.z-tool"]);
+
+        AppCatalog catalog = result.Catalog!;
+        Assert.Equal("org.hackeros.a-tool", catalog.FindCommandOwner("TOOL"));
+        Assert.Equal("org.hackeros.z-tool", catalog.FindCommandOwner("t"));
+        Assert.Equal("org.hackeros.b-tool", catalog.FindCommandOwner("bt"));
+        Assert.Equal(3, catalog.Manifests.Count);
+        Assert.Equal(
+            [("org.hackeros.a-tool", "catalog.command.duplicate"), ("org.hackeros.b-tool", "catalog.command.duplicate")],
+            catalog.Warnings.Select(warning => (warning.AppId, warning.Code)));
+    }
+
+    private static AppManifest CreateCommand(string appId, string name, IReadOnlyList<string> aliases) => CreateManifest(appId) with
+    {
+        Kind = AppKind.Terminal,
+        Terminal = new TerminalCommandManifest(name, aliases, name)
+    };
+
     private static AppManifest CreateManifest(
         string appId,
         string version = "1.0.0",
@@ -148,7 +208,7 @@ public sealed class AppCatalogTests
         Description = $"Test manifest for {appId}.",
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("HackerOs.TestApps", $"TestApps.{appId.Replace('.', '_')}"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         Dependencies = dependencies ?? []

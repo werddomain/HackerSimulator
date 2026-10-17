@@ -65,10 +65,17 @@ public sealed class TextEditorApp : AppDefinition
   plateformes ; sinon, une entrée par plateforme.
 - `Icons` devient `presentation.iconAssetPaths`.
 - `TerminalCommand.Aliases` nul devient une liste vide.
-- `sdkCompatibility.minimumVersion` n'est pas une propriété : c'est la version
-  `major.minor.0` de `HackerOs.App.Abstractions`. La surcharge
-  `ToManifest(definition, sdkMinimumVersion)` permet au générateur d'écrire la
-  version contre laquelle l'app a été compilée.
+- `sdkCompatibility` (ADR 0098 §3) : par défaut, `minimumVersion` est la version
+  du SDK contre laquelle l'app a été compilée. Le générateur la lit dans
+  l'`AssemblyInformationalVersion` de la `HackerOs.App.Abstractions.dll`
+  référencée par l'app (par exemple `0.9.0-preview.1`, voir
+  [`sdk-packages.md`](sdk-packages.md)) et la passe à
+  `ToManifest(definition, sdkMinimumVersion)` ; `ToManifest(definition)` prend
+  `HackerOsSdk.Version`, la version du SDK chargé. Une app qui veut une plage
+  surcharge `AppDefinition.SdkCompatibility` (minimum et maximum facultatif).
+  Au chargement, `AppCatalog` refuse une app dont la plage n'accepte pas le SDK
+  de l'hôte (`catalog.sdk.incompatible`) : même version majeure que le minimum,
+  minimum ≤ SDK ≤ maximum (`HackerOsSdk.IsCompatible`).
 - `osCompatibility` et `update` ne sont pas exposés par `AppDefinition` : ils
   restent absents du manifeste généré.
 - `[AppManifest(Execution = …)]` devient `execution`, toujours écrit, résolu
@@ -221,7 +228,9 @@ avec le nom complet de la classe en cause : `App.csproj : error HOSAPP0005: [Ns.
 | `HOSAPP0010` | Règles de `AppEntryPointDiscovery` : type concret, classe de base selon le genre, `IAppBackHandler` si `SupportsBack` ; vérifiées pour chaque plateforme déclarée. |
 | `HOSAPP0011` | Deux classes de la même assembly déclarent le même identifiant. |
 | `HOSAPP0020` | Agrégation : fichier manifeste absent ou JSON non strict. |
-| `HOSAPP0021` | Agrégation : catalogue invalide (identifiant en double, dépendance manquante ou cyclique). |
+| `HOSAPP0021` | Agrégation : catalogue invalide (identifiant en double, dépendance manquante ou cyclique) ou app que le SDK de l'hôte refuserait (`catalog.sdk.incompatible`, ADR 0098 §3). |
+| `HOSAPP0022` | Agrégation : nom de commande ou alias déclaré par deux apps de l'hôte (comparaison sans casse), ou nom que le shell exécute lui-même (`ShellInterpreter.ReservedNames`) (ADR 0098 §4). |
+| `HOSAPP0023` | Génération : ressource déclarée dans `Assets` absente de `wwwroot/` du projet ; son SHA-256 ne peut pas être calculé (ADR 0098 §5). |
 | `HOSAPP0030` | Frontière du SDK : `ProjectReference` interdite dans un projet d'app (ADR 0055 §2, numéro fixé par l'ADR 0059). Émis par la cible `ValidateHackerOsSdkBoundary`. Voir [`app-sdk.md`](app-sdk.md). |
 | `HOSAPP0031` | Frontière du SDK : service injecté qui n'est ni un type du SDK, ni MudBlazor, ni `IJSRuntime` (ADR 0055 §3, ADR 0059). Voir [`app-sdk.md`](app-sdk.md). |
 | `HOSAPP0040` | Traductions du manifeste (ADR 0104 §4) : `Resources/AppManifest.<culture>.resx` illisible, nom de culture invalide, clé autre que `Name`, `Description`, `Terminal.Usage` (préfixées de l'id dans un projet à plusieurs apps), `Terminal.Usage` pour une app qui n'est pas une commande, ou fichier `localization/` référencé illisible à l'agrégation. Voir [`localization.md`](localization.md). |
@@ -320,9 +329,12 @@ sont pas déclarés comme assets. Erreur : `HOSAPP0040`. Voir
 
 ### Déclarer un hôte
 
-Un projet hôte déclare `<HackerOsAppHost>true</HackerOsAppHost>`. Seul
-`OS/HackerOs.Ecosystem` le fait. `test/test` réutilise le catalogue compilé de
-l'Ecosystem (`BuildKnownLazyApps.Catalog`) et ne s'agrège pas lui-même.
+Un projet hôte déclare `<HackerOsAppHost>true</HackerOsAppHost>`. Dans ce dépôt,
+seul `OS/HackerOs.Ecosystem` le fait. `test/test` et le serveur réutilisent le
+catalogue compilé de l'Ecosystem (`BuildKnownLazyApps.Catalog`) et ne
+s'agrègent pas eux-mêmes. Hors du dépôt, un hôte référence le paquet
+`HackerOs.App.Build` et déclare la même propriété (modèle `hackeros-host`, voir
+[`sdk-packages.md`](sdk-packages.md)).
 
 ### Cible `CollectHackerOsBuiltInApplications`
 
@@ -348,6 +360,16 @@ la préparation des ressources et avant les cibles Blazor) :
 4. ajoute ce fichier en `EmbeddedResource` (`HackerOs.BuiltInApplications.json`) ;
 5. ajoute un `BlazorWebAssemblyLazyLoad` pour l'assembly de chaque app (en
    retirant d'abord un éventuel doublon écrit à la main).
+
+Les apps installées en **paquet** (ADR 0098 §2) suivent le même chemin : chaque
+paquet d'app contient ses manifestes sous `hackeros/manifests/` et un fichier
+`buildTransitive/<PackageId>.targets` qui les déclare en éléments
+`HackerOsPackagedApp` (métadonnées `PackageId`, `AssemblyFileName`,
+`AssemblyPath`). La cible `_HackerOsCollectPackagedAppManifests` les ajoute à
+la liste ; `IsSystemApp` vient de la `PackageReference` de l'hôte sur ce paquet
+(un paquet d'app arrivé par dépendance n'est jamais système). La cible
+`_HackerOsPackageAppManifests` produit ces fichiers quand un projet d'app est
+empaqueté.
 
 L'ancrage après `ResolveProjectReferences` est vérifié par un
 `dotnet publish -c Release` de l'Ecosystem : `HackerOs.Apps.Calculator` figure
@@ -380,11 +402,15 @@ n'est jamais écrit à la main ni versionné.
 
 ### Lecture au démarrage
 
-`BuildKnownLazyApps` lit la ressource `HackerOs.BuiltInApplications.json` et
-construit `Catalog` avec `AppCatalog.BuildFromBuiltInApplications` : le catalogue
-porte les drapeaux système (voir « Apps système » ci-dessous), et expose
-`BuildKnownLazyApps.Images` (image de chaque app, lue par la mesure de la
-mémoire). Seul le
+`HostAppCatalog.Load(assembly)` (`HackerOs.Ecosystem.Host`) lit la ressource
+`HackerOs.BuiltInApplications.json` de l'assembly de l'hôte et construit
+`Catalog` avec `AppCatalog.BuildFromBuiltInApplications` : le catalogue porte
+les drapeaux système (voir « Apps système » ci-dessous) ; `Images` donne l'image
+de chaque app (lue par la mesure de la mémoire) et `LazyAssemblyNames` les seules
+assemblies que le chargeur paresseux peut récupérer. Dans l'Ecosystem,
+`BuildKnownLazyApps` (`Catalog`, `Images`, `Host`) et
+`BuildKnownLazyAssemblies.Names` en sont de simples façades sur sa propre
+assembly. Seul le
 JSON est lu : les DLL d'apps restent chargées au premier lancement et les
 classes `AppDefinition` ne sont jamais instanciées au runtime.
 
@@ -414,6 +440,31 @@ système. Rien d'autre.
   toutes les apps de l'hôte (75 aujourd'hui : 12 fenêtrées et 63 commandes, `stress` depuis l'ADR 0070) ; toutes viennent de la ressource agrégée (aucune ressource
   `HackerOs.Ecosystem.Manifests.*`), et la liste de chargement différé est
   exactement celle de leurs assemblies.
+
+## Version du SDK, commandes, intégrité (ADR 0098 §3-5)
+
+- **Version du SDK** : voir « Règles de conversion ». `AppCatalog.Build` met de côté
+  les apps refusées dans `AppCatalog.Rejected` (code `catalog.sdk.incompatible`, et
+  `catalog.dependency.unavailable` pour une app qui en dépend obligatoirement) au
+  lieu d'échouer : l'OS démarre sans elles, le démarrage l'écrit dans
+  `/var/log/syslog` (catégorie `catalog`) et Paramètres les liste comme
+  incompatibles avec la raison (`HackAppInstallState.Incompatible`, `Problem`).
+- **Commandes en double** : refusées au build (`HOSAPP0022`). Au chargement, si deux
+  apps déclarent quand même le même nom, une app système l'emporte, sinon la
+  première activée ; l'autre perd ce nom (`AppCatalog.FindCommandOwner`,
+  `CommandOwners`), un avertissement `catalog.command.duplicate` va dans
+  `/var/log/syslog`, et `ShellCommandResolver` ne résout que le propriétaire.
+- **Intégrité des ressources** : pour chaque entrée de `Assets`, le générateur calcule
+  le SHA-256 du fichier `wwwroot/<chemin>` du projet et l'écrit dans le manifeste
+  (`HOSAPP0023` s'il manque) ; le générateur relance quand un fichier de
+  `wwwroot/` change. Au runtime, `AppAssetStore` (Platform.Core) lit une ressource
+  par sa source (`IAppAssetSource` ; dans le navigateur
+  `StaticWebAssetAppAssetSource`, `_content/<assembly>/<chemin>`) et vérifie son
+  empreinte à sa **première** lecture de la session, comme `dpkg --verify`. Une
+  ressource altérée est refusée (`AppAssetIntegrityException`), l'app est marquée
+  endommagée (`HackAppInstallState.Damaged` dans Paramètres) et l'événement
+  `catalog.asset.damaged` va dans `/var/log/syslog`. Les assemblies restent
+  couvertes par l'intégrité du manifeste de démarrage de Blazor.
 
 ## Apps système (ADR 0048 §1)
 
@@ -476,6 +527,7 @@ dangereuses accordées d'office arrivent avec l'ADR 0049.
 - [x] `rebuild/2-system-apps` (ADR 0048) : `AppCatalog.SystemAppIds` et `IsSystemApp`, `AppCatalog.Build(manifests, systemAppIds)` et `BuildFromBuiltInApplications`, `IsSystemApp="true"` posé sur les `ProjectReference` de l'Ecosystem, pont de transition `_HackerOsMarkLegacySystemManifests`, tests.
 - [x] `rebuild/2-app-uninstall` (ADR 0048 §2-6) : désinstallation par `apps.config`, voir [`app-installation.md`](app-installation.md).
 - [x] `rebuild/5-worker-processes` (ADR 0070) : `AppManifestAttribute.Execution`, `AppExecutionHost`, champ `execution` (schéma, liste blanche, validateur, fixture canonique), défauts par genre dans le mappeur, chaque commande et service déclare son hôte ou reçoit le défaut.
+- [x] `v3/6-sdk-versioning` (ADR 0098) : version du SDK écrite par le générateur et vérifiée au chargement, `HOSAPP0022`/`HOSAPP0023`, propriétaire unique d'une commande, empreintes des ressources et `AppAssetStore`, agrégation des apps en paquet, `HostAppCatalog`.
 - [x] `v3/4-intents` (ADR 0096) : intents déclarés reçus par l'app, schémas d'URI `x-scheme-handler/<schéma>`, commande `xdg-open`.
 - [x] `v3/12-localization` (ADR 0104) : `AppManifest.<culture>.resx` → `localization/`, `HOSAPP0040`, propriété `localized` de `BuiltInApplications.json`, `AppCatalog.Localize`.
 - [x] `rebuild/2-app-migration` : classes `[AppManifest]` pour les 43 autres apps, test d'égalité avec les anciens JSON, suppression des `app.manifest.json`, `StaticManifest`, des listes manuelles de l'hôte et de la cible `_HackerOsMarkLegacySystemManifests`, de la règle `Content Update` de `Directory.Build.targets` et des exceptions « transition ».

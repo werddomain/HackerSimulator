@@ -8,7 +8,7 @@ namespace HackerOs.Commands.Which;
 /// <summary>
 /// <c>which [-a] NAME...</c> (ADR 0064): prints where each installed command lives, as
 /// <c>/usr/bin/NAME</c> (the shell's <c>sh</c> as <c>/bin/sh</c>); exit 1 when one is missing.
-/// The list comes from the calling shell (<see cref="IShellSession.GetCommands"/>), like <c>PATH</c>.
+/// The list comes from the calling shell (<see cref="IShellSession.GetCommands()"/>), like <c>PATH</c>.
 /// </summary>
 public sealed class WhichCommand(AppManifest manifest) : TerminalAppBase(manifest)
 {

@@ -165,12 +165,15 @@ public sealed class AppDefinitionMapperTests
         Assert.Equal(first, second);
     }
 
-    [Theory]
-    [InlineData(1, 0, 0, 0, "1.0.0")]
-    [InlineData(1, 4, 7, 0, "1.4.0")]
-    [InlineData(2, 3, 0, 9, "2.3.0")]
-    public void FormatSdkMinimumVersion_DropsPatchAndRevision(int major, int minor, int build, int revision, string expected) =>
-        Assert.Equal(expected, AppDefinitionMapper.FormatSdkMinimumVersion(new Version(major, minor, build, revision)));
+    [Fact]
+    public void ToManifest_WithoutExplicitVersion_UsesTheProcessSdkVersion() =>
+        Assert.Equal(new AppSdkCompatibilityManifest(HackerOsSdk.Version), AppDefinitionMapper.ToManifest(new MinimalWindowApp()).SdkCompatibility);
+
+    [Fact]
+    public void ToManifest_KeepsARangeTheDefinitionDeclares() =>
+        Assert.Equal(
+            new AppSdkCompatibilityManifest("0.9.0-preview.1", "0.9.0"),
+            AppDefinitionMapper.ToManifest(new RangedApp(), "0.9.0-preview.4").SdkCompatibility);
 
     [Fact]
     public void AppManifestAttribute_IsSingleUseAndNotInherited()
@@ -276,6 +279,15 @@ public sealed class AppDefinitionMapperTests
         public override string Name => "Minimal";
         public override AppKind Kind => AppKind.Window;
         public override Type EntryPoint => typeof(FakeWindow);
+    }
+
+    private sealed class RangedApp : AppDefinition
+    {
+        public override string Id => "org.hackeros.tests.ranged";
+        public override string Name => "Ranged";
+        public override AppKind Kind => AppKind.Window;
+        public override Type EntryPoint => typeof(FakeWindow);
+        public override AppSdkCompatibilityManifest? SdkCompatibility => new("0.9.0-preview.1", "0.9.0");
     }
 
     private sealed class SharedMobileApp : AppDefinition

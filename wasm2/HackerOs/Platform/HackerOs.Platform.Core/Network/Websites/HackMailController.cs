@@ -12,10 +12,14 @@ public sealed class HackMailController : SimulatedWebsiteControllerBase
 {
     private const string SessionCookie = "hackmail_session";
 
+    /// <inheritdoc/>
     public override string PrimaryHostname => "hackmail.com";
+    /// <inheritdoc/>
     public override string Theme           => "mail";
+    /// <inheritdoc/>
     public override string SiteName        => "HackMail";
 
+    /// <summary>Registers the routes: <c>/</c> and <c>/inbox</c> (the inbox when logged in, else the login form), GET/POST <c>/login</c> and <c>/logout</c>.</summary>
     public HackMailController()
     {
         Get("/",       req => IsLoggedIn(req) ? SimulatedHttpResponse.Ok(BuildInboxPage())

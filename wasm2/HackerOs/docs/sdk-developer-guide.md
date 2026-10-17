@@ -65,6 +65,25 @@ frontière du SDK.
   (`HOSAPP0030`). Les `PackageReference` (MudBlazor par exemple) sont libres.
 - Ajouter le projet à `HackerOs.sln` (`dotnet sln add`).
 
+### Depuis un autre dépôt (paquets locaux)
+
+Hors de ce dépôt, une app se construit sur les paquets locaux (ADR 0098 §2,
+[`sdk-packages.md`](sdk-packages.md)) : `build/pack-local.sh` (ou `.ps1`) les
+produit dans `artifacts/local-nupkg`, un `nuget.config` (modèle
+`build/nuget.config.sample`) pointe vers ce dossier, puis les modèles créent le
+projet :
+
+```bash
+dotnet new install <HackerOS>/artifacts/local-nupkg/HackerOs.Templates.0.9.0-preview.1.nupkg
+dotnet new hackeros-window -n Contoso.Notes --appId com.contoso.notes
+dotnet new hackeros-host -n Contoso.Os          # un hôte qui lance tout l'OS
+```
+
+Le projet référence `HackerOs.AppSdk*` et `HackerOs.App.Build`
+(`PrivateAssets="all"`), qui apporte la génération du manifeste, le générateur
+de routes ASP.Hack et la règle de frontière sur les paquets (`HOSAPP0030`).
+Un hôte ajoute l'app par une `ProjectReference` ou une `PackageReference`.
+
 ## 2. Décrire l'app : `AppDefinition`
 
 ```csharp
@@ -664,6 +683,11 @@ en anglais. Le guide complet est [`localization.md`](localization.md).
 - [ ] L'app fonctionne avec le seul hôte Ecosystem, sans serveur.
 - [ ] Un document décrit l'app sous `docs/`, ajouté à l'index [`README.md`](README.md).
 
+Un hôte d'un autre dépôt (modèle `hackeros-host`) installe une app de la même
+façon : `ProjectReference` ou `PackageReference` (paquet d'app produit par
+`dotnet pack`, qui embarque ses manifestes), avec la même métadonnée
+`IsSystemApp`.
+
 ## Tâches de ce document
 
 - [x] Présenter les trois genres d'app et leurs points d'entrée.
@@ -675,5 +699,6 @@ en anglais. Le guide complet est [`localization.md`](localization.md).
 - [x] Table des services de l'OS et capacités associées.
 - [x] Installation dans l'hôte et test unitaire d'une commande.
 - [x] Compiler les exemples et exécuter le test contre `rebuild/base`.
+- [x] Construire une app ou un hôte depuis un autre dépôt avec les paquets locaux et les modèles (v3/6).
 - [x] Sauvegarde de la machine et erreurs `NoSpace`/`FileTooLarge` (`v3/7-storage-backup`).
 - [x] Traduire son app : ressources, `GetLocalizer<T>`, `AppManifest.fr.resx` (`v3/12`, ADR 0104).

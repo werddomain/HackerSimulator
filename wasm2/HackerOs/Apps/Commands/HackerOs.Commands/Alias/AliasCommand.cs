@@ -19,8 +19,10 @@ namespace HackerOs.Commands.Alias;
 /// </remarks>
 public sealed class AliasCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public AliasCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)

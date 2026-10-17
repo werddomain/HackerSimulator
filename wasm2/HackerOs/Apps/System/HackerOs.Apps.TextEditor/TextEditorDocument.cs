@@ -37,7 +37,7 @@ public sealed class TextEditorDocument
     // The editor's texts, for the "Untitled" and "(recovered)" titles (ADR 0104).
     private readonly IStringLocalizer _text;
 
-    /// <summary>Creates an empty, untitled document.</summary>
+    /// <summary>Creates an empty, unsaved "Untitled" buffer in the <see cref="TextEditorLoadState.New"/> state.</summary>
     /// <param name="text">
     /// The editor's texts in the window's language; <see langword="null"/> reads them in the language of
     /// the process running the code (English outside any app, as in unit tests).

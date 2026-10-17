@@ -23,7 +23,11 @@ public readonly record struct CapabilityGrantId
 /// <summary>Records the trusted source that created a capability grant.</summary>
 public enum CapabilityGrantSource
 {
-    /// <summary>Seeded by a validated OS build profile.</summary>
+    /// <summary>
+    /// Seeded at profile creation for a normal capability the app declares
+    /// (<c>CleanProfileCapabilityGrantSeeder</c>). The name predates ADR 0098 §7, which removed the
+    /// build profile itself: the value stays because grants stored in <c>/etc</c> already carry it.
+    /// </summary>
     BuildProfile = 1,
 
     /// <summary>Approved by an authenticated user.</summary>

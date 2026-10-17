@@ -65,7 +65,7 @@ public sealed class CapabilityAndIntentTests
         Description = "Valid manifest used by capability tests.",
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("HackerOs.TestApp", "HackerOs.TestApp.TestApp"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None
     };

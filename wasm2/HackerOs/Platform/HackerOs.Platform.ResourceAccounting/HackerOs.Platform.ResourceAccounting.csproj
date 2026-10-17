@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="../Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.Platform.ResourceAccounting</PackageId>
+    <Description>Optional measured CPU time and process memory for HackerOS (ADR 0066). Referenced by a host only when accounting is compiled in.</Description>
+    <PackageTags>hackeros;platform;accounting</PackageTags>
+  </PropertyGroup>
+
   <!--
     ADR 0066: the measuring half of the optional resource accounting. It depends on Platform Core,
     never the reverse. A host references it only through build/HackerOs.ResourceAccounting.targets,

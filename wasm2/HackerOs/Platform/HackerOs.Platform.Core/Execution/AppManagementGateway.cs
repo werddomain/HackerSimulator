@@ -39,6 +39,7 @@ internal sealed class AppManagementGateway : IAppManagementGateway
     private readonly IFileSystemService _fileSystem;
     private readonly ISimulationClock _clock;
     private readonly Func<System.Globalization.CultureInfo> _language;
+    private readonly Func<AppAssetStore>? _assets;
 
     /// <summary>Creates the gateway for one app instance.</summary>
     /// <param name="catalog">The app catalog.</param>
@@ -54,6 +55,7 @@ internal sealed class AppManagementGateway : IAppManagementGateway
     /// Language of the calling process (ADR 0104) for the operation shown in the administrator
     /// prompt; English when <see langword="null"/>.
     /// </param>
+    /// <param name="assets">Integrity of the installed apps' assets (ADR 0098 §5), or <see langword="null"/>.</param>
     public AppManagementGateway(
         AppCatalog catalog,
         Func<IAppInstallationService> installation,
@@ -64,8 +66,10 @@ internal sealed class AppManagementGateway : IAppManagementGateway
         bool isRootElevated,
         IFileSystemService fileSystem,
         ISimulationClock clock,
-        Func<System.Globalization.CultureInfo>? language = null)
+        Func<System.Globalization.CultureInfo>? language = null,
+        Func<AppAssetStore>? assets = null)
     {
+        _assets = assets;
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _installation = installation ?? throw new ArgumentNullException(nameof(installation));
         _agent = agent;
@@ -84,13 +88,30 @@ internal sealed class AppManagementGateway : IAppManagementGateway
         _capabilities.Require(AppCapabilities.AppsManage);
         cancellationToken.ThrowIfCancellationRequested();
         IAppInstallationService installation = _installation();
-        IReadOnlyList<HackAppInstallInfo> all = [.. _catalog.Manifests.Values
-            .OrderBy(manifest => manifest.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(manifest => manifest.Id, StringComparer.Ordinal)
+        AppAssetStore? assets = _assets?.Invoke();
+        IEnumerable<HackAppInstallInfo> loaded = _catalog.Manifests.Values
             .Select(manifest => new HackAppInstallInfo(
                 HackAppInfo.FromManifest(manifest, _catalog.IsSystemApp(manifest.Id)),
-                ToPublic(installation.GetState(manifest.Id)),
-                installation.GetUninstallClosure(manifest.Id)))];
+                assets is not null && assets.IsDamaged(manifest.Id)
+                    ? HackAppInstallState.Damaged
+                    : ToPublic(installation.GetState(manifest.Id)),
+                installation.GetUninstallClosure(manifest.Id))
+            {
+                Problem = assets is not null && assets.Damaged.TryGetValue(manifest.Id, out AppIntegrityProblem? problem)
+                    ? $"Asset '{problem.AssetPath}' does not match its manifest: {problem.Reason}."
+                    : null
+            });
+        // ADR 0098 §3: apps the OS refused to load are listed too, as incompatible, with the reason.
+        IEnumerable<HackAppInstallInfo> refused = _catalog.Rejected.Select(rejection => new HackAppInstallInfo(
+            HackAppInfo.FromManifest(rejection.Manifest, _catalog.IsSystemApp(rejection.AppId)),
+            HackAppInstallState.Incompatible,
+            [])
+        {
+            Problem = rejection.Message
+        });
+        IReadOnlyList<HackAppInstallInfo> all = [.. loaded.Concat(refused)
+            .OrderBy(entry => entry.App.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(entry => entry.App.Id, StringComparer.Ordinal)];
         return ValueTask.FromResult(all);
     }
 

@@ -7,7 +7,7 @@
     <!-- Development uses source projects. CI sets this property to true to prove that the same
          host restores, builds, and publishes from the isolated local NuGet feed only. -->
     <UseLocalHackerOsPackages Condition="'$(UseLocalHackerOsPackages)' == ''">false</UseLocalHackerOsPackages>
-    <HackerOsLocalPackageVersion Condition="'$(HackerOsLocalPackageVersion)' == ''">0.1.0-local</HackerOsLocalPackageVersion>
+    <HackerOsLocalPackageVersion Condition="'$(HackerOsLocalPackageVersion)' == ''">$(HackerOsVersion)</HackerOsLocalPackageVersion>
   </PropertyGroup>
 
   <ItemGroup>

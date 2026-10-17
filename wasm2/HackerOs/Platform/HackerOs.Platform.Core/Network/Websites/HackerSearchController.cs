@@ -12,10 +12,14 @@ namespace HackerOs.Platform.Core.Network.Websites;
 /// </summary>
 public sealed class HackerSearchController : SimulatedWebsiteControllerBase
 {
+    /// <inheritdoc/>
     public override string PrimaryHostname => "hackersearch.net";
+    /// <inheritdoc/>
     public override string Theme          => "hacker";
+    /// <inheritdoc/>
     public override string SiteName       => "HackerSearch";
 
+    /// <summary>Registers the routes: the home page, GET/POST <c>/search</c>, the JSON <c>/api/search</c> endpoint and <c>/robots.txt</c>.</summary>
     public HackerSearchController()
     {
         Get("/", _ => SimulatedHttpResponse.Ok(BuildHomePage()));

@@ -393,7 +393,7 @@ public sealed partial class Wave4NetworkTests
         Description = "Concatenate files and print on the standard output",
         Kind = AppKind.Terminal,
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.dll", "HackerOs.Commands.Cat.CatCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("cat", [], "cat [file ...]")

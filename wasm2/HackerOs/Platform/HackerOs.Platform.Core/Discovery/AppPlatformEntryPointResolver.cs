@@ -14,7 +14,7 @@ public enum AppPlatformEntryPointResolutionStatus
     /// <summary>
     /// The manifest's entry-point declaration is ambiguous or missing (neither or both of
     /// <see cref="AppManifest.EntryPoint"/>/<see cref="AppManifest.Platform"/> set). A validated
-    /// catalog (<see cref="AppCatalog.Build"/>) never contains such a manifest — this exists so the
+    /// catalog (<see cref="AppCatalog.Build(System.Collections.Generic.IEnumerable{AppManifest})"/>) never contains such a manifest — this exists so the
     /// resolver stays safe to call directly on an unvalidated manifest too.
     /// </summary>
     Invalid

@@ -37,7 +37,7 @@ lignes, `MemSource: simulated`).
 | `NullMemoryAccountant`, `NullKernelMemoryLedger` | `Platform/HackerOs.Platform.Core` (`Processes/Accounting/`) | mesure coupée : rien n'est mesuré, aucune charge ne coûte |
 | `AppImage`, `AppImageAssembly`, `BuiltInApplication.Image` | `Shared/HackerOs.App.Abstractions` | image d'une app dans `BuiltInApplications.json` |
 | `AppImageInspector` | `Tools/HackerOs.Tools.ManifestGenerator` | lit les références de l'assembly (métadonnées, sans charger de code) et mesure les fichiers |
-| `BuildKnownLazyApps.Images` | `OS/HackerOs.Ecosystem` | images du catalogue de l'hôte, par id d'app |
+| `HostAppCatalog.Images` (`BuildKnownLazyApps.Images` dans l'Ecosystem) | `OS/HackerOs.Ecosystem.Host` | images du catalogue de l'hôte, par id d'app |
 | `AllocationTracker` | `Platform/HackerOs.Platform.ResourceAccounting` (`Memory/`) | couche allocations : observateur du crochet de changement de contexte |
 | `KernelMemoryLedger` | idem | couche ressources de l'OS |
 | `MeasuredMemoryAccountant`, `MemoryAccountingConstants` | idem | les quatre couches, la répartition du tas, les constantes |
@@ -185,11 +185,14 @@ buffer.Resize(bufferedChars * sizeof(char));   // à chaque changement
 
 ### Composition
 
-`AddHackerOsResourceAccounting` (Ecosystem) compose la mesure quand
+`AddHackerOsResourceAccounting` (`HackerOs.Ecosystem.Host`) compose la mesure quand
 `plan.MemoryActive` et `ResourceAccountingFeatures.IsMemoryAccountingSupported`
 : `AllocationTracker` inscrit sur le diffuseur, `KernelMemoryLedger`
 (`IKernelMemoryLedger`), `MeasuredMemoryAccountant` (`IMemoryAccountant`), avec
-les images de `BuildKnownLazyApps.Images`. Sinon, les implémentations nulles
+les images que l'hôte lui passe (`AddHackerOsResourceAccounting(configuration,
+images)` ; `AddHackerOsBrowserHost` passe `HostAppCatalog.Images`, le serveur et
+`test/test` passent `BuildKnownLazyApps.Images` ; sans images, aucune app n'a de
+couche image). Sinon, les implémentations nulles
 sont enregistrées. `AddHackerOsEcosystem` passe le registre au presse-papiers,
 au shell, aux passerelles de fichiers et de réseau.
 

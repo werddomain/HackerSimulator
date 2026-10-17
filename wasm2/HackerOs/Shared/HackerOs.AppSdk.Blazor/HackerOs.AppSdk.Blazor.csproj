@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <Import Project="../../Platform/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.AppSdk.Blazor</PackageId>
+    <Description>HackerOS App SDK for window apps: HackComponentBase, window base classes, dialogs and Blazor helpers.</Description>
+    <PackageTags>hackeros;app-sdk;blazor</PackageTags>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>

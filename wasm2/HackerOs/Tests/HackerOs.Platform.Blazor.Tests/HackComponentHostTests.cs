@@ -112,7 +112,7 @@ public sealed class HackComponentHostTests
         Description = "Provides a test component.",
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest(AssemblyName, typeof(TestWindow).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         Components = [new AppComponentManifest(Contract, AssemblyName, componentType.FullName!)]

@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <Import Project="../../Platform/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.Infrastructure.Browser</PackageId>
+    <Description>Browser infrastructure of HackerOS: IndexedDB storage, Web Worker runtime and the JavaScript they need.</Description>
+    <PackageTags>hackeros;browser;indexeddb</PackageTags>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

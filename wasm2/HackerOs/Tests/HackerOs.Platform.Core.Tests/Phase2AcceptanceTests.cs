@@ -41,7 +41,7 @@ public sealed class Phase2AcceptanceTests
         Description = "Command line interface for HackerOS",
         Kind = AppKind.Terminal,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(DummyTerminalApp).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("terminal", [], "terminal"),
@@ -58,7 +58,7 @@ public sealed class Phase2AcceptanceTests
         Description = "Sample background session ticker service",
         Kind = AppKind.Service,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(DummyServiceApp).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
         Resources = AppResourceProfileManifest.None,
         AutoStart = true

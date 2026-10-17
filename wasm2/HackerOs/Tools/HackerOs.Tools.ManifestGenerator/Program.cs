@@ -60,8 +60,8 @@ public static class Program
 
         // The app's own output directory first, so sibling project references copied there win.
         string outputDirectory = Path.GetDirectoryName(assemblyPath)!;
-        IEnumerable<string> candidates = dependencies
-            .Concat(Directory.Exists(outputDirectory) ? Directory.EnumerateFiles(outputDirectory, "*.dll") : []);
+        string[] candidates = [.. dependencies
+            .Concat(Directory.Exists(outputDirectory) ? Directory.EnumerateFiles(outputDirectory, "*.dll") : [])];
 
         AppAssemblyLoadContext context = new(candidates);
         try
@@ -76,7 +76,8 @@ public static class Program
                 return Fail(project, new GeneratorDiagnostic(GeneratorCodes.AssemblyLoadFailed, assemblyPath, exception.Message));
             }
 
-            InspectionResult result = AppDefinitionInspector.Inspect(assembly);
+            // ADR 0098 §5: declared asset paths are relative to the project's wwwroot/ (served as _content/<assembly>/).
+            InspectionResult result = AppDefinitionInspector.Inspect(assembly, candidates, Path.Combine(Path.GetDirectoryName(project)!, "wwwroot"));
             if (!result.IsSuccess)
             {
                 return Fail(project, [.. result.Diagnostics]);

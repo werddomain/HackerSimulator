@@ -70,7 +70,7 @@ public sealed class AppSdkLifecycleTests
         Description = "App SDK lifecycle test application.",
         Kind = kind,
         EntryPoint = new AppEntryPointManifest("HackerOs.AppSdk.Tests", $"Test{kind}App"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None
     };

@@ -53,6 +53,14 @@ public sealed class AppExecutionContextFactory
     private readonly Keyring.UserKeyringService? _keyring;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
+    /// <param name="grantRepository">Capability grants; each context's capability checker reads the app's grants for its user from it.</param>
+    /// <param name="fileSystem">The OS filesystem behind the filesystem and directory-watch gateways, authorized per context.</param>
+    /// <param name="eventBus">The system event bus behind <see cref="IAppExecutionContext.Events"/>.</param>
+    /// <param name="topicBus">Topic messaging, shared by the event gateway and filesystem change notifications.</param>
+    /// <param name="notifications">The desktop notification queue behind <see cref="IAppExecutionContext.Notifications"/>.</param>
+    /// <param name="diagnostics">The diagnostic sink app log entries are forwarded to.</param>
+    /// <param name="clock">The simulation clock: timestamps of every gateway and <see cref="IAppExecutionContext.Clock"/>.</param>
+    /// <param name="processManager">The process table; supplies each process's cancellation token and backs <see cref="IAppExecutionContext.Processes"/>.</param>
     /// <param name="intentDispatcherProvider">
     /// Lazily resolves the app-intent dispatcher for the <see cref="IAppExecutionContext.Intents"/>
     /// gateway. Resolved lazily (not injected eagerly) because <see cref="AppIntentDispatcher"/>
@@ -104,6 +112,10 @@ public sealed class AppExecutionContextFactory
     /// <see cref="IAppExecutionContext.ServerConnection"/>, <see cref="IAppExecutionContext.SystemPower"/>,
     /// <see cref="IAppExecutionContext.StorageDiagnostics"/> and <see cref="IAppExecutionContext.SystemBackup"/>
     /// (ADR 0099); <see langword="null"/> leaves them unsupported.
+    /// </param>
+    /// <param name="localNetwork">
+    /// The local network stack (ADR 0074): listening ports, <c>hackdns</c> and web app activation, used by
+    /// the network gateway to reach services on this machine; <see langword="null"/> leaves it out.
     /// </param>
     /// <param name="webDatabases">
     /// The browser databases of web sites behind <see cref="IAppExecutionContext.WebDatabase"/> and the
@@ -250,7 +262,8 @@ public sealed class AppExecutionContextFactory
                 isRootElevated,
                 _fileSystem,
                 _clock,
-                language);
+                language,
+                _appCatalog.Assets);
         AppClipboardGateway clipboardGateway = new(_clipboard, capabilities, process.SessionId, process.Pid);
 
         AppFileSystemGateway fileSystem = new(
@@ -423,12 +436,14 @@ public sealed class AppExecutionContextFactory
 /// <param name="FileAssociations">Resolves "Open with" candidates; <see langword="null"/> leaves <c>GetHandlersAsync</c> unsupported.</param>
 /// <param name="Installation">Uninstall/reinstall service; <see langword="null"/> leaves <c>AppManagement</c> unsupported and <c>Changed</c> silent.</param>
 /// <param name="AuthenticationAgent">OS authentication agent (ADR 0055, section 5); <see langword="null"/> refuses every machine-scope change.</param>
+/// <param name="Assets">Asset integrity checks (ADR 0098 §5): Settings lists the apps it found damaged; <see langword="null"/> reports none.</param>
 public sealed record AppCatalogGatewayServices(
     AppCatalog Catalog,
     Lifecycle.IAppEnablementRegistry Enablement,
     Func<Intents.FileAssociationResolver>? FileAssociations = null,
     Func<Apps.IAppInstallationService>? Installation = null,
-    Func<Elevation.IAdministratorAuthenticationAgent>? AuthenticationAgent = null);
+    Func<Elevation.IAdministratorAuthenticationAgent>? AuthenticationAgent = null,
+    Func<Apps.AppAssetStore>? Assets = null);
 
 /// <summary>
 /// Services behind the measurements of ADR 0057 that the factory hands to each context.

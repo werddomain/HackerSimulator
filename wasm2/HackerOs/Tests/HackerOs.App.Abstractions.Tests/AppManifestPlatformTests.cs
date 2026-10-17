@@ -193,7 +193,7 @@ public sealed class AppManifestPlatformTests
         Description = "Demonstrates a manifest with multiple platform entry points.",
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("HackerOs.Samples.PlatformApp.dll", "HackerOs.Samples.PlatformApp.PlatformDemoWindow"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None
     };

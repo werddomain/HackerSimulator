@@ -38,28 +38,32 @@ public sealed record SimulatedPort(
 /// <summary>
 /// Immutable OS fingerprint returned by scanning a simulated host.
 /// </summary>
+/// <param name="Name">Detected operating system name, e.g. "Linux".</param>
+/// <param name="Version">Detected operating system version, e.g. a kernel range.</param>
+/// <param name="Accuracy">Simulated detection accuracy percentage (0-100).</param>
 public sealed record SimulatedOsFingerprint(
     string Name,
     string Version,
-    /// <summary>Simulated detection accuracy percentage (0-100).</summary>
     int Accuracy);
 
 /// <summary>
 /// Immutable record representing a single host in the simulated network.
 /// A host may be addressed by IP or by its canonical hostname.
 /// </summary>
+/// <param name="Ip">Dot-decimal IPv4 string, e.g. "192.168.1.10".</param>
+/// <param name="Hostname">Primary fully-qualified hostname, e.g. "example.com".</param>
+/// <param name="IsUp">Whether the host is currently reachable (responds to ping).</param>
+/// <param name="LatencyMs">Simulated round-trip time in milliseconds.</param>
+/// <param name="Ports">The ports a scan can see on the host, open or not.</param>
+/// <param name="OsFingerprint">The OS a scan detects, or <see langword="null"/> when it cannot be fingerprinted.</param>
+/// <param name="MacAddress">Optional MAC address (meaningful for LAN hosts only).</param>
 public sealed record SimulatedHost(
-    /// <summary>Dot-decimal IPv4 string, e.g. "192.168.1.10".</summary>
     string Ip,
-    /// <summary>Primary fully-qualified hostname, e.g. "example.com".</summary>
     string Hostname,
-    /// <summary>Whether the host is currently reachable (responds to ping).</summary>
     bool IsUp,
-    /// <summary>Simulated round-trip time in milliseconds.</summary>
     double LatencyMs,
     ImmutableArray<SimulatedPort> Ports,
     SimulatedOsFingerprint? OsFingerprint = null,
-    /// <summary>Optional MAC address (meaningful for LAN hosts only).</summary>
     string? MacAddress = null)
 {
     /// <summary>

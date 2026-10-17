@@ -298,7 +298,7 @@ public static class ShellSyntaxErrorCodes
     public const string BadFunctionName = "shell.syntax.bad-function-name";
 }
 
-/// <summary>Outcome of <see cref="ShellParser.Parse"/>.</summary>
+/// <summary>Outcome of <see cref="ShellParser.Parse(string)"/>.</summary>
 /// <param name="Commands">The parsed program, or <see langword="null"/> on error or for blank input.</param>
 /// <param name="Error">The syntax error, or <see langword="null"/> on success.</param>
 public sealed record ShellParseResult(ShellCommandList? Commands, ShellSyntaxError? Error)

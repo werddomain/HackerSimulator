@@ -65,9 +65,51 @@ public static class BuiltInApplicationsAggregator
             diagnostics.Add(new(GeneratorCodes.InvalidCatalog, error.AppId, $"{error.Message} ({error.Code})"));
         }
 
+        // ADR 0098 §3: an app the host's own SDK would refuse at load fails the host build instead.
+        foreach (AppCatalogRejection rejection in catalog.Catalog?.Rejected ?? [])
+        {
+            diagnostics.Add(new(GeneratorCodes.InvalidCatalog, rejection.AppId, $"{rejection.Message} ({rejection.Code})"));
+        }
+
+        if (diagnostics.Count == 0)
+        {
+            diagnostics.AddRange(FindDuplicateCommands(applications.Select(item => item.Manifest)));
+        }
+
         return diagnostics.Count > 0
             ? new AggregationResult(null, diagnostics)
             : new AggregationResult(BuiltInApplicationsJsonSerializer.SerializeCanonical(applications), []);
+    }
+
+    /// <summary>
+    /// ADR 0098 §4, at build: every terminal command name and alias of the host's apps must be
+    /// unique (case-insensitive) and must not be a name the shell runs itself
+    /// (<see cref="HackerOs.Platform.Core.Shell.ShellInterpreter.ReservedNames"/>). One
+    /// <c>HOSAPP0022</c> per offending app and name, in app id order.
+    /// </summary>
+    /// <param name="manifests">The host's manifests.</param>
+    /// <returns>The diagnostics, empty when every name is unique.</returns>
+    public static IReadOnlyList<GeneratorDiagnostic> FindDuplicateCommands(IEnumerable<AppManifest> manifests)
+    {
+        ArgumentNullException.ThrowIfNull(manifests);
+        List<GeneratorDiagnostic> diagnostics = [];
+        Dictionary<string, string> owners = new(StringComparer.OrdinalIgnoreCase);
+        foreach (AppManifest manifest in manifests.Where(static item => item.Terminal is not null).OrderBy(static item => item.Id, StringComparer.Ordinal))
+        {
+            foreach (string name in manifest.Terminal!.Aliases.Prepend(manifest.Terminal.Name).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (HackerOs.Platform.Core.Shell.ShellInterpreter.ReservedNames.Contains(name))
+                {
+                    diagnostics.Add(new(GeneratorCodes.DuplicateCommand, manifest.Id, $"Command '{name}' is run by the shell itself (built-in); choose another name."));
+                }
+                else if (!owners.TryAdd(name, manifest.Id))
+                {
+                    diagnostics.Add(new(GeneratorCodes.DuplicateCommand, manifest.Id, $"Command '{name}' is already declared by '{owners[name]}'."));
+                }
+            }
+        }
+
+        return diagnostics;
     }
 
     /// <summary>

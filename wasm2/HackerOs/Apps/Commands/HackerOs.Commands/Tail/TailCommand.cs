@@ -18,8 +18,10 @@ public sealed class TailCommand : TerminalAppBase
     /// <summary>How often <c>tail -f</c> looks at the file again.</summary>
     internal static TimeSpan FollowInterval { get; set; } = TimeSpan.FromMilliseconds(500);
 
+    /// <summary>Initializes the command with its manifest.</summary>
     public TailCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)

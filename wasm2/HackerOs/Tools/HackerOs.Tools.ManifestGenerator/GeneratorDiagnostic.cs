@@ -85,6 +85,18 @@ public static class GeneratorCodes
     /// <summary>The aggregated catalog is invalid (duplicate id, missing or cyclic dependency...).</summary>
     public const string InvalidCatalog = "HOSAPP0021";
 
+    /// <summary>
+    /// Aggregation (ADR 0098 §4): two apps of the host declare the same terminal command name or
+    /// alias, or an app declares a name the shell runs itself (special built-ins, <c>sh</c>/<c>bash</c>/<c>hsh</c>).
+    /// </summary>
+    public const string DuplicateCommand = "HOSAPP0022";
+
+    /// <summary>
+    /// An asset the app declares (<c>AppDefinition.Assets</c>) has no file under the project's
+    /// <c>wwwroot/</c>, so its SHA-256 cannot be computed (ADR 0098 §5).
+    /// </summary>
+    public const string AssetMissing = "HOSAPP0023";
+
     /// <summary>The tool was called with invalid arguments.</summary>
     public const string InvalidArguments = "HOSAPP0090";
 

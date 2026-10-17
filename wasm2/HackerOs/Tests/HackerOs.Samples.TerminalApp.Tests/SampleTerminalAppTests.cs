@@ -25,7 +25,7 @@ public sealed class SampleTerminalAppTests
         Description = "Sample Terminal command application",
         Kind = AppKind.Terminal,
         EntryPoint = new AppEntryPointManifest("HackerOs.Samples.TerminalApp.dll", "HackerOs.Samples.TerminalApp.SampleTerminalApp"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Visible, []),
         Terminal = new TerminalCommandManifest("sample-cmd", ["sample"], "Executes sample SDK terminal command"),
         Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite],

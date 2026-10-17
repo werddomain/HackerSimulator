@@ -18,8 +18,10 @@ namespace HackerOs.Commands.Sort;
 /// </summary>
 public sealed class SortCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public SortCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)

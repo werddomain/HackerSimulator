@@ -64,6 +64,11 @@ jobs:
 
       # Project references become NuGet dependencies; dotnet pack does not automatically emit
       # those dependency packages. Keep this sequence in dependency-topological order.
+      - name: Read the HackerOS version
+        shell: bash
+        run: >-
+          echo "HACKEROS_VERSION=$(sed -n 's:.*<HackerOsVersion>\(.*\)</HackerOsVersion>.*:\1:p' build/Versions.props)" >> "$GITHUB_ENV"
+
       - name: Pack theme contracts
         run: >-
           dotnet pack Shared/HackerOs.Theming.Abstractions/HackerOs.Theming.Abstractions.csproj
@@ -112,8 +117,8 @@ jobs:
             HackerOs.Taskbar.Blazor
           )
           for package_id in "${package_ids[@]}"; do
-            test -s "$LOCAL_PACKAGE_OUTPUT/$package_id.0.1.0-local.nupkg"
-            test -s "$LOCAL_PACKAGE_OUTPUT/$package_id.0.1.0-local.snupkg"
+            test -s "$LOCAL_PACKAGE_OUTPUT/$package_id.$HACKEROS_VERSION.nupkg"
+            test -s "$LOCAL_PACKAGE_OUTPUT/$package_id.$HACKEROS_VERSION.snupkg"
           done
 
       - name: Restore sample from local packages only
@@ -141,7 +146,7 @@ jobs:
             HackerOs.Taskbar.Blazor
           )
           for package_id in "${package_ids[@]}"; do
-            grep -q "\"$package_id/0.1.0-local\"" "$assets_file"
+            grep -q "\"$package_id/$HACKEROS_VERSION\"" "$assets_file"
           done
 
       - name: Build package-only sample

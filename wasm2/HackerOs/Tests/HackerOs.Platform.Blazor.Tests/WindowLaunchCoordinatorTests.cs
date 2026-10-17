@@ -194,7 +194,7 @@ public sealed class WindowLaunchCoordinatorTests
         Description = "Window launch coordinator test app.",
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("Test.dll", "Test.Window"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         SingleInstancePerUser = true

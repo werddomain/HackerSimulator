@@ -22,6 +22,7 @@ namespace HackerOs.Commands.Trash;
 /// </summary>
 public sealed class TrashCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public TrashCommand(AppManifest manifest) : base(manifest) { }
 
     /// <inheritdoc />

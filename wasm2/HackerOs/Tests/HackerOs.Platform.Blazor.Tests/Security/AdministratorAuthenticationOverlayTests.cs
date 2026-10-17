@@ -115,7 +115,7 @@ public sealed class AdministratorAuthenticationOverlayTests
                 PublisherId = "pub.hackeros",
                 Description = "Overlay fixture.",
                 Kind = AppKind.Window,
-                SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+                SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
                 Presentation = new PresentationManifest("system", AppLaunchVisibility.Visible, []),
                 Resources = AppResourceProfileManifest.None
             },

@@ -41,7 +41,19 @@ public enum HackAppInstallState
     UninstalledForUser = 1,
 
     /// <summary>Uninstalled in <c>/etc/hackeros/apps.config</c> for every user: only an administrator reinstalls it.</summary>
-    UninstalledForMachine = 2
+    UninstalledForMachine = 2,
+
+    /// <summary>
+    /// Shipped by the host but refused by the OS (ADR 0098 §3): built for an App SDK range that does not
+    /// contain the running SDK, or requiring such an app. It never launches; <see cref="HackAppInstallInfo.Problem"/> says why.
+    /// </summary>
+    Incompatible = 3,
+
+    /// <summary>
+    /// An asset of the app did not match the hash of its manifest when first read (ADR 0098 §5); the
+    /// asset was refused. <see cref="HackAppInstallInfo.Problem"/> names it.
+    /// </summary>
+    Damaged = 4
 }
 
 /// <summary>Which <c>apps.config</c> file an uninstall or reinstall writes (ADR 0048, section 3).</summary>
@@ -61,7 +73,15 @@ public enum HackInstallScope
 /// Every app an uninstall would remove: the apps that need it through non-optional dependencies,
 /// dependents first, then the app itself. A confirmation dialog lists them.
 /// </param>
-public sealed record HackAppInstallInfo(HackAppInfo App, HackAppInstallState State, IReadOnlyList<string> UninstallClosure);
+public sealed record HackAppInstallInfo(HackAppInfo App, HackAppInstallState State, IReadOnlyList<string> UninstallClosure)
+{
+    /// <summary>
+    /// Gets why the app is <see cref="HackAppInstallState.Incompatible"/> (the SDK range it asked for
+    /// and the one the system runs) or <see cref="HackAppInstallState.Damaged"/> (the altered asset),
+    /// or <see langword="null"/> for any other state (ADR 0098 §3, §5).
+    /// </summary>
+    public string? Problem { get; init; }
+}
 
 /// <summary>
 /// Uninstall and reinstall for one app instance (ADR 0056, section 3), behind

@@ -11,6 +11,9 @@ public sealed class BuildKnownAssemblyLoaderRegistry
     private readonly IBuildKnownAssemblyTransport _transport;
     private readonly ConcurrentDictionary<string, Lazy<Task<BuildKnownAssemblyLoadOutcome>>> _loads = new(StringComparer.Ordinal);
 
+    /// <summary>Creates the registry for the lazy-loadable assemblies the build declared.</summary>
+    /// <param name="knownAssemblies">The file names (e.g. <c>HackerOs.Apps.Foo.dll</c>) the build published as lazy assets; any other name is refused.</param>
+    /// <param name="transport">The browser transport that actually fetches and loads the assemblies.</param>
     public BuildKnownAssemblyLoaderRegistry(IEnumerable<string> knownAssemblies, IBuildKnownAssemblyTransport transport)
     {
         ArgumentNullException.ThrowIfNull(knownAssemblies);
@@ -60,6 +63,10 @@ public sealed class BuildKnownAssemblyLoaderRegistry
 /// <summary>Browser-specific transport boundary implemented with <c>LazyAssemblyLoader</c> by the WASM host.</summary>
 public interface IBuildKnownAssemblyTransport
 {
+    /// <summary>Fetches and loads the named assemblies into the running WebAssembly runtime.</summary>
+    /// <param name="assemblyNames">The declared assembly file names to load.</param>
+    /// <param name="cancellationToken">Cancels the browser request.</param>
+    /// <returns>The assemblies that were loaded.</returns>
     [RequiresUnreferencedCode("The browser lazy loader loads metadata discovered after trimming.")]
     Task<IReadOnlyList<Assembly>> LoadAsync(IReadOnlyList<string> assemblyNames, CancellationToken cancellationToken);
 }
@@ -67,11 +74,45 @@ public interface IBuildKnownAssemblyTransport
 /// <summary>Typed, recoverable result of a build-known assembly load request.</summary>
 public sealed record BuildKnownAssemblyLoadOutcome(string AssemblyName, BuildKnownAssemblyLoadStatus Status, Assembly? Assembly, string? Detail)
 {
+    /// <summary>The assembly was loaded.</summary>
+    /// <param name="name">The requested assembly file name.</param>
+    /// <param name="assembly">The loaded assembly.</param>
+    /// <returns>A <see cref="BuildKnownAssemblyLoadStatus.Loaded"/> outcome.</returns>
     public static BuildKnownAssemblyLoadOutcome Loaded(string name, Assembly assembly) => new(name, BuildKnownAssemblyLoadStatus.Loaded, assembly, null);
+    /// <summary>The name is not declared by this build, so no request was made.</summary>
+    /// <param name="name">The requested assembly file name.</param>
+    /// <returns>A <see cref="BuildKnownAssemblyLoadStatus.NotDeclared"/> outcome.</returns>
     public static BuildKnownAssemblyLoadOutcome NotDeclared(string name) => new(name, BuildKnownAssemblyLoadStatus.NotDeclared, null, "The assembly is not declared by this build.");
+    /// <summary>The transport finished without returning the assembly.</summary>
+    /// <param name="name">The requested assembly file name.</param>
+    /// <returns>A <see cref="BuildKnownAssemblyLoadStatus.Missing"/> outcome.</returns>
     public static BuildKnownAssemblyLoadOutcome Missing(string name) => new(name, BuildKnownAssemblyLoadStatus.Missing, null, "The published asset did not load.");
+    /// <summary>The request was cancelled.</summary>
+    /// <param name="name">The requested assembly file name.</param>
+    /// <returns>A <see cref="BuildKnownAssemblyLoadStatus.Cancelled"/> outcome.</returns>
     public static BuildKnownAssemblyLoadOutcome Cancelled(string name) => new(name, BuildKnownAssemblyLoadStatus.Cancelled, null, "The browser cancelled the assembly request.");
+    /// <summary>The transport threw.</summary>
+    /// <param name="name">The requested assembly file name.</param>
+    /// <param name="detail">The exception message, kept for diagnostics.</param>
+    /// <returns>A <see cref="BuildKnownAssemblyLoadStatus.Failed"/> outcome.</returns>
     public static BuildKnownAssemblyLoadOutcome Failed(string name, string detail) => new(name, BuildKnownAssemblyLoadStatus.Failed, null, detail);
 }
 
-public enum BuildKnownAssemblyLoadStatus { Loaded, NotDeclared, Missing, Cancelled, Failed }
+/// <summary>Why a <see cref="BuildKnownAssemblyLoaderRegistry.LoadAsync"/> request succeeded or not.</summary>
+public enum BuildKnownAssemblyLoadStatus
+{
+    /// <summary>The assembly was fetched and loaded into the runtime.</summary>
+    Loaded,
+
+    /// <summary>The name is not in the build's list of lazy-loadable assemblies, so nothing was requested.</summary>
+    NotDeclared,
+
+    /// <summary>The transport completed but returned no assembly for the declared asset.</summary>
+    Missing,
+
+    /// <summary>The caller's token, or the browser, cancelled the request.</summary>
+    Cancelled,
+
+    /// <summary>The transport threw; <see cref="BuildKnownAssemblyLoadOutcome.Detail"/> holds the message.</summary>
+    Failed,
+}

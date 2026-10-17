@@ -100,7 +100,7 @@ public sealed class HeadlessKernelIntegrationTests
         Description = "Waits for cancellation or shutdown.",
         Kind = AppKind.Service,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(WaiterServiceApp).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None
     };
@@ -137,7 +137,7 @@ public sealed class HeadlessKernelIntegrationTests
             Description = "Exercises the filesystem gateway and settings files end to end.",
             Kind = AppKind.Terminal,
             EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(KernelSmokeApp).FullName!),
-            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
             Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
             Resources = AppResourceProfileManifest.None,
             Terminal = new TerminalCommandManifest("kernel-smoke", [], "kernel-smoke"),

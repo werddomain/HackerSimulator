@@ -184,12 +184,32 @@ public static class HackLocalization
     /// <c>MyApp.Strings</c> in assembly <c>MyApp</c> gives <c>MyApp.Resources.Strings</c>, matching
     /// what MSBuild names <c>Resources/Strings.resx</c> when the root namespace is the assembly name.
     /// </summary>
+    /// <remarks>
+    /// MSBuild names the resource after the project's <c>RootNamespace</c>, which may differ from the
+    /// assembly name (<c>HackerOs.Ecosystem.Host</c> keeps the root namespace <c>HackerOs.Ecosystem</c>).
+    /// The neutral resources live in the main assembly, so the namespace prefix whose
+    /// <c>&lt;prefix&gt;.Resources.&lt;rest&gt;.resources</c> exists there wins; without one, the
+    /// assembly name is assumed.
+    /// </remarks>
     /// <param name="resourceType">The type naming the resources.</param>
     public static string GetResourceBaseName(Type resourceType)
     {
         ArgumentNullException.ThrowIfNull(resourceType);
         string root = resourceType.Assembly.GetName().Name ?? string.Empty;
         string fullName = resourceType.FullName ?? resourceType.Name;
+        if (!fullName.StartsWith(root + ".", StringComparison.Ordinal))
+        {
+            HashSet<string> embedded = new(resourceType.Assembly.GetManifestResourceNames(), StringComparer.Ordinal);
+            for (int dot = fullName.LastIndexOf('.'); dot > 0; dot = fullName.LastIndexOf('.', dot - 1))
+            {
+                string candidate = $"{fullName[..dot]}.{ResourcesFolder}.{fullName[(dot + 1)..]}";
+                if (embedded.Contains(candidate + ".resources"))
+                {
+                    return candidate;
+                }
+            }
+        }
+
         string relative = root.Length > 0 && fullName.StartsWith(root + ".", StringComparison.Ordinal)
             ? fullName[(root.Length + 1)..]
             : fullName;

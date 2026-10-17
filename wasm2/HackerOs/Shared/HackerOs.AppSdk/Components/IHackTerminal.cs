@@ -100,7 +100,7 @@ public sealed record HackTerminalOptions
 }
 
 /// <summary>Text shown by an embedded terminal (see <see cref="IHackTerminal.OutputReceived"/>).</summary>
-/// <param name="Text">The text, without colour and cursor control sequences.</param>
+/// <param name="text">The text, without colour and cursor control sequences.</param>
 public sealed class HackTerminalOutputEventArgs(string text) : EventArgs
 {
     /// <summary>Gets the text, without colour and cursor control sequences.</summary>
