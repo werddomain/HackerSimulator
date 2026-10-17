@@ -41,9 +41,16 @@ commande ─▶ TerminalOutputWriter ─▶ TerminalPanel.Write ("\n" → "\r\n"
 
 Le fond, le texte et le curseur viennent des jetons de design lus sur
 l'élément hôte (`--hos-bg-base`, `--hos-text-primary`, `--hos-accent`) ; la
-police vient de `--hos-font-mono` (14 px). La palette des 16 couleurs ANSI est
+police vient de `--hos-font-mono` (`0.875rem`, 14 px à 100 %). La palette des 16 couleurs ANSI est
 celle du legacy, avec le vert d'accent de HackerOS. Le style du cadre est dans
 `TerminalPanel.razor.css` ; la grille elle-même est dessinée par xterm.js.
+
+Accessibilité ([`accessibility.md`](accessibility.md), ADR 0105) : `TerminalPanel` lit
+`AppContext.Accessibility` à l'ouverture et suit `Changed`. La taille de police est relue du
+panneau, dont la taille en `rem` suit la taille du texte ; en contraste élevé, xterm.js reçoit une
+palette dont chaque couleur atteint 7:1 sur fond noir, un curseur et une sélection jaunes ; en
+mouvement réduit, le curseur ne clignote pas. `applyAccessibility` (objet renvoyé par
+`mountTerminal`) applique un changement et réajuste la grille.
 
 ## Utilisation au clavier
 

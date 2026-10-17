@@ -13,14 +13,13 @@
     the host can close its window. Shortcuts follow gnome-terminal.
 *@
 <div class="terminal-tabs" @ref="_rootRef" @onkeydown="HandleKeyDownAsync">
-    <div class="terminal-tab-strip" role="tablist" aria-label="@L["Tabs.Label"]">
+    <div class="terminal-tab-strip" role="group" aria-label="@L["Tabs.Label"]">
         @foreach (TerminalTabState tab in _tabs.Tabs)
         {
             bool active = tab == _tabs.Active;
             <div class="terminal-tab @(active ? "is-active" : null)" @key="tab.Id">
                 <button class="terminal-tab-select"
-                        role="tab"
-                        aria-selected="@(active ? "true" : "false")"
+                        aria-current="@(active ? "true" : null)"
                         title="@tab.Title"
                         @onclick="() => ActivateAsync(tab)">@tab.Title</button>
                 <button class="terminal-tab-close"
@@ -37,7 +36,7 @@
     <div class="terminal-tab-panels">
         @foreach (TerminalTabState tab in _tabs.Tabs)
         {
-            <div class="terminal-tab-panel @(tab == _tabs.Active ? "is-active" : null)" role="tabpanel" @key="tab.Id">
+            <div class="terminal-tab-panel @(tab == _tabs.Active ? "is-active" : null)" @key="tab.Id">
                 <TerminalPanel @ref="tab.Panel"
                                AppContext="AppContext"
                                CallerAppId="@CallerAppId"

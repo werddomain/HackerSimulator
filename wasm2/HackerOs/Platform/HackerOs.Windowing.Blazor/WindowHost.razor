@@ -6,6 +6,7 @@
 <article class="@HostClass"
          @ref="_hostElement"
          role="dialog"
+         tabindex="-1"
          aria-modal="@(Window.Modality == WindowModality.OwnerModal ? "true" : "false")"
          aria-hidden="@(IsInteractionBlocked ? "true" : "false")"
          aria-labelledby="@(ShowChrome ? TitleId : null)"
@@ -92,6 +93,9 @@
     private ElementReference _hostElement;
     private IJSObjectReference? _module;
 
+    /// <summary>Whether the window was the focused one at the previous render, to move the keyboard focus on the transition only.</summary>
+    private bool _wasFocused;
+
     private string HostClass => string.Join(
         ' ',
         "window-host",
@@ -109,6 +113,7 @@
             _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
                 "import",
                 "./_content/HackerOs.Windowing.Blazor/WindowHost.razor.js");
+            await _module.InvokeVoidAsync("trackFocus", _hostElement);
         }
 
         if (_module is not null)
@@ -127,6 +132,23 @@
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[WindowHost] Failed to project window geometry: {ex.Message}");
+            }
+
+            // A window that becomes the focused one (Alt+`, Alt+Q on the window above it, the
+            // taskbar) takes the keyboard focus too, or keyboard users are left on <body> with
+            // a window that only looks focused (ADR 0105 §4).
+            bool becameFocused = Window.IsFocused && !_wasFocused && !IsInteractionBlocked;
+            _wasFocused = Window.IsFocused;
+            if (becameFocused)
+            {
+                try
+                {
+                    await _module.InvokeVoidAsync("focusWindow", _hostElement);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[WindowHost] Failed to move the keyboard focus: {ex.Message}");
+                }
             }
         }
     }

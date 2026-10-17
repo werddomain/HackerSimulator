@@ -127,6 +127,7 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `Console` | Derrière `HackConsole` (ADR 0064). |
 | `SystemSettings`, `PermissionAdministration`, `ServerConnection`, `SystemPower`, `StorageDiagnostics`, `SystemBackup` | Derrière les façades d'administration. |
 | `WebDatabase` | Base IndexedDB `hackweb.<appId>` d'une app `Web` (`IAppWebDatabaseGateway`, ADR 0088) ; derrière `HackWebDb` du SDK web. Une autre app reçoit `UnauthorizedAccessException`. |
+| `Accessibility` | Préférences d'accessibilité effectives de la session (`IAppAccessibilityGateway` : `GetPreferencesAsync`, `Changed`, ADR 0105 §3) ; derrière `HackAccessibility`. Sans service (tests, Web Worker) : `DefaultAppAccessibilityGateway`, qui répond les valeurs par défaut. |
 | `Keyring` | Trousseau de connexion de l'utilisateur (`IAppKeyringGateway`, ADR 0100 §2) ; derrière `HackKeyring`. Toujours verrouillé hors d'une session avec mot de passe. |
 | `PermissionErrors` | Événement `PermissionDenied` à chaque refus de permission. |
 | `OneShotElevation` | Tickets d'élévation à usage unique (ADR 0042). |
@@ -234,6 +235,15 @@ fichiers), `ContainsFileDropListAsync`, `ClearAsync`, `Changed`. Capacités
 `clipboard.read` et `clipboard.write`. Le texte est partagé avec la vraie
 machine selon `/etc/hackeros/clipboard.config`. Voir [`file-explorer.md`](file-explorer.md)
 et [`clipboard.md`](clipboard.md).
+
+### Accessibilité (`HackerOs.AppSdk.Accessibility`)
+
+`HackAccessibility` : `GetPreferencesAsync()` → `HackAccessibilityPreferences(HighContrast,
+TextScale, ReducedMotion)`, déjà résolues (`auto` suit l'hôte) ; `PreferencesChanged`. Aucune
+capacité. `HackAccessibilityPreferences.Scale(pixels)` agrandit une taille en pixels ;
+`TextScales` liste `1.0`, `1.25`, `1.5`, `2.0`. Le shell applique déjà les préférences à tout ce
+qui est dessiné en HTML avec les jetons ; une app qui dessine elle-même (canvas, terminal, éditeur)
+les lit ici. Voir [`accessibility.md`](accessibility.md).
 
 ### Composants intégrables (`HackerOs.AppSdk.Components`)
 
@@ -433,6 +443,8 @@ Pour lire ou écrire un thème utilisateur (ADR 0103, détail dans
 
 `ThemeScope` et `ThemePreview` (`HackerOs.Theming.Blazor`) prennent un
 paramètre `Tokens` appliqué par-dessus le thème de base.
+`ThemeScope` prend aussi `HighContrast` et `TextScale` (ADR 0105) : attributs `data-contrast`
+(`high` ou `standard`) et `data-text-scale` (`100`, `125`, `150`, `200`), lus par `themes.css`.
 
 ## Tâches de ce document
 

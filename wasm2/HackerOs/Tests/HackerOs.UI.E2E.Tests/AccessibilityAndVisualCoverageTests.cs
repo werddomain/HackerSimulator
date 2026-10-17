@@ -15,9 +15,10 @@ namespace HackerOs.UI.E2E.Tests;
 /// (IndexedDbBrowserContractTests) was written to a temp file and deleted immediately after
 /// a non-zero-length check, leaving nothing for anyone to actually review.
 ///
-/// Manual coverage this does not attempt: keyboard-only navigation, focus traps, 200% zoom,
-/// long text, reduced motion, RTL, and screen-reader passes remain human checklist items —
-/// see docs/Human-test-needed-p2-GATE-003.md.
+/// Keyboard-only navigation, the high-contrast layer and text at 200% are covered by
+/// AccessibilityPreferencesTests (ADR 0105, docs/accessibility.md). Focus traps, long text,
+/// RTL and screen-reader passes remain human checklist items — see
+/// docs/Human-test-needed-p2-GATE-003.md.
 /// </summary>
 public sealed class AccessibilityAndVisualCoverageTests(ITestOutputHelper output)
 {

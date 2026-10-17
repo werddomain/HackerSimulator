@@ -308,6 +308,24 @@ du dernier commit de cette version, et l'ajoute au test E2E.
 dotnet test Tests/HackerOs.UI.E2E.Tests -c Release --no-build --filter "FullyQualifiedName~IndexedDbUpgradeFixtureTests"
 ```
 
+### Accessibilité (ADR 0105)
+
+Deux classes de `HackerOs.UI.E2E.Tests` lancent axe-core (Deque.AxeCore.Playwright) ; une
+violation sérieuse ou critique fait échouer, et chaque surface laisse une capture dans
+`artifacts/playwright/accessibility/` :
+
+- `AccessibilityAndVisualCoverageTests` : bureau, lanceur, explorateur, Paramètres, Code Editor,
+  Hack Paint, et un écran mobile ;
+- `AccessibilityPreferencesTests` (`v3/13`) : Terminal, navigateur, calculatrice, moniteur
+  système, Theme Editor, Paramètres > Sauvegarde et > Accessibilité, chacun sans puis avec le
+  contraste élevé ; un parcours au clavier seul (lanceur, `` Alt+` ``, `Alt+F7`, `Alt+Q`, focus
+  visible) ; et la taille du texte à 200 % sans débordement. Voir
+  [`accessibility.md`](accessibility.md).
+
+```bash
+dotnet test Tests/HackerOs.UI.E2E.Tests -c Release --no-build --filter "FullyQualifiedName~AccessibilityPreferencesTests"
+```
+
 ### État connu
 
 - **GitHub Actions** ne tourne plus (les jobs échouent sans exécuteur) : un
@@ -322,7 +340,8 @@ dotnet test Tests/HackerOs.UI.E2E.Tests -c Release --no-build --filter "FullyQua
     tests de [montée de version IndexedDB](#fixtures-de-montée-de-version-indexeddb)
     (`v3/7`, 2026-10-17, environ 1 min 20 s chacun), 20/20 après le rebase de
     `v3/7` sur `v3/3` avec `LowStorageSpaceTests` (quota de Chromium abaissé,
-    [`system-backup.md`](system-backup.md))
+    [`system-backup.md`](system-backup.md)), 24/24 avec les trois tests
+    d'accessibilité (`v3/13`, 2026-10-17, environ 16 min 30 s)
     (2026-10-16 : contraste de `--hos-text-muted` du thème HackerOS, états
     ARIA écrits en `"true"`/`"false"`, voir
     [`old/common-pitfalls.md`](old/common-pitfalls.md) §8 ; le test du choix

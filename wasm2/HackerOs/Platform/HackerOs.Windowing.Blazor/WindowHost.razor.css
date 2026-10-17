@@ -51,3 +51,9 @@
         inset: 0;
     }
 }
+
+/* The window itself takes the keyboard focus only as a fallback (no focusable content); its
+   focused border already shows it, so no extra outline around the whole window. */
+.window-host:focus {
+    outline: none;
+}
