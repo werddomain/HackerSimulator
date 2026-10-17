@@ -30,7 +30,7 @@
 }
 
 .calculator-previous-operand {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-muted, #6f838d);
     opacity: 0.8;
     min-height: 16px;
@@ -38,7 +38,7 @@
 }
 
 .calculator-current-operand {
-    font-size: 28px;
+    font-size: 1.75rem;
     font-weight: 700;
     letter-spacing: 1px;
     color: var(--hos-accent, #33ff33);
@@ -60,7 +60,7 @@
     box-shadow: var(--hos-btn-shadow, none);
     color: var(--hos-btn-color, var(--hos-text-primary, #33ff33));
     font-family: inherit;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: var(--hos-btn-font-weight, 600);
     cursor: pointer;
     transition: background var(--hos-transition-fast, 0.12s),

@@ -15,7 +15,7 @@
 }
 
 .setting-desc {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-secondary, #a8bac4);
     margin-bottom: 12px;
 }
@@ -31,7 +31,7 @@
 }
 
 .app-details-mark {
-    font-size: 26px;
+    font-size: 1.625rem;
     line-height: 1;
     color: var(--hos-accent, #42d392);
     text-shadow: 0 0 8px color-mix(in srgb, var(--hos-accent, #42d392) 45%, transparent);
@@ -39,7 +39,7 @@
 
 .app-details-meta {
     margin: 0;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-secondary, #a8bac4);
 }
 
@@ -50,7 +50,7 @@ code {
 
 .app-details-badge {
     padding: 2px 8px;
-    font-size: 11px;
+    font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--hos-accent, #42d392);
@@ -87,7 +87,7 @@ code {
 }
 
 .capability-state {
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-text-secondary, #a8bac4);
 }
 
@@ -95,7 +95,7 @@ code {
     display: flex;
     gap: 8px;
     padding: 4px 8px;
-    font-size: 12px;
+    font-size: 0.75rem;
     background: var(--hos-bg-elevated, #1b252a);
     border-radius: var(--hos-radius-sm, 0.25rem);
 }
@@ -115,7 +115,7 @@ code {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .start-mode select {
@@ -128,7 +128,7 @@ code {
 
 .apps-btn {
     padding: 5px 12px;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-primary, #f4f7f8);
     background: var(--hos-bg-elevated, #1b252a);
     border: 1px solid var(--hos-border, #3a4b53);
@@ -147,6 +147,6 @@ code {
 
 .apps-message {
     margin: 10px 0 0;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-secondary, #a8bac4);
 }

@@ -19,7 +19,7 @@
     border: 1px solid color-mix(in srgb, var(--hos-error, #ff7b72) 60%, transparent);
     background: color-mix(in srgb, var(--hos-error, #ff7b72) 10%, transparent);
     border-radius: var(--hos-radius-sm, 4px);
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 .svc-table-wrapper {
@@ -34,7 +34,7 @@
 
 .svc-id {
     display: block;
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-text-muted, #6e7681);
 }
 
@@ -42,7 +42,7 @@
     display: inline-block;
     padding: 1px 8px;
     border-radius: 10px;
-    font-size: 11px;
+    font-size: 0.6875rem;
     border: 1px solid currentColor;
 }
 
@@ -57,7 +57,7 @@
 
 .svc-health {
     display: inline-block;
-    font-size: 11px;
+    font-size: 0.6875rem;
     padding: 1px 6px;
     border-radius: 3px;
     background: color-mix(in srgb, currentColor 12%, transparent);
@@ -70,7 +70,7 @@
 
 .svc-status-text {
     display: block;
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-text-muted, #6e7681);
     max-width: 260px;
     overflow: hidden;

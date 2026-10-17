@@ -7,7 +7,7 @@
     background-color: var(--hos-window-content-background, var(--hos-bg-base, #0b0f14));
     color: var(--hos-text-primary, #c9d1d9);
     font-family: var(--hos-font-mono, 'Cascadia Mono', Consolas, monospace);
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 .wsm-header {
@@ -29,7 +29,7 @@
 
 .wsm-glyph {
     color: var(--hos-accent, #42d392);
-    font-size: 18px;
+    font-size: 1.125rem;
     text-shadow: 0 0 8px var(--hos-accent, #42d392);
 }
 
@@ -42,7 +42,7 @@
 .wsm-daemon {
     padding: 2px 8px;
     border-radius: 999px;
-    font-size: 11px;
+    font-size: 0.6875rem;
     border: 1px solid currentColor;
 }
 
@@ -74,7 +74,7 @@
     border-radius: var(--hos-btn-radius, var(--hos-radius-sm, 4px));
     padding: var(--hos-btn-padding, 4px 12px);
     font-family: inherit;
-    font-size: 12px;
+    font-size: 0.75rem;
     cursor: pointer;
     transition: background var(--hos-transition-fast, 120ms ease), border-color var(--hos-transition-fast, 120ms ease);
 }
@@ -133,7 +133,7 @@
 
 .wsm-group-title {
     padding: 4px 12px;
-    font-size: 11px;
+    font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--hos-text-secondary, #8b949e);
@@ -212,13 +212,13 @@
 
 .wsm-site-state {
     grid-area: state;
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-text-secondary, #8b949e);
 }
 
 .wsm-site-url {
     grid-area: url;
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-text-secondary, #8b949e);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -271,7 +271,7 @@
 .wsm-field > span,
 .wsm-field > legend {
     color: var(--hos-text-secondary, #8b949e);
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .wsm-field small {
@@ -326,12 +326,12 @@
 .wsm-file,
 .wsm-muted {
     color: var(--hos-text-secondary, #8b949e);
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .wsm-logs h3 {
     margin: 12px 0 6px;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-secondary, #8b949e);
 }
 
@@ -344,7 +344,7 @@
     border: 1px solid var(--hos-border-subtle, #30363d);
     border-radius: var(--hos-radius-sm, 4px);
     color: var(--hos-accent, #42d392);
-    font-size: 12px;
+    font-size: 0.75rem;
     white-space: pre;
 }
 
@@ -353,7 +353,7 @@
 }
 
 .wsm-tag {
-    font-size: 11px;
+    font-size: 0.6875rem;
     padding: 1px 6px;
     border: 1px solid var(--hos-info, #58a6ff);
     border-radius: 999px;
@@ -373,7 +373,7 @@
 
 .wsm-status {
     padding: 4px 14px;
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-text-secondary, #8b949e);
     border-top: 1px solid var(--hos-border-subtle, #30363d);
     background-color: var(--hos-bg-surface, #0f141a);

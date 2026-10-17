@@ -16,7 +16,7 @@
 }
 
 .setting-desc {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-secondary, #a8bac4);
     margin-bottom: 12px;
 }

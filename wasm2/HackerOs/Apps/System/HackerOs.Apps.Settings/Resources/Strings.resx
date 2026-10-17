@@ -39,6 +39,57 @@
   <data name="About.UserId" xml:space="preserve">
     <value>User ID:</value>
   </data>
+  <data name="Accessibility.Error.CannotRead" xml:space="preserve">
+    <value>Cannot read {0}: {1}</value>
+  </data>
+  <data name="Accessibility.Error.CannotSave" xml:space="preserve">
+    <value>Cannot save {0}: {1}</value>
+  </data>
+  <data name="Accessibility.HighContrast.Description" xml:space="preserve">
+    <value>Black surfaces, white text and a thick yellow focus outline, over every theme, user themes included.</value>
+  </data>
+  <data name="Accessibility.HighContrast.Title" xml:space="preserve">
+    <value>High contrast</value>
+  </data>
+  <data name="Accessibility.Mode.Auto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Accessibility.Mode.Off" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="Accessibility.Mode.On" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="Accessibility.ReducedMotion.AnimationsLocked" xml:space="preserve">
+    <value>An administrator set {0} and locked it: animations stay reduced whatever you choose.</value>
+  </data>
+  <data name="Accessibility.ReducedMotion.Description" xml:space="preserve">
+    <value>Stops transitions, blinking cursors and smooth scrolling.</value>
+  </data>
+  <data name="Accessibility.ReducedMotion.Title" xml:space="preserve">
+    <value>Reduce animations</value>
+  </data>
+  <data name="Accessibility.Saved" xml:space="preserve">
+    <value>Saved. The desktop applies it now.</value>
+  </data>
+  <data name="Accessibility.State.Description" xml:space="preserve">
+    <value>Your choices are saved in {0}, over the machine's defaults in {1}. "Auto" follows the settings of the computer HackerOS runs on.</value>
+  </data>
+  <data name="Accessibility.State.Off" xml:space="preserve">
+    <value>off</value>
+  </data>
+  <data name="Accessibility.State.On" xml:space="preserve">
+    <value>on</value>
+  </data>
+  <data name="Accessibility.State.Title" xml:space="preserve">
+    <value>Applied now</value>
+  </data>
+  <data name="Accessibility.TextScale.Description" xml:space="preserve">
+    <value>Enlarges the text of the desktop and of every app; the terminal and the code editor follow it.</value>
+  </data>
+  <data name="Accessibility.TextScale.Title" xml:space="preserve">
+    <value>Text size</value>
+  </data>
   <data name="Appearance.Accent.AriaLabel" xml:space="preserve">
     <value>HackerOS accent colors</value>
   </data>
@@ -47,12 +98,6 @@
   </data>
   <data name="Appearance.Accent.Title" xml:space="preserve">
     <value>HackerOS accent</value>
-  </data>
-  <data name="Appearance.Animations.Label" xml:space="preserve">
-    <value>Enable desktop transitions and micro-animations</value>
-  </data>
-  <data name="Appearance.Animations.Title" xml:space="preserve">
-    <value>Animations</value>
   </data>
   <data name="Appearance.DesktopTheme.AriaLabel" xml:space="preserve">
     <value>Desktop themes</value>
@@ -770,6 +815,9 @@
   </data>
   <data name="Tab.About" xml:space="preserve">
     <value>About System</value>
+  </data>
+  <data name="Tab.Accessibility" xml:space="preserve">
+    <value>Accessibility</value>
   </data>
   <data name="Tab.Appearance" xml:space="preserve">
     <value>Appearance</value>

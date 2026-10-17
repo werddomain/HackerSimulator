@@ -6,7 +6,7 @@
 
 .perf-section h3 {
     margin: 0 0 8px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--hos-accent, #42d392);
@@ -63,7 +63,7 @@
     justify-content: space-between;
     gap: 6px;
     font-family: var(--hos-font-mono, monospace);
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .perf-worker-name {
@@ -76,7 +76,7 @@
 }
 
 .perf-worker-state {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-accent, #42d392);
 }
 

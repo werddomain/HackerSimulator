@@ -9,7 +9,7 @@
     background: var(--hos-bg-base, #0d1114);
     color: var(--hos-text-primary, #f4f7f8);
     font-family: var(--hos-font-mono, "Cascadia Mono", "Fira Code", Consolas, monospace);
-    font-size: 14px;
+    font-size: 0.875rem;
     box-sizing: border-box;
     overflow: hidden;
 }

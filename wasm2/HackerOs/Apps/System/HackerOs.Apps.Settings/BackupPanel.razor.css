@@ -20,7 +20,7 @@
 }
 
 .setting-desc {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-secondary, #a8bac4);
     margin-bottom: 12px;
     line-height: 1.5;
@@ -34,7 +34,7 @@
 
 .backup-result {
     margin: 10px 0 0;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-primary, #f4f7f8);
 }
 
@@ -75,7 +75,7 @@
 }
 
 .restore-mode-desc {
-    font-size: 11px;
+    font-size: 0.6875rem;
     line-height: 1.4;
 }
 
@@ -121,6 +121,6 @@
 
 .dialog-error {
     margin: 0;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-error, #ff8f87);
 }

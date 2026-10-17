@@ -51,6 +51,7 @@ public sealed class AppExecutionContextFactory
     private readonly Network.Local.LocalNetworkServices? _localNetwork;
     private readonly WebData.IWebSiteDatabaseStore? _webDatabases;
     private readonly Keyring.UserKeyringService? _keyring;
+    private readonly Appearance.AccessibilityPreferenceService? _accessibility;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="grantRepository">Capability grants; each context's capability checker reads the app's grants for its user from it.</param>
@@ -125,6 +126,10 @@ public sealed class AppExecutionContextFactory
     /// The session user's keyring behind <see cref="IAppExecutionContext.Keyring"/> (ADR 0100 section 2);
     /// <see langword="null"/> leaves every app with a locked keyring.
     /// </param>
+    /// <param name="accessibility">
+    /// The session's accessibility preferences behind <see cref="IAppExecutionContext.Accessibility"/>
+    /// (ADR 0105 section 3); <see langword="null"/> gives every app the defaults.
+    /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
         IFileSystemService fileSystem,
@@ -148,7 +153,8 @@ public sealed class AppExecutionContextFactory
         SystemAdministrationGatewayServices? administration = null,
         Network.Local.LocalNetworkServices? localNetwork = null,
         WebData.IWebSiteDatabaseStore? webDatabases = null,
-        Keyring.UserKeyringService? keyring = null)
+        Keyring.UserKeyringService? keyring = null,
+        Appearance.AccessibilityPreferenceService? accessibility = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -173,6 +179,7 @@ public sealed class AppExecutionContextFactory
         _localNetwork = localNetwork;
         _webDatabases = webDatabases;
         _keyring = keyring;
+        _accessibility = accessibility;
     }
 
     /// <summary>
@@ -270,6 +277,7 @@ public sealed class AppExecutionContextFactory
             _fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise, kernelMemory: _metrics?.KernelMemory);
         AdministrationGateways administration = CreateAdministrationGateways(manifest, principal, isRootElevated, capabilities, fileSystem, language);
 
+        AppAccessibilityGateway? accessibilityGateway = _accessibility is null ? null : new AppAccessibilityGateway(_accessibility);
         AppExecutionContext context = new(
             manifest,
             instanceId ?? process.AppInstanceId.Value,
@@ -326,12 +334,15 @@ public sealed class AppExecutionContextFactory
             // ADR 0088: hackweb.<app id>, for web apps only.
             new WebData.AppWebDatabaseGateway(_webDatabases, manifest),
             // ADR 0100 section 2: the session user's keyring, confined to this app's entries.
-            _keyring is null ? null : new Keyring.AppKeyringGateway(_keyring, principal.UserId, manifest.Id, capabilities));
+            _keyring is null ? null : new Keyring.AppKeyringGateway(_keyring, principal.UserId, manifest.Id, capabilities),
+            // ADR 0105 section 3: the session's accessibility preferences, no capability needed.
+            accessibilityGateway);
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);
         clock.BindAmbientContext(context);
         catalogGateway?.BindAmbientContext(context);
+        accessibilityGateway?.BindAmbientContext(context);
         administration.SystemSettings?.BindAmbientContext(context);
         if (administration.SystemBackup is not null)
         {

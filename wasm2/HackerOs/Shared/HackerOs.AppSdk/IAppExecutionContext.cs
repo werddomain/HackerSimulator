@@ -339,6 +339,14 @@ public interface IAppExecutionContext
     /// factory overrides it.
     /// </summary>
     HackerOs.AppSdk.Keyring.IAppKeyringGateway Keyring => HackerOs.AppSdk.Keyring.UnsupportedAppKeyringGateway.Instance;
+
+    /// <summary>
+    /// Gets the session's effective accessibility preferences, behind
+    /// <see cref="Accessibility.HackAccessibility"/> (ADR 0105 section 3; no capability). Defaults to a
+    /// gateway answering the defaults so existing implementations keep compiling; the trusted platform
+    /// factory overrides it.
+    /// </summary>
+    HackerOs.AppSdk.Accessibility.IAppAccessibilityGateway Accessibility => HackerOs.AppSdk.Accessibility.DefaultAppAccessibilityGateway.Instance;
 }
 
 /// <summary>

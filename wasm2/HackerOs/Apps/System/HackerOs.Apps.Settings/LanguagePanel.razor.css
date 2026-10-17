@@ -17,7 +17,7 @@
 }
 
 .setting-desc {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-secondary, #a8bac4);
     margin-bottom: 12px;
     line-height: 1.5;
@@ -37,7 +37,7 @@
     margin: 0 0 10px;
     padding: 10px 12px;
     font-family: var(--hos-font-mono, ui-monospace, monospace);
-    font-size: 12px;
+    font-size: 0.75rem;
     background-color: var(--hos-bg-base, #101417);
     border: 1px solid var(--hos-border, #3a4b53);
     border-left: 3px solid var(--hos-accent, #42d392);
@@ -102,7 +102,7 @@
     min-width: 3.4rem;
     padding: 4px 6px;
     font-family: var(--hos-font-mono, ui-monospace, monospace);
-    font-size: 11px;
+    font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-align: center;
@@ -128,7 +128,7 @@
 
 .locale-code {
     font-family: var(--hos-font-mono, ui-monospace, monospace);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-text-secondary, #a8bac4);
     overflow-wrap: anywhere;
 }
@@ -136,7 +136,7 @@
 .language-pending {
     margin: 0 0 10px;
     font-family: var(--hos-font-mono, ui-monospace, monospace);
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-warning, #f2c66d);
 }
 
@@ -150,7 +150,7 @@
     flex-direction: column;
     gap: 2px;
     padding: 8px 12px;
-    font-size: 12px;
+    font-size: 0.75rem;
     border: 1px solid color-mix(in srgb, var(--hos-accent, #42d392) 55%, var(--hos-border, #3a4b53));
     border-radius: var(--hos-radius-sm, 0.25rem);
     background-color: color-mix(in srgb, var(--hos-accent, #42d392) 8%, var(--hos-bg-base, #101417));
@@ -169,6 +169,6 @@
 
 .dialog-error {
     margin: 0;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-error, #ff8f87);
 }

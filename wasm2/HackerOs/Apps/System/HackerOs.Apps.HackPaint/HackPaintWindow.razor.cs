@@ -1,5 +1,6 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Accessibility;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Globalization;
 using HackerOs.Simulation.Abstractions.FileSystem;
@@ -35,6 +36,7 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
     private IAppFileSystemGateway? _fileSystem;
     private string? _error;
     private string? _busyMessage;
+    private HackAccessibilityPreferences _accessibility = HackAccessibilityPreferences.Default;
     private int _jpegQuality = 92;
     private IStringLocalizer<Strings>? _localizer;
 
@@ -70,6 +72,13 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
         {
             _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/HackerOs.Apps.HackPaint/HackPaintWindow.razor.js");
             await _module.InvokeVoidAsync("guardShortcuts", _root);
+            // ADR 0105: the picture keeps its own colours; the frame and grid drawn around it follow
+            // the high-contrast preference, the busy marker the reduced-motion one.
+            AppContext.Accessibility.Changed += OnAccessibilityChanged;
+            if (await ReadAccessibilityAsync())
+            {
+                StateHasChanged();
+            }
         }
 
         if (!_launchFileHandled)
@@ -389,9 +398,33 @@ public partial class HackPaintWindow : WindowAppBase, IAsyncDisposable, IWindowC
         }
     }
 
+    /// <summary>The root's classes: the high-contrast frame and grid, and a still busy marker (ADR 0105).</summary>
+    private string RootClass =>
+        "paint-root"
+        + (_accessibility.HighContrast ? " is-high-contrast" : string.Empty)
+        + (_accessibility.ReducedMotion ? " is-reduced-motion" : string.Empty);
+
+    /// <summary>Reads the session's accessibility preferences; returns whether they changed.</summary>
+    private async Task<bool> ReadAccessibilityAsync()
+    {
+        HackAccessibilityPreferences next = await AppContext.Accessibility.GetPreferencesAsync(CancellationToken.None);
+        bool changed = next != _accessibility;
+        _accessibility = next;
+        return changed;
+    }
+
+    private void OnAccessibilityChanged(object? sender, EventArgs args) => _ = InvokeAsync(async () =>
+    {
+        if (await ReadAccessibilityAsync())
+        {
+            StateHasChanged();
+        }
+    });
+
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        AppContext.Accessibility.Changed -= OnAccessibilityChanged;
         if (_module is not null)
         {
             try

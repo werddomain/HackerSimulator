@@ -39,6 +39,57 @@
   <data name="About.UserId" xml:space="preserve">
     <value>Identifiant utilisateur :</value>
   </data>
+  <data name="Accessibility.Error.CannotRead" xml:space="preserve">
+    <value>Impossible de lire {0} : {1}</value>
+  </data>
+  <data name="Accessibility.Error.CannotSave" xml:space="preserve">
+    <value>Impossible d'enregistrer {0} : {1}</value>
+  </data>
+  <data name="Accessibility.HighContrast.Description" xml:space="preserve">
+    <value>Surfaces noires, texte blanc et contour de focus jaune épais, par-dessus tous les thèmes, y compris les thèmes utilisateur.</value>
+  </data>
+  <data name="Accessibility.HighContrast.Title" xml:space="preserve">
+    <value>Contraste élevé</value>
+  </data>
+  <data name="Accessibility.Mode.Auto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Accessibility.Mode.Off" xml:space="preserve">
+    <value>Désactivé</value>
+  </data>
+  <data name="Accessibility.Mode.On" xml:space="preserve">
+    <value>Activé</value>
+  </data>
+  <data name="Accessibility.ReducedMotion.AnimationsLocked" xml:space="preserve">
+    <value>Un administrateur a fixé {0} et l'a verrouillé : les animations restent réduites, quel que soit votre choix.</value>
+  </data>
+  <data name="Accessibility.ReducedMotion.Description" xml:space="preserve">
+    <value>Arrête les transitions, les curseurs clignotants et le défilement animé.</value>
+  </data>
+  <data name="Accessibility.ReducedMotion.Title" xml:space="preserve">
+    <value>Réduire les animations</value>
+  </data>
+  <data name="Accessibility.Saved" xml:space="preserve">
+    <value>Enregistré. Le bureau l'applique maintenant.</value>
+  </data>
+  <data name="Accessibility.State.Description" xml:space="preserve">
+    <value>Vos choix sont enregistrés dans {0}, par-dessus les valeurs par défaut de la machine dans {1}. « Auto » suit les réglages de l'ordinateur sur lequel HackerOS tourne.</value>
+  </data>
+  <data name="Accessibility.State.Off" xml:space="preserve">
+    <value>désactivé</value>
+  </data>
+  <data name="Accessibility.State.On" xml:space="preserve">
+    <value>activé</value>
+  </data>
+  <data name="Accessibility.State.Title" xml:space="preserve">
+    <value>Appliqué maintenant</value>
+  </data>
+  <data name="Accessibility.TextScale.Description" xml:space="preserve">
+    <value>Agrandit le texte du bureau et de toutes les apps ; le terminal et l'éditeur de code suivent.</value>
+  </data>
+  <data name="Accessibility.TextScale.Title" xml:space="preserve">
+    <value>Taille du texte</value>
+  </data>
   <data name="Appearance.Accent.AriaLabel" xml:space="preserve">
     <value>Couleurs d'accent HackerOS</value>
   </data>
@@ -47,12 +98,6 @@
   </data>
   <data name="Appearance.Accent.Title" xml:space="preserve">
     <value>Couleur d'accent HackerOS</value>
-  </data>
-  <data name="Appearance.Animations.Label" xml:space="preserve">
-    <value>Activer les transitions et les micro-animations du bureau</value>
-  </data>
-  <data name="Appearance.Animations.Title" xml:space="preserve">
-    <value>Animations</value>
   </data>
   <data name="Appearance.DesktopTheme.AriaLabel" xml:space="preserve">
     <value>Thèmes du bureau</value>
@@ -770,6 +815,9 @@
   </data>
   <data name="Tab.About" xml:space="preserve">
     <value>À propos du système</value>
+  </data>
+  <data name="Tab.Accessibility" xml:space="preserve">
+    <value>Accessibilité</value>
   </data>
   <data name="Tab.Appearance" xml:space="preserve">
     <value>Apparence</value>

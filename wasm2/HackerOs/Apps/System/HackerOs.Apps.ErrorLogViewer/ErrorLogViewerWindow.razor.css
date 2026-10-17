@@ -29,7 +29,7 @@
     box-shadow: var(--hos-btn-shadow, none);
     padding: var(--hos-btn-padding, 4px 12px);
     font-family: inherit;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: var(--hos-btn-font-weight, 500);
     cursor: pointer;
     transition: background var(--hos-transition-fast, 120ms ease),
@@ -64,7 +64,7 @@
 .log-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 .log-table th, .log-table td {
@@ -92,7 +92,7 @@
 .badge {
     padding: 2px 6px;
     border-radius: var(--hos-radius-sm, 4px);
-    font-size: 11px;
+    font-size: 0.6875rem;
     font-weight: bold;
 }
 
@@ -143,7 +143,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-secondary, #8b949e);
 }
 
@@ -154,7 +154,7 @@
     border-radius: var(--hos-radius-sm, 4px);
     padding: 3px 6px;
     font-family: inherit;
-    font-size: 12px;
+    font-size: 0.75rem;
     max-width: 260px;
 }
 
@@ -177,7 +177,7 @@
     color: var(--hos-error, #f85149);
     background-color: color-mix(in srgb, var(--hos-error, #ff8f87) 12%, var(--hos-bg-base, #101417));
     border-bottom: 1px solid var(--hos-border-subtle, #30363d);
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .log-time,
@@ -194,7 +194,7 @@
 
 .logviewer-status {
     padding: 4px 16px;
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-text-muted, #8b949e);
     background-color: var(--hos-toolbar-bg, var(--hos-bg-surface, #161b22));
     border-top: 1px solid var(--hos-border-subtle, #30363d);
