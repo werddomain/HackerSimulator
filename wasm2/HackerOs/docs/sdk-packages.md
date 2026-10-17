@@ -18,7 +18,7 @@ empreintes des ressources, ADR 0098 §3 à §5) sont décrites dans
 
 ## Version unique
 
-- `build/Versions.props` définit `HackerOsVersion` (aujourd'hui `1.0.0`),
+- `build/Versions.props` définit `HackerOsVersion` (aujourd'hui `1.1.0`, publiée par le chantier `v3.1/4-sdk-1-1`),
   importé par `Directory.Build.props` : chaque projet de la solution porte ce
   `Version`.
 - Avant le gel : `0.9.0-preview.<n>`. Depuis le gel du SDK 1.0 (chantier
@@ -212,11 +212,35 @@ sans paramètre pour les tests unitaires.
 ### Ruptures hors SDK
 
 Ruptures d'API publique de la plateforme, de l'hôte ou des apps de base, par
-version. Aucune depuis la 1.0.0.
+version (lignes `*REMOVED*` versées dans `Shipped` à la publication). Aucune
+app n'est touchée : ces types ne font pas partie du SDK.
 
 | Version | Paquet | Rupture | Que faire |
 |---|---|---|---|
-| — | — | — | — |
+| 1.1.0 | `HackerOs.Platform.Blazor` | `WindowGeometryPersistence.RestoreAsync` rend `SavedWindowGeometry?` au lieu de `WindowBounds?` ; `SaveAsync` prend `SavedWindowGeometry` au lieu de `(WindowBounds, isEligible)` (ADR 0116, 0122 : seules la taille et l'état agrandi sont retenus) | passer par `SavedWindowGeometry`, ou par `WindowGeometryRecorder` |
+| 1.1.0 | `HackerOs.Platform.Blazor` | `WindowGeometrySettings.Parse` rend `SavedWindowGeometry?` ; `Serialize(WindowBounds)` devient `Serialize(appId, SavedWindowGeometry)` | adapter l'appel |
+| 1.1.0 | `HackerOs.Platform.Blazor` | `WindowLaunchCoordinator.Present(...)` (deux surcharges) remplacé par `PresentAsync(...)` ; le constructeur prend maintenant l'enregistreur de géométrie | appeler `PresentAsync` ; laisser l'injection de dépendances construire le coordinateur (`AddHackerOsBrowserHost`) |
+
+## SDK 1.1
+
+Publiée par le chantier `v3.1/4-sdk-1-1` ([ADR 0117](adr/0117-sdk-window-title-and-sdk-1-1.md) §5) :
+chaque `PublicAPI.Unshipped.txt` est versé dans son `PublicAPI.Shipped.txt`
+(lignes triées, `*REMOVED*` appliqués) et `HackerOsVersion` passe à `1.1.0`.
+Ajouts du SDK, tous compatibles avec une app 1.0 (les nouveaux membres
+d'interfaces ont une implémentation par défaut) :
+
+| Bibliothèque | Ajout | Décision |
+|---|---|---|
+| `HackerOs.AppSdk.Blazor` | `WindowAppBase.SetWindowTitleAsync`, `WindowTitle`, `FormatWindowTitle`, `IAppWindowGateway` | ADR 0117, 0123 |
+| `HackerOs.App.Abstractions` | `WindowOptions.RememberGeometry` ; capacité `users.manage` | ADR 0116, 0122 ; ADR 0120 |
+| `HackerOs.AppSdk` | `HackUserAccounts`, `HackUserAccount`, `IAppUserAccountsGateway`, `IAppExecutionContext.UserAccounts`, `ITerminalInputMode`, `TerminalExecutionContext.ReadSecretLineAsync` | ADR 0120 |
+| `HackerOs.AppSdk` | `HackApps.GetDefaultHandlersAsync`, `SetDefaultHandlerAsync`, `ResetDefaultHandlerAsync`, `HackFileAssociation`, `HackFileAssociationLayer`, `HackDefaultHandlerStatus` | ADR 0121 |
+| `HackerOs.AppSdk.Terminal` | `TerminalInputReader.EchoEnabled` | ADR 0120 |
+| `HackerOs.Simulation.Abstractions` | `ILocalUserRepository.SetCredentialAsync` | ADR 0120 |
+
+Une app reconstruite contre 1.1.0 porte `sdkCompatibility.minimumVersion:
+1.1.0` et n'est plus admise par un OS 1.0. L'app de compatibilité compilée en
+1.0.0 se charge et tourne toujours sur l'OS 1.1 (voir ci-dessous).
 
 ### App de compatibilité
 
@@ -278,4 +302,5 @@ Vérifié à la main aussi : une app qui ajoute la référence
 - [x] `build/pack-local.sh` / `.ps1`, `build/nuget.config.sample`.
 - [x] Cinq modèles et leur test de bout en bout.
 - [x] Gel du SDK 1.0 (`v3/15`, ADR 0114) : tout en `Shipped`, version `1.0.0`, API obsolètes retirées, app de compatibilité et ses tests, guide [`building-on-hackeros.md`](building-on-hackeros.md).
+- [x] SDK 1.1 (`v3.1/4-sdk-1-1`, ADR 0117 §5) : `Unshipped` versé dans `Shipped`, version `1.1.0`, ruptures hors SDK listées, app de compatibilité 1.0 toujours chargée.
 - [x] Documentation (ce fichier, `app-model`, `app-sdk`, `sdk-reference`, `sdk-developer-guide`, `building-and-testing`, `project-overview`, mesure des ressources, notes des documents archivés) et index.

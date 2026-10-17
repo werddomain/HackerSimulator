@@ -741,6 +741,8 @@ HackerOs.App.Abstractions.WindowOptions.MinHeight.get -> int
 HackerOs.App.Abstractions.WindowOptions.MinHeight.init -> void
 HackerOs.App.Abstractions.WindowOptions.MinWidth.get -> int
 HackerOs.App.Abstractions.WindowOptions.MinWidth.init -> void
+HackerOs.App.Abstractions.WindowOptions.RememberGeometry.get -> bool
+HackerOs.App.Abstractions.WindowOptions.RememberGeometry.init -> void
 HackerOs.App.Abstractions.WindowOptions.Resizable.get -> bool
 HackerOs.App.Abstractions.WindowOptions.Resizable.init -> void
 HackerOs.App.Abstractions.WindowOptions.WindowOptions(int defaultWidth = 800, int defaultHeight = 560, int minWidth = 360, int minHeight = 240, int? maxWidth = null, int? maxHeight = null, bool resizable = true) -> void
@@ -784,6 +786,7 @@ const HackerOs.App.Abstractions.AppCapabilities.ShellHost = "shell.host" -> stri
 const HackerOs.App.Abstractions.AppCapabilities.SystemBackup = "system.backup" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.SystemPower = "system.power" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.SystemStorageInspect = "system.storage.inspect" -> string!
+const HackerOs.App.Abstractions.AppCapabilities.UsersManage = "users.manage" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.WindowsManage = "windows.manage" -> string!
 const HackerOs.App.Abstractions.AppIntentIds.EditFile = "org.hackeros.intent.edit-file.v1" -> string!
 const HackerOs.App.Abstractions.AppIntentIds.ExecuteCommand = "org.hackeros.intent.execute-command.v1" -> string!
@@ -943,6 +946,7 @@ virtual HackerOs.App.Abstractions.AppDefinition.Window.get -> HackerOs.App.Abstr
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.LocalizationManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.LocalizationManifest>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.NullableAppExecutionHost.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppExecutionHost?>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.NullableAppServiceStartup.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppServiceStartup?>
+~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.NullableBoolean.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<bool?>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.NullableInt32.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<int?>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.OsCompatibilityManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.OsCompatibilityManifest>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.PresentationManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.PresentationManifest>

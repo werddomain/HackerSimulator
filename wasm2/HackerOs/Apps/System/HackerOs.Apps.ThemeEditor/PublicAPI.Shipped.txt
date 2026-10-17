@@ -69,6 +69,7 @@ override HackerOs.Apps.ThemeEditor.ThemeEditorApp.Name.get -> string!
 override HackerOs.Apps.ThemeEditor.ThemeEditorApp.PublisherId.get -> string!
 override HackerOs.Apps.ThemeEditor.ThemeEditorApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 override HackerOs.Apps.ThemeEditor.ThemeEditorApp.Window.get -> HackerOs.App.Abstractions.WindowOptions?
+override HackerOs.Apps.ThemeEditor.ThemeEditorWindow.OnAppAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override HackerOs.Apps.ThemeEditor.ThemeEditorWindow.OnAppInitializedAsync() -> System.Threading.Tasks.Task!
 override HackerOs.Apps.ThemeEditor.ThemeEditorWindow.OnWindowActivatedAsync() -> System.Threading.Tasks.Task!
 static HackerOs.Apps.ThemeEditor.ThemeEditorDocument.Slugify(string! name) -> string!

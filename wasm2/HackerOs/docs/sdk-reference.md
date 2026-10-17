@@ -26,14 +26,14 @@ Conventions de l'API :
 ## Bibliothèques
 
 Toutes sont publiées en paquets NuGet locaux du même nom, à la version de
-`build/Versions.props` (`1.0.0` depuis le gel du SDK, ADR 0114) ; un autre
+`build/Versions.props` (`1.1.0` depuis la série v3.1, ADR 0117 §5 ; `1.0.0` au gel du SDK, ADR 0114) ; un autre
 dépôt les consomme comme le décrit [`building-on-hackeros.md`](building-on-hackeros.md).
 La promesse de compatibilité SemVer couvre les bibliothèques de cette page et
 `HackerOs.Theming.Blazor`, pas la plateforme (ADR 0114 §2).
 
 Cette page présente les API qu'une app utilise au quotidien ; elle n'est pas
-exhaustive. La liste complète et exacte de la surface publique 1.0 est le
-fichier `PublicAPI.Shipped.txt` de chaque projet (environ 940 types au gel),
+exhaustive. La liste complète et exacte de la surface publique 1.1 est le
+fichier `PublicAPI.Shipped.txt` de chaque projet (environ 940 types au gel de la 1.0),
 vérifié au build par l'analyseur d'API publique : un ajout va dans
 `PublicAPI.Unshipped.txt`, un retrait exige une ligne `*REMOVED*` (ADR 0114).
 
@@ -65,7 +65,7 @@ vérifié au build par l'analyseur d'API publique : un ajout va dans
 | `AppSettingsSchemaManifest(SchemaVersion, Fields)`, `AppSettingFieldManifest(Key, ValueType, DefaultValue, Scope, Sensitivity, AllowedValues, Group)` | Schéma des paramètres ; `AppSettingValueType` : `String`, `Integer`, `Boolean`, `Enum`. |
 | `AppResourceProfileManifest` | Poids CPU, mémoire, disque et réseau simulés (`None` par défaut). |
 | `AppDefinitionMapper.ToManifest(definition)` | Définition → `AppManifest` (utile dans les tests). |
-| `HackerOsSdk` | `Version` (version du SDK chargé, par exemple `1.0.0`), `SemanticVersion`, `IsCompatible(range)` (ADR 0098 §3). `AppDefinition.SdkCompatibility` déclare une plage ; par défaut, la version contre laquelle l'app est compilée est le minimum. |
+| `HackerOsSdk` | `Version` (version du SDK chargé, par exemple `1.1.0`), `SemanticVersion`, `IsCompatible(range)` (ADR 0098 §3). `AppDefinition.SdkCompatibility` déclare une plage ; par défaut, la version contre laquelle l'app est compilée est le minimum. |
 | `AppManifest` | Manifeste validé, lu par l'OS ; `AppContext.Manifest` à l'exécution. |
 | `AppCapabilities` | Catalogue des capacités (voir ci-dessous) ; `Describe`, `IsDangerous`, `GetRisk`, `IsKnown`, `RequiresWindowKind`, `All`. |
 | `VirtualPath` | Chemin absolu canonique (`Parse`, `Value`). |
@@ -481,5 +481,5 @@ paramètre `Tokens` appliqué par-dessus le thème de base.
 - [x] Thèmes utilisateur : jetons, format `.theme`, bibliothèque et résolution (`v3/11`).
 - [x] `HackSystemBackup`, `BrowserFilePicker`, codes `NoSpace` et `FileTooLarge` (16 Mio) (`v3/7`).
 - [x] Localisation : `Culture`/`FormatCulture`, `HackLocale`, `GetLocalizer<T>`, `IShellSession.GetCommands(culture)` (`v3/12`, ADR 0104).
-- [x] Titre de fenêtre : `WindowTitle`, `SetWindowTitleAsync`, `FormatWindowTitle`, `IAppWindowGateway` (`v3.1/3`, SDK 1.1, dans `PublicAPI.Unshipped.txt` jusqu'à `v3.1/4`).
+- [x] Titre de fenêtre : `WindowTitle`, `SetWindowTitleAsync`, `FormatWindowTitle`, `IAppWindowGateway` (`v3.1/3`, SDK 1.1, versé dans `PublicAPI.Shipped.txt` par `v3.1/4-sdk-1-1`).
 - [x] Relecture finale de la migration v3 (`v3/16-final`) : renvoi vers les fichiers `PublicAPI.Shipped.txt`, liste exhaustive de la surface 1.0.

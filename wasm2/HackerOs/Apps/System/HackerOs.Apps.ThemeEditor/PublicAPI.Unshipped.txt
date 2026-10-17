@@ -1,2 +1,1 @@
 #nullable enable
-override HackerOs.Apps.ThemeEditor.ThemeEditorWindow.OnAppAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!

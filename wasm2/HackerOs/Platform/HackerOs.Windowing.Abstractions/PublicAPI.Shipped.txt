@@ -53,6 +53,12 @@ HackerOs.Windowing.Abstractions.RestoreWindowCommand
 HackerOs.Windowing.Abstractions.RestoreWindowCommand.RestoreWindowCommand(HackerOs.Windowing.Abstractions.WindowId WindowId) -> void
 HackerOs.Windowing.Abstractions.RestoreWindowCommand.WindowId.get -> HackerOs.Windowing.Abstractions.WindowId
 HackerOs.Windowing.Abstractions.RestoreWindowCommand.WindowId.init -> void
+HackerOs.Windowing.Abstractions.SetWindowTitleCommand
+HackerOs.Windowing.Abstractions.SetWindowTitleCommand.SetWindowTitleCommand(HackerOs.Windowing.Abstractions.WindowId WindowId, string! Title) -> void
+HackerOs.Windowing.Abstractions.SetWindowTitleCommand.Title.get -> string!
+HackerOs.Windowing.Abstractions.SetWindowTitleCommand.Title.init -> void
+HackerOs.Windowing.Abstractions.SetWindowTitleCommand.WindowId.get -> HackerOs.Windowing.Abstractions.WindowId
+HackerOs.Windowing.Abstractions.SetWindowTitleCommand.WindowId.init -> void
 HackerOs.Windowing.Abstractions.WindowBounds
 HackerOs.Windowing.Abstractions.WindowBounds.Height.get -> double
 HackerOs.Windowing.Abstractions.WindowBounds.Width.get -> double
@@ -145,6 +151,15 @@ HackerOs.Windowing.Abstractions.WindowRuntimeState.Title.get -> string!
 HackerOs.Windowing.Abstractions.WindowRuntimeState.VisualState.get -> HackerOs.Windowing.Abstractions.WindowVisualState
 HackerOs.Windowing.Abstractions.WindowRuntimeState.WindowRuntimeState(HackerOs.Windowing.Abstractions.WindowId id, string! appId, HackerOs.Windowing.Abstractions.WindowOwnerId ownerInstanceId, string! title, string? iconAssetPath, HackerOs.Windowing.Abstractions.WindowBounds bounds, HackerOs.Windowing.Abstractions.WindowBounds? restoreBounds, int zOrder, HackerOs.Windowing.Abstractions.WindowVisualState visualState, HackerOs.Windowing.Abstractions.WindowConstraints! constraints, HackerOs.Windowing.Abstractions.WindowModality modality = HackerOs.Windowing.Abstractions.WindowModality.Modeless, HackerOs.Windowing.Abstractions.WindowId? ownerId = null, bool isFocused = false, Microsoft.AspNetCore.Components.RenderFragment? content = null, System.Func<System.Threading.Tasks.Task!>? onRequestClose = null, bool supportsBack = false) -> void
 HackerOs.Windowing.Abstractions.WindowRuntimeState.ZOrder.get -> int
+HackerOs.Windowing.Abstractions.WindowTitleChangedEvent
+HackerOs.Windowing.Abstractions.WindowTitleChangedEvent.PreviousTitle.get -> string!
+HackerOs.Windowing.Abstractions.WindowTitleChangedEvent.PreviousTitle.init -> void
+HackerOs.Windowing.Abstractions.WindowTitleChangedEvent.Title.get -> string!
+HackerOs.Windowing.Abstractions.WindowTitleChangedEvent.Title.init -> void
+HackerOs.Windowing.Abstractions.WindowTitleChangedEvent.WindowId.get -> HackerOs.Windowing.Abstractions.WindowId
+HackerOs.Windowing.Abstractions.WindowTitleChangedEvent.WindowId.init -> void
+HackerOs.Windowing.Abstractions.WindowTitleChangedEvent.WindowTitleChangedEvent(HackerOs.Windowing.Abstractions.WindowId WindowId, string! PreviousTitle, string! Title) -> void
+HackerOs.Windowing.Abstractions.WindowTitles
 HackerOs.Windowing.Abstractions.WindowViewportChangedEvent
 HackerOs.Windowing.Abstractions.WindowViewportChangedEvent.WindowViewportChangedEvent(HackerOs.Windowing.Abstractions.WindowBounds WorkArea, System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowRuntimeState!>! Windows) -> void
 HackerOs.Windowing.Abstractions.WindowViewportChangedEvent.Windows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowRuntimeState!>!
@@ -167,7 +182,11 @@ HackerOs.Windowing.Abstractions.WindowVisualStateChangedEvent.State.init -> void
 HackerOs.Windowing.Abstractions.WindowVisualStateChangedEvent.WindowId.get -> HackerOs.Windowing.Abstractions.WindowId
 HackerOs.Windowing.Abstractions.WindowVisualStateChangedEvent.WindowId.init -> void
 HackerOs.Windowing.Abstractions.WindowVisualStateChangedEvent.WindowVisualStateChangedEvent(HackerOs.Windowing.Abstractions.WindowId WindowId, HackerOs.Windowing.Abstractions.WindowVisualState PreviousState, HackerOs.Windowing.Abstractions.WindowVisualState State, HackerOs.Windowing.Abstractions.WindowBounds Bounds, HackerOs.Windowing.Abstractions.WindowBounds? RestoreBounds) -> void
+const HackerOs.Windowing.Abstractions.WindowTitles.Ellipsis = '…' -> char
+const HackerOs.Windowing.Abstractions.WindowTitles.MaxLength = 256 -> int
 override HackerOs.Windowing.Abstractions.WindowId.ToString() -> string!
 override HackerOs.Windowing.Abstractions.WindowOwnerId.ToString() -> string!
 static HackerOs.Windowing.Abstractions.WindowId.FromGuid(System.Guid value) -> HackerOs.Windowing.Abstractions.WindowId
 static HackerOs.Windowing.Abstractions.WindowOwnerId.FromGuid(System.Guid value) -> HackerOs.Windowing.Abstractions.WindowOwnerId
+static HackerOs.Windowing.Abstractions.WindowTitles.Sanitize(string? title) -> string!
+static HackerOs.Windowing.Abstractions.WindowTitles.SanitizeOrDefault(string? title, string! defaultTitle) -> string!
