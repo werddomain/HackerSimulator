@@ -107,6 +107,7 @@ internal sealed class RemoteProcessSession
     public void Attach()
     {
         _context.StopRequested += OnStopRequested;
+        _context.IntentReceived += OnIntentReceived;
         _context.PermissionErrors.PermissionDenied += OnPermissionDenied;
         if (_context.StopRequest is { } already)
         {
@@ -119,6 +120,19 @@ internal sealed class RemoteProcessSession
             CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
+    }
+
+    /// <summary>Forwards an intent the OS handed to this running process to its worker (ADR 0096, section 5).</summary>
+    private void OnIntentReceived(object? sender, AppIntentDelivery delivery)
+    {
+        if (!HasEnded)
+        {
+            _worker.Post(WorkerMessage.Create(WorkerMessageType.Intent, writer =>
+            {
+                writer.WriteNumber("p", Pid);
+                WireCodec.WriteIntentDelivery(writer, "it", delivery);
+            }));
+        }
     }
 
     /// <summary>Ctrl+C: cancels the process token in the worker.</summary>
@@ -262,6 +276,7 @@ internal sealed class RemoteProcessSession
     private void End(RemoteProcessExit exit)
     {
         _context.StopRequested -= OnStopRequested;
+        _context.IntentReceived -= OnIntentReceived;
         _context.PermissionErrors.PermissionDenied -= OnPermissionDenied;
         List<FileSystemContentReadHandle> reads;
         List<CancellationTokenSource> calls;
@@ -662,6 +677,33 @@ internal sealed class RemoteProcessSession
             {
                 AppIntentOpenFileResult result = await c.Intents.OpenFileAsync(WireCodec.ReadPath(a, "p"), a.GetOptionalString("mt"), cancellationToken).ConfigureAwait(false);
                 return writer => WireCodec.WriteOpenFileResult(writer, result);
+            }
+            case RemoteOps.IntentEditFile:
+            {
+                AppIntentOpenFileResult result = await c.Intents.EditFileAsync(WireCodec.ReadPath(a, "p"), a.GetOptionalString("mt"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteOpenFileResult(writer, result);
+            }
+            case RemoteOps.IntentReveal:
+            {
+                AppIntentResult result = await c.Intents.RevealFileAsync(WireCodec.ReadPath(a, "p"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteIntentResult(writer, result);
+            }
+            case RemoteOps.IntentOpenUri:
+            {
+                AppIntentResult result = await c.Intents.OpenUriAsync(new Uri(a.GetString("u"), UriKind.Absolute), a.GetOptionalString("app"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteIntentResult(writer, result);
+            }
+            case RemoteOps.IntentShowSettings:
+            {
+                AppIntentResult result = await c.Intents.ShowAppSettingsAsync(a.GetString("id"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteIntentResult(writer, result);
+            }
+            case RemoteOps.IntentSend:
+            {
+                AppIntentResult result = await c.Intents.SendIntentAsync(
+                    a.GetString("id"), a.GetOptionalString("pl"), a.GetOptionalString("app"),
+                    a.TryGetProperty("rm", out _) && a.GetFlag("rm"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteIntentResult(writer, result);
             }
             case RemoteOps.ClipboardGetText:
             {

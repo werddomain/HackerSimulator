@@ -27,6 +27,12 @@ internal static class WorkerMessageType
     /// <summary><c>SIGKILL</c> while the worker still answers (escalation step 3): drop the process.</summary>
     public const string Kill = "kill";
 
+    /// <summary>
+    /// An intent for an already running process <c>p</c> (ADR 0096, section 5): the second activation
+    /// of a single-instance service, raised as <c>IntentReceived</c>.
+    /// </summary>
+    public const string Intent = "intent";
+
     /// <summary>Run <c>OnStoppingAsync</c> of a hosted service (logout, shutdown, disable).</summary>
     public const string ServiceStop = "sstop";
 

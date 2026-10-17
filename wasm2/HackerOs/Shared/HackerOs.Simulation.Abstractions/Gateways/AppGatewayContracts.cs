@@ -338,8 +338,50 @@ public enum AppIntentOpenFileOutcome
 /// <param name="Outcome">Stable resolution outcome.</param>
 /// <param name="CandidateAppIds">Every candidate app ID considered, populated only for <see cref="AppIntentOpenFileOutcome.ChooserRequired"/>.</param>
 /// <param name="ErrorCode">Stable machine-readable error code when the outcome did not succeed.</param>
+/// <param name="FellBackToOpen">
+/// For <see cref="IAppIntentGateway.EditFileAsync"/>: no handler declares <c>edit</c>, so the file was
+/// resolved among the <c>open</c> handlers instead (ADR 0096, section 2).
+/// </param>
 public sealed record AppIntentOpenFileResult(
     AppIntentOpenFileOutcome Outcome,
+    IReadOnlyList<string>? CandidateAppIds = null,
+    string? ErrorCode = null,
+    bool FellBackToOpen = false);
+
+/// <summary>Identifies the stable outcome of one reveal, URI, app-settings or app-defined intent (ADR 0096).</summary>
+public enum AppIntentOutcome
+{
+    /// <summary>The handler was launched, or the running single instance received the intent.</summary>
+    Dispatched,
+
+    /// <summary>Several apps can handle it and none is the default: the caller asks the user, then sends again with a target.</summary>
+    ChooserRequired,
+
+    /// <summary>No installed app handles it (no folder handler, no handler for the URI scheme, nobody declares the intent).</summary>
+    NoHandler,
+
+    /// <summary>The file, folder or target app does not exist.</summary>
+    NotFound,
+
+    /// <summary>The acting user may not read what the intent points at.</summary>
+    AccessDenied,
+
+    /// <summary>The target app is uninstalled.</summary>
+    Disabled,
+
+    /// <summary>The request itself is malformed: identifier, URI or payload.</summary>
+    Invalid,
+
+    /// <summary>The handler's entry point faulted while starting.</summary>
+    Faulted
+}
+
+/// <summary>Contains the result of one reveal, URI, app-settings or app-defined intent (ADR 0096).</summary>
+/// <param name="Outcome">Stable outcome.</param>
+/// <param name="CandidateAppIds">The apps to choose from, for <see cref="AppIntentOutcome.ChooserRequired"/>.</param>
+/// <param name="ErrorCode">Stable machine-readable error code when the outcome did not succeed (e.g. <c>intent.open-uri.no-handler</c>).</param>
+public sealed record AppIntentResult(
+    AppIntentOutcome Outcome,
     IReadOnlyList<string>? CandidateAppIds = null,
     string? ErrorCode = null);
 
@@ -378,6 +420,66 @@ public interface IAppIntentGateway
     /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
     ValueTask<AppIntentOpenFileResult> OpenFileAsync(
         VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Requests that a file be edited (ADR 0096, section 2): resolved like <see cref="OpenFileAsync"/>
+    /// among the handlers declaring <c>edit</c>, or among the <c>open</c> handlers when none does
+    /// (<see cref="AppIntentOpenFileResult.FellBackToOpen"/>).
+    /// </summary>
+    /// <param name="path">Canonical virtual filesystem path to edit.</param>
+    /// <param name="mediaType">Caller-supplied media type when already known.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
+    ValueTask<AppIntentOpenFileResult> EditFileAsync(
+        VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This intents gateway does not support editing files.");
+
+    /// <summary>
+    /// Requests that the default folder handler open the parent of <paramref name="path"/> and select
+    /// it (ADR 0096, section 1; <c>org.freedesktop.FileManager1.ShowItems</c>): the handler starts with
+    /// <c>&lt;parent&gt; --select=&lt;path&gt;</c>.
+    /// </summary>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
+    ValueTask<AppIntentResult> RevealFileAsync(VirtualPath path, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This intents gateway does not support revealing files.");
+
+    /// <summary>
+    /// Requests that a URI be opened by the handler of its scheme (ADR 0096, section 3), the media
+    /// type <c>x-scheme-handler/&lt;scheme&gt;</c>; <c>file://</c> opens the file.
+    /// </summary>
+    /// <param name="uri">Absolute URI.</param>
+    /// <param name="preferredAppId">The app to use, when the caller already chose one.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
+    ValueTask<AppIntentResult> OpenUriAsync(Uri uri, string? preferredAppId = null, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This intents gateway does not support opening URIs.");
+
+    /// <summary>
+    /// Requests an app's settings (ADR 0096, section 4): the app itself with <c>--show-settings</c>
+    /// when it declares the intent, otherwise the app's page in Settings (<c>--app=&lt;id&gt;</c>).
+    /// </summary>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
+    ValueTask<AppIntentResult> ShowAppSettingsAsync(string appId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This intents gateway does not support showing app settings.");
+
+    /// <summary>
+    /// Sends an app-defined intent (ADR 0096, section 5) to the installed apps declaring
+    /// <paramref name="intentId"/>: the only one, the remembered choice, or
+    /// <see cref="AppIntentOutcome.ChooserRequired"/> with the candidates.
+    /// </summary>
+    /// <param name="intentId">Well-formed identifier, <c>domain.reversed.name.vN</c>.</param>
+    /// <param name="payloadJson">Optional JSON object of at most 64 KiB.</param>
+    /// <param name="targetAppId">The app to deliver to, when the caller already chose one.</param>
+    /// <param name="rememberChoice">With <paramref name="targetAppId"/>: "always use" this app for this intent.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
+    ValueTask<AppIntentResult> SendIntentAsync(
+        string intentId,
+        string? payloadJson,
+        string? targetAppId = null,
+        bool rememberChoice = false,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This intents gateway does not support app-defined intents.");
 }
 
 /// <summary>Identifies the stable outcome of one <see cref="IAppServiceControlGateway"/> request.</summary>

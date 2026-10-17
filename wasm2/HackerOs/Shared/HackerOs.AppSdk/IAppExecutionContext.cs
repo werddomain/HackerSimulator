@@ -136,6 +136,26 @@ public interface IAppExecutionContext
     IAppIntentGateway Intents => new UnsupportedAppIntentGateway();
 
     /// <summary>
+    /// Gets the intent this process was started for (ADR 0096, section 5): an app-defined intent
+    /// with its payload, or the OS intent that launched it. <see langword="null"/> for a plain launch.
+    /// Defaults to <see langword="null"/> so existing implementations keep compiling; the trusted
+    /// platform factory sets it from the launch.
+    /// </summary>
+    AppIntentDelivery? Intent => null;
+
+    /// <summary>
+    /// Raised when the OS hands an intent to this already running instance instead of starting a new
+    /// one: a <see cref="AppManifest.SingleInstancePerUser"/> window app or a service, like a second
+    /// <c>GApplication</c> activation (ADR 0096, section 5). Defaults to an event that is never
+    /// raised; the trusted platform factory overrides it.
+    /// </summary>
+    event EventHandler<AppIntentDelivery>? IntentReceived
+    {
+        add { }
+        remove { }
+    }
+
+    /// <summary>
     /// Gets this instance's authorized directory-change watch gateway. Defaults to an unsupported
     /// gateway so existing <see cref="IAppExecutionContext"/> implementations that predate this member
     /// keep compiling; the trusted platform factory overrides it with a real implementation.

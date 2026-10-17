@@ -98,6 +98,9 @@ public sealed class WorkerProcessHost
                 case WorkerMessageType.Kill:
                     Kill(root.GetInt64("p"));
                     break;
+                case WorkerMessageType.Intent:
+                    Find(root)?.Context.DeliverIntent(WireCodec.ReadIntentDelivery(root.GetProperty("it")));
+                    break;
                 case WorkerMessageType.ServiceStop:
                     Find(root)?.StopService((ServiceStopReason)root.GetInt32("r"));
                     break;
@@ -250,7 +253,8 @@ public sealed class WorkerProcessHost
             environment.GetString("cwd"),
             WireCodec.ReadDictionary(environment, "vars"),
             environment.GetString("user"),
-            environment.GetString("host"));
+            environment.GetString("host"),
+            identity.GetOptional("it") is { } intent ? WireCodec.ReadIntentDelivery(intent) : null);
 
         WorkerProcess process = new(this, pid, snapshot, root.GetFlag("in"), _clock);
         lock (_gate)

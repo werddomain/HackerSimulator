@@ -843,12 +843,62 @@ internal static class WireCodec
         {
             writer.WriteString("ec", code);
         }
+
+        if (result.FellBackToOpen)
+        {
+            writer.WriteBoolean("fb", true);
+        }
     }
 
     public static AppIntentOpenFileResult ReadOpenFileResult(JsonElement element) => new(
         (AppIntentOpenFileOutcome)element.GetInt32("oc"),
         element.TryGetProperty("ca", out _) ? ReadStrings(element, "ca") : null,
+        element.GetOptionalString("ec"),
+        element.TryGetProperty("fb", out _) && element.GetFlag("fb"));
+
+    public static void WriteIntentResult(Utf8JsonWriter writer, AppIntentResult result)
+    {
+        writer.WriteNumber("oc", (int)result.Outcome);
+        if (result.CandidateAppIds is { } candidates)
+        {
+            WriteStrings(writer, "ca", candidates);
+        }
+
+        if (result.ErrorCode is { } code)
+        {
+            writer.WriteString("ec", code);
+        }
+    }
+
+    public static AppIntentResult ReadIntentResult(JsonElement element) => new(
+        (AppIntentOutcome)element.GetInt32("oc"),
+        element.TryGetProperty("ca", out _) ? ReadStrings(element, "ca") : null,
         element.GetOptionalString("ec"));
+
+    /// <summary>Writes one intent delivered to a process (ADR 0096, section 5) as the object <paramref name="name"/>.</summary>
+    public static void WriteIntentDelivery(Utf8JsonWriter writer, string name, AppIntentDelivery delivery)
+    {
+        writer.WriteStartObject(name);
+        writer.WriteString("id", delivery.IntentId);
+        if (delivery.PayloadJson is { } payload)
+        {
+            writer.WriteString("pl", payload);
+        }
+
+        if (delivery.SenderAppId is { } sender)
+        {
+            writer.WriteString("snd", sender);
+        }
+
+        WriteStrings(writer, "ar", delivery.Arguments);
+        writer.WriteEndObject();
+    }
+
+    public static AppIntentDelivery ReadIntentDelivery(JsonElement element) =>
+        new(element.GetString("id"), element.GetOptionalString("pl"), element.GetOptionalString("snd"))
+        {
+            Arguments = ReadStrings(element, "ar")
+        };
 
     public static void WriteClipboardFiles(Utf8JsonWriter writer, HackClipboardFileList? files)
     {

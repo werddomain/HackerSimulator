@@ -66,6 +66,11 @@ internal static class RemoteOps
     public const string Drives = "drv.list";
     public const string IntentLaunch = "int.launch";
     public const string IntentOpenFile = "int.open";
+    public const string IntentEditFile = "int.edit";
+    public const string IntentReveal = "int.reveal";
+    public const string IntentOpenUri = "int.uri";
+    public const string IntentShowSettings = "int.settings";
+    public const string IntentSend = "int.send";
     public const string ClipboardGetText = "clip.get";
     public const string ClipboardSetText = "clip.set";
     public const string ClipboardGetFiles = "clip.getfiles";
