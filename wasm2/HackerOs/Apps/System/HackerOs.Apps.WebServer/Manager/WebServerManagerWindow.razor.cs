@@ -4,6 +4,8 @@ using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Net.Hosting;
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.WebServer.Manager;
 
@@ -20,6 +22,11 @@ namespace HackerOs.Apps.WebServer.Manager;
 /// </remarks>
 public partial class WebServerManagerWindow
 {
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The Manager's texts in its own process's language (ADR 0104); site files, logs and paths are not translated.</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
     private readonly CancellationTokenSource _lifetime = new();
     private WebServerSnapshot? _snapshot;
     private WebSiteRow? _selected;
@@ -43,20 +50,20 @@ public partial class WebServerManagerWindow
         get
         {
             IReadOnlyList<WebSiteRow> rows = _snapshot?.Rows ?? [];
-            yield return ("System", "/etc/hackweb/sites", [.. rows.Where(static row => row.Declaration?.Scope == HackWebSiteScope.System)]);
-            yield return ("My sites", "~/.config/hackweb/sites", [.. rows.Where(static row => row.Declaration?.Scope == HackWebSiteScope.User)]);
-            yield return ("External", "web apps, read-only", [.. rows.Where(static row => row.State == WebSiteState.External)]);
+            yield return (L["Group.System"], "/etc/hackweb/sites", [.. rows.Where(static row => row.Declaration?.Scope == HackWebSiteScope.System)]);
+            yield return (L["Group.User"], "~/.config/hackweb/sites", [.. rows.Where(static row => row.Declaration?.Scope == HackWebSiteScope.User)]);
+            yield return (L["Group.External"], L["Group.External.Hint"], [.. rows.Where(static row => row.State == WebSiteState.External)]);
         }
     }
 
     private string DaemonText => _snapshot?.Daemon switch
     {
-        null => "hackwebd not installed",
-        { ProcessId: { } pid } => $"hackwebd running · pid {pid}",
-        _ => "hackwebd stopped"
+        null => L["Daemon.NotInstalled"],
+        { ProcessId: { } pid } => L["Daemon.Running", pid],
+        _ => L["Daemon.Stopped"]
     };
 
-    private string DaemonTitle => _snapshot?.Daemon?.StartType is { } mode ? $"start type: {mode}" : "systemctl status hackwebd";
+    private string DaemonTitle => _snapshot?.Daemon?.StartType is { } mode ? L["Daemon.StartType", mode] : "systemctl status hackwebd";
 
     private string DaemonClass => _snapshot?.Daemon?.ProcessId is null ? "wsm-daemon-down" : "wsm-daemon-up";
 
@@ -68,13 +75,13 @@ public partial class WebServerManagerWindow
         {
             if (_snapshot is null)
             {
-                return "Loading…";
+                return L["Status.Loading"];
             }
 
             int declared = _snapshot.Rows.Count(static row => row.Declaration is not null);
             int running = _snapshot.Rows.Count(static row => row.State == WebSiteState.Running);
             int external = _snapshot.Rows.Count(static row => row.State == WebSiteState.External);
-            return $"{declared} hosted site(s), {running} running · {external} external · {_snapshot.Listeners.Count} listening socket(s)";
+            return L["Status.Summary", Count("Status.Hosted", declared), Count("Status.Running", running), Count("Status.External", external), Count("Status.Sockets", _snapshot.Listeners.Count)];
         }
     }
 
@@ -101,7 +108,7 @@ public partial class WebServerManagerWindow
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            ShowMessage($"Cannot read the sites: {exception.Message}", error: true);
+            ShowMessage(L["Message.ReadFailed", exception.Message], error: true);
         }
     }
 
@@ -126,7 +133,7 @@ public partial class WebServerManagerWindow
         _selected = null;
         _tab = DetailTab.Settings;
         _editor = SiteEditor.FromNew(suggested);
-        ShowMessage($"New site for {folder}: check the name and the address, then Save.", error: false);
+        ShowMessage(L["Message.NewSite", folder], error: false);
         await ValidateAsync();
     }
 
@@ -175,7 +182,7 @@ public partial class WebServerManagerWindow
 
         SelectFolderDialogResult result = await SelectFolderAsync(new SelectFolderDialogRequest
         {
-            Title = "Site root folder",
+            Title = L["Dialog.RootFolder"],
             InitialDirectory = TryParse(_editor.Root),
             AllowCreateFolder = true
         });
@@ -202,7 +209,7 @@ public partial class WebServerManagerWindow
         try
         {
             string path = await WebSiteStore.SaveAsync(editor.ToSite(), editor.Scope, editor.OriginalPath, _lifetime.Token);
-            ShowMessage($"Saved {path}. hackwebd applies it now.", error: false);
+            ShowMessage(L["Message.Saved", path], error: false);
             await RefreshAsync();
             _selected = _snapshot?.Rows.FirstOrDefault(row => row.Declaration?.Path == path);
             _editor = _selected?.Declaration is { } declaration ? SiteEditor.From(declaration) : null;
@@ -210,12 +217,12 @@ public partial class WebServerManagerWindow
         catch (UnauthorizedAccessException)
         {
             ShowMessage(editor.Scope == HackWebSiteScope.System
-                ? "Writing /etc/hackweb/sites needs an administrator. Once one has approved the action, press Save again."
-                : "Access denied while writing the site file.", error: true);
+                ? L["Message.SaveNeedsAdmin"]
+                : L["Message.SaveDenied"], error: true);
         }
         catch (Exception exception) when (exception is IOException or ArgumentException)
         {
-            ShowMessage($"Cannot save: {exception.Message}", error: true);
+            ShowMessage(L["Message.SaveFailed", exception.Message], error: true);
         }
     }
 
@@ -238,8 +245,8 @@ public partial class WebServerManagerWindow
         }
 
         MessageBoxDialogResult answer = await MessageBox(
-            "Delete site",
-            $"Delete {declaration.Path}? hackwebd stops serving '{declaration.Name}' at once. The site's files are kept.",
+            L["Dialog.Delete.Title"],
+            L["Dialog.Delete.Message", declaration.Path, declaration.Name],
             MessageBoxType.YesNo);
         if (answer.Result != MessageBoxResult.Yes)
         {
@@ -249,18 +256,18 @@ public partial class WebServerManagerWindow
         try
         {
             await WebSiteStore.DeleteAsync(declaration, _lifetime.Token);
-            ShowMessage($"Deleted {declaration.Path}.", error: false);
+            ShowMessage(L["Message.Deleted", declaration.Path], error: false);
             _selected = null;
             _editor = null;
             await RefreshAsync();
         }
         catch (UnauthorizedAccessException)
         {
-            ShowMessage("Deleting a system site needs an administrator. Once one has approved the action, press Delete again.", error: true);
+            ShowMessage(L["Message.DeleteNeedsAdmin"], error: true);
         }
         catch (IOException exception)
         {
-            ShowMessage($"Cannot delete: {exception.Message}", error: true);
+            ShowMessage(L["Message.DeleteFailed", exception.Message], error: true);
         }
     }
 
@@ -277,7 +284,7 @@ public partial class WebServerManagerWindow
         }
         catch (Exception exception) when (exception is HackAppLaunchException or UnauthorizedAccessException)
         {
-            ShowMessage($"Cannot open the browser: {exception.Message}", error: true);
+            ShowMessage(L["Message.BrowserFailed", exception.Message], error: true);
         }
     }
 
@@ -292,17 +299,17 @@ public partial class WebServerManagerWindow
         (_accessLines, _errorLines) = await WebSiteStore.ReadLogsAsync(_editor.OriginalName ?? _editor.Name, cancellationToken: _lifetime.Token);
     }
 
-    private Task StartDaemonAsync() => ControlDaemonAsync(static (service, token) => service.StartAsync(token), "started");
+    private Task StartDaemonAsync() => ControlDaemonAsync(static (service, token) => service.StartAsync(token), "Message.Daemon.Started");
 
-    private Task StopDaemonAsync() => ControlDaemonAsync(static (service, token) => service.StopAsync(token), "stopped");
+    private Task StopDaemonAsync() => ControlDaemonAsync(static (service, token) => service.StopAsync(token), "Message.Daemon.Stopped");
 
     private Task RestartDaemonAsync() => ControlDaemonAsync(static async (service, token) =>
     {
         await service.StopAsync(token);
         await service.StartAsync(token);
-    }, "restarted");
+    }, "Message.Daemon.Restarted");
 
-    private async Task ControlDaemonAsync(Func<AppSdk.ServiceProcess.HackServiceController, CancellationToken, Task> action, string done)
+    private async Task ControlDaemonAsync(Func<AppSdk.ServiceProcess.HackServiceController, CancellationToken, Task> action, string doneKey)
     {
         if (_snapshot?.Daemon is not { } daemon)
         {
@@ -312,15 +319,18 @@ public partial class WebServerManagerWindow
         try
         {
             await action(daemon, _lifetime.Token);
-            ShowMessage($"hackwebd {done}.", error: false);
+            ShowMessage(L[doneKey], error: false);
         }
         catch (Exception exception) when (exception is InvalidOperationException or UnauthorizedAccessException)
         {
-            ShowMessage($"hackwebd: {exception.Message}", error: true);
+            ShowMessage(L["Message.Daemon.Failed", exception.Message], error: true);
         }
 
         await RefreshAsync();
     }
+
+    /// <summary>A counted text of the status bar, singular or plural by the process's language.</summary>
+    private string Count(string key, int count) => Strings.Count(L, key, count);
 
     private void ShowMessage(string message, bool error)
     {
@@ -328,14 +338,14 @@ public partial class WebServerManagerWindow
         _messageIsError = error;
     }
 
-    private static string StateLabel(WebSiteState state) => state switch
+    private string StateLabel(WebSiteState state) => state switch
     {
-        WebSiteState.Running => "running",
-        WebSiteState.Partial => "partly bound",
-        WebSiteState.Down => "not listening",
-        WebSiteState.Stopped => "stopped",
-        WebSiteState.Invalid => "invalid file",
-        _ => "external"
+        WebSiteState.Running => L["State.Running"],
+        WebSiteState.Partial => L["State.Partial"],
+        WebSiteState.Down => L["State.Down"],
+        WebSiteState.Stopped => L["State.Stopped"],
+        WebSiteState.Invalid => L["State.Invalid"],
+        _ => L["State.External"]
     };
 
     private static VirtualPath? TryParse(string path)

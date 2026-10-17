@@ -8,12 +8,19 @@ using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.CodeEditor;
 
 /// <summary>Code-behind of the Explorer view: selection, inline creation, context menu entries, rename tracking.</summary>
 public partial class CodeEditorExplorer
 {
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The Code Editor's texts in its own process's language (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
     private FileView? _fileView;
     private ElementReference _createInput;
     private CreationKind? _creating;
@@ -96,8 +103,8 @@ public partial class CodeEditorExplorer
                 // Replaces FileView's "New Folder" (it creates "New Folder" then renames) with
                 // VS Code's pair, the name typed first.
                 items.Remove("new-folder");
-                items.Add(Item("explorer-new-file", "New File...", "file-plus", () => BeginCreateAsync(CreationKind.File, Workspace?.Root)));
-                items.Add(Item("explorer-new-folder", "New Folder...", "folder-plus", () => BeginCreateAsync(CreationKind.Folder, Workspace?.Root)));
+                items.Add(Item("explorer-new-file", L["Explorer.NewFile.Title"], "file-plus", () => BeginCreateAsync(CreationKind.File, Workspace?.Root)));
+                items.Add(Item("explorer-new-folder", L["Explorer.NewFolder.Title"], "folder-plus", () => BeginCreateAsync(CreationKind.Folder, Workspace?.Root)));
             }),
             new MenuProvider(FileViewContextMenuScope.Directory, (context, items) =>
             {
@@ -106,10 +113,10 @@ public partial class CodeEditorExplorer
                     return;
                 }
 
-                items.Add(Item("explorer-new-file", "New File...", "file-plus", () => BeginCreateAsync(CreationKind.File, folder.FullPath), separator: true));
-                items.Add(Item("explorer-new-folder", "New Folder...", "folder-plus", () => BeginCreateAsync(CreationKind.Folder, folder.FullPath)));
-                items.Add(Item("explorer-find-in-folder", "Find in Folder...", "search", () => OnFindInFolder.InvokeAsync(folder.FullPath)));
-                items.Add(Item("explorer-open-in-terminal", "Open in Integrated Terminal", "terminal", () => OnOpenInTerminal.InvokeAsync(folder.FullPath)));
+                items.Add(Item("explorer-new-file", L["Explorer.NewFile.Title"], "file-plus", () => BeginCreateAsync(CreationKind.File, folder.FullPath), separator: true));
+                items.Add(Item("explorer-new-folder", L["Explorer.NewFolder.Title"], "folder-plus", () => BeginCreateAsync(CreationKind.Folder, folder.FullPath)));
+                items.Add(Item("explorer-find-in-folder", L["Explorer.FindInFolder"], "search", () => OnFindInFolder.InvokeAsync(folder.FullPath)));
+                items.Add(Item("explorer-open-in-terminal", L["Explorer.OpenInTerminal"], "terminal", () => OnOpenInTerminal.InvokeAsync(folder.FullPath)));
             })
         ];
     }

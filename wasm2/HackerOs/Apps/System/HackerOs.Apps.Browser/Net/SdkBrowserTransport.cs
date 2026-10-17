@@ -1,3 +1,4 @@
+using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Net;
 using HackerOs.Simulation.Abstractions.Network;
@@ -115,6 +116,8 @@ public sealed class SdkBrowserTransport(HackCookieContainer cookies) : IBrowserT
 
     private static async Task<BrowserResponse> ListDirectoryAsync(Uri url, HackDirectoryInfo directory, CancellationToken cancellationToken)
     {
+        // The listing speaks the language of the browser's process (ADR 0104), ambient like HackFile's rights.
+        IAppExecutionContext? process = HackExecutionContext.CurrentOrNull;
         HackFileSystemInfo[] entries = await directory.GetFileSystemInfosAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
         string html = DirectoryListingPage.Build(
             directory.FullName,
@@ -122,7 +125,9 @@ public sealed class SdkBrowserTransport(HackCookieContainer cookies) : IBrowserT
                 entry.Name,
                 entry is HackDirectoryInfo,
                 entry is HackFileInfo file ? file.Length : null,
-                entry.LastWriteTimeUtc)));
+                entry.LastWriteTimeUtc)),
+            process?.Culture,
+            process?.FormatCulture);
         byte[] bytes = System.Text.Encoding.UTF8.GetBytes(html);
 
         // Like Chromium, a directory URL ends with "/" so the listing's relative links resolve inside it.

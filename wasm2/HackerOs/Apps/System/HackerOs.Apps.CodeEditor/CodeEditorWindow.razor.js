@@ -2,6 +2,7 @@ import { createCodeEditor } from "./monaco/monaco.bundle.js";
 
 // The collocated boundary keeps Monaco private to this component and exposes only document,
 // reveal, focus, and deterministic disposal operations to C#.
+// options.ariaLabel is the accessible name in the process's language, chosen by C# (ADR 0104).
 export function createEditor(host, dotNet, options) {
   const editor = createCodeEditor(host, dotNet, options);
   // Monaco's hidden input surface already carries role="textbox" but a generic accessible name
@@ -12,7 +13,7 @@ export function createEditor(host, dotNet, options) {
   const relabel = () => {
     const inputArea = host.querySelector(".native-edit-context, textarea.inputarea");
     if (inputArea) {
-      inputArea.setAttribute("aria-label", "Source code editor");
+      inputArea.setAttribute("aria-label", options?.ariaLabel || "Source code editor");
     }
   };
   relabel();
