@@ -3,10 +3,12 @@ using System.Text;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Diagnostics;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.IO;
 using HackerOs.Apps.SystemMonitor.Metrics;
 using HackerOs.Apps.SystemMonitor.Processes;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 
 namespace HackerOs.Apps.SystemMonitor;
@@ -63,11 +65,16 @@ public partial class SystemMonitorWindow
 
     private string StatusClass => IsLive ? "live" : "paused";
 
-    private string StatusText => _paused ? "PAUSED" : _windowVisible ? "LIVE 1s" : "IDLE";
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>System Monitor's texts in the language of its own process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
+    private string StatusText => _paused ? L["Status.Paused"] : _windowVisible ? L["Status.Live"] : L["Status.Idle"];
 
     private string StatusTitle => _paused
-        ? "Refresh paused by the user"
-        : _windowVisible ? "Reading /proc every second" : "Window hidden: refresh suspended";
+        ? L["Status.Title.Paused"]
+        : _windowVisible ? L["Status.Title.Live"] : L["Status.Title.Hidden"];
 
     /// <summary>Called by the JavaScript module when the window is minimized, restored, or the tab is hidden or shown.</summary>
     /// <param name="visible">Whether the window can be seen.</param>
@@ -172,7 +179,7 @@ public partial class SystemMonitorWindow
         }
         catch (Exception exception) when (exception is HackIOException or HackUnauthorizedAccessException or InvalidOperationException)
         {
-            _error = $"Cannot read /proc: {exception.Message}";
+            _error = L["Error.CannotReadProc", exception.Message];
         }
         finally
         {
@@ -206,10 +213,10 @@ public partial class SystemMonitorWindow
         StringBuilder content = new();
         content.Append((rows.Count, force) switch
         {
-            (1, false) => "End this process? It gets 5 seconds to close; unsaved work in it may be lost.",
-            (_, false) => $"End these {rows.Count.ToString(CultureInfo.InvariantCulture)} processes? Each gets 5 seconds to close; unsaved work in them may be lost.",
-            (1, true) => "Kill this process now? It cannot react: unsaved work in it will be lost.",
-            _ => $"Kill these {rows.Count.ToString(CultureInfo.InvariantCulture)} processes now? They cannot react: unsaved work in them will be lost."
+            (1, false) => L["EndTask.Confirm.One"].Value,
+            (_, false) => L["EndTask.Confirm.Many", rows.Count].Value,
+            (1, true) => L["ForceKill.Confirm.One"].Value,
+            _ => L["ForceKill.Confirm.Many", rows.Count].Value
         });
         content.Append("\n\n");
         foreach (ProcessRow row in rows)
@@ -217,7 +224,7 @@ public partial class SystemMonitorWindow
             content.Append(CultureInfo.InvariantCulture, $"  {row.Pid,6}  {row.Name}  ({row.AppId})\n");
         }
 
-        MessageBoxDialogResult answer = await MessageBox(force ? "Force kill" : "End task", content.ToString(), MessageBoxType.YesNo);
+        MessageBoxDialogResult answer = await MessageBox(force ? L["ForceKill.Title"] : L["EndTask.Title"], content.ToString(), MessageBoxType.YesNo);
         if (answer.Result != MessageBoxResult.Yes)
         {
             return;

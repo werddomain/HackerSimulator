@@ -5,6 +5,8 @@ using HackerOs.AppSdk;
 using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.IO;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Unzip;
 
@@ -21,6 +23,8 @@ public sealed class UnzipCommand(AppManifest manifest) : TerminalAppBase(manifes
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        // Messages follow the process language; the progress lines and the listing stay as Info-ZIP prints them.
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         bool list = false, test = false, overwrite = false, never = false, quiet = false, pipe = false, junk = false;
         string? destination = null;
         List<string> operands = [];
@@ -49,7 +53,7 @@ public sealed class UnzipCommand(AppManifest manifest) : TerminalAppBase(manifes
                         case 'j': junk = true; break;
                         case 'u' or 'f' or 'a' or 'X': break;
                         default:
-                            await context.StandardError.WriteLineAsync($"unzip:  -{flag}: unknown option");
+                            await context.StandardError.WriteLineAsync(text["UnknownOption", flag]);
                             return 10;
                     }
                 }
@@ -62,7 +66,7 @@ public sealed class UnzipCommand(AppManifest manifest) : TerminalAppBase(manifes
 
         if (operands.Count == 0)
         {
-            await context.StandardError.WriteLineAsync("usage: unzip [-l|-t|-p] [-o|-n] [-q] [-j] [-d exdir] file[.zip] [list]");
+            await context.StandardError.WriteLineAsync(text["Usage"]);
             return 10;
         }
 
@@ -79,7 +83,7 @@ public sealed class UnzipCommand(AppManifest manifest) : TerminalAppBase(manifes
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            await context.StandardError.WriteLineAsync($"unzip:  cannot find or open {operands[0]}, {operands[0]}.zip or {operands[0]}.ZIP. ({ShellErrorText.Describe(exception)})");
+            await context.StandardError.WriteLineAsync(text["CannotOpen", operands[0], CommandText.Describe(context, exception)]);
             return 9;
         }
 
@@ -112,7 +116,7 @@ public sealed class UnzipCommand(AppManifest manifest) : TerminalAppBase(manifes
                     }
                 }
 
-                await context.StandardOutput.WriteLineAsync($"No errors detected in compressed data of {archive}.");
+                await context.StandardOutput.WriteLineAsync(text["NoErrors", archive]);
                 return 0;
             }
 
@@ -148,7 +152,7 @@ public sealed class UnzipCommand(AppManifest manifest) : TerminalAppBase(manifes
                 string target = HackPath.GetFullPath(relative, root);
                 if (!target.StartsWith(root.TrimEnd('/') + "/", StringComparison.Ordinal))
                 {
-                    await context.StandardError.WriteLineAsync($"warning:  skipped \"{entry.FullName}\": path escapes the destination");
+                    await context.StandardError.WriteLineAsync(text["PathEscapes", entry.FullName]);
                     status = 1;
                     continue;
                 }
@@ -173,7 +177,7 @@ public sealed class UnzipCommand(AppManifest manifest) : TerminalAppBase(manifes
                 {
                     if (!quiet || never)
                     {
-                        await context.StandardError.WriteLineAsync($"replace {Display(target)}? [N]one: skipped (use -o to overwrite)");
+                        await context.StandardError.WriteLineAsync(text["ReplaceSkipped", Display(target)]);
                     }
 
                     continue;
@@ -202,14 +206,14 @@ public sealed class UnzipCommand(AppManifest manifest) : TerminalAppBase(manifes
         }
         catch (InvalidDataException)
         {
-            await context.StandardError.WriteLineAsync($"  End-of-central-directory signature not found.  Either this file is not");
-            await context.StandardError.WriteLineAsync($"  a zipfile, or it constitutes one disk of a multi-part archive.");
-            await context.StandardError.WriteLineAsync($"unzip:  cannot find zipfile directory in {archive}.");
+            await context.StandardError.WriteLineAsync(text["NotZip1"]);
+            await context.StandardError.WriteLineAsync(text["NotZip2"]);
+            await context.StandardError.WriteLineAsync(text["NoDirectory", archive]);
             return 9;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            await context.StandardError.WriteLineAsync($"unzip: {ShellErrorText.Describe(exception)}");
+            await context.StandardError.WriteLineAsync(text["Error", CommandText.Describe(context, exception)]);
             return 50;
         }
 

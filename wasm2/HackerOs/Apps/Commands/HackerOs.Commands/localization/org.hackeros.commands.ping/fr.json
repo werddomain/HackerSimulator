@@ -1,0 +1,5 @@
+{
+  "name": "ping",
+  "description": "Commande ping réseau simulée : teste si un hôte simulé est joignable",
+  "terminalUsage": "ping <nom-d-hôte|ip>"
+}

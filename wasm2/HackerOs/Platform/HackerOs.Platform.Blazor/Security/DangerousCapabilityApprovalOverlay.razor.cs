@@ -1,6 +1,7 @@
 using HackerOs.Platform.Core.Policy;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Platform.Blazor.Security;
 
@@ -17,10 +18,10 @@ namespace HackerOs.Platform.Blazor.Security;
 /// password.
 /// </para>
 /// <para>
-/// The overlay decides nothing: <em>Autoriser</em> submits the credentials to
+/// The overlay decides nothing: <em>Allow</em> submits the credentials to
 /// <see cref="DangerousCapabilityApprovalRequest.ApproveAsync"/>, which verifies them, writes the
 /// machine file and logs. After the third failure the request closes as dismissed.
-/// <em>Refuser</em> ends it as refused; Escape closes it without a choice.
+/// <em>Deny</em> ends it as refused; Escape closes it without a choice.
 /// </para>
 /// </remarks>
 public sealed partial class DangerousCapabilityApprovalOverlay
@@ -35,11 +36,15 @@ public sealed partial class DangerousCapabilityApprovalOverlay
     private bool _isVerifying;
     private bool _focusPending;
 
+    /// <summary>Gets or sets the overlay's texts, in the session language (ADR 0104).</summary>
+    [Inject]
+    private IStringLocalizer<Strings> L { get; set; } = default!;
+
     /// <summary>Gets or sets the broker queuing approval requests.</summary>
     [Inject]
     public DangerousCapabilityApprovalBroker Broker { get; set; } = default!;
 
-    /// <summary>Gets whether <em>Autoriser</em> is enabled: a name and a password are both required.</summary>
+    /// <summary>Gets whether <em>Allow</em> is enabled: a name and a password are both required.</summary>
     private bool CanApprove => !_isVerifying && !string.IsNullOrWhiteSpace(_login) && !string.IsNullOrEmpty(_password);
 
     /// <inheritdoc />
@@ -118,7 +123,7 @@ public sealed partial class DangerousCapabilityApprovalOverlay
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             _isVerifying = false;
-            _error = $"La décision n'a pas pu être enregistrée : {exception.Message}";
+            _error = L["Approval.SaveFailed", exception.Message];
             return;
         }
 
@@ -136,12 +141,12 @@ public sealed partial class DangerousCapabilityApprovalOverlay
             return;
         }
 
-        _error = attempt.FailureReason switch
+        _error = L[attempt.FailureReason switch
         {
-            "not-administrator" => $"Ce compte n'est pas administrateur. Essais restants : {attempt.RemainingAttempts}.",
-            "user-disabled" => $"Ce compte est désactivé. Essais restants : {attempt.RemainingAttempts}.",
-            _ => $"Nom ou mot de passe incorrect. Essais restants : {attempt.RemainingAttempts}."
-        };
+            "not-administrator" => "Security.NotAdministrator",
+            "user-disabled" => "Security.UserDisabled",
+            _ => "Security.InvalidCredentials"
+        }, attempt.RemainingAttempts];
         _focusPending = true;
     }
 

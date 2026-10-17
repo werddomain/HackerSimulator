@@ -1,0 +1,5 @@
+{
+  "name": "stress",
+  "description": "Impose une charge CPU au système",
+  "terminalUsage": "stress [-c N] [-t SECONDES] [--yield]"
+}

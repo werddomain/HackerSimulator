@@ -1,7 +1,10 @@
+using System.Globalization;
 using HackerOs.AppSdk.Diagnostics;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.Apps.SystemMonitor.Processes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Localization;
 using MudBlazor;
 
 namespace HackerOs.Apps.SystemMonitor.Tabs;
@@ -17,17 +20,26 @@ public partial class ProcessesTab
 {
     private MudMenu? _rowMenu;
 
-    private static readonly (ProcessColumn Column, string Label, bool Numeric)[] Columns =
+    /// <summary>The columns, with the resource key of their header.</summary>
+    private static readonly (ProcessColumn Column, string LabelKey, bool Numeric)[] Columns =
     [
-        (ProcessColumn.Pid, "PID", true),
-        (ProcessColumn.Name, "Name", false),
-        (ProcessColumn.User, "User", false),
-        (ProcessColumn.State, "State", false),
-        (ProcessColumn.Cpu, "CPU", true),
-        (ProcessColumn.Memory, "Memory", true),
-        (ProcessColumn.DiskRead, "Disk read", true),
-        (ProcessColumn.DiskWrite, "Disk write", true)
+        (ProcessColumn.Pid, "Column.Pid", true),
+        (ProcessColumn.Name, "Column.Name", false),
+        (ProcessColumn.User, "Column.User", false),
+        (ProcessColumn.State, "Column.State", false),
+        (ProcessColumn.Cpu, "Column.Cpu", true),
+        (ProcessColumn.Memory, "Column.Memory", true),
+        (ProcessColumn.DiskRead, "Column.DiskRead", true),
+        (ProcessColumn.DiskWrite, "Column.DiskWrite", true)
     ];
+
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The tab's texts in the language of the System Monitor process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
+    /// <summary>The culture of the numbers shown (the process's locale).</summary>
+    private CultureInfo Formats => AppContext?.FormatCulture ?? CultureInfo.InvariantCulture;
 
     /// <summary>Gets or sets the table model owned by the window.</summary>
     [Parameter, EditorRequired]
@@ -135,10 +147,20 @@ public partial class ProcessesTab
     internal static string DisplayUser(string user) =>
         user.Length == 32 && user.All(char.IsAsciiHexDigit) ? $"uid:{user[..8]}" : user;
 
-    private static string ReportSummary(EndTaskReport report) => (report.Ended.Count, report.Failures.Count) switch
+    private string ReportSummary(EndTaskReport report) => (report.Ended.Count, report.Failures.Count) switch
     {
-        (_, 0) => report.Ended.Count == 1 ? "Ended 1 process." : $"Ended {report.Ended.Count} processes.",
-        (0, _) => $"Could not end {report.Failures.Count} process(es):",
-        _ => $"Ended {report.Ended.Count}; could not end {report.Failures.Count}:"
+        (_, 0) => report.Ended.Count == 1 ? L["Report.EndedOne"] : L["Report.EndedMany", report.Ended.Count],
+        (0, _) => L["Report.Failed", report.Failures.Count],
+        _ => L["Report.Mixed", report.Ended.Count, report.Failures.Count]
     };
+
+    /// <summary>A process state (<c>Running</c>, <c>Sleeping</c>…) in the process's language; an unknown one as is.</summary>
+    private string StateLabel(string state) => ProcessStateLabel(L, state);
+
+    /// <summary>Translates a <see cref="HackProcessState"/> name, shared with the detail panel.</summary>
+    internal static string ProcessStateLabel(IStringLocalizer<Strings> text, string state)
+    {
+        LocalizedString label = text[$"ProcessState.{state}"];
+        return label.ResourceNotFound ? state : label.Value;
+    }
 }

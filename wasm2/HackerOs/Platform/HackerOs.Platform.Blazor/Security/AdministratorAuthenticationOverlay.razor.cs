@@ -1,6 +1,7 @@
 using HackerOs.Platform.Core.Elevation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Platform.Blazor.Security;
 
@@ -11,9 +12,9 @@ namespace HackerOs.Platform.Blazor.Security;
 /// are an administrator) and a password.
 /// </summary>
 /// <remarks>
-/// The overlay decides nothing: <em>Authentifier</em> submits the credentials to
+/// The overlay decides nothing: <em>Authenticate</em> submits the credentials to
 /// <see cref="AdministratorAuthenticationPromptRequest.AuthenticateAsync"/>, which verifies and logs.
-/// After the third failure the request closes as cancelled. <em>Annuler</em> and Escape cancel.
+/// After the third failure the request closes as cancelled. <em>Cancel</em> and Escape cancel.
 /// </remarks>
 public sealed partial class AdministratorAuthenticationOverlay
 {
@@ -26,6 +27,10 @@ public sealed partial class AdministratorAuthenticationOverlay
     private string? _error;
     private bool _isVerifying;
     private bool _focusPending;
+
+    /// <summary>Gets or sets the overlay's texts, in the session language (ADR 0104).</summary>
+    [Inject]
+    private IStringLocalizer<Strings> L { get; set; } = default!;
 
     /// <summary>Gets or sets the broker queuing authentication requests.</summary>
     [Inject]
@@ -115,12 +120,12 @@ public sealed partial class AdministratorAuthenticationOverlay
             return;
         }
 
-        _error = attempt.FailureReason switch
+        _error = L[attempt.FailureReason switch
         {
-            "not-administrator" => $"Ce compte n'est pas administrateur. Essais restants : {attempt.RemainingAttempts}.",
-            "user-disabled" => $"Ce compte est désactivé. Essais restants : {attempt.RemainingAttempts}.",
-            _ => $"Nom ou mot de passe incorrect. Essais restants : {attempt.RemainingAttempts}."
-        };
+            "not-administrator" => "Security.NotAdministrator",
+            "user-disabled" => "Security.UserDisabled",
+            _ => "Security.InvalidCredentials"
+        }, attempt.RemainingAttempts];
         _focusPending = true;
     }
 

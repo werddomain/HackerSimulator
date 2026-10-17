@@ -90,7 +90,7 @@ HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.UserId.init -> void
 HackerOs.Platform.Blazor.Dialogs.FileDialogWindowAdapter
 HackerOs.Platform.Blazor.Dialogs.FileDialogWindowAdapter.Changed -> System.Action?
 HackerOs.Platform.Blazor.Dialogs.FileDialogWindowAdapter.Dispose() -> void
-HackerOs.Platform.Blazor.Dialogs.FileDialogWindowAdapter.FileDialogWindowAdapter(HackerOs.Platform.Blazor.Dialogs.FileDialogCoordinator! fileCoordinator, HackerOs.Windowing.Core.WindowRuntime! windows, HackerOs.Platform.Blazor.Dialogs.DialogCoordinator? basicCoordinator = null) -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogWindowAdapter.FileDialogWindowAdapter(HackerOs.Platform.Blazor.Dialogs.FileDialogCoordinator! fileCoordinator, HackerOs.Windowing.Core.WindowRuntime! windows, HackerOs.Platform.Blazor.Dialogs.DialogCoordinator? basicCoordinator = null, HackerOs.Platform.Core.Globalization.SessionLocaleService? locale = null) -> void
 HackerOs.Platform.Blazor.Dialogs.FileDialogWindowAdapter.IsDialogWindow(HackerOs.Windowing.Abstractions.WindowId windowId) -> bool
 HackerOs.Platform.Blazor.Dialogs.FolderSelectDialog
 HackerOs.Platform.Blazor.Dialogs.FolderSelectDialog.Coordinator.get -> HackerOs.Platform.Blazor.Dialogs.FileDialogCoordinator!
@@ -166,7 +166,7 @@ HackerOs.Platform.Blazor.Dialogs.VirtualFolderBrowser.SelectionChanged.set -> vo
 HackerOs.Platform.Blazor.Dialogs.VirtualFolderBrowser.VirtualFolderBrowser() -> void
 HackerOs.Platform.Blazor.Display.DisplaySurfaceService
 HackerOs.Platform.Blazor.Display.DisplaySurfaceService.CloseAllAsync() -> System.Threading.Tasks.Task!
-HackerOs.Platform.Blazor.Display.DisplaySurfaceService.DisplaySurfaceService(Microsoft.JSInterop.IJSRuntime! jsRuntime, HackerOs.Simulation.Abstractions.Notifications.INotificationQueue? notifications = null, HackerOs.Simulation.Abstractions.Sessions.ISessionService? session = null, HackerOs.Simulation.Abstractions.Time.ISimulationClock? clock = null) -> void
+HackerOs.Platform.Blazor.Display.DisplaySurfaceService.DisplaySurfaceService(Microsoft.JSInterop.IJSRuntime! jsRuntime, HackerOs.Simulation.Abstractions.Notifications.INotificationQueue? notifications = null, HackerOs.Simulation.Abstractions.Sessions.ISessionService? session = null, HackerOs.Simulation.Abstractions.Time.ISimulationClock? clock = null, HackerOs.Platform.Core.Globalization.SessionLocaleService? locale = null) -> void
 HackerOs.Platform.Blazor.Display.DisplaySurfaceService.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Platform.Blazor.Display.DisplaySurfaceService.OnSurfaceEvent(string! id, string! type, int width, int height) -> void
 HackerOs.Platform.Blazor.Display.DisplaySurfaceService.OpenAsync(HackerOs.AppSdk.Blazor.Display.DisplaySurfaceOptions! options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Blazor.Display.DisplaySurfaceOpenResult!>!
@@ -334,7 +334,8 @@ HackerOs.Platform.Blazor.Shell.TaskbarSessionCommandsAdapter.TaskbarSessionComma
 HackerOs.Platform.Blazor.Shell.TaskbarStatusSourceAdapter
 HackerOs.Platform.Blazor.Shell.TaskbarStatusSourceAdapter.Changed -> System.Action?
 HackerOs.Platform.Blazor.Shell.TaskbarStatusSourceAdapter.Dispose() -> void
-HackerOs.Platform.Blazor.Shell.TaskbarStatusSourceAdapter.TaskbarStatusSourceAdapter(HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock) -> void
+HackerOs.Platform.Blazor.Shell.TaskbarStatusSourceAdapter.FormatCulture.get -> System.Globalization.CultureInfo!
+HackerOs.Platform.Blazor.Shell.TaskbarStatusSourceAdapter.TaskbarStatusSourceAdapter(HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, HackerOs.Platform.Core.Globalization.SessionLocaleService? locale = null) -> void
 HackerOs.Platform.Blazor.Shell.TaskbarStatusSourceAdapter.UtcNow.get -> System.DateTimeOffset
 HackerOs.Platform.Blazor.Shell.TaskbarWindowSourceAdapter
 HackerOs.Platform.Blazor.Shell.TaskbarWindowSourceAdapter.Changed -> System.Action?
@@ -420,7 +421,7 @@ HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands.SwitcherSelection.get ->
 HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands.SwitcherWindows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowRuntimeState!>!
 HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands.ToggleFullScreen.get -> System.Func<System.Threading.Tasks.Task!>?
 HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands.ToggleFullScreen.set -> void
-HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands.WindowKeyboardCommands(HackerOs.Windowing.Core.WindowRuntime! runtime, HackerOs.Platform.Core.Settings.IOsSettingsService? settings = null, Microsoft.Extensions.Logging.ILogger<HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands!>? logger = null) -> void
+HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands.WindowKeyboardCommands(HackerOs.Windowing.Core.WindowRuntime! runtime, HackerOs.Platform.Core.Settings.IOsSettingsService? settings = null, Microsoft.Extensions.Logging.ILogger<HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands!>? logger = null, HackerOs.Platform.Core.Globalization.SessionLocaleService? locale = null) -> void
 HackerOs.Platform.Blazor.Windows.WindowKeyboardMode
 HackerOs.Platform.Blazor.Windows.WindowKeyboardMode.Moving = 2 -> HackerOs.Platform.Blazor.Windows.WindowKeyboardMode
 HackerOs.Platform.Blazor.Windows.WindowKeyboardMode.None = 0 -> HackerOs.Platform.Blazor.Windows.WindowKeyboardMode
@@ -444,6 +445,7 @@ HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator
 HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.Present(HackerOs.App.Abstractions.AppManifest! manifest, HackerOs.Platform.Core.Lifecycle.AppLaunchResult! launch) -> bool
 HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.Present(HackerOs.App.Abstractions.AppManifest! manifest, HackerOs.Simulation.Abstractions.Processes.ProcessRecord! process) -> bool
 HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.WindowLaunchCoordinator(HackerOs.Windowing.Core.WindowRuntime! windows) -> void
+HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.WindowLaunchCoordinator(HackerOs.Windowing.Core.WindowRuntime! windows, HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Globalization.SessionLocaleService! locale) -> void
 HackerOs.Platform.Blazor.Windows.WindowManagerOverlays
 HackerOs.Platform.Blazor.Windows.WindowManagerOverlays.Commands.get -> HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands!
 HackerOs.Platform.Blazor.Windows.WindowManagerOverlays.Commands.set -> void

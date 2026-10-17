@@ -1,6 +1,8 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Tail;
 
@@ -26,6 +28,7 @@ public sealed class TailCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> messages = context.App.GetLocalizer<Strings>();
 
         long count = 10;
         bool bytes = false, fromStart = false, follow = false, quiet = false, verbose = false;
@@ -73,7 +76,7 @@ public sealed class TailCommand : TerminalAppBase
             fromStart = value.StartsWith('+');
             if (!long.TryParse(value.TrimStart('-', '+'), out count))
             {
-                context.StandardError.WriteLine($"tail: invalid number of {(bytes ? "bytes" : "lines")}: '{value}'");
+                context.StandardError.WriteLine(messages[bytes ? "InvalidBytes" : "InvalidLines", value]);
                 return 1;
             }
         }
@@ -99,7 +102,7 @@ public sealed class TailCommand : TerminalAppBase
             seen[file] = text.Length;
             if (headers)
             {
-                await context.StandardOutput.WriteLineAsync($"{(index > 0 ? "\n" : string.Empty)}==> {(file == "-" ? "standard input" : file)} <==");
+                await context.StandardOutput.WriteLineAsync($"{(index > 0 ? "\n" : string.Empty)}==> {(file == "-" ? messages["StandardInput"] : file)} <==");
             }
 
             if (bytes)
@@ -138,7 +141,7 @@ public sealed class TailCommand : TerminalAppBase
                 int previous = seen.GetValueOrDefault(file);
                 if (text.Length < previous)
                 {
-                    await context.StandardError.WriteLineAsync($"tail: {file}: file truncated");
+                    await context.StandardError.WriteLineAsync(messages["Truncated", file]);
                     previous = 0;
                 }
 

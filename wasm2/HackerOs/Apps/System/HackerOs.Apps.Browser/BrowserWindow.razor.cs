@@ -18,6 +18,8 @@ using HackerOs.AppSdk.Web.Hosting;
 using HackerOs.Simulation.Abstractions.Network;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.Browser;
 
@@ -126,6 +128,14 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
     private bool ShowsFrame => !_isLoading && _error is null && _currentPage is null && _frameDocument is not null && !_viewSource;
     private bool ShowsSite => !_isLoading && _error is null && _site is { HasExited: false } && _siteUrl is not null && !_viewSource;
 
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>
+    /// The browser's own texts in its process's language (ADR 0104). Web pages and developer-tools
+    /// console messages stay as the sites and the web platform write them.
+    /// </summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
     private string SchemeIcon => _documentUrl?.Scheme switch
     {
         "https" => "\U0001F512",
@@ -137,9 +147,9 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
 
     private string SchemeTitle => _documentUrl?.Scheme switch
     {
-        "https" => "Secure connection (simulated)",
-        "file" => "Local file",
-        "http" => "Not secure",
+        "https" => L["Scheme.Secure"],
+        "file" => L["Scheme.File"],
+        "http" => L["Scheme.NotSecure"],
         _ => string.Empty,
     };
 
@@ -341,7 +351,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
 
         if (response.Body.Length == 0 && !response.IsSuccessStatusCode)
         {
-            _error = BrowserErrorPages.ForHttpStatus(response.StatusCode, response.Url);
+            _error = BrowserErrorPages.ForHttpStatus(response.StatusCode, response.Url, AppContext.Culture);
             return;
         }
 
@@ -403,7 +413,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
         if (start.Process is not { } process)
         {
             _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Error, $"Failed to start the Blazor site: {start.Error}", BrowserUrl.ToDisplayString(pageUrl)));
-            _error = BrowserErrorPages.ForSiteNotStarted(pageUrl, start.Error ?? "The site did not start.");
+            _error = BrowserErrorPages.ForSiteNotStarted(pageUrl, start.Error ?? L["Error.SiteNotStarted.Fallback"], AppContext.Culture);
             return true;
         }
 
@@ -482,7 +492,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
     {
         _currentPage = null;
         _frameDocument = null;
-        _error = BrowserErrorPages.ForRendererCrash(url, killed);
+        _error = BrowserErrorPages.ForRendererCrash(url, killed, AppContext.Culture);
         StateHasChanged();
     }
 
@@ -547,7 +557,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
         _documentUrl = url;
         _finalUrl = display;
         _currentUrl = display;
-        _error = BrowserErrorPages.ForNetworkError(code, url);
+        _error = BrowserErrorPages.ForNetworkError(code, url, AppContext.Culture);
     }
 
     private async Task NavigateToCurrentInputAsync() =>
@@ -605,7 +615,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
     private sealed record FrameSource(Uri DocumentUrl, string Html, Uri? Referrer);
 
     private string SurfaceTitle => string.IsNullOrWhiteSpace(_pageTitle)
-        ? (string.IsNullOrEmpty(_finalUrl) ? "HackerOS Browser" : _finalUrl)
+        ? (string.IsNullOrEmpty(_finalUrl) ? L["NewTab.Title"] : _finalUrl)
         : _pageTitle;
 
     private Task ToggleDetachedAsync() => _surface is null ? DetachAsync() : ReattachAsync();
@@ -636,11 +646,11 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
                     await RewriteFrameAsync();
                     break;
                 case DisplaySurfaceOpenStatus.Blocked:
-                    _detachMessage = "The detached window was blocked by your browser. Allow pop-ups for HackerOS, then try again.";
+                    _detachMessage = L["Detach.Blocked"];
                     _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Warning, "The host browser blocked the detached window (pop-up blocker).", "browser"));
                     break;
                 default:
-                    _detachMessage = "This HackerOS host cannot open detached windows.";
+                    _detachMessage = L["Detach.Unsupported"];
                     break;
             }
         }
@@ -869,7 +879,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
             case "dialog" when JsonSerializer.Deserialize(payload, PageBridgeJsonContext.Default.BridgeDialogEvent) is { } dialog:
                 await InvokeAsync(() =>
                 {
-                    _alertOrigin = session.DocumentUrl.Scheme == "file" ? "This page" : session.DocumentUrl.Host;
+                    _alertOrigin = session.DocumentUrl.Scheme == "file" ? L["Alert.ThisPage"] : session.DocumentUrl.Host;
                     _alertMessage = dialog.Message ?? string.Empty;
                     StateHasChanged();
                 });
@@ -895,7 +905,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
 
         await _formHistory.ClearAsync();
         _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Log, $"Form history cleared ({_formHistory.Path}).", "browser"));
-        _notice = "Form history cleared: fields no longer suggest what you typed before.";
+        _notice = L["Notice.FormHistoryCleared"];
         StateHasChanged();
     }
 
@@ -985,11 +995,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
         // browser wrote. Show why instead of an unbridged page.
         Uri? url = _documentUrl;
         ClearView();
-        _error = new BrowserErrorView(
-            "This page navigated by script",
-            "The page changed window.location, which HackerOS Browser does not support yet: links, forms and history.pushState work.",
-            BrowserErrorCodes.BlockedByClient,
-            ["Reload the page.", "Use a link or a form for navigation."]);
+        _error = BrowserErrorPages.ForScriptNavigation(AppContext.Culture);
         _devTools.Add(new ConsoleLogEntry(ConsoleLevel.Error,
             "The page navigated its frame by script (window.location); the navigation was blocked.",
             url is null ? string.Empty : BrowserUrl.ToDisplayString(url)));

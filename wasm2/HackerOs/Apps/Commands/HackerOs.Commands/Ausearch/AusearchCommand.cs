@@ -4,6 +4,8 @@ using HackerOs.AppSdk;
 using HackerOs.Commands.Common;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Ausearch;
 
@@ -29,6 +31,7 @@ public sealed class AusearchCommand(AppManifest manifest) : TerminalAppBase(mani
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         string? file = null, user = null, uid = null, auid = null, command = null;
         bool? success = null;
         string? inputFile = null;
@@ -38,8 +41,7 @@ public sealed class AusearchCommand(AppManifest manifest) : TerminalAppBase(mani
             string option = args[i];
             if (option is "--help" or "-h")
             {
-                await context.StandardOutput.WriteLineAsync(
-                    "usage: ausearch [-f path] [-ua user] [-ui user] [-ul user] [-c comm] [--success yes|no] [-if file] [-i]");
+                await context.StandardOutput.WriteLineAsync(text["Usage"]);
                 return 0;
             }
 
@@ -51,7 +53,7 @@ public sealed class AusearchCommand(AppManifest manifest) : TerminalAppBase(mani
             if (i + 1 >= args.Count
                 || option is not ("-f" or "--file" or "-ua" or "-ui" or "-ul" or "-c" or "--comm" or "--success" or "-sv" or "-if" or "--input"))
             {
-                await context.StandardError.WriteLineAsync($"ausearch: unrecognized option '{option}'");
+                await context.StandardError.WriteLineAsync(text["UnrecognizedOption", option]);
                 return 1;
             }
 
@@ -79,7 +81,7 @@ public sealed class AusearchCommand(AppManifest manifest) : TerminalAppBase(mani
                 default:
                     if (value is not ("yes" or "no"))
                     {
-                        await context.StandardError.WriteLineAsync($"ausearch: success value must be yes or no, not '{value}'");
+                        await context.StandardError.WriteLineAsync(text["InvalidSuccess", value]);
                         return 1;
                     }
 
@@ -95,8 +97,8 @@ public sealed class AusearchCommand(AppManifest manifest) : TerminalAppBase(mani
         int matches = 0;
         foreach (string path in files)
         {
-            string? text = await ReadAsync(context, path, required: inputFile is not null || path == AuditLogPath, cancellationToken);
-            if (text is null)
+            string? content = await ReadAsync(context, text, path, required: inputFile is not null || path == AuditLogPath, cancellationToken);
+            if (content is null)
             {
                 if (path == AuditLogPath || inputFile is not null)
                 {
@@ -106,7 +108,7 @@ public sealed class AusearchCommand(AppManifest manifest) : TerminalAppBase(mani
                 continue;
             }
 
-            foreach (string line in CommandIO.SplitLines(text))
+            foreach (string line in CommandIO.SplitLines(content))
             {
                 if (!AuditLineFormat.TryParse(line, out AuditRecord? record) || !Matches(record))
                 {
@@ -123,7 +125,7 @@ public sealed class AusearchCommand(AppManifest manifest) : TerminalAppBase(mani
 
         if (matches == 0)
         {
-            await context.StandardError.WriteLineAsync("<no matches>");
+            await context.StandardError.WriteLineAsync(text["NoMatches"]);
             return 1;
         }
 
@@ -143,7 +145,7 @@ public sealed class AusearchCommand(AppManifest manifest) : TerminalAppBase(mani
             ? recorded == wanted || recorded.StartsWith(wanted + "/", StringComparison.Ordinal)
             : recorded[(recorded.LastIndexOf('/') + 1)..] == wanted;
 
-    private static async Task<string?> ReadAsync(TerminalExecutionContext context, string path, bool required, CancellationToken cancellationToken)
+    private static async Task<string?> ReadAsync(TerminalExecutionContext context, IStringLocalizer<Strings> text, string path, bool required, CancellationToken cancellationToken)
     {
         FileSystemResult<FileSystemContentReadHandle> read = await context.App.FileSystem
             .ReadAsync(new FileSystemReadRequest(VirtualPath.Parse(path)), cancellationToken);
@@ -158,11 +160,11 @@ public sealed class AusearchCommand(AppManifest manifest) : TerminalAppBase(mani
         {
             string reason = read.Error?.Code switch
             {
-                FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied => "Permission denied",
-                FileSystemErrorCode.NotFound => "No such file or directory",
+                FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied => CommandText.Reason(context, Errno.PermissionDenied),
+                FileSystemErrorCode.NotFound => CommandText.Reason(context, Errno.NotFound),
                 _ => read.Error?.Code.ToString() ?? "error"
             };
-            await context.StandardError.WriteLineAsync($"Error opening {path} ({reason})");
+            await context.StandardError.WriteLineAsync(text["OpenFailed", path, reason]);
         }
 
         return null;

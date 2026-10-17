@@ -1,0 +1,5 @@
+{
+  "name": "uniq",
+  "description": "Signale ou omet les lignes répétées",
+  "terminalUsage": "uniq [-c] [-d] [-u] [-i] [entrée [sortie]]"
+}

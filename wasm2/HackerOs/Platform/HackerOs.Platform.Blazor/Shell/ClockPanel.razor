@@ -12,13 +12,15 @@
 @inject UiPlatformPreferenceService PlatformPreference
 @inject PlatformShellSwitchCoordinator PlatformSwitch
 @inject IServiceProvider Services
+@inject IStringLocalizer<Strings> L
+@inject HackerOs.Platform.Core.Globalization.SessionLocaleService SessionLocale
 
-<div class="clock-panel" role="dialog" aria-label="Notifications and calendar" @onkeydown="HandleKeyDownAsync">
-    <section class="clock-panel-section" aria-label="Notifications">
-        <h3 class="clock-panel-heading">Notifications</h3>
+<div class="clock-panel" role="dialog" aria-label="@L["Clock.Panel"]" @onkeydown="HandleKeyDownAsync">
+    <section class="clock-panel-section" aria-label="@L["Clock.Notifications"]">
+        <h3 class="clock-panel-heading">@L["Clock.Notifications"]</h3>
         @if (ActiveNotifications.Count == 0)
         {
-            <p class="clock-panel-empty">No notifications.</p>
+            <p class="clock-panel-empty">@L["Clock.NoNotifications"]</p>
         }
         else
         {
@@ -38,7 +40,7 @@
                             <span class="source-app">@notification.SourceAppId</span>
                             <button type="button"
                                     class="notification-dismiss"
-                                    aria-label="Dismiss notification"
+                                    aria-label="@L["Clock.Dismiss"]"
                                     @onclick="() => DismissNotificationAsync(notification.Id)">
                                 ×
                             </button>
@@ -64,8 +66,8 @@
         }
     </section>
 
-    <section class="clock-panel-section" aria-label="Calendar">
-        <h3 class="clock-panel-heading">@Today.ToString("MMMM yyyy")</h3>
+    <section class="clock-panel-section" aria-label="@L["Clock.Calendar"]">
+        <h3 class="clock-panel-heading">@Today.ToString("MMMM yyyy", FormatCulture)</h3>
         <table class="calendar-grid">
             <thead>
                 <tr>
@@ -96,34 +98,35 @@
         </table>
     </section>
 
-    <section class="clock-panel-section" aria-label="Platform mode">
-        <h3 class="clock-panel-heading">Platform mode</h3>
-        <div class="platform-toggle" role="radiogroup" aria-label="Platform mode">
+    <section class="clock-panel-section" aria-label="@L["Clock.PlatformMode"]">
+        <h3 class="clock-panel-heading">@L["Clock.PlatformMode"]</h3>
+        <div class="platform-toggle" role="radiogroup" aria-label="@L["Clock.PlatformMode"]">
             <button type="button"
                     role="radio"
                     class="platform-toggle-option @(PlatformPreference.Current.SelectionSource == UiPlatformSelectionSource.Auto ? "is-selected" : "")"
                     aria-checked="@((PlatformPreference.Current.SelectionSource == UiPlatformSelectionSource.Auto).ToString().ToLowerInvariant())"
                     @onclick="SetAutoAsync">
-                Auto
+                @L["Clock.Auto"]
             </button>
             <button type="button"
                     role="radio"
                     class="platform-toggle-option @(IsExplicit(WellKnownAppPlatforms.Desktop) ? "is-selected" : "")"
                     aria-checked="@(IsExplicit(WellKnownAppPlatforms.Desktop).ToString().ToLowerInvariant())"
                     @onclick="() => SetExplicitAsync(WellKnownAppPlatforms.Desktop)">
-                Desktop
+                @L["Clock.Desktop"]
             </button>
             <button type="button"
                     role="radio"
                     class="platform-toggle-option @(IsExplicit(WellKnownAppPlatforms.Mobile) ? "is-selected" : "")"
                     aria-checked="@(IsExplicit(WellKnownAppPlatforms.Mobile).ToString().ToLowerInvariant())"
                     @onclick="() => SetExplicitAsync(WellKnownAppPlatforms.Mobile)">
-                Mobile
+                @L["Clock.Mobile"]
             </button>
         </div>
         <p class="platform-toggle-hint">
-            Active: @PlatformPreference.Current.ActivePlatform.Value
-            (@(PlatformPreference.Current.SelectionSource == UiPlatformSelectionSource.Auto ? "automatic detection" : "explicit choice")).
+            @L["Clock.ActivePlatform",
+                PlatformPreference.Current.ActivePlatform.Value,
+                PlatformPreference.Current.SelectionSource == UiPlatformSelectionSource.Auto ? L["Clock.AutomaticDetection"] : L["Clock.ExplicitChoice"]]
         </p>
     </section>
 </div>
@@ -132,7 +135,19 @@
     [Parameter]
     public EventCallback OnClose { get; set; }
 
-    private static readonly string[] DayLabels = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+    /// <summary>Gets the culture of the calendar (session <c>LC_TIME</c>, ADR 0104): month name, day names, first day of the week.</summary>
+    private System.Globalization.CultureInfo FormatCulture => SessionLocale.FormatCulture;
+
+    /// <summary>Gets the column headers, starting on the culture's first day of the week (Sunday in en-US, Monday in fr-FR).</summary>
+    private IEnumerable<string> DayLabels
+    {
+        get
+        {
+            System.Globalization.DateTimeFormatInfo format = FormatCulture.DateTimeFormat;
+            int first = (int)format.FirstDayOfWeek;
+            return Enumerable.Range(0, 7).Select(offset => format.ShortestDayNames[(first + offset) % 7]);
+        }
+    }
 
     private DateTimeOffset Today => SimulationClock.UtcNow;
 
@@ -152,7 +167,7 @@
             DateTimeOffset today = Today;
             DateTime firstOfMonth = new(today.Year, today.Month, 1);
             int daysInMonth = DateTime.DaysInMonth(today.Year, today.Month);
-            int leadingBlanks = (int)firstOfMonth.DayOfWeek;
+            int leadingBlanks = ((int)firstOfMonth.DayOfWeek - (int)FormatCulture.DateTimeFormat.FirstDayOfWeek + 7) % 7;
 
             List<IReadOnlyList<int?>> weeks = [];
             List<int?> currentWeek = [.. Enumerable.Repeat<int?>(null, leadingBlanks)];

@@ -1,0 +1,5 @@
+{
+  "name": "tee",
+  "description": "Copie l'entrée standard sur la sortie standard et dans des fichiers",
+  "terminalUsage": "tee [-a] [fichier...]"
+}

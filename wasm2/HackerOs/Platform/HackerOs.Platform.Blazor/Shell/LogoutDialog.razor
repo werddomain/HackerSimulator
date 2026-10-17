@@ -2,6 +2,7 @@
 @using HackerOs.Simulation.Abstractions.Sessions
 @inject ISessionService SessionService
 @inject IProcessManager ProcessManager
+@inject IStringLocalizer<Strings> L
 
 <div class="modal-backdrop" @onclick="CancelAsync">
     <div class="logout-dialog"
@@ -11,16 +12,16 @@
          @onclick:stopPropagation>
         <header class="dialog-header">
             <div class="logout-mark" aria-hidden="true">⏻</div>
-            <h2 id="logout-title">Sign out of HackerOS</h2>
+            <h2 id="logout-title">@L["Logout.Title"]</h2>
         </header>
 
         <div class="dialog-body">
-            <p>Ending your session will close all running applications and processes.</p>
+            <p>@L["Logout.Body"]</p>
 
             @if (RunningProcesses.Count > 0)
             {
                 <div class="running-processes-section">
-                    <span class="section-label">Active processes to terminate (@RunningProcesses.Count):</span>
+                    <span class="section-label">@L["Logout.Processes", RunningProcesses.Count]</span>
                     <ul class="process-list">
                         @foreach (ProcessRecord proc in RunningProcesses)
                         {
@@ -44,13 +45,13 @@
                     class="btn-secondary"
                     disabled="@_isSigningOut"
                     @onclick="CancelAsync">
-                Cancel
+                @L["Common.Cancel"]
             </button>
             <button type="button"
                     class="btn-danger"
                     disabled="@_isSigningOut"
                     @onclick="ConfirmLogoutAsync">
-                @(_isSigningOut ? "Signing out..." : "Sign out")
+                @(_isSigningOut ? L["Logout.SigningOut"] : L["Logout.SignOut"])
             </button>
         </footer>
     </div>

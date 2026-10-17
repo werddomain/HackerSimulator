@@ -1,4 +1,5 @@
 @using HackerOs.AppSdk.Blazor
+@inject IStringLocalizer<Strings> L
 
 <div class="message-box-dialog" role="dialog" aria-modal="true">
     <div class="message-box-body">
@@ -8,29 +9,29 @@
         @switch (Presentation.Request.DialogType)
         {
             case MessageBoxType.Ok:
-                <button type="button" class="primary" @onclick="HandleOk">OK</button>
+                <button type="button" class="primary" @onclick="HandleOk">@L["Common.Ok"]</button>
                 break;
             case MessageBoxType.OkCancel:
-                <button type="button" class="primary" @onclick="HandleOk">OK</button>
-                <button type="button" @onclick="HandleCancel">Cancel</button>
+                <button type="button" class="primary" @onclick="HandleOk">@L["Common.Ok"]</button>
+                <button type="button" @onclick="HandleCancel">@L["Common.Cancel"]</button>
                 break;
             case MessageBoxType.YesNo:
-                <button type="button" class="primary" @onclick="HandleYes">Yes</button>
-                <button type="button" @onclick="HandleNo">No</button>
+                <button type="button" class="primary" @onclick="HandleYes">@L["Common.Yes"]</button>
+                <button type="button" @onclick="HandleNo">@L["Common.No"]</button>
                 break;
             case MessageBoxType.OkCancelRetry:
-                <button type="button" class="primary" @onclick="HandleOk">OK</button>
-                <button type="button" @onclick="HandleRetry">Retry</button>
-                <button type="button" @onclick="HandleCancel">Cancel</button>
+                <button type="button" class="primary" @onclick="HandleOk">@L["Common.Ok"]</button>
+                <button type="button" @onclick="HandleRetry">@L["Common.Retry"]</button>
+                <button type="button" @onclick="HandleCancel">@L["Common.Cancel"]</button>
                 break;
             case MessageBoxType.YesNoCancel:
-                <button type="button" class="primary" @onclick="HandleYes">Yes</button>
-                <button type="button" @onclick="HandleNo">No</button>
-                <button type="button" @onclick="HandleCancel">Cancel</button>
+                <button type="button" class="primary" @onclick="HandleYes">@L["Common.Yes"]</button>
+                <button type="button" @onclick="HandleNo">@L["Common.No"]</button>
+                <button type="button" @onclick="HandleCancel">@L["Common.Cancel"]</button>
                 break;
             case MessageBoxType.RetryCancel:
-                <button type="button" class="primary" @onclick="HandleRetry">Retry</button>
-                <button type="button" @onclick="HandleCancel">Cancel</button>
+                <button type="button" class="primary" @onclick="HandleRetry">@L["Common.Retry"]</button>
+                <button type="button" @onclick="HandleCancel">@L["Common.Cancel"]</button>
                 break;
         }
     </footer>

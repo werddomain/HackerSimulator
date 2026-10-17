@@ -26,6 +26,8 @@
 @inject IEventBus EventBus
 @inject FileDialogWindowAdapter FileDialogAdapter
 @inject TestDemoFixtureSeeder TestDemoSeeder
+@inject IStringLocalizer<Strings> L
+@inject HackerOs.Platform.Core.Globalization.SessionLocaleService SessionLocale
 
 <div class="desktop-shell" @onkeydown="HandleShellKeyDown">
     <div class="desktop-workspace">
@@ -193,7 +195,7 @@
         }
         _launchError = result.IsSuccess
             ? null
-            : result.ErrorMessage ?? result.ErrorCode ?? "The optional app could not be loaded.";
+            : result.ErrorMessage ?? result.ErrorCode ?? L["Shell.LaunchFailed"];
         StateHasChanged();
     }
 
@@ -307,7 +309,7 @@
         _launcher.Changed += Rerender;
         _clockPanel = new TaskbarClockPanelSourceAdapter();
         _clockPanel.Changed += Rerender;
-        _taskbarStatus = new TaskbarStatusSourceAdapter(SimulationClock);
+        _taskbarStatus = new TaskbarStatusSourceAdapter(SimulationClock, SessionLocale);
         _taskbarSessionCommands = new TaskbarSessionCommandsAdapter(OpenLogout);
     }
 

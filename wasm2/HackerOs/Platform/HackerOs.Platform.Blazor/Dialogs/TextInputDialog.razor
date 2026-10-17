@@ -1,5 +1,6 @@
 @using Microsoft.AspNetCore.Components.Web
 @using HackerOs.AppSdk.Blazor
+@inject IStringLocalizer<Strings> L
 
 <div class="text-input-dialog" role="dialog" aria-modal="true">
     <div class="text-input-body">
@@ -15,8 +16,8 @@
                @onkeydown="HandleKeyDown" />
     </div>
     <footer class="text-input-actions">
-        <button type="button" class="primary" @onclick="HandleSubmit">OK</button>
-        <button type="button" @onclick="HandleCancel">Cancel</button>
+        <button type="button" class="primary" @onclick="HandleSubmit">@L["Common.Ok"]</button>
+        <button type="button" @onclick="HandleCancel">@L["Common.Cancel"]</button>
     </footer>
 </div>
 

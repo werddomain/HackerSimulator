@@ -1,3 +1,5 @@
+using HackerOs.AppSdk.Globalization;
+using HackerOs.Platform.Core.Globalization;
 using HackerOs.Platform.Core.Settings;
 using HackerOs.Platform.Core.Shell;
 using HackerOs.Simulation.Abstractions.Settings;
@@ -73,6 +75,7 @@ public sealed class WindowKeyboardCommands : IDisposable
     private readonly WindowRuntime _runtime;
     private readonly IOsSettingsService? _settings;
     private readonly ILogger _logger;
+    private readonly Microsoft.Extensions.Localization.IStringLocalizer _text;
     private IReadOnlyList<WindowKeyBinding> _bindings = WindowKeyBindingsSettingsDocuments.DefaultBindings;
     private IReadOnlyList<WindowId> _switchOrder = [];
     private int _switchIndex;
@@ -84,11 +87,17 @@ public sealed class WindowKeyboardCommands : IDisposable
     /// <param name="runtime">Authoritative window runtime.</param>
     /// <param name="settings">OS settings, to read <c>keybindings.config</c>; without it the defaults apply.</param>
     /// <param name="logger">Receives the lines of the file that could not be read.</param>
-    public WindowKeyboardCommands(WindowRuntime runtime, IOsSettingsService? settings = null, ILogger<WindowKeyboardCommands>? logger = null)
+    /// <param name="locale">The session language of the window menu (ADR 0104); English without it.</param>
+    public WindowKeyboardCommands(
+        WindowRuntime runtime,
+        IOsSettingsService? settings = null,
+        ILogger<WindowKeyboardCommands>? logger = null,
+        SessionLocaleService? locale = null)
     {
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _settings = settings;
         _logger = (ILogger?)logger ?? NullLogger.Instance;
+        _text = Strings.For(() => locale?.Culture ?? HackLocale.DefaultLanguage);
     }
 
     /// <summary>Raised when the mode, the switcher, the menu or the active bindings changed.</summary>
@@ -338,14 +347,14 @@ public sealed class WindowKeyboardCommands : IDisposable
         bool resizable = window.Constraints.IsResizable;
         return
         [
-            new(WindowKeyboardAction.ToggleMaximize, maximized ? "Restore" : "Maximize", ShortcutOf(WindowKeyboardAction.ToggleMaximize), maximized || resizable),
-            new(WindowKeyboardAction.Minimize, "Minimize", ShortcutOf(WindowKeyboardAction.Minimize), true),
-            new(WindowKeyboardAction.Move, "Move", ShortcutOf(WindowKeyboardAction.Move), normal && window.Constraints.IsMovable),
-            new(WindowKeyboardAction.Resize, "Resize", ShortcutOf(WindowKeyboardAction.Resize), normal && resizable),
-            new(WindowKeyboardAction.SnapLeft, "Snap left", ShortcutOf(WindowKeyboardAction.SnapLeft), resizable),
-            new(WindowKeyboardAction.SnapRight, "Snap right", ShortcutOf(WindowKeyboardAction.SnapRight), resizable),
-            new(WindowKeyboardAction.ToggleFullScreen, IsFullScreen ? "Exit full screen" : "Full screen (Linux keys)", ShortcutOf(WindowKeyboardAction.ToggleFullScreen), ToggleFullScreen is not null),
-            new(WindowKeyboardAction.Close, "Close", ShortcutOf(WindowKeyboardAction.Close), true),
+            new(WindowKeyboardAction.ToggleMaximize, _text[maximized ? "WindowMenu.Restore" : "WindowMenu.Maximize"], ShortcutOf(WindowKeyboardAction.ToggleMaximize), maximized || resizable),
+            new(WindowKeyboardAction.Minimize, _text["WindowMenu.Minimize"], ShortcutOf(WindowKeyboardAction.Minimize), true),
+            new(WindowKeyboardAction.Move, _text["WindowMenu.Move"], ShortcutOf(WindowKeyboardAction.Move), normal && window.Constraints.IsMovable),
+            new(WindowKeyboardAction.Resize, _text["WindowMenu.Resize"], ShortcutOf(WindowKeyboardAction.Resize), normal && resizable),
+            new(WindowKeyboardAction.SnapLeft, _text["WindowMenu.SnapLeft"], ShortcutOf(WindowKeyboardAction.SnapLeft), resizable),
+            new(WindowKeyboardAction.SnapRight, _text["WindowMenu.SnapRight"], ShortcutOf(WindowKeyboardAction.SnapRight), resizable),
+            new(WindowKeyboardAction.ToggleFullScreen, _text[IsFullScreen ? "WindowMenu.ExitFullScreen" : "WindowMenu.FullScreen"], ShortcutOf(WindowKeyboardAction.ToggleFullScreen), ToggleFullScreen is not null),
+            new(WindowKeyboardAction.Close, _text["WindowMenu.Close"], ShortcutOf(WindowKeyboardAction.Close), true),
         ];
     }
 

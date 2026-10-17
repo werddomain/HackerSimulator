@@ -12,6 +12,8 @@ HackerOs.Apps.Settings.InstalledAppsPanel.Dispose() -> void
 HackerOs.Apps.Settings.InstalledAppsPanel.InstalledAppsPanel() -> void
 HackerOs.Apps.Settings.InstalledAppsPanel.OnlyAppId.get -> string?
 HackerOs.Apps.Settings.InstalledAppsPanel.OnlyAppId.set -> void
+HackerOs.Apps.Settings.LanguagePanel
+HackerOs.Apps.Settings.LanguagePanel.LanguagePanel() -> void
 HackerOs.Apps.Settings.ServerRelayPolicyPanel
 HackerOs.Apps.Settings.ServerRelayPolicyPanel.ServerRelayPolicyPanel() -> void
 HackerOs.Apps.Settings.SettingsApp

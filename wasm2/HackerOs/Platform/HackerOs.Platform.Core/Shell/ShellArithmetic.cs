@@ -2,8 +2,28 @@ using System.Globalization;
 
 namespace HackerOs.Platform.Core.Shell;
 
-/// <summary>Raised for an arithmetic expression that cannot be evaluated (<c>$((1/0))</c>, a stray token).</summary>
-public sealed class ShellArithmeticException(string message) : Exception(message);
+/// <summary>
+/// Raised for an arithmetic expression that cannot be evaluated (<c>$((1/0))</c>, a stray token).
+/// <see cref="Exception.Message"/> is English; the shell prints <see cref="IShellLocalizableError.TextKey"/>
+/// in its own language (ADR 0104).
+/// </summary>
+public sealed class ShellArithmeticException : Exception, IShellLocalizableError
+{
+    /// <summary>Creates the error <c>expression: reason</c>.</summary>
+    /// <param name="expression">The expression as typed (trimmed).</param>
+    /// <param name="reason">Why it failed, as a resource text.</param>
+    public ShellArithmeticException(string expression, ShellLocalizedText reason)
+        : base($"{expression}: {reason}")
+    {
+        TextArguments = [expression, reason];
+    }
+
+    /// <inheritdoc />
+    public string TextKey => "Shell.Error";
+
+    /// <inheritdoc />
+    public IReadOnlyList<object> TextArguments { get; }
+}
 
 /// <summary>
 /// Evaluates shell arithmetic (<c>$((…))</c>, <c>let</c>-style), on 64-bit signed integers as
@@ -54,13 +74,14 @@ public sealed class ShellArithmetic
         SkipBlanks();
         if (_position < _text.Length)
         {
-            throw Error($"syntax error in expression (error token is \"{_text[_position..].Trim()}\")");
+            throw Error("Arithmetic.SyntaxError", _text[_position..].Trim());
         }
 
         return value;
     }
 
-    private ShellArithmeticException Error(string message) => new($"{_text.Trim()}: {message}");
+    private ShellArithmeticException Error(string textKey, params object[] arguments) =>
+        new(_text.Trim(), new ShellLocalizedText(textKey, arguments));
 
     private void SkipBlanks()
     {
@@ -143,7 +164,7 @@ public sealed class ShellArithmetic
             long whenTrue = ParseSkippedUnless(condition != 0);
             if (!TryTake(":"))
             {
-                throw Error("`:' expected for conditional expression");
+                throw Error("Arithmetic.ColonExpected");
             }
 
             long whenFalse = ParseSkippedUnless(condition == 0);
@@ -261,7 +282,7 @@ public sealed class ShellArithmetic
             long exponent = ParsePower();
             if (exponent < 0)
             {
-                throw Error("exponent less than 0");
+                throw Error("Arithmetic.NegativeExponent");
             }
 
             long result = 1;
@@ -285,7 +306,7 @@ public sealed class ShellArithmetic
             SkipBlanks();
             if (!TryReadName(out string? name))
             {
-                throw Error("operand expected for increment");
+                throw Error("Arithmetic.IncrementOperandExpected");
             }
 
             long value = ReadVariable(name) + (increment ? 1 : -1);
@@ -324,7 +345,7 @@ public sealed class ShellArithmetic
             long value = ParseAssignment();
             if (!TryTake(")"))
             {
-                throw Error("missing `)'");
+                throw Error("Arithmetic.MissingParenthesis");
             }
 
             return value;
@@ -377,12 +398,12 @@ public sealed class ShellArithmetic
         string literal = _text[start.._position];
         if (literal.Length == 0)
         {
-            throw Error(_position < _text.Length
-                ? $"syntax error: operand expected (error token is \"{_text[_position..].Trim()}\")"
-                : "syntax error: operand expected");
+            throw _position < _text.Length
+                ? Error("Arithmetic.OperandExpectedAt", _text[_position..].Trim())
+                : Error("Arithmetic.OperandExpected");
         }
 
-        return ParseInteger(literal) ?? throw Error($"value too great for base (error token is \"{literal}\")");
+        return ParseInteger(literal) ?? throw Error("Arithmetic.ValueTooGreat", literal);
     }
 
     /// <summary>Parses a shell integer literal: decimal, <c>0</c>-prefixed octal, <c>0x</c> hexadecimal, or <c>base#digits</c>.</summary>
@@ -495,16 +516,16 @@ public sealed class ShellArithmetic
         "*" => unchecked(left * right),
         "**" => Power(left, right),
         "/" or "%" when right == 0 && _skip > 0 => 0,
-        "/" => right == 0 ? throw Error("division by 0 (error token is \"0\")") : left / right,
-        "%" => right == 0 ? throw Error("division by 0 (error token is \"0\")") : left % right,
-        _ => throw Error($"unknown operator `{op}'")
+        "/" => right == 0 ? throw Error("Arithmetic.DivisionByZero") : left / right,
+        "%" => right == 0 ? throw Error("Arithmetic.DivisionByZero") : left % right,
+        _ => throw Error("Arithmetic.UnknownOperator", op)
     };
 
     private long Power(long value, long exponent)
     {
         if (exponent < 0)
         {
-            throw Error("exponent less than 0");
+            throw Error("Arithmetic.NegativeExponent");
         }
 
         long result = 1;

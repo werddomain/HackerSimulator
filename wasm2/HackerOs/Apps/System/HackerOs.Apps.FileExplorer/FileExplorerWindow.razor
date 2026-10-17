@@ -45,39 +45,39 @@
     <!-- Navigation & Address Toolbar -->
     <div class="explorer-toolbar">
         <div class="nav-buttons">
-            <button class="nav-btn" disabled="@(!_state.CanNavigateBack)" @onclick="NavigateBackAsync" title="Back">
+            <button class="nav-btn" disabled="@(!_state.CanNavigateBack)" @onclick="NavigateBackAsync" title="@L["Nav.Back"]">
                 <HackerIcon Library="IconLibrary.Lucide" Name="arrow-left" Size="16" />
             </button>
-            <button class="nav-btn" disabled="@(!_state.CanNavigateForward)" @onclick="NavigateForwardAsync" title="Forward">
+            <button class="nav-btn" disabled="@(!_state.CanNavigateForward)" @onclick="NavigateForwardAsync" title="@L["Nav.Forward"]">
                 <HackerIcon Library="IconLibrary.Lucide" Name="arrow-right" Size="16" />
             </button>
-            <button class="nav-btn" disabled="@(!_state.CanNavigateUp)" @onclick="NavigateUpAsync" title="Up">
+            <button class="nav-btn" disabled="@(!_state.CanNavigateUp)" @onclick="NavigateUpAsync" title="@L["Nav.Up"]">
                 <HackerIcon Library="IconLibrary.Lucide" Name="arrow-up" Size="16" />
             </button>
-            <button class="nav-btn" @onclick="RefreshAsync" title="Refresh">
+            <button class="nav-btn" @onclick="RefreshAsync" title="@L["Nav.Refresh"]">
                 <HackerIcon Library="IconLibrary.Lucide" Name="refresh-cw" Size="16" />
             </button>
-            <button class="nav-btn" @onclick="NavigateHomeAsync" title="Home">
+            <button class="nav-btn" @onclick="NavigateHomeAsync" title="@L["Nav.Home"]">
                 <HackerIcon Library="IconLibrary.Lucide" Name="house" Size="16" />
             </button>
         </div>
 
         <div class="address-bar">
-            <input type="text" class="address-input" @bind="_addressInput" @bind:event="oninput" @onkeydown="HandleAddressKeyDownAsync" aria-label="Current path address" />
+            <input type="text" class="address-input" @bind="_addressInput" @bind:event="oninput" @onkeydown="HandleAddressKeyDownAsync" aria-label="@L["Address.AriaLabel"]" />
         </div>
 
         <div class="search-box">
-            <input type="text" class="search-input" placeholder="Search..." @bind="_state.SearchQuery" @bind:event="oninput" @bind:after="OnSearchQueryChanged" aria-label="Search directory" />
+            <input type="text" class="search-input" placeholder="@L["Search.Placeholder"]" @bind="_state.SearchQuery" @bind:event="oninput" @bind:after="OnSearchQueryChanged" aria-label="@L["Search.AriaLabel"]" />
         </div>
 
         <div class="view-toggle">
-            <button class="view-btn @(_state.ViewMode == FileViewMode.Details ? "active" : "")" @onclick="() => SetViewMode(FileViewMode.Details)" title="Details View">
+            <button class="view-btn @(_state.ViewMode == FileViewMode.Details ? "active" : "")" @onclick="() => SetViewMode(FileViewMode.Details)" title="@L["View.Details"]">
                 <HackerIcon Library="IconLibrary.Lucide" Name="list" Size="16" />
             </button>
-            <button class="view-btn @(_state.ViewMode == FileViewMode.Icons ? "active" : "")" @onclick="() => SetViewMode(FileViewMode.Icons)" title="Icons View">
+            <button class="view-btn @(_state.ViewMode == FileViewMode.Icons ? "active" : "")" @onclick="() => SetViewMode(FileViewMode.Icons)" title="@L["View.Icons"]">
                 <HackerIcon Library="IconLibrary.Lucide" Name="layout-grid" Size="16" />
             </button>
-            <button class="view-btn @(_state.ViewMode == FileViewMode.Tree ? "active" : "")" @onclick="() => SetViewMode(FileViewMode.Tree)" title="Tree View">
+            <button class="view-btn @(_state.ViewMode == FileViewMode.Tree ? "active" : "")" @onclick="() => SetViewMode(FileViewMode.Tree)" title="@L["View.Tree"]">
                 <HackerIcon Library="IconLibrary.Lucide" Name="list-tree" Size="16" />
             </button>
         </div>
@@ -85,18 +85,18 @@
 
     <div class="explorer-body">
     <!-- Places sidebar -->
-    <nav class="explorer-sidebar" aria-label="Places">
-        <div class="sidebar-heading">Places</div>
+    <nav class="explorer-sidebar" aria-label="@L["Places.Heading"]">
+        <div class="sidebar-heading">@L["Places.Heading"]</div>
         @if (_fileView is not null)
         {
             <FileViewDropZone Owner="_fileView" Destination="_homeDirectory">
-                <button class="sidebar-entry @(!_showTrash && _state.CurrentPath == GetHomePath() ? "active" : "")" @onclick="NavigateHomeAsync" title="Home">
-                    <HackerIcon Library="IconLibrary.Lucide" Name="house" Size="16" /> <span>Home</span>
+                <button class="sidebar-entry @(!_showTrash && _state.CurrentPath == GetHomePath() ? "active" : "")" @onclick="NavigateHomeAsync" title="@L["Places.Home"]">
+                    <HackerIcon Library="IconLibrary.Lucide" Name="house" Size="16" /> <span>@L["Places.Home"]</span>
                 </button>
             </FileViewDropZone>
             <FileViewDropZone Owner="_fileView" Dropped="OnTrashDropAsync">
-                <button class="sidebar-entry @(_showTrash ? "active" : "")" @onclick="ShowTrashAsync" title="Trash (drop here to delete)">
-                    <HackerIcon Library="IconLibrary.Lucide" Name="trash-2" Size="16" /> <span>Trash</span>
+                <button class="sidebar-entry @(_showTrash ? "active" : "")" @onclick="ShowTrashAsync" title="@L["Places.TrashTooltip"]">
+                    <HackerIcon Library="IconLibrary.Lucide" Name="trash-2" Size="16" /> <span>@L["Places.Trash"]</span>
                 </button>
             </FileViewDropZone>
         }
@@ -114,59 +114,59 @@
     @if (_fileView is not null)
     {
         <div class="explorer-locationbar">
-            <FileViewBreadcrumb Owner="_fileView" RootLabel="Computer" />
+            <FileViewBreadcrumb Owner="_fileView" RootLabel="@L["Breadcrumb.Root"]" />
         </div>
     }
 
     <!-- Actions Toolbar -->
     <div class="actions-toolbar">
-        <button class="action-btn" @onclick="CreateFolderAsync" title="New Folder">
-            <HackerIcon Library="IconLibrary.Lucide" Name="folder-plus" Size="16" /> <span>New Folder</span>
+        <button class="action-btn" @onclick="CreateFolderAsync" title="@L["Toolbar.NewFolder"]">
+            <HackerIcon Library="IconLibrary.Lucide" Name="folder-plus" Size="16" /> <span>@L["Toolbar.NewFolder"]</span>
         </button>
-        <button class="action-btn" @onclick="CreateFileAsync" title="New File">
-            <HackerIcon Library="IconLibrary.Lucide" Name="file-plus" Size="16" /> <span>New File</span>
+        <button class="action-btn" @onclick="CreateFileAsync" title="@L["Toolbar.NewFile"]">
+            <HackerIcon Library="IconLibrary.Lucide" Name="file-plus" Size="16" /> <span>@L["Toolbar.NewFile"]</span>
         </button>
-        <button class="action-btn" disabled="@(SelectedCount != 1)" @onclick="RenameSelected" title="Rename">
-            <HackerIcon Library="IconLibrary.Lucide" Name="pencil" Size="16" /> <span>Rename</span>
+        <button class="action-btn" disabled="@(SelectedCount != 1)" @onclick="RenameSelected" title="@L["Toolbar.Rename"]">
+            <HackerIcon Library="IconLibrary.Lucide" Name="pencil" Size="16" /> <span>@L["Toolbar.Rename"]</span>
         </button>
-        <button class="action-btn danger" disabled="@(SelectedCount == 0)" @onclick="DeleteSelectedAsync" title="Move to Trash (Del)">
-            <HackerIcon Library="IconLibrary.Lucide" Name="trash-2" Size="16" /> <span>Delete</span>
+        <button class="action-btn danger" disabled="@(SelectedCount == 0)" @onclick="DeleteSelectedAsync" title="@L["Toolbar.DeleteTooltip"]">
+            <HackerIcon Library="IconLibrary.Lucide" Name="trash-2" Size="16" /> <span>@L["Toolbar.Delete"]</span>
         </button>
         <span class="toolbar-divider"></span>
 
-        <button class="action-btn" disabled="@(SelectedCount == 0)" @onclick="CutSelectedAsync" title="Cut (Ctrl+X)">
-            <HackerIcon Library="IconLibrary.Lucide" Name="scissors" Size="16" /> <span>Cut</span>
+        <button class="action-btn" disabled="@(SelectedCount == 0)" @onclick="CutSelectedAsync" title="@L["Toolbar.CutTooltip"]">
+            <HackerIcon Library="IconLibrary.Lucide" Name="scissors" Size="16" /> <span>@L["Toolbar.Cut"]</span>
         </button>
-        <button class="action-btn" disabled="@(SelectedCount == 0)" @onclick="CopySelectedAsync" title="Copy (Ctrl+C)">
-            <HackerIcon Library="IconLibrary.Lucide" Name="copy" Size="16" /> <span>Copy</span>
+        <button class="action-btn" disabled="@(SelectedCount == 0)" @onclick="CopySelectedAsync" title="@L["Toolbar.CopyTooltip"]">
+            <HackerIcon Library="IconLibrary.Lucide" Name="copy" Size="16" /> <span>@L["Toolbar.Copy"]</span>
         </button>
-        <button class="action-btn" disabled="@(!_canPaste)" @onclick="PasteHereAsync" title="Paste (Ctrl+V)">
-            <HackerIcon Library="IconLibrary.Lucide" Name="clipboard-paste" Size="16" /> <span>Paste</span>
+        <button class="action-btn" disabled="@(!_canPaste)" @onclick="PasteHereAsync" title="@L["Toolbar.PasteTooltip"]">
+            <HackerIcon Library="IconLibrary.Lucide" Name="clipboard-paste" Size="16" /> <span>@L["Toolbar.Paste"]</span>
         </button>
 
         <span class="toolbar-divider"></span>
 
-        <button class="action-btn" disabled="@(SelectedCount != 1)" @onclick="ShowPropertiesAsync" title="Properties">
-            <HackerIcon Library="IconLibrary.Lucide" Name="info" Size="16" /> <span>Properties</span>
+        <button class="action-btn" disabled="@(SelectedCount != 1)" @onclick="ShowPropertiesAsync" title="@L["Toolbar.Properties"]">
+            <HackerIcon Library="IconLibrary.Lucide" Name="info" Size="16" /> <span>@L["Toolbar.Properties"]</span>
         </button>
-        <button class="action-btn" disabled="@(SelectedCount != 1)" @onclick="OpenWithAsync" title="Open With...">
-            <HackerIcon Library="IconLibrary.Lucide" Name="external-link" Size="16" /> <span>Open With...</span>
+        <button class="action-btn" disabled="@(SelectedCount != 1)" @onclick="OpenWithAsync" title="@L["Toolbar.OpenWith"]">
+            <HackerIcon Library="IconLibrary.Lucide" Name="external-link" Size="16" /> <span>@L["Toolbar.OpenWith"]</span>
         </button>
 
         <span class="toolbar-divider"></span>
 
         <InputFile id="fileInput" OnChange="UploadFilesAsync" multiple hidden />
-        <label for="fileInput" class="action-btn" title="Upload">
-            <HackerIcon Library="IconLibrary.Lucide" Name="upload" Size="16" /> <span>Upload</span>
+        <label for="fileInput" class="action-btn" title="@L["Toolbar.Upload"]">
+            <HackerIcon Library="IconLibrary.Lucide" Name="upload" Size="16" /> <span>@L["Toolbar.Upload"]</span>
         </label>
-        <button class="action-btn" disabled="@(SelectedCount == 0)" @onclick="DownloadSelectedAsync" title="Download">
-            <HackerIcon Library="IconLibrary.Lucide" Name="download" Size="16" /> <span>Download</span>
+        <button class="action-btn" disabled="@(SelectedCount == 0)" @onclick="DownloadSelectedAsync" title="@L["Toolbar.Download"]">
+            <HackerIcon Library="IconLibrary.Lucide" Name="download" Size="16" /> <span>@L["Toolbar.Download"]</span>
         </button>
-        <button class="action-btn" disabled="@(SelectedCount == 0)" @onclick="CompressSelectedAsync" title="Compress to Zip">
-            <HackerIcon Library="IconLibrary.Lucide" Name="archive" Size="16" /> <span>Compress</span>
+        <button class="action-btn" disabled="@(SelectedCount == 0)" @onclick="CompressSelectedAsync" title="@L["Toolbar.CompressTooltip"]">
+            <HackerIcon Library="IconLibrary.Lucide" Name="archive" Size="16" /> <span>@L["Toolbar.Compress"]</span>
         </button>
-        <button class="action-btn" disabled="@(!CanExtractSelection)" @onclick="ExtractSelectedAsync" title="Extract Zip">
-            <HackerIcon Library="IconLibrary.Lucide" Name="package-open" Size="16" /> <span>Extract</span>
+        <button class="action-btn" disabled="@(!CanExtractSelection)" @onclick="ExtractSelectedAsync" title="@L["Toolbar.ExtractTooltip"]">
+            <HackerIcon Library="IconLibrary.Lucide" Name="package-open" Size="16" /> <span>@L["Toolbar.Extract"]</span>
         </button>
     </div>
 
@@ -176,7 +176,7 @@
     }
     else if (_fileView is not null && _fileView.Items.Count == 0)
     {
-        <div class="empty-state">This directory is empty.</div>
+        <div class="empty-state">@L["Empty"]</div>
     }
 
     <!-- Directory Content View -->
@@ -199,10 +199,10 @@
 
     <!-- Status Bar -->
     <div class="explorer-statusbar">
-        <span>@(_fileView?.Items.Count ?? 0) item(s)</span>
+        <span>@Strings.Plural(L, "Status.Items", _fileView?.Items.Count ?? 0)</span>
         @if (SelectedCount > 0)
         {
-            <span> | @SelectedCount selected</span>
+            <span> | @Strings.Plural(L, "Status.Selected", SelectedCount)</span>
         }
     </div>
     </div>
@@ -228,6 +228,11 @@
     private bool _canPaste;
     private IReadOnlyCollection<string> _cutPaths = [];
     private bool _subscribedToClipboard;
+
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The File Explorer's texts in its own process's language (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
 
     private int SelectedCount => _fileView?.SelectedItems.Count ?? 0;
 
@@ -279,8 +284,8 @@
         _searchFilter = MatchesSearchQuery;
         _contextMenuProviders =
         [
-            new ZipFileContextMenuProvider(AppContext.FileSystem, () => _fileView, ReportError),
-            new PublishSiteContextMenuProvider(LaunchWithAsync)
+            new ZipFileContextMenuProvider(AppContext.FileSystem, () => _fileView, ReportError, L),
+            new PublishSiteContextMenuProvider(LaunchWithAsync, L)
         ];
         _eventSub = AppContext.Events.Subscribe<AppDisabledEvent>(evt =>
         {
@@ -381,7 +386,7 @@
         {
             if (!await _fileView.RevealAsync(path))
             {
-                ReportError($"'{path.Value}' is no longer in this folder.");
+                ReportError(L["Error.NoLongerHere", path.Value]);
             }
         }
         catch (InvalidOperationException exception)
@@ -493,7 +498,7 @@
         }
         catch (AppGatewayAccessDeniedException)
         {
-            ReportError("You don't have permission to open files.");
+            ReportError(L["Error.OpenDenied"]);
             return;
         }
 
@@ -505,10 +510,10 @@
                 await ShowOpenWithChooserAsync(fullPath, result.CandidateAppIds ?? []);
                 break;
             case AppIntentOpenFileOutcome.NoHandler:
-                ReportError("No application is registered to open this file.");
+                ReportError(L["Error.NoHandler"]);
                 break;
             default:
-                ReportError($"Could not open file: {result.ErrorCode}");
+                ReportError(L["Error.OpenFailed", result.ErrorCode ?? string.Empty]);
                 break;
         }
     }
@@ -527,7 +532,7 @@
             { nameof(OpenWithDialog.AvailableApps), candidates }
         };
 
-        IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>("Open With", parameters);
+        IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>(L["Dialog.OpenWith.Title"], parameters);
         DialogResult? dialogResult = await dialog.Result;
 
         if (dialogResult is not null && !dialogResult.Canceled && dialogResult.Data is HackAppInfo selectedApp)
@@ -544,7 +549,7 @@
         }
         catch (AppGatewayAccessDeniedException)
         {
-            ReportError("You don't have permission to launch applications.");
+            ReportError(L["Error.LaunchDenied"]);
         }
     }
 
@@ -556,10 +561,10 @@
         if (_fileView is null) return;
 
         TextInputDialogResult result = await base.TextInput(
-            title: "New Folder",
-            content: "Enter the name of the new folder:",
-            defaultValue: "New Folder",
-            placeholder: "Folder name...");
+            title: L["Dialog.NewFolder.Title"],
+            content: L["Dialog.NewFolder.Prompt"],
+            defaultValue: L["Dialog.NewFolder.Default"],
+            placeholder: L["Dialog.NewFolder.Placeholder"]);
 
         if (result.Status != TextInputStatus.Submitted || string.IsNullOrWhiteSpace(result.Value)) return;
 
@@ -577,8 +582,8 @@
         else
         {
             ReportError(creation.Transaction.Error?.Code == FileSystemErrorCode.AlreadyExists
-                ? $"'{folderName}' already exists."
-                : "Could not create the folder.");
+                ? L["Error.AlreadyExists", folderName]
+                : L["Error.CreateFolder"]);
         }
     }
 
@@ -587,10 +592,10 @@
         if (_fileView is null) return;
 
         TextInputDialogResult result = await base.TextInput(
-            title: "New File",
-            content: "Enter the name of the new file:",
+            title: L["Dialog.NewFile.Title"],
+            content: L["Dialog.NewFile.Prompt"],
             defaultValue: "NewFile.txt",
-            placeholder: "File name...");
+            placeholder: L["Dialog.NewFile.Placeholder"]);
 
         if (result.Status != TextInputStatus.Submitted || string.IsNullOrWhiteSpace(result.Value)) return;
 
@@ -608,8 +613,8 @@
         else
         {
             ReportError(creation.Transaction.Error?.Code == FileSystemErrorCode.AlreadyExists
-                ? $"'{fileName}' already exists."
-                : "Could not create the file.");
+                ? L["Error.AlreadyExists", fileName]
+                : L["Error.CreateFile"]);
         }
     }
 
@@ -637,9 +642,9 @@
         if (permanent)
         {
             string question = items.Count == 1
-                ? $"Permanently delete '{items[0].FileName}'? This cannot be undone."
-                : $"Permanently delete these {items.Count} items? This cannot be undone.";
-            MessageBoxDialogResult answer = await base.MessageBox("Delete permanently", question, MessageBoxType.YesNo);
+                ? L["Dialog.DeletePermanently.One", items[0].FileName]
+                : L["Dialog.DeletePermanently.Many", items.Count];
+            MessageBoxDialogResult answer = await base.MessageBox(L["Dialog.DeletePermanently.Title"], question, MessageBoxType.YesNo);
             if (answer.Result != MessageBoxResult.Yes) return;
         }
 
@@ -663,15 +668,15 @@
             }
             catch (UnauthorizedAccessException)
             {
-                failures.Add($"'{item.FileName}': permission denied");
+                failures.Add(L["Error.ItemPermissionDenied", item.FileName]);
             }
             catch (IOException ex)
             {
-                failures.Add($"'{item.FileName}': {ex.Message}");
+                failures.Add(L["Error.Item", item.FileName, ex.Message]);
             }
         }
 
-        _errorMessage = failures.Count == 0 ? null : "Could not delete " + string.Join("; ", failures);
+        _errorMessage = failures.Count == 0 ? null : L["Error.Delete", string.Join("; ", failures)].Value;
         _fileView.ClearSelect();
         await _fileView.RefreshAsync();
     }
@@ -744,7 +749,7 @@
             await HackClipboard.ClearAsync(AppContext.CancellationToken);
         }
 
-        ReportTransfer(result, cut ? "move" : "copy");
+        ReportTransfer(result, cut ? TransferVerb.Move : TransferVerb.Copy);
         await RefreshAfterTransferAsync();
     }
 
@@ -807,7 +812,7 @@
             failures.AddRange(imported.Failures);
         }
 
-        ReportTransfer(new FileTransferResult(completed, skipped, failures), e.Copy || e.Entries.Count == 0 ? "copy" : "move");
+        ReportTransfer(new FileTransferResult(completed, skipped, failures), e.Copy || e.Entries.Count == 0 ? TransferVerb.Copy : TransferVerb.Move);
         await RefreshAfterTransferAsync();
     }
 
@@ -818,7 +823,7 @@
 
         FileTransferResult result = await TrackOperation(FileTransfer.MoveToTrashAsync(
             e.Entries.Select(entry => entry.Path.Value).ToList(), AppContext.CancellationToken));
-        ReportTransfer(result, "move to the trash");
+        ReportTransfer(result, TransferVerb.Trash);
         await RefreshAfterTransferAsync();
         if (_trashView is not null && _showTrash)
         {
@@ -834,7 +839,7 @@
             { nameof(FileConflictDialog.OwnerAppContext), AppContext },
             { nameof(FileConflictDialog.Conflict), conflict }
         };
-        IDialogReference dialog = await MudDialogService.ShowAsync<FileConflictDialog>("Name conflict", parameters);
+        IDialogReference dialog = await MudDialogService.ShowAsync<FileConflictDialog>(L["Dialog.Conflict.Title"], parameters);
         DialogResult? result = await dialog.Result;
         return result is { Canceled: false, Data: FileConflictResolution resolution }
             ? resolution
@@ -845,15 +850,15 @@
     /// Shows the end-of-operation summary: the failures (with their reason) in the error banner and as a
     /// desktop notification; nothing when everything went through.
     /// </summary>
-    private void ReportTransfer(FileTransferResult result, string verb)
+    private void ReportTransfer(FileTransferResult result, TransferVerb verb)
     {
-        string? summary = result.DescribeFailures(verb);
+        string? summary = DescribeFailures(result, verb);
         _errorMessage = summary;
         if (summary is not null)
         {
             try
             {
-                AppContext.Notifications.Post(NotificationSeverity.Warning, "File Explorer", summary);
+                AppContext.Notifications.Post(NotificationSeverity.Warning, L["Notification.Title"], summary);
             }
             catch (AppGatewayAccessDeniedException)
             {
@@ -862,6 +867,33 @@
         }
 
         _ = InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>What a transfer was doing, for its failure summary (<c>Transfer.&lt;verb&gt;.One/Many</c>).</summary>
+    private enum TransferVerb
+    {
+        Copy,
+        Move,
+        Trash,
+        Upload
+    }
+
+    /// <summary>
+    /// The failure summary of a transfer in the explorer's language, worded like
+    /// <see cref="FileTransferResult.DescribeFailures(string)"/>: <c>Could not copy 'a': reason.</c>, or the
+    /// count and the list when several items failed; <see langword="null"/> when nothing failed.
+    /// </summary>
+    private string? DescribeFailures(FileTransferResult result, TransferVerb verb)
+    {
+        if (result.Failures.Count == 0)
+        {
+            return null;
+        }
+
+        string items = string.Join("; ", result.Failures.Select(failure => L["Error.Item", FileTransfer.GetName(failure.Path), failure.Reason].Value));
+        return result.Failures.Count == 1
+            ? L[$"Transfer.{verb}.One", items]
+            : L[$"Transfer.{verb}.Many", result.Failures.Count, items];
     }
 
     private async Task RefreshAfterTransferAsync()
@@ -907,7 +939,7 @@
                 (maxBytes, cancellationToken) => Task.FromResult(file.OpenReadStream(maxBytes, cancellationToken))))
             .ToList();
         FileTransferResult result = await TrackOperation(FileTransfer.ImportAsync(files, _fileView.CurrentDirectory.Value, AppContext.CancellationToken));
-        ReportTransfer(result, "upload");
+        ReportTransfer(result, TransferVerb.Upload);
         await _fileView.RefreshAsync();
     }
 
@@ -969,10 +1001,10 @@
 
         string defaultName = selected.Count == 1 ? selected[0].FileName + ".zip" : "Archive.zip";
         TextInputDialogResult result = await base.TextInput(
-            title: "Compress to Zip",
-            content: "Enter the name of the zip archive:",
+            title: L["Dialog.Compress.Title"],
+            content: L["Dialog.Compress.Prompt"],
             defaultValue: defaultName,
-            placeholder: "Archive name...");
+            placeholder: L["Dialog.Compress.Placeholder"]);
 
         if (result.Status != TextInputStatus.Submitted || string.IsNullOrWhiteSpace(result.Value)) return;
 
@@ -987,7 +1019,7 @@
             new FileSystemStatRequest(destPath), AppContext.CancellationToken);
         if (destStat.Succeeded)
         {
-            ReportError($"'{archiveName}' already exists.");
+            ReportError(L["Error.AlreadyExists", archiveName]);
             return;
         }
 
@@ -1014,7 +1046,7 @@
 
         if (!createResult.Succeeded)
         {
-            ReportError("Could not create the archive.");
+            ReportError(L["Error.CreateArchive"]);
             return;
         }
 
@@ -1030,7 +1062,7 @@
         }
         else
         {
-            ReportError("Failed to write the archive.");
+            ReportError(L["Error.WriteArchive"]);
         }
     }
 
@@ -1042,7 +1074,7 @@
         string folderName = item.FileName[..^".zip".Length];
         VirtualPath destDir = CombineChild(_fileView.CurrentDirectory, folderName);
 
-        string? error = await FileExplorerZipService.ExtractAsync(AppContext.FileSystem, item.FullPath, destDir, AppContext.CancellationToken);
+        string? error = await FileExplorerZipService.ExtractAsync(AppContext.FileSystem, item.FullPath, destDir, L, AppContext.CancellationToken);
         if (error is not null)
         {
             ReportError(error);
@@ -1067,7 +1099,7 @@
             { nameof(FilePropertiesDialog.Metadata), item.Metadata }
         };
 
-        await MudDialogService.ShowAsync<FilePropertiesDialog>("Properties", parameters);
+        await MudDialogService.ShowAsync<FilePropertiesDialog>(L["Dialog.Properties.Title"], parameters);
     }
 
     private async Task OpenWithAsync()
@@ -1087,7 +1119,7 @@
             { nameof(OpenWithDialog.AvailableApps), windowApps }
         };
 
-        IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>("Open With", parameters);
+        IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>(L["Dialog.OpenWith.Title"], parameters);
         DialogResult? result = await dialog.Result;
 
         if (result is not null && !result.Canceled && result.Data is HackAppInfo selectedApp)

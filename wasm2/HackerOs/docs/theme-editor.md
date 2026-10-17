@@ -141,6 +141,38 @@ système) pour lister `/etc/hackeros/themes`. Fenêtre 1180 × 760, minimum
 - Un `.theme` ouvert par l'explorateur (« Ouvrir avec ») ou passé en argument
   au lancement est chargé au démarrage.
 
+### Langues (ADR 0104)
+
+Barre d'outils, panneau d'identité, onglets, aperçu, champs de jeton,
+documentation et messages viennent de `Resources/Strings.resx` /
+`Strings.fr.resx`. `ThemeEditorDocument` reçoit le localiseur de la fenêtre
+(nom par défaut « Mon … », problèmes qui empêchent l'enregistrement). Les
+phrases de la documentation contiennent du `<code>` et sont rendues comme
+balisage depuis les ressources de l'assembly (jamais depuis un fichier), d'où
+le `::deep code` de `ThemeTokenDocumentation.razor.css`.
+
+`HackerOs.Theming.Abstractions` a ses propres `Resources/Strings.resx` /
+`Strings.fr.resx`, lus par un simple `ResourceManager` (le paquet reste sans
+dépendance HackerOS) avec la culture que l'appelant passe : une app donne
+`AppContext.Culture` (l'éditeur la tire de son localiseur, `Strings.CultureOf(L)`),
+la plateforme `SessionLocaleService.Culture`, et `null` donne l'anglais.
+Les propriétés `Label`, `Description` et `Message` restent en anglais ; les
+traductions passent par :
+
+- `ThemeTokenDefinition.GetLabel(culture)` / `GetDescription(culture)` (clé
+  `Token.BgBase.Label` pour `--hos-bg-base`) ;
+- `ThemeTokenValidator.TryValidate(type, valeur, culture, out normalisée, out erreur)` ;
+- `ThemeFileDiagnostic.GetMessage(culture)` et `ToString(culture)`
+  (`chemin:ligne: avertissement: …`). Un diagnostic produit par `ThemeFile` ou
+  `UserThemeLibrary` garde sa clé et ses arguments, il se lit donc dans la
+  langue de celui qui l'affiche. `ToString()` reste en anglais : c'est la
+  forme écrite dans les journaux par `UserThemeCatalogService`.
+
+Ne sont jamais traduits : les noms des thèmes intégrés (`ThemeCatalog`,
+des noms propres : HackerOS, Windows 98, macOS…), les noms de jetons, les ids
+et le contenu d'un fichier `.theme` (clés, valeurs, `platforms = desktop, mobile`,
+commentaires d'en-tête écrits par `Serialize`).
+
 ## Décisions clés
 
 - Les fichiers sont lus et écrits par la passerelle de fichiers de l'app

@@ -32,6 +32,29 @@ public sealed class StorageSpaceMonitorTests
     }
 
     [Fact]
+    public async Task The_warning_is_written_in_the_session_language()
+    {
+        Probe probe = new(new StorageCapacity(UsageBytes: 950 * MiB, QuotaBytes: 1000 * MiB));
+        InMemoryNotificationQueue english = new(maxEntriesPerUser: 10);
+        InMemoryNotificationQueue french = new(maxEntriesPerUser: 10);
+        AuthenticatedPrincipal alice = Principal("alice");
+        await using StorageSpaceMonitor englishMonitor = new(probe, english, () => alice);
+        await using StorageSpaceMonitor frenchMonitor = new(
+            probe, french, () => alice, language: () => System.Globalization.CultureInfo.GetCultureInfo("fr"));
+
+        await englishMonitor.RefreshAsync();
+        await frenchMonitor.RefreshAsync();
+
+        Notification inEnglish = Assert.Single(english.GetActive(alice.UserId, DateTimeOffset.UtcNow));
+        Assert.Equal("Low storage space", inEnglish.Title);
+        Assert.StartsWith("Only 50 MiB left of 1000 MiB.", inEnglish.Message, StringComparison.Ordinal);
+        Notification inFrench = Assert.Single(french.GetActive(alice.UserId, DateTimeOffset.UtcNow));
+        Assert.Equal("Espace de stockage faible", inFrench.Title);
+        Assert.StartsWith("Plus que 50 Mio libres sur 1000 Mio.", inFrench.Message, StringComparison.Ordinal);
+        Assert.Equal("Ouvrir Diagnostic", Assert.Single(inFrench.Actions).Label);
+    }
+
+    [Fact]
     public async Task A_new_session_user_is_warned_again()
     {
         Probe probe = new(new StorageCapacity(950 * MiB, 1000 * MiB));

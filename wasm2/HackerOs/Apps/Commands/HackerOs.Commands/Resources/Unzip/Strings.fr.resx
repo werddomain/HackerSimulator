@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="CannotOpen" xml:space="preserve">
+    <value>unzip :  impossible de trouver ou d'ouvrir {0}, {0}.zip ou {0}.ZIP. ({1})</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>unzip : {0}</value>
+  </data>
+  <data name="NoDirectory" xml:space="preserve">
+    <value>unzip :  impossible de trouver le répertoire zip dans {0}.</value>
+  </data>
+  <data name="NoErrors" xml:space="preserve">
+    <value>Aucune erreur détectée dans les données compressées de {0}.</value>
+  </data>
+  <data name="NotZip1" xml:space="preserve">
+    <value>  Signature de fin du répertoire central introuvable.  Soit ce fichier n'est pas</value>
+  </data>
+  <data name="NotZip2" xml:space="preserve">
+    <value>  un fichier zip, soit il constitue un disque d'une archive en plusieurs parties.</value>
+  </data>
+  <data name="PathEscapes" xml:space="preserve">
+    <value>avertissement :  « {0} » ignoré : le chemin sort de la destination</value>
+  </data>
+  <data name="ReplaceSkipped" xml:space="preserve">
+    <value>remplacer {0} ? [A]ucun : ignoré (utilisez -o pour écraser)</value>
+  </data>
+  <data name="UnknownOption" xml:space="preserve">
+    <value>unzip :  -{0} : option inconnue</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>utilisation : unzip [-l|-t|-p] [-o|-n] [-q] [-j] [-d dossier] fichier[.zip] [liste]</value>
+  </data>
+</root>

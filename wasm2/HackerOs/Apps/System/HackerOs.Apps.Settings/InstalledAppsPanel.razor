@@ -2,18 +2,16 @@
 @using HackerOs.AppSdk.Apps
 
 <div class="setting-group">
-    <h4>@(OnlyAppId is null ? "Installed Applications" : "Installation")</h4>
+    <h4>@(OnlyAppId is null ? L["Apps.Title"] : L["Apps.InstallationTitle"])</h4>
     <p class="setting-desc @(OnlyAppId is null ? "" : "is-hidden")">
-        Uninstalling an app hides it everywhere, blocks every way to start it and stops its running
-        windows. Nothing is deleted: its settings and your files stay in place for a reinstall. Only a
-        website loses its browser database.
-        The list lives in <code>~/.config/hackeros/apps.config</code> (for you) and
-        <code>/etc/hackeros/apps.config</code> (for every user: an administrator must authenticate).
+        @LocalizedMarkup.Format(L["Apps.Description"],
+            LocalizedMarkup.Code("~/.config/hackeros/apps.config"),
+            LocalizedMarkup.Code("/etc/hackeros/apps.config"))
     </p>
 
     @if (_apps is null)
     {
-        <p class="setting-desc">Loading applications...</p>
+        <p class="setting-desc">@L["Apps.Loading"]</p>
     }
 
     <div class="apps-list" role="list">
@@ -26,7 +24,7 @@
     @if (Commands.Count > 0)
     {
         <details class="commands-group">
-            <summary>Terminal commands (@Commands.Count) — part of the system, always installed</summary>
+            <summary>@L["Apps.Commands", Commands.Count]</summary>
             <div class="apps-list" role="list">
                 @foreach (HackAppInstallInfo command in Commands)
                 {
@@ -52,13 +50,13 @@
              @onclick:stopPropagation>
             <header class="apps-dialog-header">
                 <span class="apps-dialog-mark" aria-hidden="true">⏏</span>
-                <h2 id="uninstall-title">Uninstall @_pending.App.Name?</h2>
+                <h2 id="uninstall-title">@L["Apps.Uninstall.Title", _pending.App.Name]</h2>
             </header>
 
             <div class="apps-dialog-body">
                 @if (_pending.UninstallClosure.Count > 1)
                 {
-                    <p>These apps need it and will be uninstalled too:</p>
+                    <p>@L["Apps.Uninstall.Dependents"]</p>
                     <ul class="closure-list">
                         @foreach (string dependentId in _pending.UninstallClosure.Where(id => id != _pending.App.Id))
                         {
@@ -69,53 +67,52 @@
 
                 @if (_plan is { RunningProcesses.Count: > 0 } plan)
                 {
-                    <p>These processes will be stopped:</p>
+                    <p>@L["Apps.Uninstall.Processes"]</p>
                     <ul class="process-list">
                         @foreach (HackRunningProcessInfo process in plan.RunningProcesses)
                         {
                             <li><span class="process-pid">@process.Pid</span> @process.Name <span class="process-user">(@process.UserName)</span></li>
                         }
                     </ul>
-                    <p>Each one is asked to stop and gets a few seconds to save its work before it is forced. Settings and files are kept.</p>
+                    <p>@L["Apps.Uninstall.GracePeriod"]</p>
                 }
                 else
                 {
-                    <p>Nothing of it is running. Settings and files are kept.</p>
+                    <p>@L["Apps.Uninstall.NothingRunning"]</p>
                 }
 
                 @foreach (string siteId in WebSitesIn(_pending.UninstallClosure))
                 {
                     <p class="apps-site-data">
-                        The website data of @NameOf(siteId) (its browser database <code>hackweb.@siteId</code>) is deleted:
-                        it is not in your files and cannot come back with a reinstall.
+                        @LocalizedMarkup.Format(L["Apps.Uninstall.SiteData"], NameOf(siteId), LocalizedMarkup.Code($"hackweb.{siteId}"))
                     </p>
                 }
 
                 @if (IsAdministrator && _scope == HackInstallScope.Machine)
                 {
-                    <p>The system will ask an administrator to authenticate.</p>
+                    <p>@L["Apps.Uninstall.AdminWillAuthenticate"]</p>
                 }
 
                 @if (IsAdministrator)
                 {
-                    <div class="scope-options" role="radiogroup" aria-label="Uninstall for">
+                    <div class="scope-options" role="radiogroup" aria-label="@L["Apps.Uninstall.ScopeAriaLabel"]">
                         <button type="button" role="radio"
                                 aria-checked="@(_scope == HackInstallScope.User ? "true" : "false")"
                                 class="@ScopeClass(HackInstallScope.User)"
                                 @onclick="() => _scope = HackInstallScope.User">
-                            Only for me
+                            @L["Apps.Scope.User"]
                         </button>
                         <button type="button" role="radio"
                                 aria-checked="@(_scope == HackInstallScope.Machine ? "true" : "false")"
                                 class="@ScopeClass(HackInstallScope.Machine)"
                                 @onclick="() => _scope = HackInstallScope.Machine">
-                            For all users
+                            @L["Apps.Scope.Machine"]
                         </button>
                     </div>
                 }
                 else
                 {
-                    <p>This uninstalls it for you only.</p>
+                    <p>@L["Apps.Uninstall.ForYouOnly"]</p>
                 }
 
                 @if (!string.IsNullOrEmpty(_message))
@@ -125,9 +122,9 @@
             </div>
 
             <footer class="apps-dialog-footer">
-                <button type="button" class="apps-btn" disabled="@_isBusy" @onclick="CancelUninstall">Cancel</button>
+                <button type="button" class="apps-btn" disabled="@_isBusy" @onclick="CancelUninstall">@L["Common.Cancel"]</button>
                 <button type="button" class="apps-btn apps-btn-danger" disabled="@_isBusy" @onclick="ConfirmUninstallAsync">
-                    @(_isBusy ? "Uninstalling..." : "Uninstall")
+                    @(_isBusy ? L["Apps.Uninstalling"] : L["Apps.Uninstall"])
                 </button>
             </footer>
         </div>
@@ -159,21 +156,21 @@
                 }
                 else if (app.IsSystemApp)
                 {
-                    <span class="app-badge app-badge-system" title="System apps cannot be uninstalled">System</span>
+                    <span class="app-badge app-badge-system" title="@L["Apps.SystemBadge.Title"]">@L["Apps.SystemBadge"]</span>
                 }
                 else
                 {
                     @switch (entry.State)
                     {
                         case HackAppInstallState.Installed:
-                            <button type="button" class="apps-btn apps-btn-danger" disabled="@_isBusy" @onclick="() => AskUninstall(entry)">Uninstall</button>
+                            <button type="button" class="apps-btn apps-btn-danger" disabled="@_isBusy" @onclick="() => AskUninstall(entry)">@L["Apps.Uninstall"]</button>
                             break;
                         case HackAppInstallState.UninstalledForMachine when !IsAdministrator:
-                            <span class="app-badge app-badge-locked">Uninstalled by the administrator</span>
+                            <span class="app-badge app-badge-locked">@L["Apps.UninstalledByAdmin"]</span>
                             break;
                         default:
-                            <span class="app-badge">@(entry.State == HackAppInstallState.UninstalledForMachine ? "Uninstalled for all users" : "Uninstalled")</span>
-                            <button type="button" class="apps-btn" disabled="@_isBusy" @onclick="() => ReinstallAsync(entry)">Reinstall</button>
+                            <span class="app-badge">@(entry.State == HackAppInstallState.UninstalledForMachine ? L["Apps.UninstalledForAll"] : L["Apps.Uninstalled"])</span>
+                            <button type="button" class="apps-btn" disabled="@_isBusy" @onclick="() => ReinstallAsync(entry)">@L["Apps.Reinstall"]</button>
                             break;
                     }
                 }

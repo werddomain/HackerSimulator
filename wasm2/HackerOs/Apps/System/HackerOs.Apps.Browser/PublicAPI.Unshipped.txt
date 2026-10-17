@@ -490,10 +490,11 @@ static HackerOs.Apps.Browser.BrowserDownloads.GetFolder(string! homeDirectory) -
 static HackerOs.Apps.Browser.BrowserDownloads.GetUniquePathAsync(string! folder, string! fileName, System.Func<string!, System.Threading.Tasks.Task<bool>!>! exists) -> System.Threading.Tasks.Task<string!>!
 static HackerOs.Apps.Browser.BrowserDownloads.SaveAsync(string! homeDirectory, string! fileName, byte[]! bytes, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
 static HackerOs.Apps.Browser.BrowserDownloads.SuggestFileName(System.Uri! url, string? contentDisposition) -> string!
-static HackerOs.Apps.Browser.BrowserErrorPages.ForHttpStatus(int statusCode, System.Uri! url) -> HackerOs.Apps.Browser.BrowserErrorView!
-static HackerOs.Apps.Browser.BrowserErrorPages.ForNetworkError(string! code, System.Uri? url) -> HackerOs.Apps.Browser.BrowserErrorView!
-static HackerOs.Apps.Browser.BrowserErrorPages.ForRendererCrash(System.Uri? url, bool killed) -> HackerOs.Apps.Browser.BrowserErrorView!
-static HackerOs.Apps.Browser.BrowserErrorPages.ForSiteNotStarted(System.Uri! url, string! reason) -> HackerOs.Apps.Browser.BrowserErrorView!
+static HackerOs.Apps.Browser.BrowserErrorPages.ForHttpStatus(int statusCode, System.Uri! url, System.Globalization.CultureInfo? culture = null) -> HackerOs.Apps.Browser.BrowserErrorView!
+static HackerOs.Apps.Browser.BrowserErrorPages.ForNetworkError(string! code, System.Uri? url, System.Globalization.CultureInfo? culture = null) -> HackerOs.Apps.Browser.BrowserErrorView!
+static HackerOs.Apps.Browser.BrowserErrorPages.ForRendererCrash(System.Uri? url, bool killed, System.Globalization.CultureInfo? culture = null) -> HackerOs.Apps.Browser.BrowserErrorView!
+static HackerOs.Apps.Browser.BrowserErrorPages.ForScriptNavigation(System.Globalization.CultureInfo? culture = null) -> HackerOs.Apps.Browser.BrowserErrorView!
+static HackerOs.Apps.Browser.BrowserErrorPages.ForSiteNotStarted(System.Uri! url, string! reason, System.Globalization.CultureInfo? culture = null) -> HackerOs.Apps.Browser.BrowserErrorView!
 static HackerOs.Apps.Browser.BrowserWindow.ResolveSubmitUrl(string! finalUrl, string! postPath) -> string!
 static HackerOs.Apps.Browser.DevTools.DevToolsPanel.ShortName(string! url) -> string!
 static HackerOs.Apps.Browser.Net.BrowserFetchResult.Fail(string! errorCode) -> HackerOs.Apps.Browser.Net.BrowserFetchResult!
@@ -507,8 +508,8 @@ static HackerOs.Apps.Browser.Net.BrowserUrl.IsSameOrigin(System.Uri! first, Syst
 static HackerOs.Apps.Browser.Net.BrowserUrl.Resolve(System.Uri! baseUrl, string? reference) -> System.Uri?
 static HackerOs.Apps.Browser.Net.BrowserUrl.ToDisplayString(System.Uri! url, bool viewSource = false) -> string!
 static HackerOs.Apps.Browser.Net.BrowserUrl.ToLocalPath(System.Uri! url) -> string!
-static HackerOs.Apps.Browser.Net.DirectoryListingPage.Build(string! directoryPath, System.Collections.Generic.IEnumerable<HackerOs.Apps.Browser.Net.DirectoryListingEntry!>! entries) -> string!
-static HackerOs.Apps.Browser.Net.DirectoryListingPage.FormatSize(long bytes) -> string!
+static HackerOs.Apps.Browser.Net.DirectoryListingPage.Build(string! directoryPath, System.Collections.Generic.IEnumerable<HackerOs.Apps.Browser.Net.DirectoryListingEntry!>! entries, System.Globalization.CultureInfo? culture = null, System.Globalization.CultureInfo? formatCulture = null) -> string!
+static HackerOs.Apps.Browser.Net.DirectoryListingPage.FormatSize(long bytes, System.Globalization.CultureInfo? culture = null, System.Globalization.CultureInfo? formatCulture = null) -> string!
 static HackerOs.Apps.Browser.Rendering.DataUrl.FromBytes(string! mediaType, byte[]! bytes) -> string!
 static HackerOs.Apps.Browser.Rendering.DataUrl.FromText(string! mediaType, string! text) -> string!
 static HackerOs.Apps.Browser.Rendering.HtmlPageComposer.BridgeScript.get -> string!

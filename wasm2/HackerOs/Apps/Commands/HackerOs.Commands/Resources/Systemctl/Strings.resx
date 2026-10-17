@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AccessDenied" xml:space="preserve">
+    <value>Failed to {0} {1}: Access denied</value>
+  </data>
+  <data name="AccessDeniedHint" xml:space="preserve">
+    <value>See system logs and 'systemctl status' for details. (Needs the services.manage capability; try sudo.)</value>
+  </data>
+  <data name="BusFailed" xml:space="preserve">
+    <value>Failed to connect to bus: {0}</value>
+  </data>
+  <data name="CreatedSymlink" xml:space="preserve">
+    <value>Created symlink {0} → {1}.</value>
+  </data>
+  <data name="Legend.Active" xml:space="preserve">
+    <value>ACTIVE = The high-level unit activation state, i.e. generalization of SUB.</value>
+  </data>
+  <data name="Legend.Load" xml:space="preserve">
+    <value>LOAD   = Reflects whether the unit definition was properly loaded.</value>
+  </data>
+  <data name="Legend.Sub" xml:space="preserve">
+    <value>SUB    = The low-level unit activation state, values depend on unit type.</value>
+  </data>
+  <data name="Removed" xml:space="preserve">
+    <value>Removed "{0}".</value>
+  </data>
+  <data name="TooFewArguments" xml:space="preserve">
+    <value>Too few arguments.</value>
+  </data>
+  <data name="UnitFilesListed" xml:space="preserve">
+    <value>{0} unit files listed.</value>
+  </data>
+  <data name="UnitNotFound" xml:space="preserve">
+    <value>Unit {0} could not be found.</value>
+  </data>
+  <data name="UnitsListed" xml:space="preserve">
+    <value>{0} loaded units listed.</value>
+  </data>
+  <data name="UnknownVerb" xml:space="preserve">
+    <value>Unknown command verb '{0}'.</value>
+  </data>
+  <data name="VerbFailed" xml:space="preserve">
+    <value>Failed to {0} {1}: {2}</value>
+  </data>
+  <data name="VerbUnitNotFound" xml:space="preserve">
+    <value>Failed to {0} {1}: Unit {1} not found.</value>
+  </data>
+</root>

@@ -5,6 +5,8 @@
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Diagnostics
 @using HackerOs.AppSdk.IO
+@using HackerOs.AppSdk.Globalization
+@using Microsoft.Extensions.Localization
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
 @using MudBlazor
@@ -15,21 +17,21 @@
 
 <div class="editor-container" @ref="_editorContainerRef" @onkeydown="HandleGlobalKeyDownAsync" tabindex="0">
     <!-- Menu Bar -->
-    <nav class="editor-menubar" aria-label="Text editor menu">
+    <nav class="editor-menubar" aria-label="@L["Menu.AriaLabel"]">
         <div class="menu-group">
-            <span class="menu-label">File</span>
+            <span class="menu-label">@L["Menu.File"]</span>
             <div class="menu-dropdown">
-                <button class="menu-item" id="btn-new" @onclick="NewDocumentAsync">New</button>
-                <button class="menu-item" id="btn-open" @onclick="OpenFileAsync">Open...</button>
-                <button class="menu-item" id="btn-save" @onclick="SaveAsync" disabled="@(!_doc.IsDirty)">Save</button>
-                <button class="menu-item" id="btn-save-as" @onclick="SaveAsAsync">Save As...</button>
+                <button class="menu-item" id="btn-new" @onclick="NewDocumentAsync">@L["Menu.New"]</button>
+                <button class="menu-item" id="btn-open" @onclick="OpenFileAsync">@L["Menu.Open"]</button>
+                <button class="menu-item" id="btn-save" @onclick="SaveAsync" disabled="@(!_doc.IsDirty)">@L["Menu.Save"]</button>
+                <button class="menu-item" id="btn-save-as" @onclick="SaveAsAsync">@L["Menu.SaveAs"]</button>
             </div>
         </div>
         <div class="menu-group">
-            <span class="menu-label">Edit</span>
+            <span class="menu-label">@L["Menu.Edit"]</span>
             <div class="menu-dropdown">
-                <button class="menu-item" id="btn-find" @onclick="ToggleFindBar">Find (Ctrl+F)</button>
-                <button class="menu-item" id="btn-replace" @onclick="ToggleReplacePanel">Replace (Ctrl+H)</button>
+                <button class="menu-item" id="btn-find" @onclick="ToggleFindBar">@L["Menu.Find"]</button>
+                <button class="menu-item" id="btn-replace" @onclick="ToggleReplacePanel">@L["Menu.Replace"]</button>
             </div>
         </div>
         <div class="editor-title-display">
@@ -44,36 +46,36 @@
     <!-- Find / Replace panel (P2-TEXT-006, ADR 0058 §3) -->
     @if (_showFindBar)
     {
-        <div class="find-panel @(_showReplace ? "find-panel--replace" : null)" role="search" aria-label="@(_showReplace ? "Find and replace in document" : "Find in document")">
+        <div class="find-panel @(_showReplace ? "find-panel--replace" : null)" role="search" aria-label="@(_showReplace ? L["Find.ReplaceAriaLabel"] : L["Find.AriaLabel"])">
             <div class="find-bar">
                 <button class="find-expand-btn"
                         id="btn-toggle-replace"
                         @onclick="ToggleReplaceRow"
                         aria-expanded="@(_showReplace ? "true" : "false")"
-                        title="Toggle Replace (Ctrl+H)">@(_showReplace ? "▾" : "▸")</button>
+                        title="@L["Find.ToggleReplace"]">@(_showReplace ? "▾" : "▸")</button>
                 <input id="find-input"
                        type="text"
                        class="find-input"
-                       placeholder="Search…"
+                       placeholder="@L["Find.Placeholder"]"
                        value="@_findQuery"
                        @ref="_findInputRef"
                        @oninput="HandleFindQueryChangedAsync"
                        @onkeydown="HandleFindKeyDown"
-                       aria-label="Search text" />
+                       aria-label="@L["Find.InputAriaLabel"]" />
                 <button class="find-option-btn @(_findOptions.MatchCase ? "find-option-btn--on" : null)"
                         id="btn-match-case"
                         @onclick="ToggleMatchCaseAsync"
                         aria-pressed="@(_findOptions.MatchCase ? "true" : "false")"
-                        title="Match case">Aa</button>
+                        title="@L["Find.MatchCase"]">Aa</button>
                 <button class="find-option-btn @(_findOptions.WholeWord ? "find-option-btn--on" : null)"
                         id="btn-whole-word"
                         @onclick="ToggleWholeWordAsync"
                         aria-pressed="@(_findOptions.WholeWord ? "true" : "false")"
-                        title="Whole word">ab|</button>
+                        title="@L["Find.WholeWord"]">ab|</button>
                 <span class="find-match-count" id="find-match-count">@FindMatchSummary</span>
-                <button class="find-nav-btn" id="btn-find-prev" @onclick="FindPrev" title="Previous match (Shift+Enter)">↑</button>
-                <button class="find-nav-btn" id="btn-find-next" @onclick="FindNext" title="Next match (Enter)">↓</button>
-                <button class="find-close-btn" id="btn-find-close" @onclick="CloseFindBar" aria-label="Close find bar">✕</button>
+                <button class="find-nav-btn" id="btn-find-prev" @onclick="FindPrev" title="@L["Find.Previous"]">↑</button>
+                <button class="find-nav-btn" id="btn-find-next" @onclick="FindNext" title="@L["Find.Next"]">↓</button>
+                <button class="find-close-btn" id="btn-find-close" @onclick="CloseFindBar" aria-label="@L["Find.Close"]">✕</button>
             </div>
             @if (_showReplace)
             {
@@ -81,14 +83,14 @@
                     <input id="replace-input"
                            type="text"
                            class="find-input"
-                           placeholder="Replace with…"
+                           placeholder="@L["Replace.Placeholder"]"
                            value="@_replaceText"
                            @ref="_replaceInputRef"
                            @oninput="HandleReplaceTextChanged"
                            @onkeydown="HandleReplaceKeyDown"
-                           aria-label="Replace with" />
-                    <button class="replace-btn" id="btn-replace-one" @onclick="ReplaceAsync" disabled="@(!CanReplace)" title="Replace (Enter)">Replace</button>
-                    <button class="replace-btn" id="btn-replace-all" @onclick="ReplaceAllAsync" disabled="@(!CanReplace)" title="Replace All (Ctrl+Alt+Enter)">Replace All</button>
+                           aria-label="@L["Replace.AriaLabel"]" />
+                    <button class="replace-btn" id="btn-replace-one" @onclick="ReplaceAsync" disabled="@(!CanReplace)" title="@L["Replace.Tooltip"]">@L["Replace.Button"]</button>
+                    <button class="replace-btn" id="btn-replace-all" @onclick="ReplaceAllAsync" disabled="@(!CanReplace)" title="@L["Replace.AllTooltip"]">@L["Replace.AllButton"]</button>
                     @if (_replaceSummary is not null)
                     {
                         <span class="replace-summary" id="replace-summary" role="status">@_replaceSummary</span>
@@ -101,13 +103,13 @@
     <!-- Loading / Error Overlay -->
     @if (_doc.LoadState == TextEditorLoadState.Loading)
     {
-        <div class="overlay-state" role="status">Loading file…</div>
+        <div class="overlay-state" role="status">@L["Overlay.Loading"]</div>
     }
     else if (_doc.LoadState == TextEditorLoadState.Error)
     {
         <div class="overlay-error" role="alert">
             <span>@_doc.ErrorMessage</span>
-            <button class="retry-btn" id="btn-retry" @onclick="ReloadCurrentFileAsync">Retry</button>
+            <button class="retry-btn" id="btn-retry" @onclick="ReloadCurrentFileAsync">@L["Overlay.Retry"]</button>
         </div>
     }
     else
@@ -115,7 +117,7 @@
         <!-- Text Area (P2-TEXT-002, P2-TEXT-003) -->
         <textarea id="editor-textarea"
                   class="editor-textarea"
-                  aria-label="Document content editor"
+                  aria-label="@L["Editor.AriaLabel"]"
                   spellcheck="false"
                   value="@_doc.Content"
                   @oninput="HandleTextInput"
@@ -125,13 +127,13 @@
     }
 
     <!-- Status Bar -->
-    <div class="editor-statusbar" aria-label="Editor status bar">
-        <span class="status-path">@(_doc.Path?.ToString() ?? "New document")</span>
+    <div class="editor-statusbar" aria-label="@L["Status.AriaLabel"]">
+        <span class="status-path">@(_doc.Path?.ToString() ?? L["Status.NewDocument"])</span>
         <span class="status-sep">|</span>
         <span class="status-media">@_doc.MediaType</span>
         @if (_conflictDetected)
         {
-            <span class="status-conflict" role="alert">⚡ Conflict detected – please Save As</span>
+            <span class="status-conflict" role="alert">@L["Status.Conflict"]</span>
         }
         @if (_recoveryNotice is not null)
         {
@@ -143,7 +145,12 @@
 </div>
 
 @code {
-    private readonly TextEditorDocument _doc = new();
+    // Replaced at initialization by a document reading the window's texts (ADR 0104).
+    private TextEditorDocument _doc = new();
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The Text Editor's texts in its own process's language (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
     private ElementReference _editorContainerRef;
     private ElementReference _textAreaRef;
     private ElementReference _findInputRef;
@@ -188,6 +195,7 @@
 
     protected override async Task OnAppInitializedAsync()
     {
+        _doc = new TextEditorDocument(L);
         _fileSystem = AppContext.FileSystem;
 
         // Accept the file to open (P2-TEXT-002): an explicit host parameter, otherwise the first
@@ -229,8 +237,8 @@
             {
                 _doc.RestoreDraft(draft.Content, draft.OriginalPath);
                 _recoveryNotice = draft.OriginalPath is null
-                    ? "Recovered unsaved text from the last session – Save As to keep it"
-                    : $"Recovered unsaved changes to {draft.OriginalPath} – Save As to keep them";
+                    ? L["Recovery.Untitled"]
+                    : L["Recovery.File", draft.OriginalPath];
             }
         }
         catch (Exception exception) when (exception is HackIOException or HackUnauthorizedAccessException)
@@ -330,13 +338,13 @@
         string defaultDir = GetParentDirectory(_doc.Path);
         OpenFileDialogResult result = await base.OpenFileAsync(new OpenFileDialogRequest
         {
-            Title = "Open Text File",
+            Title = L["Dialog.Open.Title"],
             InitialDirectory = VirtualPath.Parse(defaultDir),
             Filters =
             [
-                new FileDialogFilter("Text files", [".txt", ".log", ".conf", ".json", ".md"],
+                new FileDialogFilter(L["Filter.Text"], [".txt", ".log", ".conf", ".json", ".md"],
                     ["text/plain", "application/json", "text/markdown"]),
-                new FileDialogFilter("All files", [], [])
+                new FileDialogFilter(L["Filter.All"], [], [])
             ],
             RequestedAccess = SelectedFileAccess.ReadWrite
         });
@@ -361,7 +369,7 @@
         if (!EditableExtensions.Contains(ext) && !string.IsNullOrEmpty(ext))
         {
             _doc.BeginLoading(path);
-            _doc.FailLoading($"Unsupported file type '{ext}'. Text Editor only opens: {string.Join(", ", EditableExtensions)}.");
+            _doc.FailLoading(L["Error.UnsupportedType", ext, string.Join(", ", EditableExtensions)]);
             StateHasChanged();
             return;
         }
@@ -378,10 +386,10 @@
             {
                 string reason = result.Error?.Code switch
                 {
-                    FileSystemErrorCode.PermissionDenied => "Permission denied.",
-                    FileSystemErrorCode.NotFound => "File not found.",
-                    FileSystemErrorCode.NotFile => "Path is not a regular file.",
-                    _ => result.Error?.Code.ToString() ?? "Unknown read error."
+                    FileSystemErrorCode.PermissionDenied => L["Error.PermissionDenied"],
+                    FileSystemErrorCode.NotFound => L["Error.NotFound"],
+                    FileSystemErrorCode.NotFile => L["Error.NotFile"],
+                    _ => result.Error?.Code.ToString() ?? L["Error.UnknownRead"]
                 };
                 _doc.FailLoading(reason);
                 StateHasChanged();
@@ -393,7 +401,7 @@
             // Guard against oversized files (P2-TEXT-002)
             if (handle.Entry.Metadata is FileMetadata fm && fm.Length > MaxTextFileSizeBytes)
             {
-                _doc.FailLoading($"File is too large ({fm.Length / 1024} KiB). Text Editor supports up to {MaxTextFileSizeBytes / 1024} KiB.");
+                _doc.FailLoading(L["Error.TooLarge", fm.Length / 1024, MaxTextFileSizeBytes / 1024]);
                 StateHasChanged();
                 return;
             }
@@ -404,7 +412,7 @@
             string? content = await HackerOs.AppSdk.IO.HackTextContent.TryReadAsync(handle.Content, AppContext.CancellationToken);
             if (content is null)
             {
-                _doc.FailLoading("Binary files are not supported by Text Editor.");
+                _doc.FailLoading(L["Error.Binary"]);
                 StateHasChanged();
                 return;
             }
@@ -415,11 +423,11 @@
         }
         catch (OperationCanceledException)
         {
-            _doc.FailLoading("Load cancelled.");
+            _doc.FailLoading(L["Error.LoadCancelled"]);
         }
         catch (Exception ex)
         {
-            _doc.FailLoading($"Unexpected error: {ex.Message}");
+            _doc.FailLoading(L["Error.Unexpected", ex.Message]);
         }
 
         StateHasChanged();
@@ -449,15 +457,15 @@
         
         SaveFileDialogResult result = await base.SaveFileAsync(new SaveFileDialogRequest
         {
-            Title = "Save Text File",
+            Title = L["Dialog.Save.Title"],
             InitialDirectory = VirtualPath.Parse(defaultDir),
-            SuggestedFileName = _doc.Title != "Untitled" ? _doc.Title : "untitled.txt",
+            SuggestedFileName = _doc.Title != L["Title.Untitled"] ? _doc.Title : "untitled.txt",
             DefaultExtension = ".txt",
             Filters =
             [
-                new FileDialogFilter("Text files", [".txt", ".log", ".conf", ".json", ".md"],
+                new FileDialogFilter(L["Filter.Text"], [".txt", ".log", ".conf", ".json", ".md"],
                     ["text/plain", "application/json", "text/markdown"]),
-                new FileDialogFilter("All files", [], [])
+                new FileDialogFilter(L["Filter.All"], [], [])
             ],
             ConfirmOverwrite = true
         });
@@ -502,7 +510,7 @@
                 }
                 else if (creation.Transaction.Error?.Code != FileSystemErrorCode.AlreadyExists)
                 {
-                    await ShowErrorDialogAsync("Save Failed", DescribeSaveError(creation.Transaction.Error?.Code));
+                    await ShowErrorDialogAsync(L["Dialog.SaveFailed.Title"], DescribeSaveError(creation.Transaction.Error?.Code));
                     StateHasChanged();
                     return;
                 }
@@ -533,7 +541,7 @@
             }
             else
             {
-                await ShowErrorDialogAsync("Save Failed", DescribeSaveError(result.Transaction.Error?.Code));
+                await ShowErrorDialogAsync(L["Dialog.SaveFailed.Title"], DescribeSaveError(result.Transaction.Error?.Code));
             }
         }
         catch (OperationCanceledException)
@@ -542,7 +550,7 @@
         }
         catch (Exception ex)
         {
-            await ShowErrorDialogAsync("Save Failed", ex.Message);
+            await ShowErrorDialogAsync(L["Dialog.SaveFailed.Title"], ex.Message);
         }
         finally
         {
@@ -552,12 +560,12 @@
         StateHasChanged();
     }
 
-    private static string DescribeSaveError(FileSystemErrorCode? code) => code switch
+    private string DescribeSaveError(FileSystemErrorCode? code) => code switch
     {
-        FileSystemErrorCode.PermissionDenied => "Permission denied.",
-        FileSystemErrorCode.NotFound => "Destination directory not found.",
-        FileSystemErrorCode.RevisionConflict => "Revision conflict.",
-        _ => code?.ToString() ?? "Write failed."
+        FileSystemErrorCode.PermissionDenied => L["Error.PermissionDenied"],
+        FileSystemErrorCode.NotFound => L["Error.DestinationNotFound"],
+        FileSystemErrorCode.RevisionConflict => L["Error.RevisionConflict"],
+        _ => code?.ToString() ?? L["Error.WriteFailed"]
     };
 
     /// <summary>
@@ -666,8 +674,8 @@
         {
             if (string.IsNullOrEmpty(_findQuery)) return string.Empty;
             int count = CountMatches();
-            if (count == 0) return "No matches";
-            return _findIndex < 0 ? $"{count} matches" : $"Match {_findIndex + 1}/{count}";
+            if (count == 0) return L["Find.NoMatches"];
+            return _findIndex < 0 ? Strings.Plural(L, "Find.Matches", count) : L["Find.MatchPosition", _findIndex + 1, count];
         }
     }
 
@@ -812,7 +820,7 @@
             _doc.Edit(result.Content);
         }
 
-        _replaceSummary = TextEditorFindEngine.DescribeReplacementCount(result.Count);
+        _replaceSummary = TextEditorFindEngine.DescribeReplacementCount(result.Count, L);
         List<int> remaining = GetMatchIndexes();
         _findIndex = remaining.Count > 0 ? 0 : -1;
         StateHasChanged();
@@ -905,24 +913,23 @@
     private async Task<bool> ShowDirtyConfirmDialogAsync()
     {
         bool? result = await MudDialogService.ShowMessageBoxAsync(
-            "Unsaved Changes",
-            $"'{_doc.Title}' has unsaved changes. Discard them and continue?",
-            yesText: "Discard",
-            cancelText: "Cancel");
+            L["Dialog.Unsaved.Title"],
+            L["Dialog.Unsaved.Message", _doc.Title],
+            yesText: L["Dialog.Unsaved.Discard"],
+            cancelText: L["Dialog.Cancel"]);
         return result == true;
     }
 
     private async Task ShowConflictDialogAsync()
     {
         await MudDialogService.ShowMessageBoxAsync(
-            "Save Conflict",
-            "The file was changed by another process since it was last loaded. " +
-            "Use 'Save As' to write a new copy, or reload the file to accept external changes.",
-            yesText: "OK");
+            L["Dialog.Conflict.Title"],
+            L["Dialog.Conflict.Message"],
+            yesText: L["Dialog.Ok"]);
     }
 
     private async Task ShowErrorDialogAsync(string title, string message)
     {
-        await MudDialogService.ShowMessageBoxAsync(title, message, yesText: "OK");
+        await MudDialogService.ShowMessageBoxAsync(title, message, yesText: L["Dialog.Ok"]);
     }
 }

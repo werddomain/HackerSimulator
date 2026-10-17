@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AccessDenied" xml:space="preserve">
+    <value>Échec de {0} {1} : accès refusé</value>
+  </data>
+  <data name="AccessDeniedHint" xml:space="preserve">
+    <value>Consultez les journaux système et « systemctl status » pour plus de détails. (La capacité services.manage est requise ; essayez sudo.)</value>
+  </data>
+  <data name="BusFailed" xml:space="preserve">
+    <value>Échec de la connexion au bus : {0}</value>
+  </data>
+  <data name="CreatedSymlink" xml:space="preserve">
+    <value>Lien symbolique {0} → {1} créé.</value>
+  </data>
+  <data name="Legend.Active" xml:space="preserve">
+    <value>ACTIVE = L'état d'activation de haut niveau de l'unité, c.-à-d. une généralisation de SUB.</value>
+  </data>
+  <data name="Legend.Load" xml:space="preserve">
+    <value>LOAD   = Indique si la définition de l'unité a été chargée correctement.</value>
+  </data>
+  <data name="Legend.Sub" xml:space="preserve">
+    <value>SUB    = L'état d'activation de bas niveau de l'unité, les valeurs dépendent du type d'unité.</value>
+  </data>
+  <data name="Removed" xml:space="preserve">
+    <value>« {0} » supprimé.</value>
+  </data>
+  <data name="TooFewArguments" xml:space="preserve">
+    <value>Trop peu d'arguments.</value>
+  </data>
+  <data name="UnitFilesListed" xml:space="preserve">
+    <value>{0} fichiers d'unité listés.</value>
+  </data>
+  <data name="UnitNotFound" xml:space="preserve">
+    <value>L'unité {0} est introuvable.</value>
+  </data>
+  <data name="UnitsListed" xml:space="preserve">
+    <value>{0} unités chargées listées.</value>
+  </data>
+  <data name="UnknownVerb" xml:space="preserve">
+    <value>Verbe de commande inconnu « {0} ».</value>
+  </data>
+  <data name="VerbFailed" xml:space="preserve">
+    <value>Échec de {0} {1} : {2}</value>
+  </data>
+  <data name="VerbUnitNotFound" xml:space="preserve">
+    <value>Échec de {0} {1} : unité {1} introuvable.</value>
+  </data>
+</root>

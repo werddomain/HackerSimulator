@@ -1,6 +1,9 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Commands.Common;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Cp;
 
@@ -20,6 +23,7 @@ public sealed class CpCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
         List<string> pos = [];
 
@@ -30,7 +34,7 @@ public sealed class CpCommand : TerminalAppBase
 
         if (pos.Count < 2)
         {
-            context.StandardError.WriteLine("cp: missing destination file operand after '" + (pos.FirstOrDefault() ?? "") + "'");
+            context.StandardError.WriteLine(text["MissingDestination", pos.FirstOrDefault() ?? ""]);
             return 1;
         }
 
@@ -47,7 +51,7 @@ public sealed class CpCommand : TerminalAppBase
                 new FileSystemStatRequest(VirtualPath.Parse(srcPath)), cancellationToken);
             if (!srcStat.Succeeded || srcStat.Value is null)
             {
-                context.StandardError.WriteLine($"cp: cannot stat '{src}': No such file or directory");
+                context.StandardError.WriteLine(text["CannotStat", src, CommandText.Reason(context, Errno.NotFound)]);
                 status = 1;
                 continue;
             }
@@ -56,7 +60,7 @@ public sealed class CpCommand : TerminalAppBase
                 new FileSystemStatRequest(VirtualPath.Parse(GetParentPath(destPath))), cancellationToken);
             if (!destParentStat.Succeeded || destParentStat.Value is null)
             {
-                context.StandardError.WriteLine($"cp: cannot create '{dest}': No such file or directory");
+                context.StandardError.WriteLine(text["CannotCreate", dest, CommandText.Reason(context, Errno.NotFound)]);
                 status = 1;
                 continue;
             }
@@ -70,7 +74,7 @@ public sealed class CpCommand : TerminalAppBase
             var result = await context.App.FileSystem.CopyAsync(req, cancellationToken);
             if (!result.Succeeded)
             {
-                context.StandardError.WriteLine($"cp: cannot copy '{src}' to '{dest}': {result.Transaction.Error?.Code.ToString() ?? "Operation failed"}");
+                context.StandardError.WriteLine(text["CopyFailed", src, dest, result.Transaction.Error?.Code.ToString() ?? text["OperationFailed"]]);
                 status = 1;
             }
         }

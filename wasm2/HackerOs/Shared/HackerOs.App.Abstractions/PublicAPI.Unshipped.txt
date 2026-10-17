@@ -229,6 +229,7 @@ HackerOs.App.Abstractions.AppManifestJsonSerializer
 HackerOs.App.Abstractions.AppManifestJsonSerializerContext
 HackerOs.App.Abstractions.AppManifestJsonSerializerContext.AppManifestJsonSerializerContext() -> void
 HackerOs.App.Abstractions.AppManifestJsonSerializerContext.AppManifestJsonSerializerContext(System.Text.Json.JsonSerializerOptions! options) -> void
+HackerOs.App.Abstractions.AppManifestLocalization
 HackerOs.App.Abstractions.AppManifestPlatform
 HackerOs.App.Abstractions.AppManifestPlatform.AppManifestPlatform(System.Collections.Generic.IReadOnlyList<string!>! Supported, System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppPlatformEntryPointManifest!>! EntryPoints) -> void
 HackerOs.App.Abstractions.AppManifestPlatform.EntryPoints.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppPlatformEntryPointManifest!>!
@@ -242,6 +243,15 @@ HackerOs.App.Abstractions.AppManifestPlatformResolution.EntryPointsByPlatform.in
 HackerOs.App.Abstractions.AppManifestPlatformResolution.SupportedPlatforms.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppPlatformId>!
 HackerOs.App.Abstractions.AppManifestPlatformResolution.SupportedPlatforms.init -> void
 HackerOs.App.Abstractions.AppManifestPlatformSupport
+HackerOs.App.Abstractions.AppManifestText
+HackerOs.App.Abstractions.AppManifestText.AppManifestText(string! Name, string! Description, string? TerminalUsage = null) -> void
+HackerOs.App.Abstractions.AppManifestText.Description.get -> string!
+HackerOs.App.Abstractions.AppManifestText.Description.init -> void
+HackerOs.App.Abstractions.AppManifestText.Name.get -> string!
+HackerOs.App.Abstractions.AppManifestText.Name.init -> void
+HackerOs.App.Abstractions.AppManifestText.TerminalUsage.get -> string?
+HackerOs.App.Abstractions.AppManifestText.TerminalUsage.init -> void
+HackerOs.App.Abstractions.AppManifestTextJsonSerializer
 HackerOs.App.Abstractions.AppManifestValidator
 HackerOs.App.Abstractions.AppOperationContext
 HackerOs.App.Abstractions.AppOperationContext.AppId.get -> string!
@@ -379,11 +389,13 @@ HackerOs.App.Abstractions.AssetManifest.Role.init -> void
 HackerOs.App.Abstractions.AssetManifest.Sha256.get -> string!
 HackerOs.App.Abstractions.AssetManifest.Sha256.init -> void
 HackerOs.App.Abstractions.BuiltInApplication
-HackerOs.App.Abstractions.BuiltInApplication.BuiltInApplication(bool IsSystemApp, HackerOs.App.Abstractions.AppManifest! Manifest, HackerOs.App.Abstractions.AppImage? Image = null) -> void
+HackerOs.App.Abstractions.BuiltInApplication.BuiltInApplication(bool IsSystemApp, HackerOs.App.Abstractions.AppManifest! Manifest, HackerOs.App.Abstractions.AppImage? Image = null, System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.App.Abstractions.AppManifestText!>? Localized = null) -> void
 HackerOs.App.Abstractions.BuiltInApplication.Image.get -> HackerOs.App.Abstractions.AppImage?
 HackerOs.App.Abstractions.BuiltInApplication.Image.init -> void
 HackerOs.App.Abstractions.BuiltInApplication.IsSystemApp.get -> bool
 HackerOs.App.Abstractions.BuiltInApplication.IsSystemApp.init -> void
+HackerOs.App.Abstractions.BuiltInApplication.Localized.get -> System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.App.Abstractions.AppManifestText!>?
+HackerOs.App.Abstractions.BuiltInApplication.Localized.init -> void
 HackerOs.App.Abstractions.BuiltInApplication.Manifest.get -> HackerOs.App.Abstractions.AppManifest!
 HackerOs.App.Abstractions.BuiltInApplication.Manifest.init -> void
 HackerOs.App.Abstractions.BuiltInApplicationsJsonSerializer
@@ -827,7 +839,11 @@ static HackerOs.App.Abstractions.AppManifestJsonSerializer.DeserializeStrict(str
 static HackerOs.App.Abstractions.AppManifestJsonSerializer.NormalizeOptionalCollections(HackerOs.App.Abstractions.AppManifest! manifest) -> HackerOs.App.Abstractions.AppManifest!
 static HackerOs.App.Abstractions.AppManifestJsonSerializer.SerializeCanonical(HackerOs.App.Abstractions.AppManifest! manifest) -> string!
 static HackerOs.App.Abstractions.AppManifestJsonSerializerContext.Default.get -> HackerOs.App.Abstractions.AppManifestJsonSerializerContext!
+static HackerOs.App.Abstractions.AppManifestLocalization.Apply(HackerOs.App.Abstractions.AppManifest! manifest, System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.App.Abstractions.AppManifestText!>? localized, System.Globalization.CultureInfo! culture) -> HackerOs.App.Abstractions.AppManifest!
+static HackerOs.App.Abstractions.AppManifestLocalization.Find(System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.App.Abstractions.AppManifestText!>? localized, System.Globalization.CultureInfo! culture) -> HackerOs.App.Abstractions.AppManifestText?
 static HackerOs.App.Abstractions.AppManifestPlatformSupport.Resolve(HackerOs.App.Abstractions.AppManifest! manifest) -> HackerOs.App.Abstractions.AppManifestPlatformResolution?
+static HackerOs.App.Abstractions.AppManifestTextJsonSerializer.DeserializeStrict(string! json) -> HackerOs.App.Abstractions.AppManifestText!
+static HackerOs.App.Abstractions.AppManifestTextJsonSerializer.SerializeCanonical(HackerOs.App.Abstractions.AppManifestText! text) -> string!
 static HackerOs.App.Abstractions.AppManifestValidator.Validate(HackerOs.App.Abstractions.AppManifest! manifest) -> HackerOs.App.Abstractions.ManifestValidationResult!
 static HackerOs.App.Abstractions.AppPlatformCapabilityRegistry.CreateWithWellKnownPlatforms() -> HackerOs.App.Abstractions.AppPlatformCapabilityRegistry!
 static HackerOs.App.Abstractions.AppPlatformId.Parse(string! value) -> HackerOs.App.Abstractions.AppPlatformId

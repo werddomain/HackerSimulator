@@ -43,15 +43,23 @@ internal sealed class AppPermissionAdministrationGateway : IAppPermissionAdminis
     {
         _capabilities.Require(AppCapabilities.PermissionsManage);
         IReadOnlyList<AppPermissionOverview> overview = await _administration().GetOverviewAsync(cancellationToken).ConfigureAwait(false);
+        // The Settings app shows these texts: they follow its process's language (ADR 0104).
+        System.Globalization.CultureInfo language = _gate.Language;
         return [.. overview.Select(app => new HackAppPermissionInfo(
             app.Manifest.Id,
             app.Manifest.Name,
             app.IsSystemApp,
-            [.. app.Capabilities.Select(status => new HackCapabilityPermissionInfo(
+            [.. app.Capabilities.Select(status => Describe(status, language))]))];
+
+        static HackCapabilityPermissionInfo Describe(DangerousCapabilityStatus status, System.Globalization.CultureInfo language)
+        {
+            CapabilityDescription description = CapabilityText.Localize(status.Description, language);
+            return new HackCapabilityPermissionInfo(
                 status.Capability,
-                status.Description.Title,
-                status.Description.RiskDescription ?? string.Empty,
-                ToPublic(status.State)))]))];
+                description.Title,
+                description.RiskDescription ?? string.Empty,
+                ToPublic(status.State));
+        }
     }
 
     /// <inheritdoc />
@@ -60,8 +68,8 @@ internal sealed class AppPermissionAdministrationGateway : IAppPermissionAdminis
         _capabilities.Require(AppCapabilities.PermissionsManage);
         string admin = await _gate.AuthenticateAsync(
             policy == HackDangerousCapabilityPolicy.Block
-                ? "Block every dangerous capability of non-system apps"
-                : "Let an administrator approve dangerous capabilities at launch",
+                ? _gate.Text["Admin.Policy.Block"]
+                : _gate.Text["Admin.Policy.Prompt"],
             "permissions.policy",
             SecuritySettingsDocuments.Document.SystemPath.Value,
             cancellationToken).ConfigureAwait(false);
@@ -77,14 +85,14 @@ internal sealed class AppPermissionAdministrationGateway : IAppPermissionAdminis
         _capabilities.Require(AppCapabilities.PermissionsManage);
         AppPermissionAdministration administration = _administration();
         administration.ValidateMachineDecision(appId, capability);
-        string verb = decision switch
+        string textKey = decision switch
         {
-            HackPermissionDecision.Allow => "Allow",
-            HackPermissionDecision.Deny => "Deny",
-            _ => "Ask again at launch for"
+            HackPermissionDecision.Allow => "Admin.Decision.Allow",
+            HackPermissionDecision.Deny => "Admin.Decision.Deny",
+            _ => "Admin.Decision.Ask"
         };
         string admin = await _gate.AuthenticateAsync(
-            $"{verb} '{AppCapabilities.Describe(capability).Title}' ({capability}) for {appId} on this machine",
+            _gate.Text[textKey, CapabilityText.Describe(capability, _gate.Language).Title, capability, appId],
             "permissions.machine-decision",
             AppPermissionsDocument.MachineFile.Resolve(null).Value,
             cancellationToken).ConfigureAwait(false);

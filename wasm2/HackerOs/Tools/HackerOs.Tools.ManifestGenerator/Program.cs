@@ -93,9 +93,16 @@ public static class Program
                 return Fail(project, [.. boundary]);
             }
 
-            IReadOnlyList<string> files = ManifestWriter.Write(Path.GetDirectoryName(project)!, result.Manifests);
+            // ADR 0104 section 4: Resources/AppManifest.<culture>.resx -> localization/<culture>.json.
+            ManifestLocalizationGenerator.Result localized = ManifestLocalizationGenerator.Apply(Path.GetDirectoryName(project)!, result.Manifests);
+            if (localized.Diagnostics.Count > 0)
+            {
+                return Fail(project, [.. localized.Diagnostics]);
+            }
+
+            IReadOnlyList<string> files = ManifestWriter.Write(Path.GetDirectoryName(project)!, localized.Manifests);
             ManifestWriter.WriteIfChanged(stamp, string.Join('\n', files) + "\n");
-            foreach (GeneratedManifest manifest in result.Manifests)
+            foreach (GeneratedManifest manifest in localized.Manifests)
             {
                 Console.WriteLine($"HackerOS manifest: {manifest.Manifest.Id} <- {manifest.DefinitionType}");
             }

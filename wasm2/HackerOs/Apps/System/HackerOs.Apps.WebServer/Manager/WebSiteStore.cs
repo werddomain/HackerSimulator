@@ -240,12 +240,12 @@ public static class WebSiteStore
 
         if (!await HackDirectory.ExistsAsync(root, cancellationToken).ConfigureAwait(false))
         {
-            return $"{root} does not exist yet: the site will answer 404 until it does.";
+            return Strings.Ambient["Warning.RootMissing", root];
         }
 
         return await WwwDataAccess.CanTraverseAsync(root, cancellationToken).ConfigureAwait(false)
             ? null
-            : $"{WwwDataAccess.AccountName} cannot enter {root} (a directory on the way lacks o+x, a home is 0700): requests will answer 403. Use a user site, or a root such as /var/www.";
+            : Strings.Ambient["Warning.WwwDataCannotEnter", WwwDataAccess.AccountName, root].Value;
     }
 
     /// <summary>Reads the last lines of the access log of a site and its lines of the error log.</summary>
@@ -279,7 +279,7 @@ public static class WebSiteStore
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            return [$"cannot read {path}: {exception.Message}"];
+            return [Strings.Ambient["Logs.ReadFailed", path, exception.Message]];
         }
     }
 }

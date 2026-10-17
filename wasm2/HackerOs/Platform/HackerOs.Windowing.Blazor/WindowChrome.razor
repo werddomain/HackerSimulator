@@ -2,6 +2,7 @@
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
+@inject IServiceProvider LocalizationServices
 
 <div class="chrome-interaction-layer" @ref="_interactionLayer" @onpointerdown:stopPropagation>
 <header class="window-chrome @(Window.IsFocused ? "is-focused" : "is-background")"
@@ -11,7 +12,7 @@
     <div class="window-identity">
         @if (Window.SupportsBack)
         {
-            <button type="button" class="chrome-button chrome-button-back" aria-label="Back" title="Back" @onclick="BackAsync">
+            <button type="button" class="chrome-button chrome-button-back" aria-label="@L["Chrome.Back"]" title="@L["Chrome.Back"]" @onclick="BackAsync">
                 <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
                     <polyline points="7,2 3,6 7,10" />
                 </svg>
@@ -20,7 +21,7 @@
         @if (OnWindowMenu.HasDelegate)
         {
             @* The window menu button (ADR 0095 §3): every window command stays reachable without a shortcut. *@
-            <button type="button" class="chrome-button chrome-button-menu" aria-label="Window menu" title="Window menu (Alt+Space, Alt+F3)" aria-haspopup="menu" @onclick="OpenWindowMenuFromButtonAsync">
+            <button type="button" class="chrome-button chrome-button-menu" aria-label="@L["Chrome.WindowMenu"]" title="@L["Chrome.WindowMenuHint"]" aria-haspopup="menu" @onclick="OpenWindowMenuFromButtonAsync">
                 @if (!string.IsNullOrWhiteSpace(Window.IconAssetPath))
                 {
                     <img class="window-icon" src="@Window.IconAssetPath" alt="" />
@@ -41,8 +42,8 @@
         }
         <h2 id="@TitleId">@Window.Title</h2>
     </div>
-    <div class="window-actions" aria-label="Window controls">
-        <button type="button" class="chrome-button chrome-button-minimize" aria-label="Minimize" title="Minimize" @onclick="MinimizeAsync">
+    <div class="window-actions" aria-label="@L["Chrome.Controls"]">
+        <button type="button" class="chrome-button chrome-button-minimize" aria-label="@L["Chrome.Minimize"]" title="@L["Chrome.Minimize"]" @onclick="MinimizeAsync">
             <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
                 <line x1="2" y1="9" x2="10" y2="9" />
             </svg>
@@ -65,7 +66,7 @@
             }
         </button>
         }
-        <button type="button" class="chrome-button chrome-button-close" aria-label="Close" title="Close" @onclick="CloseAsync">
+        <button type="button" class="chrome-button chrome-button-close" aria-label="@L["Chrome.Close"]" title="@L["Chrome.Close"]" @onclick="CloseAsync">
             <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
                 <line x1="2" y1="2" x2="10" y2="10" />
                 <line x1="10" y1="2" x2="2" y2="10" />
@@ -131,7 +132,11 @@
     private IJSObjectReference? _module;
     private DotNetObjectReference<WindowChrome>? _selfReference;
 
-    private string ToggleLabel => Window.VisualState == WindowVisualState.Maximized ? "Restore" : "Maximize";
+    private string ToggleLabel => Window.VisualState == WindowVisualState.Maximized ? L["Chrome.Restore"] : L["Chrome.Maximize"];
+
+    /// <summary>Gets the package's texts: the host's session language, or English without localization (ADR 0104).</summary>
+    private IStringLocalizer L => _localizer ??= PackageStringLocalizer.Resolve<Strings>(LocalizationServices);
+    private IStringLocalizer? _localizer;
 
     private async Task MinimizeAsync()
     {

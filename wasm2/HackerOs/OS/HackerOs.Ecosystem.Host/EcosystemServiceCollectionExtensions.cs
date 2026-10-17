@@ -34,6 +34,7 @@ using HackerOs.Platform.Core.Network;
 using HackerOs.Platform.Core.Network.Local;
 using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Policy;
+using HackerOs.Platform.Core.Globalization;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Processes.Accounting;
 using HackerOs.Platform.Core.Sessions;
@@ -428,7 +429,8 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<StorageSpaceMonitor>(provider => new StorageSpaceMonitor(
             provider.GetRequiredService<IStorageCapacityProbe>(),
             provider.GetRequiredService<INotificationQueue>(),
-            () => provider.GetRequiredService<ISessionService>().CurrentPrincipal));
+            () => provider.GetRequiredService<ISessionService>().CurrentPrincipal,
+            language: () => provider.GetRequiredService<HackerOs.Platform.Core.Globalization.SessionLocaleService>().Culture));
         services.AddScoped<IStorageSpaceGuard>(provider => provider.GetRequiredService<StorageSpaceMonitor>());
 
         // User keyring (ADR 0100 section 2): ~/.local/share/keyrings/login.keyring, sealed with
@@ -476,6 +478,9 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IFileSystemService>(),
             provider.GetRequiredService<ISimulationClock>(),
             provider.GetService<ILogger<LoginEnvironmentProvider>>()));
+        // ADR 0104: the platform's language (sign-in screens: /etc/locale.conf; desktop: the
+        // user's login environment) and the IStringLocalizer<T> every platform component injects.
+        services.AddHackerOsPlatformLocalization();
         services.AddSingleton<IResourceSimulator>(provider => new DeterministicResourceSimulator(
             provider.GetRequiredService<ISimulationClock>(),
             provider.GetRequiredService<ISimulationRandom>(),
@@ -728,7 +733,8 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IJSRuntime>(),
             provider.GetRequiredService<INotificationQueue>(),
             provider.GetRequiredService<ISessionService>(),
-            provider.GetRequiredService<ISimulationClock>()));
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<HackerOs.Platform.Core.Globalization.SessionLocaleService>()));
         // Embeddable components registered in manifests (ADR 0063): a window embeds another app's
         // component by contract; the provider's assembly is loaded as a launch would load it.
         services.AddScoped<IHackComponentHost>(provider =>
@@ -773,14 +779,16 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped(provider => new WindowKeyboardCommands(
             provider.GetRequiredService<WindowRuntime>(),
             provider.GetService<IOsSettingsService>(),
-            provider.GetService<ILogger<WindowKeyboardCommands>>()));
+            provider.GetService<ILogger<WindowKeyboardCommands>>(),
+            provider.GetRequiredService<HackerOs.Platform.Core.Globalization.SessionLocaleService>()));
         // Depends on AppLifecycleOrchestrator, which is Scoped (see above) — see this file's
         // IJSRuntime scoping note.
         services.AddScoped<WindowCloseCoordinator>();
         services.AddScoped<FileDialogWindowAdapter>(provider => new FileDialogWindowAdapter(
             provider.GetRequiredService<FileDialogCoordinator>(),
             provider.GetRequiredService<WindowRuntime>(),
-            provider.GetRequiredService<DialogCoordinator>()));
+            provider.GetRequiredService<DialogCoordinator>(),
+            provider.GetRequiredService<HackerOs.Platform.Core.Globalization.SessionLocaleService>()));
         // Depends on IFileSystemService, which is Scoped (see above) — see this file's IJSRuntime
         // scoping note.
         services.AddScoped<TestDemoFixtureSeeder>();

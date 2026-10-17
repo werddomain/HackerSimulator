@@ -1,39 +1,39 @@
 @namespace HackerOs.Apps.SystemMonitor.Tabs
 @inherits HackComponentBase
 
-<aside class="detail" aria-label="Process details">
+<aside class="detail" aria-label="@L["Detail.AriaLabel"]">
     <header class="detail-header">
         <div>
             <div class="detail-title">@Process.ProcessName</div>
             <div class="detail-subtitle">PID @Process.Id · @Process.AppId</div>
         </div>
-        <button class="sysmon-btn sysmon-btn-ghost" @onclick="OnClose" aria-label="Close details">&#x2715;</button>
+        <button class="sysmon-btn sysmon-btn-ghost" @onclick="OnClose" aria-label="@L["Detail.Close"]">&#x2715;</button>
     </header>
 
     <div class="detail-body">
         <section>
-            <h4>Overview</h4>
+            <h4>@L["Detail.Overview"]</h4>
             <dl class="kv">
-                <dt>State</dt><dd><span class="state-dot state-@Process.StateCode"></span>@Process.State (@Process.StateCode)</dd>
-                <dt>Kind</dt><dd>@Process.Kind</dd>
-                <dt>User</dt><dd title="@Process.UserId">@ProcessesTab.DisplayUser(Process.UserName)</dd>
-                <dt>Started</dt><dd class="mono">@Process.StartTime.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) UTC</dd>
-                <dt>CPU</dt><dd>@Units.Percent(Process.CpuUsage)</dd>
-                <dt>Memory</dt><dd>@Units.Bytes(Process.WorkingSet64)</dd>
+                <dt>@L["Detail.State"]</dt><dd><span class="state-dot state-@Process.StateCode"></span>@ProcessesTab.ProcessStateLabel(L, Process.State.ToString()) (@Process.StateCode)</dd>
+                <dt>@L["Detail.Kind"]</dt><dd>@KindLabel</dd>
+                <dt>@L["Detail.User"]</dt><dd title="@Process.UserId">@ProcessesTab.DisplayUser(Process.UserName)</dd>
+                <dt>@L["Detail.Started"]</dt><dd class="mono">@L["Detail.StartedValue", Process.StartTime.UtcDateTime.ToString("G", Formats)]</dd>
+                <dt>@L["Detail.Cpu"]</dt><dd>@Units.Percent(Process.CpuUsage, Formats)</dd>
+                <dt>@L["Detail.Memory"]</dt><dd>@Units.Bytes(Process.WorkingSet64, Formats)</dd>
             </dl>
         </section>
 
         <section>
-            <h4>Command line</h4>
+            <h4>@L["Detail.CommandLine"]</h4>
             <code class="detail-code">@(Process.CommandLine.Length > 0 ? Process.CommandLine : "—")</code>
-            <h4>Working directory</h4>
+            <h4>@L["Detail.WorkingDirectory"]</h4>
             <code class="detail-code">@(Process.WorkingDirectory ?? "—")</code>
         </section>
 
         <section>
-            <h4>Family</h4>
+            <h4>@L["Detail.Family"]</h4>
             <dl class="kv">
-                <dt>Parent</dt>
+                <dt>@L["Detail.Parent"]</dt>
                 <dd>
                     @if (Parent is { } parent)
                     {
@@ -41,18 +41,18 @@
                     }
                     else if (Process.ParentId is { } parentId)
                     {
-                        <span>@parentId (not visible)</span>
+                        <span>@L["Detail.NotVisible", parentId]</span>
                     }
                     else
                     {
-                        <span>— (started by the OS)</span>
+                        <span>@L["Detail.StartedByOs"]</span>
                     }
                 </dd>
-                <dt>Children</dt>
+                <dt>@L["Detail.Children"]</dt>
                 <dd>
                     @if (Children.Count == 0)
                     {
-                        <span>none</span>
+                        <span>@L["Detail.None"]</span>
                     }
                     @foreach (HackProcess child in Children)
                     {
@@ -64,25 +64,25 @@
         </section>
 
         <section>
-            <h4>I/O <span class="detail-source">/proc/@Process.Id/io</span></h4>
+            <h4>@L["Detail.Io"] <span class="detail-source">/proc/@Process.Id/io</span></h4>
             @if (Process.IoCounters is { } io)
             {
                 <dl class="kv">
-                    <dt>Read (rchar)</dt><dd>@Units.Bytes(io.ReadChars) · @Units.Count(io.ReadSyscalls) calls</dd>
-                    <dt>Written (wchar)</dt><dd>@Units.Bytes(io.WrittenChars) · @Units.Count(io.WriteSyscalls) calls</dd>
-                    <dt>From disk</dt><dd>@Units.Bytes(io.ReadBytes)</dd>
-                    <dt>To disk</dt><dd>@Units.Bytes(io.WriteBytes)</dd>
-                    <dt>Cancelled</dt><dd>@Units.Bytes(io.CancelledWriteBytes)</dd>
+                    <dt>@L["Detail.ReadChars"]</dt><dd>@L["Detail.Calls", Units.Bytes(io.ReadChars, Formats), Units.Count(io.ReadSyscalls, Formats)]</dd>
+                    <dt>@L["Detail.WrittenChars"]</dt><dd>@L["Detail.Calls", Units.Bytes(io.WrittenChars, Formats), Units.Count(io.WriteSyscalls, Formats)]</dd>
+                    <dt>@L["Detail.FromDisk"]</dt><dd>@Units.Bytes(io.ReadBytes, Formats)</dd>
+                    <dt>@L["Detail.ToDisk"]</dt><dd>@Units.Bytes(io.WriteBytes, Formats)</dd>
+                    <dt>@L["Detail.Cancelled"]</dt><dd>@Units.Bytes(io.CancelledWriteBytes, Formats)</dd>
                 </dl>
             }
             else
             {
-                <p class="detail-muted">Not readable: io is private to the process owner (mode 0400).</p>
+                <p class="detail-muted">@L["Detail.IoPrivate"]</p>
             }
         </section>
 
         <section>
-            <h4>Status <span class="detail-source">/proc/@Process.Id/status</span></h4>
+            <h4>@L["Detail.Status"] <span class="detail-source">/proc/@Process.Id/status</span></h4>
             <dl class="kv">
                 @foreach (KeyValuePair<string, string> field in Process.Status)
                 {
@@ -93,20 +93,20 @@
 
         <section>
             <h4>
-                Environment <span class="detail-source">/proc/@Process.Id/environ</span>
-                <button class="link-btn" @onclick="LoadEnvironmentAsync">reload</button>
+                @L["Detail.Environment"] <span class="detail-source">/proc/@Process.Id/environ</span>
+                <button class="link-btn" @onclick="LoadEnvironmentAsync">@L["Detail.Reload"]</button>
             </h4>
             @if (_loadingEnvironment)
             {
-                <p class="detail-muted">Reading…</p>
+                <p class="detail-muted">@L["Detail.Reading"]</p>
             }
             else if (_environment is null)
             {
-                <p class="detail-muted">Not readable: environ is private to the process owner (mode 0400).</p>
+                <p class="detail-muted">@L["Detail.EnvironPrivate"]</p>
             }
             else if (_environment.Count == 0)
             {
-                <p class="detail-muted">Empty.</p>
+                <p class="detail-muted">@L["Detail.Empty"]</p>
             }
             else
             {

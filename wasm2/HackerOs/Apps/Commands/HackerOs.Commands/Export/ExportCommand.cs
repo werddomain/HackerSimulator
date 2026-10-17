@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Export;
 
@@ -24,7 +26,7 @@ public sealed class ExportCommand : TerminalAppBase
 
         if (context.Shell is not { } shell)
         {
-            await context.StandardError.WriteLineAsync("export: no shell session");
+            await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["NoShell"]);
             return 1;
         }
 
@@ -52,7 +54,7 @@ public sealed class ExportCommand : TerminalAppBase
             }
             catch (ArgumentException)
             {
-                await context.StandardError.WriteLineAsync($"export: `{argument}': not a valid identifier");
+                await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["InvalidIdentifier", argument]);
                 status = 1;
             }
         }

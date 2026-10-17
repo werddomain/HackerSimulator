@@ -1,0 +1,513 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Diagnostic.Error" xml:space="preserve">
+    <value>erreur</value>
+  </data>
+  <data name="Diagnostic.NoPath" xml:space="preserve">
+    <value>thème</value>
+  </data>
+  <data name="Diagnostic.Warning" xml:space="preserve">
+    <value>avertissement</value>
+  </data>
+  <data name="File.ExpectedKeyValue" xml:space="preserve">
+    <value>« clé = valeur » attendu ; ligne ignorée.</value>
+  </data>
+  <data name="File.InvalidId" xml:space="preserve">
+    <value>Identifiant « {0} » invalide : utilisez de 1 à 64 lettres minuscules, chiffres et tirets.</value>
+  </data>
+  <data name="File.InvalidName" xml:space="preserve">
+    <value>« name » manquant ou invalide dans [theme] (de 1 à {0} caractères).</value>
+  </data>
+  <data name="File.KeyOutsideSection" xml:space="preserve">
+    <value>Clé en dehors de toute section ; ligne ignorée.</value>
+  </data>
+  <data name="File.MalformedSection" xml:space="preserve">
+    <value>En-tête de section mal formé ; ligne ignorée.</value>
+  </data>
+  <data name="File.MissingBase" xml:space="preserve">
+    <value>« base » manquant dans [theme].</value>
+  </data>
+  <data name="File.MissingId" xml:space="preserve">
+    <value>« id » manquant dans [theme].</value>
+  </data>
+  <data name="File.NoPlatform" xml:space="preserve">
+    <value>Aucun format valide ; celui du thème de base ({0}) est utilisé.</value>
+  </data>
+  <data name="File.TokenIgnored" xml:space="preserve">
+    <value>{0} Jeton « {1} » ignoré.</value>
+  </data>
+  <data name="File.TokenTwice" xml:space="preserve">
+    <value>Le jeton « {0} » est défini deux fois ; la dernière valeur l'emporte.</value>
+  </data>
+  <data name="File.TooLarge" xml:space="preserve">
+    <value>Le fichier dépasse {0} Kio.</value>
+  </data>
+  <data name="File.UnknownBase" xml:space="preserve">
+    <value>Thème de base « {0} » inconnu : utilisez un thème intégré comme {1}.</value>
+  </data>
+  <data name="File.UnknownKey" xml:space="preserve">
+    <value>Clé « {0} » inconnue dans [theme] ; ignorée.</value>
+  </data>
+  <data name="File.UnknownPlatform" xml:space="preserve">
+    <value>Format « {0} » inconnu ; utilisez desktop ou mobile.</value>
+  </data>
+  <data name="File.UnknownSection" xml:space="preserve">
+    <value>Section [{0}] inconnue ; ses lignes sont ignorées.</value>
+  </data>
+  <data name="Library.BuiltInId" xml:space="preserve">
+    <value>L'identifiant « {0} » est celui d'un thème intégré ; ce fichier est ignoré.</value>
+  </data>
+  <data name="Library.IdInUse" xml:space="preserve">
+    <value>L'identifiant « {0} » est déjà utilisé par {1} ; ce fichier est ignoré.</value>
+  </data>
+  <data name="Library.Unreadable" xml:space="preserve">
+    <value>Impossible de lire le fichier : {0}</value>
+  </data>
+  <data name="Token.Accent.Description" xml:space="preserve">
+    <value>Boutons principaux, sélection, onglets actifs et liens.</value>
+  </data>
+  <data name="Token.Accent.Label" xml:space="preserve">
+    <value>Couleur d'accent</value>
+  </data>
+  <data name="Token.AccentGlow.Description" xml:space="preserve">
+    <value>Halo doux autour des éléments ayant le focus ou principaux ; généralement translucide.</value>
+  </data>
+  <data name="Token.AccentGlow.Label" xml:space="preserve">
+    <value>Halo d'accent</value>
+  </data>
+  <data name="Token.AccentHover.Description" xml:space="preserve">
+    <value>Couleur d'accent sous le pointeur.</value>
+  </data>
+  <data name="Token.AccentHover.Label" xml:space="preserve">
+    <value>Couleur d'accent (survol)</value>
+  </data>
+  <data name="Token.AccentSubtle.Description" xml:space="preserve">
+    <value>Arrière-plan des lignes sélectionnées et des boutons actifs.</value>
+  </data>
+  <data name="Token.AccentSubtle.Label" xml:space="preserve">
+    <value>Couleur d'accent (discrète)</value>
+  </data>
+  <data name="Token.BgBase.Description" xml:space="preserve">
+    <value>Arrière-plan le plus profond : surfaces du bureau, champs de saisie et contenu des fenêtres.</value>
+  </data>
+  <data name="Token.BgBase.Label" xml:space="preserve">
+    <value>Arrière-plan de base</value>
+  </data>
+  <data name="Token.BgElevated.Description" xml:space="preserve">
+    <value>Menus, boutons survolés, en-têtes de tableaux et fenêtres contextuelles.</value>
+  </data>
+  <data name="Token.BgElevated.Label" xml:space="preserve">
+    <value>Surface surélevée</value>
+  </data>
+  <data name="Token.BgOverlay.Description" xml:space="preserve">
+    <value>Couche assombrie derrière les boîtes de dialogue ; généralement translucide.</value>
+  </data>
+  <data name="Token.BgOverlay.Label" xml:space="preserve">
+    <value>Voile</value>
+  </data>
+  <data name="Token.BgSurface.Description" xml:space="preserve">
+    <value>Panneaux, barres d'outils, boutons et cartes.</value>
+  </data>
+  <data name="Token.BgSurface.Label" xml:space="preserve">
+    <value>Surface</value>
+  </data>
+  <data name="Token.Border.Description" xml:space="preserve">
+    <value>Bordure par défaut des boutons et des champs de saisie.</value>
+  </data>
+  <data name="Token.Border.Label" xml:space="preserve">
+    <value>Bordure</value>
+  </data>
+  <data name="Token.BorderStrong.Description" xml:space="preserve">
+    <value>Bordures survolées et contours mis en avant.</value>
+  </data>
+  <data name="Token.BorderStrong.Label" xml:space="preserve">
+    <value>Bordure marquée</value>
+  </data>
+  <data name="Token.BorderSubtle.Description" xml:space="preserve">
+    <value>Séparateurs entre barres d'outils, cartes et lignes de tableaux.</value>
+  </data>
+  <data name="Token.BorderSubtle.Label" xml:space="preserve">
+    <value>Bordure discrète</value>
+  </data>
+  <data name="Token.BtnFontWeight.Description" xml:space="preserve">
+    <value>Graisse des libellés des boutons.</value>
+  </data>
+  <data name="Token.BtnFontWeight.Label" xml:space="preserve">
+    <value>Graisse des boutons</value>
+  </data>
+  <data name="Token.BtnRadius.Description" xml:space="preserve">
+    <value>Coins des boutons (par défaut, le petit rayon).</value>
+  </data>
+  <data name="Token.BtnRadius.Label" xml:space="preserve">
+    <value>Rayon des boutons</value>
+  </data>
+  <data name="Token.ControlHeight.Description" xml:space="preserve">
+    <value>Hauteur des boutons et des champs de saisie.</value>
+  </data>
+  <data name="Token.ControlHeight.Label" xml:space="preserve">
+    <value>Hauteur des contrôles</value>
+  </data>
+  <data name="Token.DesktopBackground.Description" xml:space="preserve">
+    <value>Couleur derrière les icônes et les fenêtres du bureau.</value>
+  </data>
+  <data name="Token.DesktopBackground.Label" xml:space="preserve">
+    <value>Arrière-plan du bureau</value>
+  </data>
+  <data name="Token.DesktopGridOpacity.Description" xml:space="preserve">
+    <value>Opacité de la grille discrète dessinée sur le bureau, de 0 (masquée) à 1.</value>
+  </data>
+  <data name="Token.DesktopGridOpacity.Label" xml:space="preserve">
+    <value>Opacité de la grille du bureau</value>
+  </data>
+  <data name="Token.Error.Description" xml:space="preserve">
+    <value>Erreurs, boutons destructifs et états en échec.</value>
+  </data>
+  <data name="Token.Error.Label" xml:space="preserve">
+    <value>Erreur</value>
+  </data>
+  <data name="Token.FocusRing.Description" xml:space="preserve">
+    <value>Contour du focus clavier ; gardez-le visible sur toutes les surfaces.</value>
+  </data>
+  <data name="Token.FocusRing.Label" xml:space="preserve">
+    <value>Anneau de focus</value>
+  </data>
+  <data name="Token.FontMono.Description" xml:space="preserve">
+    <value>Police du terminal, de l'éditeur de code et des autres textes à chasse fixe.</value>
+  </data>
+  <data name="Token.FontMono.Label" xml:space="preserve">
+    <value>Police à chasse fixe</value>
+  </data>
+  <data name="Token.FontUi.Description" xml:space="preserve">
+    <value>Police des menus, des fenêtres et des boîtes de dialogue. Prévoyez des polices de secours : seules les polices installées sur la machine sont utilisées.</value>
+  </data>
+  <data name="Token.FontUi.Label" xml:space="preserve">
+    <value>Police de l'interface</value>
+  </data>
+  <data name="Token.Info.Description" xml:space="preserve">
+    <value>Messages et badges d'information.</value>
+  </data>
+  <data name="Token.Info.Label" xml:space="preserve">
+    <value>Information</value>
+  </data>
+  <data name="Token.InputRadius.Description" xml:space="preserve">
+    <value>Coins des champs de texte et des listes déroulantes.</value>
+  </data>
+  <data name="Token.InputRadius.Label" xml:space="preserve">
+    <value>Rayon des champs</value>
+  </data>
+  <data name="Token.LauncherBackground.Description" xml:space="preserve">
+    <value>Arrière-plan du lanceur d'applications.</value>
+  </data>
+  <data name="Token.LauncherBackground.Label" xml:space="preserve">
+    <value>Lanceur d'applications</value>
+  </data>
+  <data name="Token.LauncherSidebarBackground.Description" xml:space="preserve">
+    <value>Colonne latérale du lanceur d'applications.</value>
+  </data>
+  <data name="Token.LauncherSidebarBackground.Label" xml:space="preserve">
+    <value>Barre latérale du lanceur</value>
+  </data>
+  <data name="Token.RadiusLg.Description" xml:space="preserve">
+    <value>Coins des boîtes de dialogue et des grandes surfaces.</value>
+  </data>
+  <data name="Token.RadiusLg.Label" xml:space="preserve">
+    <value>Grand rayon</value>
+  </data>
+  <data name="Token.RadiusMd.Description" xml:space="preserve">
+    <value>Coins des cartes et des panneaux.</value>
+  </data>
+  <data name="Token.RadiusMd.Label" xml:space="preserve">
+    <value>Rayon moyen</value>
+  </data>
+  <data name="Token.RadiusSm.Description" xml:space="preserve">
+    <value>Coins des boutons, des champs de saisie et des petits contrôles.</value>
+  </data>
+  <data name="Token.RadiusSm.Label" xml:space="preserve">
+    <value>Petit rayon</value>
+  </data>
+  <data name="Token.Success.Description" xml:space="preserve">
+    <value>Messages de confirmation et états sains.</value>
+  </data>
+  <data name="Token.Success.Label" xml:space="preserve">
+    <value>Succès</value>
+  </data>
+  <data name="Token.TaskbarActiveIndicator.Description" xml:space="preserve">
+    <value>Marque sous le bouton de la fenêtre active.</value>
+  </data>
+  <data name="Token.TaskbarActiveIndicator.Label" xml:space="preserve">
+    <value>Indicateur d'activité</value>
+  </data>
+  <data name="Token.TaskbarBackground.Description" xml:space="preserve">
+    <value>Arrière-plan de la barre des tâches.</value>
+  </data>
+  <data name="Token.TaskbarBackground.Label" xml:space="preserve">
+    <value>Barre des tâches</value>
+  </data>
+  <data name="Token.TaskbarButtonActiveBackground.Description" xml:space="preserve">
+    <value>Bouton de la fenêtre active.</value>
+  </data>
+  <data name="Token.TaskbarButtonActiveBackground.Label" xml:space="preserve">
+    <value>Bouton de tâche (actif)</value>
+  </data>
+  <data name="Token.TaskbarButtonActiveColor.Description" xml:space="preserve">
+    <value>Libellé du bouton de la fenêtre active.</value>
+  </data>
+  <data name="Token.TaskbarButtonActiveColor.Label" xml:space="preserve">
+    <value>Texte du bouton de tâche (actif)</value>
+  </data>
+  <data name="Token.TaskbarButtonBackground.Description" xml:space="preserve">
+    <value>Arrière-plan du bouton d'une fenêtre dans la barre des tâches.</value>
+  </data>
+  <data name="Token.TaskbarButtonBackground.Label" xml:space="preserve">
+    <value>Bouton de tâche</value>
+  </data>
+  <data name="Token.TaskbarButtonColor.Description" xml:space="preserve">
+    <value>Libellé des boutons de tâche.</value>
+  </data>
+  <data name="Token.TaskbarButtonColor.Label" xml:space="preserve">
+    <value>Texte des boutons de tâche</value>
+  </data>
+  <data name="Token.TaskbarButtonHoverBackground.Description" xml:space="preserve">
+    <value>Bouton de tâche sous le pointeur.</value>
+  </data>
+  <data name="Token.TaskbarButtonHoverBackground.Label" xml:space="preserve">
+    <value>Bouton de tâche (survol)</value>
+  </data>
+  <data name="Token.TaskbarButtonRadius.Description" xml:space="preserve">
+    <value>Coins des boutons de tâche.</value>
+  </data>
+  <data name="Token.TaskbarButtonRadius.Label" xml:space="preserve">
+    <value>Rayon des boutons de tâche</value>
+  </data>
+  <data name="Token.TaskbarFontSize.Description" xml:space="preserve">
+    <value>Taille des libellés de la barre des tâches.</value>
+  </data>
+  <data name="Token.TaskbarFontSize.Label" xml:space="preserve">
+    <value>Taille du texte de la barre des tâches</value>
+  </data>
+  <data name="Token.TaskbarGap.Description" xml:space="preserve">
+    <value>Espace entre les éléments de la barre des tâches.</value>
+  </data>
+  <data name="Token.TaskbarGap.Label" xml:space="preserve">
+    <value>Espacement de la barre des tâches</value>
+  </data>
+  <data name="Token.TaskbarHeight.Description" xml:space="preserve">
+    <value>Hauteur de la barre des tâches.</value>
+  </data>
+  <data name="Token.TaskbarHeight.Label" xml:space="preserve">
+    <value>Hauteur de la barre des tâches</value>
+  </data>
+  <data name="Token.TaskbarLauncherBackground.Description" xml:space="preserve">
+    <value>Arrière-plan du bouton qui ouvre le lanceur d'applications.</value>
+  </data>
+  <data name="Token.TaskbarLauncherBackground.Label" xml:space="preserve">
+    <value>Bouton du lanceur</value>
+  </data>
+  <data name="Token.TaskbarLauncherColor.Description" xml:space="preserve">
+    <value>Couleur de l'icône du bouton du lanceur.</value>
+  </data>
+  <data name="Token.TaskbarLauncherColor.Label" xml:space="preserve">
+    <value>Icône du bouton du lanceur</value>
+  </data>
+  <data name="Token.TextInverse.Description" xml:space="preserve">
+    <value>Texte dessiné sur la couleur d'accent (boutons principaux).</value>
+  </data>
+  <data name="Token.TextInverse.Label" xml:space="preserve">
+    <value>Texte inversé</value>
+  </data>
+  <data name="Token.TextMuted.Description" xml:space="preserve">
+    <value>Textes indicatifs, éléments désactivés et astuces.</value>
+  </data>
+  <data name="Token.TextMuted.Label" xml:space="preserve">
+    <value>Texte atténué</value>
+  </data>
+  <data name="Token.TextPrimary.Description" xml:space="preserve">
+    <value>Couleur principale du texte.</value>
+  </data>
+  <data name="Token.TextPrimary.Label" xml:space="preserve">
+    <value>Texte principal</value>
+  </data>
+  <data name="Token.TextSecondary.Description" xml:space="preserve">
+    <value>Libellés, légendes et éléments inactifs.</value>
+  </data>
+  <data name="Token.TextSecondary.Label" xml:space="preserve">
+    <value>Texte secondaire</value>
+  </data>
+  <data name="Token.TitlebarBackground.Description" xml:space="preserve">
+    <value>Barre de titre des fenêtres inactives.</value>
+  </data>
+  <data name="Token.TitlebarBackground.Label" xml:space="preserve">
+    <value>Barre de titre</value>
+  </data>
+  <data name="Token.TitlebarFocusedBackground.Description" xml:space="preserve">
+    <value>Barre de titre de la fenêtre active.</value>
+  </data>
+  <data name="Token.TitlebarFocusedBackground.Label" xml:space="preserve">
+    <value>Barre de titre (active)</value>
+  </data>
+  <data name="Token.TitlebarFocusedText.Description" xml:space="preserve">
+    <value>Titre de la fenêtre active.</value>
+  </data>
+  <data name="Token.TitlebarFocusedText.Label" xml:space="preserve">
+    <value>Texte du titre (actif)</value>
+  </data>
+  <data name="Token.TitlebarFontSize.Description" xml:space="preserve">
+    <value>Taille des titres des fenêtres.</value>
+  </data>
+  <data name="Token.TitlebarFontSize.Label" xml:space="preserve">
+    <value>Taille des titres</value>
+  </data>
+  <data name="Token.TitlebarFontWeight.Description" xml:space="preserve">
+    <value>Graisse des titres des fenêtres, de 100 (fin) à 900 (noir).</value>
+  </data>
+  <data name="Token.TitlebarFontWeight.Label" xml:space="preserve">
+    <value>Graisse des titres</value>
+  </data>
+  <data name="Token.TitlebarHeight.Description" xml:space="preserve">
+    <value>Hauteur des barres de titre des fenêtres.</value>
+  </data>
+  <data name="Token.TitlebarHeight.Label" xml:space="preserve">
+    <value>Hauteur de la barre de titre</value>
+  </data>
+  <data name="Token.TitlebarText.Description" xml:space="preserve">
+    <value>Titre des fenêtres inactives.</value>
+  </data>
+  <data name="Token.TitlebarText.Label" xml:space="preserve">
+    <value>Texte du titre</value>
+  </data>
+  <data name="Token.TransitionFast.Description" xml:space="preserve">
+    <value>Retour visuel au survol et à l'appui. Ignorée quand les animations sont désactivées.</value>
+  </data>
+  <data name="Token.TransitionFast.Label" xml:space="preserve">
+    <value>Transition rapide</value>
+  </data>
+  <data name="Token.TransitionNormal.Description" xml:space="preserve">
+    <value>Ouverture des panneaux, des menus et des fenêtres. Ignorée quand les animations sont désactivées.</value>
+  </data>
+  <data name="Token.TransitionNormal.Label" xml:space="preserve">
+    <value>Transition normale</value>
+  </data>
+  <data name="Token.Warning.Description" xml:space="preserve">
+    <value>Avertissements et états dégradés.</value>
+  </data>
+  <data name="Token.Warning.Label" xml:space="preserve">
+    <value>Avertissement</value>
+  </data>
+  <data name="Token.WindowBackground.Description" xml:space="preserve">
+    <value>Arrière-plan du cadre des fenêtres.</value>
+  </data>
+  <data name="Token.WindowBackground.Label" xml:space="preserve">
+    <value>Cadre des fenêtres</value>
+  </data>
+  <data name="Token.WindowCloseBackground.Description" xml:space="preserve">
+    <value>Arrière-plan du bouton Fermer.</value>
+  </data>
+  <data name="Token.WindowCloseBackground.Label" xml:space="preserve">
+    <value>Bouton Fermer</value>
+  </data>
+  <data name="Token.WindowCloseColor.Description" xml:space="preserve">
+    <value>Couleur de l'icône du bouton Fermer.</value>
+  </data>
+  <data name="Token.WindowCloseColor.Label" xml:space="preserve">
+    <value>Icône du bouton Fermer</value>
+  </data>
+  <data name="Token.WindowCloseHoverBackground.Description" xml:space="preserve">
+    <value>Bouton Fermer sous le pointeur.</value>
+  </data>
+  <data name="Token.WindowCloseHoverBackground.Label" xml:space="preserve">
+    <value>Bouton Fermer (survol)</value>
+  </data>
+  <data name="Token.WindowContentBackground.Description" xml:space="preserve">
+    <value>Arrière-plan derrière le contenu d'une application.</value>
+  </data>
+  <data name="Token.WindowContentBackground.Label" xml:space="preserve">
+    <value>Contenu des fenêtres</value>
+  </data>
+  <data name="Token.WindowControlBackground.Description" xml:space="preserve">
+    <value>Arrière-plan des boutons Réduire et Agrandir.</value>
+  </data>
+  <data name="Token.WindowControlBackground.Label" xml:space="preserve">
+    <value>Bouton de fenêtre</value>
+  </data>
+  <data name="Token.WindowControlColor.Description" xml:space="preserve">
+    <value>Couleur de l'icône des boutons Réduire et Agrandir.</value>
+  </data>
+  <data name="Token.WindowControlColor.Label" xml:space="preserve">
+    <value>Icône des boutons de fenêtre</value>
+  </data>
+  <data name="Token.WindowControlHoverBackground.Description" xml:space="preserve">
+    <value>Boutons Réduire et Agrandir sous le pointeur.</value>
+  </data>
+  <data name="Token.WindowControlHoverBackground.Label" xml:space="preserve">
+    <value>Bouton de fenêtre (survol)</value>
+  </data>
+  <data name="Token.WindowControlRadius.Description" xml:space="preserve">
+    <value>Coins des boutons de fenêtre.</value>
+  </data>
+  <data name="Token.WindowControlRadius.Label" xml:space="preserve">
+    <value>Rayon des boutons de fenêtre</value>
+  </data>
+  <data name="Token.WindowControlSize.Description" xml:space="preserve">
+    <value>Taille des boutons Réduire, Agrandir et Fermer.</value>
+  </data>
+  <data name="Token.WindowControlSize.Label" xml:space="preserve">
+    <value>Taille des boutons de fenêtre</value>
+  </data>
+  <data name="Token.WindowFocusedBorder.Description" xml:space="preserve">
+    <value>Couleur de la bordure de la fenêtre active.</value>
+  </data>
+  <data name="Token.WindowFocusedBorder.Label" xml:space="preserve">
+    <value>Bordure de la fenêtre active</value>
+  </data>
+  <data name="Token.WindowRadius.Description" xml:space="preserve">
+    <value>Coins des fenêtres.</value>
+  </data>
+  <data name="Token.WindowRadius.Label" xml:space="preserve">
+    <value>Rayon des fenêtres</value>
+  </data>
+  <data name="Token.WindowText.Description" xml:space="preserve">
+    <value>Couleur par défaut du texte dans les fenêtres.</value>
+  </data>
+  <data name="Token.WindowText.Label" xml:space="preserve">
+    <value>Texte des fenêtres</value>
+  </data>
+  <data name="Validator.Empty" xml:space="preserve">
+    <value>La valeur est vide.</value>
+  </data>
+  <data name="Validator.Expected.Color" xml:space="preserve">
+    <value>Couleur attendue, par exemple #39ff14, rgb(57 255 20) ou un nom de couleur.</value>
+  </data>
+  <data name="Validator.Expected.Duration" xml:space="preserve">
+    <value>Durée attendue, par exemple 150ms ou 0.2s, éventuellement suivie de ease, linear, ease-in, ease-out ou ease-in-out.</value>
+  </data>
+  <data name="Validator.Expected.FontFamily" xml:space="preserve">
+    <value>Noms de polices séparés par des virgules attendus, par exemple "Fira Code", monospace.</value>
+  </data>
+  <data name="Validator.Expected.Length" xml:space="preserve">
+    <value>Longueur attendue, par exemple 0.5rem, 12px ou 50%.</value>
+  </data>
+  <data name="Validator.Expected.Number" xml:space="preserve">
+    <value>Nombre attendu, par exemple 600 ou 0.8.</value>
+  </data>
+  <data name="Validator.TooLong" xml:space="preserve">
+    <value>La valeur dépasse {0} caractères.</value>
+  </data>
+  <data name="Validator.UnknownToken" xml:space="preserve">
+    <value>Jeton « {0} » inconnu.</value>
+  </data>
+  <data name="Validator.UnknownType" xml:space="preserve">
+    <value>Type de jeton inconnu.</value>
+  </data>
+</root>

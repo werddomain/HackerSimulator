@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="NotFound" xml:space="preserve">
+    <value>** server can't find {0}: NXDOMAIN</value>
+  </data>
+  <data name="Source.HostedSite" xml:space="preserve">
+    <value>;; source: hosted site {0} (this machine)</value>
+  </data>
+  <data name="Source.HostsFile" xml:space="preserve">
+    <value>;; source: {0} (static table)</value>
+  </data>
+  <data name="Source.Loopback" xml:space="preserve">
+    <value>;; source: loopback (this machine)</value>
+  </data>
+  <data name="Source.NonAuthoritative" xml:space="preserve">
+    <value>Non-authoritative answer:</value>
+  </data>
+  <data name="Source.Unknown" xml:space="preserve">
+    <value>;; source: unknown</value>
+  </data>
+  <data name="Source.WebApp" xml:space="preserve">
+    <value>;; source: web app {0} (web.urls, this machine)</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>Usage: nslookup &lt;name|address&gt;</value>
+  </data>
+</root>

@@ -73,6 +73,12 @@ public static class GeneratorCodes
     /// </summary>
     public const string WebFileSystem = "HOSAPP0050";
 
+    /// <summary>
+    /// A <c>Resources/AppManifest.&lt;culture&gt;.resx</c> file is malformed, names an unknown culture,
+    /// app or key, or a referenced <c>localization/*.json</c> file cannot be read (ADR 0104, section 4).
+    /// </summary>
+    public const string InvalidLocalization = "HOSAPP0040";
+
     /// <summary>A manifest file read back during aggregation is missing or not strict schema-v1 JSON.</summary>
     public const string UnreadableManifest = "HOSAPP0020";
 

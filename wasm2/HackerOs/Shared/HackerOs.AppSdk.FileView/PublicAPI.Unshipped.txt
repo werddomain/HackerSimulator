@@ -418,3 +418,6 @@ static HackerOs.AppSdk.FileView.Transfers.FileTransfer.TransferAsync(System.Coll
 ~override HackerOs.AppSdk.FileView.FileViewTreeNode.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.AppSdk.FileView.Icons.ShellIcon.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.AppSdk.FileView.Icons.ShellIconLabel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+HackerOs.AppSdk.FileView.FileView.AppContext.get -> HackerOs.AppSdk.IAppExecutionContext?
+HackerOs.AppSdk.FileView.FileView.AppContext.set -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult.DescribeFailures(string! verb, HackerOs.AppSdk.IAppExecutionContext? context) -> string?

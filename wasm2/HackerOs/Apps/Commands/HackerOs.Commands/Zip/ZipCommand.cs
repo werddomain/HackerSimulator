@@ -4,6 +4,8 @@ using HackerOs.AppSdk;
 using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.IO;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Zip;
 
@@ -21,6 +23,8 @@ public sealed class ZipCommand(AppManifest manifest) : TerminalAppBase(manifest)
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        // Errors and warnings follow the process language; the "adding:" progress lines stay as Info-ZIP prints them.
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         bool recursive = false, quiet = false, junkPaths = false, delete = false;
         CompressionLevel level = CompressionLevel.Optimal;
         List<string> operands = [];
@@ -41,7 +45,7 @@ public sealed class ZipCommand(AppManifest manifest) : TerminalAppBase(manifest)
                         case >= '4' and <= '9': level = flag == '9' ? CompressionLevel.SmallestSize : CompressionLevel.Optimal; break;
                         case 'v' or 'y' or 'u' or 'f' or 'm' or 'T': break;
                         default:
-                            await context.StandardError.WriteLineAsync($"zip error: Invalid command arguments (short option '{flag}' not supported)");
+                            await context.StandardError.WriteLineAsync(text["ShortOption", flag]);
                             return 16;
                     }
                 }
@@ -54,7 +58,7 @@ public sealed class ZipCommand(AppManifest manifest) : TerminalAppBase(manifest)
 
         if (operands.Count < 2)
         {
-            await context.StandardError.WriteLineAsync(operands.Count == 0 ? "zip error: Nothing to do! (no archive given)" : $"zip error: Nothing to do! ({operands[0]})");
+            await context.StandardError.WriteLineAsync(operands.Count == 0 ? text["NothingNoArchive"] : text["Nothing", operands[0]]);
             return 12;
         }
 
@@ -80,7 +84,7 @@ public sealed class ZipCommand(AppManifest manifest) : TerminalAppBase(manifest)
                         List<ZipArchiveEntry> matches = [.. zip.Entries.Where(e => e.FullName == name || e.FullName.StartsWith(name.TrimEnd('/') + "/", StringComparison.Ordinal))];
                         if (matches.Count == 0)
                         {
-                            await context.StandardError.WriteLineAsync($"zip warning: name not matched: {name}");
+                            await context.StandardError.WriteLineAsync(text["NotMatched", name]);
                             status = 12;
                         }
 
@@ -110,12 +114,12 @@ public sealed class ZipCommand(AppManifest manifest) : TerminalAppBase(manifest)
         }
         catch (InvalidDataException)
         {
-            await context.StandardError.WriteLineAsync($"zip error: Zip file structure invalid ({archive})");
+            await context.StandardError.WriteLineAsync(text["InvalidStructure", archive]);
             return 3;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            await context.StandardError.WriteLineAsync($"zip error: {archive}: {ShellErrorText.Describe(exception)}");
+            await context.StandardError.WriteLineAsync(text["FileError", archive, CommandText.Describe(context, exception)]);
             return 15;
         }
     }
@@ -157,7 +161,7 @@ public sealed class ZipCommand(AppManifest manifest) : TerminalAppBase(manifest)
 
         if (!await HackFile.ExistsAsync(source, cancellationToken))
         {
-            await context.StandardError.WriteLineAsync($"zip warning: name not matched: {source}");
+            await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["NotMatched", source]);
             return 12;
         }
 

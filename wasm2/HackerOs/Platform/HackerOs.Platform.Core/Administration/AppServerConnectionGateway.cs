@@ -50,14 +50,34 @@ internal sealed class AppServerConnectionGateway : IAppServerConnectionGateway
 {
     private readonly ServerConnectionGatewayServices? _services;
     private readonly ICapabilityChecker _capabilities;
+    private readonly Func<System.Globalization.CultureInfo> _language;
+
+    /// <summary>
+    /// The relay warnings the server writes (<c>ProxyRelayPolicy.OperatorWeakeningWarnings</c>, always
+    /// in English), with the core text that says each one in the app's language.
+    /// </summary>
+    private static readonly Dictionary<string, string> RelayWarningKeys = new(StringComparer.Ordinal)
+    {
+        ["HackerOs:Proxy:AllowAllPorts is on: the relay reaches every TCP and UDP port."] = "Relay.Warning.AllowAllPorts",
+        ["HackerOs:Proxy:AllowPrivateNetworks is on: the relay reaches the private networks of the server's machine (loopback and cloud metadata stay blocked)."] = "Relay.Warning.AllowPrivateNetworks",
+        ["HackerOs:Proxy:Quotas:Enabled is off: no size, concurrency, stream or idle limit applies."] = "Relay.Warning.QuotasDisabled"
+    };
 
     /// <summary>Creates the gateway for one app instance.</summary>
     /// <param name="services">Server services; <see langword="null"/> on a host without them.</param>
     /// <param name="capabilities">The app's capability checker.</param>
-    public AppServerConnectionGateway(ServerConnectionGatewayServices? services, ICapabilityChecker capabilities)
+    /// <param name="language">
+    /// Language of the calling process (ADR 0104), read at each call: the relay warnings are shown in
+    /// it. English when <see langword="null"/>.
+    /// </param>
+    public AppServerConnectionGateway(
+        ServerConnectionGatewayServices? services,
+        ICapabilityChecker capabilities,
+        Func<System.Globalization.CultureInfo>? language = null)
     {
         _services = services;
         _capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
+        _language = language ?? (static () => HackerOs.AppSdk.Globalization.HackLocale.DefaultLanguage);
     }
 
     /// <inheritdoc />
@@ -174,12 +194,27 @@ internal sealed class AppServerConnectionGateway : IAppServerConnectionGateway
                 policy.CurrentStreams,
                 TimeSpan.FromSeconds(policy.StreamIdleTimeoutSeconds),
                 policy.GrantedApps ?? [],
-                policy.OperatorWeakeningWarnings);
+                LocalizeRelayWarnings(policy.OperatorWeakeningWarnings));
         }
         catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException)
         {
             throw new HackServerConnectionException($"Could not read the relay policy: {exception.Message}", exception);
         }
+    }
+
+    /// <summary>
+    /// Rewrites the server's known relay warnings in the app's language; a warning this client
+    /// does not know (a newer server) is shown as the server wrote it.
+    /// </summary>
+    private IReadOnlyList<string> LocalizeRelayWarnings(IReadOnlyList<string>? warnings)
+    {
+        if (warnings is null || warnings.Count == 0)
+        {
+            return [];
+        }
+
+        Microsoft.Extensions.Localization.IStringLocalizer text = Strings.For(_language());
+        return [.. warnings.Select(warning => RelayWarningKeys.TryGetValue(warning, out string? key) ? text[key].Value : warning)];
     }
 
     public async ValueTask ShowConflictsAsync(CancellationToken cancellationToken = default)

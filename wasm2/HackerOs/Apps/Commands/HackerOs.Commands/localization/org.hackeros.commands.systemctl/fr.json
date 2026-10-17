@@ -1,0 +1,5 @@
+{
+  "name": "systemctl",
+  "description": "Consulte et contrôle les services du système",
+  "terminalUsage": "systemctl [list-units|status|start|stop|restart|enable|disable|is-active|is-enabled] [service...]"
+}

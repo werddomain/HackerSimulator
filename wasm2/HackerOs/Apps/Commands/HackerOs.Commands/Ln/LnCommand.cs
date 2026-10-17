@@ -2,6 +2,8 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Ln;
 
@@ -18,6 +20,7 @@ public sealed class LnCommand(AppManifest manifest) : TerminalAppBase(manifest)
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         (List<string> options, List<string> operands) = CommandIO.SplitArguments(context.Arguments);
         bool symbolic = false, force = false, verbose = false, noDereference = false;
         foreach (string option in options)
@@ -41,7 +44,7 @@ public sealed class LnCommand(AppManifest manifest) : TerminalAppBase(manifest)
                     case 'n': noDereference = true; break;
                     case 'r' or 'T' or 'i': break;
                     default:
-                        await context.StandardError.WriteLineAsync($"ln: invalid option -- '{flag}'");
+                        await context.StandardError.WriteLineAsync(text["InvalidOption", flag]);
                         return 1;
                 }
             }
@@ -49,7 +52,7 @@ public sealed class LnCommand(AppManifest manifest) : TerminalAppBase(manifest)
 
         if (operands.Count == 0)
         {
-            await context.StandardError.WriteLineAsync("ln: missing file operand");
+            await context.StandardError.WriteLineAsync(text["MissingOperand"]);
             return 1;
         }
 
@@ -72,7 +75,7 @@ public sealed class LnCommand(AppManifest manifest) : TerminalAppBase(manifest)
         }
         else
         {
-            await context.StandardError.WriteLineAsync($"ln: target '{last}' is not a directory");
+            await context.StandardError.WriteLineAsync(text["TargetNotDirectory", last]);
             return 1;
         }
 
@@ -81,8 +84,8 @@ public sealed class LnCommand(AppManifest manifest) : TerminalAppBase(manifest)
         {
             if (!symbolic)
             {
-                await context.StandardError.WriteLineAsync($"ln: failed to create hard link '{link}' => '{target}': Operation not supported");
-                await context.StandardError.WriteLineAsync("ln: hint: the HackerOS filesystem has no hard links; use 'ln -s' for a symbolic link");
+                await context.StandardError.WriteLineAsync(text["HardLinkFailed", link, target, CommandText.Reason(context, Errno.NotSupported)]);
+                await context.StandardError.WriteLineAsync(text["HardLinkHint"]);
                 status = 1;
                 continue;
             }
@@ -103,9 +106,9 @@ public sealed class LnCommand(AppManifest manifest) : TerminalAppBase(manifest)
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
             {
                 string reason = exception is HackIOException && !force && await HackFile.ExistsAsync(link, cancellationToken)
-                    ? "File exists"
-                    : ShellErrorText.Describe(exception);
-                await context.StandardError.WriteLineAsync($"ln: failed to create symbolic link '{link}': {reason}");
+                    ? CommandText.Reason(context, Errno.FileExists)
+                    : CommandText.Describe(context, exception);
+                await context.StandardError.WriteLineAsync(text["SymbolicLinkFailed", link, reason]);
                 status = 1;
             }
         }

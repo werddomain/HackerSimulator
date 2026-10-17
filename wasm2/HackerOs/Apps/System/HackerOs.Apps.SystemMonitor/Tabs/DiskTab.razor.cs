@@ -1,7 +1,9 @@
 using System.Globalization;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.IO;
 using HackerOs.Apps.SystemMonitor.Metrics;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.SystemMonitor.Tabs;
 
@@ -19,6 +21,20 @@ public partial class DiskTab
     /// <summary>Gets or sets the drives of the last refresh.</summary>
     [Parameter]
     public IReadOnlyList<HackDriveInfo> Drives { get; set; } = [];
+
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The tab's texts in the language of the System Monitor process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
+    /// <summary>The culture of the numbers shown (the process's locale).</summary>
+    private CultureInfo Formats => AppContext?.FormatCulture ?? CultureInfo.InvariantCulture;
+
+    /// <summary>The throughput chart's value formatter, in the process's locale.</summary>
+    private string FormatRate(double value) => Units.Rate(value, Formats);
+
+    /// <summary>The active-time chart's value formatter, in the process's locale.</summary>
+    private string FormatPercent(double value) => Units.Percent(value, Formats);
 
     /// <summary>Width of the used part of the bar, in the bar's 0–100 coordinate space.</summary>
     private static string BarWidth(double percent) =>

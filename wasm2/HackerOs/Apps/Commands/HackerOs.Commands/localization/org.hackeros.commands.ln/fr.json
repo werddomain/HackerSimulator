@@ -1,0 +1,5 @@
+{
+  "name": "ln",
+  "description": "Crée des liens entre fichiers",
+  "terminalUsage": "ln [-s] [-f] [-n] [-v] cible [nom_du_lien] | ln -s cible... dossier"
+}

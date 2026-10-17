@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="CannotAccess" xml:space="preserve">
+    <value>chmod : impossible d'accéder à « {0} » : {1}</value>
+  </data>
+  <data name="CannotReadDirectory" xml:space="preserve">
+    <value>chmod : impossible de lire le dossier « {0} » : {1}</value>
+  </data>
+  <data name="ChangeFailed" xml:space="preserve">
+    <value>chmod : modification des droits de « {0} » : {1}</value>
+  </data>
+  <data name="Changed" xml:space="preserve">
+    <value>mode de « {0} » modifié de {1} ({2}) en {3} ({4})</value>
+  </data>
+  <data name="InvalidMode" xml:space="preserve">
+    <value>chmod : mode non valide : « {0} »</value>
+  </data>
+  <data name="MissingOperand" xml:space="preserve">
+    <value>chmod : opérande manquant</value>
+  </data>
+  <data name="MissingOperandAfter" xml:space="preserve">
+    <value>chmod : opérande manquant après « {0} »</value>
+  </data>
+  <data name="OperationFailed" xml:space="preserve">
+    <value>Échec de l'opération</value>
+  </data>
+  <data name="Retained" xml:space="preserve">
+    <value>mode de « {0} » conservé à {1} ({2})</value>
+  </data>
+</root>

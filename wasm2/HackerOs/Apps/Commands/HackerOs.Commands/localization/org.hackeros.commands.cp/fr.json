@@ -1,0 +1,5 @@
+{
+  "name": "cp",
+  "description": "Copie des fichiers et des dossiers",
+  "terminalUsage": "cp [-r|-R] <source...> <destination>"
+}

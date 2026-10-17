@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="AllClear" xml:space="preserve">
+    <value>All clear</value>
+  </data>
+  <data name="Clear" xml:space="preserve">
+    <value>Clear entry</value>
+  </data>
+  <data name="DecimalPoint" xml:space="preserve">
+    <value>Decimal point</value>
+  </data>
+  <data name="Display" xml:space="preserve">
+    <value>Calculator display</value>
+  </data>
+  <data name="Divide" xml:space="preserve">
+    <value>Divide</value>
+  </data>
+  <data name="Equals" xml:space="preserve">
+    <value>Equals</value>
+  </data>
+  <data name="Keypad" xml:space="preserve">
+    <value>Keypad</value>
+  </data>
+  <data name="MemoryAdd" xml:space="preserve">
+    <value>Add to memory</value>
+  </data>
+  <data name="MemoryClear" xml:space="preserve">
+    <value>Memory clear</value>
+  </data>
+  <data name="MemoryRecall" xml:space="preserve">
+    <value>Memory recall</value>
+  </data>
+  <data name="MemorySubtract" xml:space="preserve">
+    <value>Subtract from memory</value>
+  </data>
+  <data name="Multiply" xml:space="preserve">
+    <value>Multiply</value>
+  </data>
+  <data name="Negate" xml:space="preserve">
+    <value>Change sign</value>
+  </data>
+  <data name="Percent" xml:space="preserve">
+    <value>Percent</value>
+  </data>
+  <data name="Square" xml:space="preserve">
+    <value>Square</value>
+  </data>
+  <data name="SquareRoot" xml:space="preserve">
+    <value>Square root</value>
+  </data>
+  <data name="Subtract" xml:space="preserve">
+    <value>Subtract</value>
+  </data>
+</root>

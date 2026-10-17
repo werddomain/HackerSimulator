@@ -76,18 +76,18 @@ public partial class FileViewContextMenu
         {
             case FileViewContextMenuScope.Background:
                 items.Add(new FileViewMenuItem(
-                    "new-folder", "New Folder", ShellIconDescriptor.Vector(IconLibrary.Lucide, "folder-plus"),
+                    "new-folder", Owner.L["Menu.NewFolder"], ShellIconDescriptor.Vector(IconLibrary.Lucide, "folder-plus"),
                     Owner.CreateFolderInteractiveAsync));
                 if (Owner.ClipboardRequested.HasDelegate)
                 {
                     items.Add(new FileViewMenuItem(
-                        "paste", "Paste", ShellIconDescriptor.Vector(IconLibrary.Lucide, "clipboard-paste"),
+                        "paste", Owner.L["Menu.Paste"], ShellIconDescriptor.Vector(IconLibrary.Lucide, "clipboard-paste"),
                         () => Owner.RequestClipboardAsync(FileViewClipboardAction.Paste, Owner.CurrentDirectory),
                         IsDisabled: !Owner.CanPaste));
                 }
 
                 items.Add(new FileViewMenuItem(
-                    "refresh", "Refresh", ShellIconDescriptor.Vector(IconLibrary.Lucide, "refresh-cw"),
+                    "refresh", Owner.L["Menu.Refresh"], ShellIconDescriptor.Vector(IconLibrary.Lucide, "refresh-cw"),
                     () => Owner.RefreshAsync()));
                 break;
 
@@ -96,29 +96,29 @@ public partial class FileViewContextMenu
                 if (item is not null)
                 {
                     items.Add(new FileViewMenuItem(
-                        "open", "Open", ShellIconDescriptor.Vector(IconLibrary.Lucide, "folder-open"),
+                        "open", Owner.L["Menu.Open"], ShellIconDescriptor.Vector(IconLibrary.Lucide, "folder-open"),
                         () => Owner.ActivateItemAsync(item)));
                     if (Owner.ClipboardRequested.HasDelegate)
                     {
                         // Like a desktop file manager: a right-click on an unselected item acts on it alone.
                         items.Add(new FileViewMenuItem(
-                            "cut", "Cut", ShellIconDescriptor.Vector(IconLibrary.Lucide, "scissors"),
+                            "cut", Owner.L["Menu.Cut"], ShellIconDescriptor.Vector(IconLibrary.Lucide, "scissors"),
                             () => RequestOnSelectionAsync(item, FileViewClipboardAction.Cut),
                             IsSeparatorBefore: true));
                         items.Add(new FileViewMenuItem(
-                            "copy", "Copy", ShellIconDescriptor.Vector(IconLibrary.Lucide, "copy"),
+                            "copy", Owner.L["Menu.Copy"], ShellIconDescriptor.Vector(IconLibrary.Lucide, "copy"),
                             () => RequestOnSelectionAsync(item, FileViewClipboardAction.Copy)));
                         if (item.IsDirectory)
                         {
                             items.Add(new FileViewMenuItem(
-                                "paste-into", "Paste Into Folder", ShellIconDescriptor.Vector(IconLibrary.Lucide, "clipboard-paste"),
+                                "paste-into", Owner.L["Menu.PasteInto"], ShellIconDescriptor.Vector(IconLibrary.Lucide, "clipboard-paste"),
                                 () => Owner.RequestClipboardAsync(FileViewClipboardAction.Paste, item.FullPath),
                                 IsDisabled: !Owner.CanPaste));
                         }
                     }
 
                     items.Add(new FileViewMenuItem(
-                        "rename", "Rename", ShellIconDescriptor.Vector(IconLibrary.Lucide, "pencil"),
+                        "rename", Owner.L["Menu.Rename"], ShellIconDescriptor.Vector(IconLibrary.Lucide, "pencil"),
                         () =>
                         {
                             item.Select();
@@ -126,7 +126,7 @@ public partial class FileViewContextMenu
                             return Task.CompletedTask;
                         }));
                     items.Add(new FileViewMenuItem(
-                        "delete", "Delete", ShellIconDescriptor.Vector(IconLibrary.Lucide, "trash-2"),
+                        "delete", Owner.L["Menu.Delete"], ShellIconDescriptor.Vector(IconLibrary.Lucide, "trash-2"),
                         () =>
                         {
                             item.Select();
@@ -137,7 +137,7 @@ public partial class FileViewContextMenu
                     if (Owner.DeleteRequested.HasDelegate)
                     {
                         items.Add(new FileViewMenuItem(
-                            "delete-permanently", "Delete permanently", ShellIconDescriptor.Vector(IconLibrary.Lucide, "octagon-x"),
+                            "delete-permanently", Owner.L["Menu.DeletePermanently"], ShellIconDescriptor.Vector(IconLibrary.Lucide, "octagon-x"),
                             () =>
                             {
                                 item.Select();

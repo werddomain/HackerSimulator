@@ -637,6 +637,39 @@ Le projet de tests référence le projet de l'app et `HackerOs.Tests.Support`
 (xUnit 2.9). Les composants fenêtrés se testent avec bUnit (voir
 `Tests/HackerOs.Apps.*.Tests`).
 
+## 8 bis. Traduire son app
+
+HackerOS parle anglais (par défaut) et français ; chaque processus suit son
+propre `LANG` (ADR 0104). Pour traduire une app :
+
+1. Ajouter une classe marqueur `internal sealed class Strings` dans l'espace
+   de noms racine, et ses textes dans `Resources/Strings.resx` (anglais) et
+   `Resources/Strings.fr.resx` (français), avec exactement les mêmes clés
+   (`build/tools/resx.py` écrit un `.resx` depuis une table JSON).
+2. Lire les textes dans la langue du processus :
+
+   ```razor
+   @using HackerOs.AppSdk.Globalization
+   @using Microsoft.Extensions.Localization
+
+   <button aria-label="@L["Toolbar.NewFolder"]">@L["Toolbar.NewFolder"]</button>
+
+   @code {
+       private IStringLocalizer<Strings>? _l;
+       private IStringLocalizer<Strings> L => _l ??= AppContext.GetLocalizer<Strings>();
+   }
+   ```
+
+   Dans une commande : `context.App.GetLocalizer<Strings>()`. Les dates et
+   nombres affichés utilisent `AppContext.FormatCulture`.
+3. Traduire le nom et la description : `Resources/AppManifest.fr.resx` avec les
+   clés `Name`, `Description` (et `Terminal.Usage` pour une commande). Le build
+   produit `localization/fr.json` et l'entrée `localizations` du manifeste ; le
+   lanceur et `help` affichent alors le nom traduit.
+
+Les sorties lues par des scripts, les noms de fichiers et les journaux restent
+en anglais. Le guide complet est [`localization.md`](localization.md).
+
 ## 9. Liste de contrôle avant de livrer
 
 - [ ] Le projet est sous `Apps/`, dans `HackerOs.sln`, et ne référence que le SDK.
@@ -646,6 +679,7 @@ Le projet de tests référence le projet de l'app et `HackerOs.Tests.Support`
 - [ ] Les erreurs de permission et de fichier sont gérées et affichées.
 - [ ] Une demande d'arrêt ne perd rien en silence (`OnAppStopRequestedAsync`, `OnStoppingAsync`) et les boucles longues appellent `HackProcess.CheckpointAsync` (ADR 0069).
 - [ ] Des tests couvrent la logique de l'app.
+- [ ] Les textes visibles sont dans `Resources/Strings.resx` et `Strings.fr.resx` (mêmes clés), le nom dans `AppManifest.fr.resx`.
 - [ ] L'app fonctionne avec le seul hôte Ecosystem, sans serveur.
 - [ ] Un document décrit l'app sous `docs/`, ajouté à l'index [`README.md`](README.md).
 
@@ -667,3 +701,4 @@ façon : `ProjectReference` ou `PackageReference` (paquet d'app produit par
 - [x] Compiler les exemples et exécuter le test contre `rebuild/base`.
 - [x] Construire une app ou un hôte depuis un autre dépôt avec les paquets locaux et les modèles (v3/6).
 - [x] Sauvegarde de la machine et erreurs `NoSpace`/`FileTooLarge` (`v3/7-storage-backup`).
+- [x] Traduire son app : ressources, `GetLocalizer<T>`, `AppManifest.fr.resx` (`v3/12`, ADR 0104).

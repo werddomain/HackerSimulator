@@ -1,6 +1,8 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Simulation.Abstractions.Gateways;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Launch;
 
@@ -20,10 +22,11 @@ public sealed class LaunchCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
         if (context.Arguments.Count == 0)
         {
-            context.StandardError.WriteLine("launch: missing app-id argument");
+            context.StandardError.WriteLine(text["MissingAppId"]);
             return 1;
         }
 
@@ -44,17 +47,17 @@ public sealed class LaunchCommand : TerminalAppBase
         switch (result.Outcome)
         {
             case AppIntentLaunchOutcome.Launched:
-                context.StandardOutput.WriteLine($"Launched '{appId}'.");
+                context.StandardOutput.WriteLine(text["Launched", appId]);
                 return 0;
             case AppIntentLaunchOutcome.NotFound:
-                context.StandardError.WriteLine($"launch: no such application '{appId}'");
+                context.StandardError.WriteLine(text["NoSuchApp", appId]);
                 return 1;
             case AppIntentLaunchOutcome.Disabled:
                 // ADR 0048: a disabled app is an uninstalled one.
-                context.StandardError.WriteLine($"launch: '{appId}' is not installed");
+                context.StandardError.WriteLine(text["NotInstalled", appId]);
                 return 1;
             default:
-                context.StandardError.WriteLine($"launch: '{appId}' failed to start ({result.ErrorCode})");
+                context.StandardError.WriteLine(text["StartFailed", appId, result.ErrorCode ?? string.Empty]);
                 return 1;
         }
     }

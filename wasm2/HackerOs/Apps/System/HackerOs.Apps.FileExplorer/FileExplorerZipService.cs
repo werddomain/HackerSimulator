@@ -3,6 +3,7 @@ using HackerOs.AppSdk.Diagnostics;
 using HackerOs.App.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.FileExplorer;
 
@@ -57,16 +58,17 @@ internal static class FileExplorerZipService
 
     /// <summary>
     /// Extracts <paramref name="zipPath"/> into <paramref name="destinationDirectory"/> (created fresh —
-    /// fails if it already exists). Returns a human-readable error message, or <see langword="null"/> on success.
+    /// fails if it already exists). Returns a human-readable error message in the explorer's language
+    /// (<paramref name="text"/>), or <see langword="null"/> on success.
     /// </summary>
     public static async Task<string?> ExtractAsync(
-        IAppFileSystemGateway fileSystem, VirtualPath zipPath, VirtualPath destinationDirectory, CancellationToken cancellationToken)
+        IAppFileSystemGateway fileSystem, VirtualPath zipPath, VirtualPath destinationDirectory, IStringLocalizer text, CancellationToken cancellationToken)
     {
         FileSystemResult<FileSystemContentReadHandle> readResult = await fileSystem.ReadAsync(
             new FileSystemReadRequest(zipPath), cancellationToken);
         if (!readResult.Succeeded || readResult.Value is null)
         {
-            return "Could not read the archive.";
+            return text["Error.ReadArchive"];
         }
 
         using MemoryStream ms = new();
@@ -81,7 +83,7 @@ internal static class FileExplorerZipService
         if (destStat.Succeeded)
         {
             string folderName = destinationDirectory.Value[(destinationDirectory.Value.LastIndexOf('/') + 1)..];
-            return $"'{folderName}' already exists.";
+            return text["Error.AlreadyExists", folderName];
         }
 
         FileSystemMutationResult dirCreate = await fileSystem.CreateAsync(
@@ -89,7 +91,7 @@ internal static class FileExplorerZipService
             cancellationToken);
         if (!dirCreate.Succeeded)
         {
-            return "Could not create destination folder.";
+            return text["Error.CreateDestination"];
         }
 
         HashSet<string> ensuredDirs = new(StringComparer.Ordinal) { destinationDirectory.Value };
@@ -140,7 +142,7 @@ internal static class FileExplorerZipService
         }
         catch (InvalidDataException)
         {
-            return "The archive is not a valid zip file.";
+            return text["Error.InvalidZip"];
         }
 
         return null;

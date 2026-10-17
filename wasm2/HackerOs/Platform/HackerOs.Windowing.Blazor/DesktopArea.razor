@@ -2,8 +2,9 @@
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
+@inject IServiceProvider LocalizationServices
 
-<main @ref="_desktopElement" class="desktop-area" aria-label="Desktop workspace">
+<main @ref="_desktopElement" class="desktop-area" aria-label="@L["Desktop.Workspace"]">
     <div class="desktop-grid" aria-hidden="true"></div>
     @if (BackgroundContent is not null)
     {
@@ -11,7 +12,7 @@
             @BackgroundContent
         </section>
     }
-    <section class="window-layer" aria-label="Open windows">
+    <section class="window-layer" aria-label="@L["Desktop.OpenWindows"]">
         @foreach (WindowRuntimeState window in Windows)
         {
             <WindowHost @key="window.Id"
@@ -130,4 +131,8 @@
             }
         }
     }
+
+    /// <summary>Gets the package's texts: the host's session language, or English without localization (ADR 0104).</summary>
+    private IStringLocalizer L => _localizer ??= PackageStringLocalizer.Resolve<Strings>(LocalizationServices);
+    private IStringLocalizer? _localizer;
 }

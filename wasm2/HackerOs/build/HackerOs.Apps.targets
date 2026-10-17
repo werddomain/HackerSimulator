@@ -157,8 +157,14 @@
     content: they must never be copied or published under the same name by several apps.
   -->
   <ItemGroup Condition="'$(HackerOsAppProject)' == 'true'">
-    <Content Remove="manifest.json;manifests/**" />
-    <None Remove="manifest.json;manifests/**" />
+    <Content Remove="manifest.json;manifests/**;localization/**" />
+    <None Remove="manifest.json;manifests/**;localization/**" />
+    <!--
+      ADR 0104 section 4: Resources/AppManifest.<culture>.resx is read by the generator, which writes
+      localization/<culture>.json for the host catalog; it is not compiled into a satellite assembly.
+    -->
+    <EmbeddedResource Remove="Resources/AppManifest.*.resx" />
+    <None Include="Resources/AppManifest.*.resx" />
   </ItemGroup>
 
   <!-- Paths are computed inside targets so that IntermediateOutputPath is final. -->
@@ -187,6 +193,9 @@
       <_HackerOsManifestDependency Include="@(ReferencePath->'%(FullPath)')" />
       <_HackerOsExistingManifest Include="$(MSBuildProjectDirectory)/manifest.json" Condition="Exists('$(MSBuildProjectDirectory)/manifest.json')" />
       <_HackerOsExistingManifest Include="$(MSBuildProjectDirectory)/manifests/*.json" />
+      <!-- ADR 0104: translations of the manifest, and the files generated from them. -->
+      <_HackerOsExistingManifest Include="$(MSBuildProjectDirectory)/Resources/AppManifest.*.resx" />
+      <_HackerOsExistingManifest Include="$(MSBuildProjectDirectory)/localization/**/*.json" />
       <!-- ADR 0098 §5: declared assets are hashed from wwwroot/, so an edited asset reruns the generator. -->
       <_HackerOsAssetFile Include="$(MSBuildProjectDirectory)/wwwroot/**" />
     </ItemGroup>

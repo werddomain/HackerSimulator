@@ -1,0 +1,5 @@
+{
+  "name": "watch",
+  "description": "Exécute une commande à intervalles réguliers et affiche sa sortie en plein écran",
+  "terminalUsage": "watch [-n secondes] [-t] [-g] [-e] commande"
+}

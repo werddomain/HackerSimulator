@@ -8,6 +8,14 @@ const HackerOs.AppSdk.Apps.HackBrowser.AppId = "org.hackeros.browser" -> string!
 const HackerOs.AppSdk.Apps.HackBrowser.DetachedArgument = "--detached" -> string!
 const HackerOs.AppSdk.Clipboard.HackClipboardFileList.GnomeCopiedFilesMediaType = "x-special/gnome-copied-files" -> string!
 const HackerOs.AppSdk.Components.HackComponentContracts.Terminal = "hackeros.terminal" -> string!
+const HackerOs.AppSdk.Globalization.HackLocale.AllVariable = "LC_ALL" -> string!
+const HackerOs.AppSdk.Globalization.HackLocale.DefaultLocale = "en_US.UTF-8" -> string!
+const HackerOs.AppSdk.Globalization.HackLocale.LangVariable = "LANG" -> string!
+const HackerOs.AppSdk.Globalization.HackLocale.MessagesVariable = "LC_MESSAGES" -> string!
+const HackerOs.AppSdk.Globalization.HackLocale.MonetaryVariable = "LC_MONETARY" -> string!
+const HackerOs.AppSdk.Globalization.HackLocale.NumericVariable = "LC_NUMERIC" -> string!
+const HackerOs.AppSdk.Globalization.HackLocale.TimeVariable = "LC_TIME" -> string!
+const HackerOs.AppSdk.Globalization.HackLocalization.ResourcesFolder = "Resources" -> string!
 const HackerOs.AppSdk.IO.HackPath.AltDirectorySeparatorChar = '/' -> char
 const HackerOs.AppSdk.IO.HackPath.DirectorySeparatorChar = '/' -> char
 const HackerOs.AppSdk.IO.HackPath.PathSeparator = ':' -> char
@@ -526,6 +534,18 @@ HackerOs.AppSdk.DragDrop.VirtualFolderDragPayload.ItemCount.init -> void
 HackerOs.AppSdk.DragDrop.VirtualFolderDragPayload.SourceAppId.get -> string!
 HackerOs.AppSdk.DragDrop.VirtualFolderDragPayload.SourceAppId.init -> void
 HackerOs.AppSdk.DragDrop.VirtualFolderDragPayload.VirtualFolderDragPayload(string! SourceAppId, string! FolderPath, string! FolderName, int ItemCount) -> void
+HackerOs.AppSdk.Globalization.EnglishStringLocalizer<TResource>
+HackerOs.AppSdk.Globalization.EnglishStringLocalizer<TResource>.EnglishStringLocalizer() -> void
+HackerOs.AppSdk.Globalization.HackLocale
+HackerOs.AppSdk.Globalization.HackLocalization
+HackerOs.AppSdk.Globalization.HackStringLocalizer
+HackerOs.AppSdk.Globalization.HackStringLocalizer.Culture.get -> System.Globalization.CultureInfo!
+HackerOs.AppSdk.Globalization.HackStringLocalizer.GetAllStrings(bool includeParentCultures) -> System.Collections.Generic.IEnumerable<Microsoft.Extensions.Localization.LocalizedString!>!
+HackerOs.AppSdk.Globalization.HackStringLocalizer.HackStringLocalizer(System.Resources.ResourceManager! resources, System.Func<System.Globalization.CultureInfo!>! culture) -> void
+HackerOs.AppSdk.Globalization.HackStringLocalizer.this[string! name, params object![]! arguments].get -> Microsoft.Extensions.Localization.LocalizedString!
+HackerOs.AppSdk.Globalization.HackStringLocalizer.this[string! name].get -> Microsoft.Extensions.Localization.LocalizedString!
+HackerOs.AppSdk.Globalization.HackStringLocalizer<TResource>
+HackerOs.AppSdk.Globalization.HackStringLocalizer<TResource>.HackStringLocalizer(System.Func<System.Globalization.CultureInfo!>! culture) -> void
 HackerOs.AppSdk.HackConsole
 HackerOs.AppSdk.HackEnvironment
 HackerOs.AppSdk.HackExecutionContext
@@ -561,10 +581,12 @@ HackerOs.AppSdk.IAppExecutionContext.Catalog.get -> HackerOs.AppSdk.Apps.IAppCat
 HackerOs.AppSdk.IAppExecutionContext.Clipboard.get -> HackerOs.AppSdk.Clipboard.IAppClipboardGateway!
 HackerOs.AppSdk.IAppExecutionContext.Clock.get -> HackerOs.Simulation.Abstractions.Gateways.IAppClockGateway!
 HackerOs.AppSdk.IAppExecutionContext.Console.get -> HackerOs.AppSdk.IAppConsoleGateway!
+HackerOs.AppSdk.IAppExecutionContext.Culture.get -> System.Globalization.CultureInfo!
 HackerOs.AppSdk.IAppExecutionContext.Drives.get -> HackerOs.AppSdk.IO.IAppDriveGateway!
 HackerOs.AppSdk.IAppExecutionContext.Environment.get -> HackerOs.Simulation.Abstractions.Gateways.IAppEnvironmentGateway!
 HackerOs.AppSdk.IAppExecutionContext.Events.get -> HackerOs.Simulation.Abstractions.Gateways.IAppEventGateway!
 HackerOs.AppSdk.IAppExecutionContext.FileSystem.get -> HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway!
+HackerOs.AppSdk.IAppExecutionContext.FormatCulture.get -> System.Globalization.CultureInfo!
 HackerOs.AppSdk.IAppExecutionContext.GrantedCapabilities.get -> System.Collections.Generic.IReadOnlySet<string!>!
 HackerOs.AppSdk.IAppExecutionContext.HomeDirectory.get -> string!
 HackerOs.AppSdk.IAppExecutionContext.InstanceId.get -> System.Guid
@@ -754,6 +776,7 @@ HackerOs.AppSdk.IShellSession.ChangeDirectoryAsync(string! path, System.Threadin
 HackerOs.AppSdk.IShellSession.Environment.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
 HackerOs.AppSdk.IShellSession.Exit(int? exitStatus) -> int
 HackerOs.AppSdk.IShellSession.GetCommands() -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.ShellCommandInfo!>!
+HackerOs.AppSdk.IShellSession.GetCommands(System.Globalization.CultureInfo! culture) -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.ShellCommandInfo!>!
 HackerOs.AppSdk.IShellSession.GetVariable(string! name) -> string?
 HackerOs.AppSdk.IShellSession.History.get -> System.Collections.Generic.IReadOnlyList<string!>!
 HackerOs.AppSdk.IShellSession.Jobs.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.ShellJobInfo!>!
@@ -1674,6 +1697,23 @@ static HackerOs.AppSdk.Diagnostics.HackProcess.GetProcessesAsync(System.Threadin
 static HackerOs.AppSdk.Diagnostics.HackProcess.ParseIo(string! text) -> HackerOs.AppSdk.Diagnostics.HackProcessIoCounters!
 static HackerOs.AppSdk.Diagnostics.HackProcess.ParseStatTimes(string! text) -> (System.TimeSpan User, System.TimeSpan System)
 static HackerOs.AppSdk.Diagnostics.HackProcess.ParseStatus(string! text) -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+static HackerOs.AppSdk.Globalization.HackLocale.AvailableLocales.get -> System.Collections.Generic.IReadOnlyList<string!>!
+static HackerOs.AppSdk.Globalization.HackLocale.DefaultFormatCulture.get -> System.Globalization.CultureInfo!
+static HackerOs.AppSdk.Globalization.HackLocale.DefaultLanguage.get -> System.Globalization.CultureInfo!
+static HackerOs.AppSdk.Globalization.HackLocale.FormatLocaleConf(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string!, string!>>! variables, string? header = null) -> string!
+static HackerOs.AppSdk.Globalization.HackLocale.IsAvailable(string? locale) -> bool
+static HackerOs.AppSdk.Globalization.HackLocale.LocaleConfVariables.get -> System.Collections.Generic.IReadOnlySet<string!>!
+static HackerOs.AppSdk.Globalization.HackLocale.ParseLocaleConf(string? content, System.Collections.Generic.ICollection<(int Line, string! Message)>? warnings = null) -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+static HackerOs.AppSdk.Globalization.HackLocale.ResolveFormatCulture(System.Func<string!, string?>! getVariable, string! category = "LC_TIME") -> System.Globalization.CultureInfo!
+static HackerOs.AppSdk.Globalization.HackLocale.ResolveLanguage(System.Func<string!, string?>! getVariable) -> System.Globalization.CultureInfo!
+static HackerOs.AppSdk.Globalization.HackLocale.SupportedLanguages.get -> System.Collections.Generic.IReadOnlyList<System.Globalization.CultureInfo!>!
+static HackerOs.AppSdk.Globalization.HackLocale.ToCulture(string? locale) -> System.Globalization.CultureInfo?
+static HackerOs.AppSdk.Globalization.HackLocale.ToLanguage(string? locale) -> System.Globalization.CultureInfo!
+static HackerOs.AppSdk.Globalization.HackLocale.ToLocaleName(System.Globalization.CultureInfo! culture) -> string!
+static HackerOs.AppSdk.Globalization.HackLocalization.GetLocalizer<TResource>() -> Microsoft.Extensions.Localization.IStringLocalizer<TResource>!
+static HackerOs.AppSdk.Globalization.HackLocalization.GetLocalizer<TResource>(this HackerOs.AppSdk.IAppExecutionContext? context) -> Microsoft.Extensions.Localization.IStringLocalizer<TResource>!
+static HackerOs.AppSdk.Globalization.HackLocalization.GetResourceBaseName(System.Type! resourceType) -> string!
+static HackerOs.AppSdk.Globalization.HackLocalization.GetResourceManager(System.Type! resourceType) -> System.Resources.ResourceManager!
 static HackerOs.AppSdk.HackConsole.Error.get -> System.IO.TextWriter!
 static HackerOs.AppSdk.HackConsole.In.get -> System.IO.TextReader!
 static HackerOs.AppSdk.HackConsole.IsAttached.get -> bool
@@ -1682,7 +1722,9 @@ static HackerOs.AppSdk.HackConsole.ReadLineAsync(System.Threading.CancellationTo
 static HackerOs.AppSdk.HackConsole.Write(string? value) -> void
 static HackerOs.AppSdk.HackConsole.WriteLine(string? value = null) -> void
 static HackerOs.AppSdk.HackConsole.WriteLineAsync(string? value = null) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.HackEnvironment.Culture.get -> System.Globalization.CultureInfo!
 static HackerOs.AppSdk.HackEnvironment.CurrentDirectory.get -> string!
+static HackerOs.AppSdk.HackEnvironment.FormatCulture.get -> System.Globalization.CultureInfo!
 static HackerOs.AppSdk.HackEnvironment.GetCommandLineArgs() -> string![]!
 static HackerOs.AppSdk.HackEnvironment.GetEnvironmentVariable(string! name) -> string?
 static HackerOs.AppSdk.HackEnvironment.GetEnvironmentVariables() -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
@@ -1805,6 +1847,7 @@ static HackerOs.AppSdk.Net.Hosting.HackWebSiteFile.ReadDirectoryAsync(string! di
 static HackerOs.AppSdk.Net.Hosting.HackWebSiteFile.Serialize(HackerOs.AppSdk.Net.Hosting.HackWebSite! site) -> string!
 static HackerOs.AppSdk.Net.Hosting.HackWebSiteFile.TryParseBinding(string? value, out HackerOs.App.Abstractions.WebBinding binding, out string? error) -> bool
 static HackerOs.AppSdk.Net.Hosting.HackWebSiteFile.Validate(HackerOs.AppSdk.Net.Hosting.HackWebSite! site, HackerOs.AppSdk.Net.Hosting.HackWebSiteScope scope) -> System.Collections.Generic.IReadOnlyList<string!>!
+static HackerOs.AppSdk.Net.Hosting.HackWebSiteFile.Validate(HackerOs.AppSdk.Net.Hosting.HackWebSite! site, HackerOs.AppSdk.Net.Hosting.HackWebSiteScope scope, HackerOs.AppSdk.IAppExecutionContext? context) -> System.Collections.Generic.IReadOnlyList<string!>!
 static HackerOs.AppSdk.ServiceAppBase.ToServiceStopReason(HackerOs.Simulation.Abstractions.Processes.ProcessExitReason reason) -> HackerOs.AppSdk.ServiceStopReason
 static HackerOs.AppSdk.ServiceProcess.HackServiceController.GetServicesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.ServiceProcess.HackServiceController![]!>!
 static HackerOs.AppSdk.ServiceProcess.HackServiceStates.ToSystemdName(HackerOs.AppSdk.ServiceProcess.HackServiceActiveState state) -> string!
@@ -1821,6 +1864,7 @@ static HackerOs.AppSdk.Shell.HackShell.StartAsync(HackerOs.AppSdk.IAppExecutionC
 static HackerOs.AppSdk.Shell.HackShell.StartAsync(HackerOs.AppSdk.Shell.HackShellOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Shell.IHackShell!>!
 static HackerOs.AppSdk.Shell.HackShellCompletion.None(int cursor) -> HackerOs.AppSdk.Shell.HackShellCompletion!
 static HackerOs.AppSdk.ShellErrorText.Describe(System.Exception! exception) -> string!
+static HackerOs.AppSdk.ShellErrorText.Describe(System.Exception! exception, HackerOs.AppSdk.IAppExecutionContext? context) -> string!
 static HackerOs.AppSdk.TerminalViewport.Create(int columns, int rows) -> HackerOs.AppSdk.TerminalViewport
 static HackerOs.AppSdk.UnsupportedAdministrationGateways.Permissions.get -> HackerOs.AppSdk.Administration.IAppPermissionAdministrationGateway!
 static HackerOs.AppSdk.UnsupportedAdministrationGateways.ServerConnection.get -> HackerOs.AppSdk.Administration.IAppServerConnectionGateway!

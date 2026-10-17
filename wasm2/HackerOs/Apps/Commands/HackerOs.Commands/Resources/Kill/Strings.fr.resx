@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="InvalidSignal" xml:space="preserve">
+    <value>kill : {0} : spécification de signal non valable</value>
+  </data>
+  <data name="InvalidTarget" xml:space="preserve">
+    <value>kill : {0} : les arguments doivent être des identifiants de processus ou de tâches</value>
+  </data>
+  <data name="NoShell" xml:space="preserve">
+    <value>kill : {0} : pas de tâche courante (aucune session de shell)</value>
+  </data>
+  <data name="NoSuchJob" xml:space="preserve">
+    <value>kill : {0} : tâche inexistante</value>
+  </data>
+  <data name="NoSuchProcess" xml:space="preserve">
+    <value>kill : ({0}) - Aucun processus de ce type</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>kill : utilisation : kill [-s sigspec | -n signum | -sigspec] pid | jobspec ... ou kill -l [sigspec]</value>
+  </data>
+</root>

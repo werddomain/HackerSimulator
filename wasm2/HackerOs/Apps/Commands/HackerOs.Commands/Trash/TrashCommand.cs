@@ -3,6 +3,8 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.IO;
 using HackerOs.Commands.Rm;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Trash;
 
@@ -20,13 +22,6 @@ namespace HackerOs.Commands.Trash;
 /// </summary>
 public sealed class TrashCommand : TerminalAppBase
 {
-    private const string Usage =
-        "usage: trash put [-f] <file...>\n" +
-        "       trash list\n" +
-        "       trash restore <name|original-path> [destination]\n" +
-        "       trash rm <name...>\n" +
-        "       trash empty";
-
     /// <summary>Initializes the command with its manifest.</summary>
     public TrashCommand(AppManifest manifest) : base(manifest) { }
 
@@ -36,9 +31,10 @@ public sealed class TrashCommand : TerminalAppBase
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
+        IStringLocalizer<Strings> text = Text(context);
         if (context.Arguments.Count == 0)
         {
-            context.StandardError.WriteLine(Usage);
+            context.StandardError.WriteLine(text["Usage"]);
             return 1;
         }
 
@@ -53,12 +49,12 @@ public sealed class TrashCommand : TerminalAppBase
                 "rm" => await RemoveAsync(context, rest, cancellationToken),
                 "empty" => await EmptyAsync(context, rest, cancellationToken),
                 "--help" or "-h" or "help" => PrintUsage(context),
-                string other => Fail(context, $"unknown subcommand '{other}'\n{Usage}")
+                string other => Fail(context, text["UnknownSubcommand", other] + "\n" + text["Usage"])
             };
         }
         catch (UnauthorizedAccessException)
         {
-            return Fail(context, "Permission denied");
+            return Fail(context, text["PermissionDenied"]);
         }
         catch (IOException exception)
         {
@@ -68,19 +64,20 @@ public sealed class TrashCommand : TerminalAppBase
 
     private static async Task<int> PutAsync(TerminalExecutionContext context, string[] arguments, CancellationToken cancellationToken)
     {
-        if (!RmOptions.TryParse(arguments, out RmOptions options, out string? error))
+        IStringLocalizer<Strings> text = Text(context);
+        if (!RmOptions.TryParse(arguments, context.App.GetLocalizer<Rm.Strings>(), out RmOptions options, out string? error))
         {
-            return Fail(context, $"put: {error}");
+            return Fail(context, text["Put.Error", error!]);
         }
 
         if (options.Permanent)
         {
-            return Fail(context, "put: --permanent is not a trash operation; use 'rm --permanent'");
+            return Fail(context, text["Put.Permanent"]);
         }
 
         if (options.Targets.Count == 0)
         {
-            return options.Force ? 0 : Fail(context, "put: missing operand");
+            return options.Force ? 0 : Fail(context, text["Put.MissingOperand"]);
         }
 
         // trash-put sends directories without asking for -r.
@@ -99,19 +96,20 @@ public sealed class TrashCommand : TerminalAppBase
 
     private static async Task<int> ListAsync(TerminalExecutionContext context, string[] arguments, CancellationToken cancellationToken)
     {
+        IStringLocalizer<Strings> text = Text(context);
         if (arguments.Length > 0)
         {
-            return Fail(context, "list: too many arguments");
+            return Fail(context, text["List.TooManyArguments"]);
         }
 
         foreach (HackTrashItem item in await HackTrash.GetItemsAsync(cancellationToken))
         {
             string date = item.DeletedAt?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? "????-??-?? ??:??:??";
-            string path = item.OriginalPath ?? "(unknown origin)";
+            string path = item.OriginalPath ?? text["List.UnknownOrigin"];
 
             // Show the trash name when it is not obvious from the path, so `trash rm <name>` is usable.
             string suffix = item.OriginalPath is null || HackPath.GetFileName(item.OriginalPath) != item.Name ? $"  [{item.Name}]" : string.Empty;
-            string origin = item.DeletedOnAnotherDevice ? "  (deleted on another device)" : string.Empty;
+            string origin = item.DeletedOnAnotherDevice ? text["List.OtherDevice"] : string.Empty;
             context.StandardOutput.WriteLine($"{date}  {path}{suffix}{origin}");
         }
 
@@ -120,16 +118,17 @@ public sealed class TrashCommand : TerminalAppBase
 
     private static async Task<int> RestoreAsync(TerminalExecutionContext context, string[] arguments, CancellationToken cancellationToken)
     {
+        IStringLocalizer<Strings> text = Text(context);
         if (arguments.Length is 0 or > 2)
         {
-            return Fail(context, "restore: expected <name|original-path> [destination]");
+            return Fail(context, text["Restore.Expected"]);
         }
 
         IReadOnlyList<HackTrashItem> items = await HackTrash.GetItemsAsync(cancellationToken);
         HackTrashItem? item = Find(items, context, arguments[0]);
         if (item is null)
         {
-            return Fail(context, $"restore: '{arguments[0]}' is not in the trash");
+            return Fail(context, text["Restore.NotInTrash", arguments[0]]);
         }
 
         string? destination = arguments.Length == 2 ? Resolve(context, arguments[1]) : null;
@@ -139,9 +138,10 @@ public sealed class TrashCommand : TerminalAppBase
 
     private static async Task<int> RemoveAsync(TerminalExecutionContext context, string[] arguments, CancellationToken cancellationToken)
     {
+        IStringLocalizer<Strings> text = Text(context);
         if (arguments.Length == 0)
         {
-            return Fail(context, "rm: missing trash element name");
+            return Fail(context, text["Rm.MissingName"]);
         }
 
         IReadOnlyList<HackTrashItem> items = await HackTrash.GetItemsAsync(cancellationToken);
@@ -151,7 +151,7 @@ public sealed class TrashCommand : TerminalAppBase
             HackTrashItem? item = items.FirstOrDefault(candidate => candidate.Name == name);
             if (item is null)
             {
-                context.StandardError.WriteLine($"trash: rm: '{name}' is not in the trash");
+                context.StandardError.WriteLine(text["Rm.NotInTrash", name]);
                 status = 1;
                 continue;
             }
@@ -166,7 +166,7 @@ public sealed class TrashCommand : TerminalAppBase
     {
         if (arguments.Length > 0)
         {
-            return Fail(context, "empty: too many arguments");
+            return Fail(context, Text(context)["Empty.TooManyArguments"]);
         }
 
         await HackTrash.EmptyAsync(cancellationToken);
@@ -204,13 +204,16 @@ public sealed class TrashCommand : TerminalAppBase
 
     private static int PrintUsage(TerminalExecutionContext context)
     {
-        context.StandardOutput.WriteLine(Usage);
+        context.StandardOutput.WriteLine(Text(context)["Usage"]);
         return 0;
     }
 
     private static int Fail(TerminalExecutionContext context, string message)
     {
-        context.StandardError.WriteLine($"trash: {message}");
+        context.StandardError.WriteLine(Text(context)["Error", message]);
         return 1;
     }
+
+    /// <summary>The texts of the command, in the language of its process (ADR 0104).</summary>
+    private static IStringLocalizer<Strings> Text(TerminalExecutionContext context) => context.App.GetLocalizer<Strings>();
 }

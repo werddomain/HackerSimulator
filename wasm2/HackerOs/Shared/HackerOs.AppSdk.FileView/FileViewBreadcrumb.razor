@@ -7,7 +7,7 @@
     segment from "/" down. A click navigates the owner there; a drop on a segment goes through the owner's
     drop pipeline (FileView.DropOntoAsync), so the same DropRequested/move/copy rules apply as on a folder.
 *@
-<nav class="file-view-breadcrumb" aria-label="Path" @ref="_element">
+<nav class="file-view-breadcrumb" aria-label="@Owner.L["Breadcrumb.Label"]" @ref="_element">
     @{ IReadOnlyList<(string Label, VirtualPath Path)> segments = Segments; }
     @for (int index = 0; index < segments.Count; index++)
     {

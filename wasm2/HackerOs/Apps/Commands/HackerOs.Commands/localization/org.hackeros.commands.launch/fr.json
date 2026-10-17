@@ -1,0 +1,5 @@
+{
+  "name": "launch",
+  "description": "Lance une application par son ID",
+  "terminalUsage": "launch <id-app>"
+}

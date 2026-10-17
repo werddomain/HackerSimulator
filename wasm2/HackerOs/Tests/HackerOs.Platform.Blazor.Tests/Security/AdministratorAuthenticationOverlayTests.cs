@@ -1,6 +1,8 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Icons;
 using HackerOs.Platform.Blazor.Security;
+using HackerOs.Platform.Blazor.Tests.Localization;
+using HackerOs.Platform.Core.Globalization;
 using HackerOs.Platform.Core.Elevation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -22,13 +24,33 @@ public sealed class AdministratorAuthenticationOverlayTests
         string html = await RenderAsync(broker);
         string text = System.Net.WebUtility.HtmlDecode(html);
 
-        Assert.Contains("Authentification administrateur", text, StringComparison.Ordinal);
+        Assert.Contains("Administrator authentication", text, StringComparison.Ordinal);
+        Assert.Contains("Administrator name", text, StringComparison.Ordinal);
         Assert.Contains("Uninstall Calculator for all users", text, StringComparison.Ordinal);
         Assert.Contains("org.hackeros.settings", html, StringComparison.Ordinal);
         Assert.Contains("value=\"admin\"", html, StringComparison.Ordinal);
         Assert.Matches("<button type=\"submit\" class=\"aaa-authenticate\" disabled", html);
         Assert.Contains("/var/log/auth.log", html, StringComparison.Ordinal);
         Assert.False(outcome.IsCompleted);
+    }
+
+    [Fact]
+    public async Task Overlay_speaks_the_session_language_French_after_sign_in()
+    {
+        AdministratorAuthenticationBroker broker = new();
+        using IDisposable host = broker.Attach();
+        _ = broker.RequestAsync(CreateRequest("admin"));
+
+        string text = System.Net.WebUtility.HtmlDecode(
+            await RenderAsync(broker, TestLocalization.CreateSessionLocale("fr_CA.UTF-8")));
+
+        Assert.Contains("Authentification administrateur", text, StringComparison.Ordinal);
+        Assert.Contains("Nom d'administrateur", text, StringComparison.Ordinal);
+        Assert.Contains(">Annuler</button>", text, StringComparison.Ordinal);
+        Assert.Contains("Authentifier", text, StringComparison.Ordinal);
+        Assert.Contains("Cette demande sera inscrite dans /var/log/auth.log", text, StringComparison.Ordinal);
+        // The operation comes from the requester; it is not the overlay's to translate.
+        Assert.Contains("Uninstall Calculator for all users", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -60,10 +82,19 @@ public sealed class AdministratorAuthenticationOverlayTests
         Assert.Null(broker.Current);
     }
 
-    private static async Task<string> RenderAsync(AdministratorAuthenticationBroker broker)
+    private static async Task<string> RenderAsync(AdministratorAuthenticationBroker broker, SessionLocaleService? locale = null)
     {
         ServiceCollection services = new();
         services.AddSingleton(broker);
+        if (locale is null)
+        {
+            services.AddEnglishLocalizer();
+        }
+        else
+        {
+            services.AddSessionLocalizer(locale);
+        }
+
         services.AddSingleton<IIconCatalog, IconCatalog>();
         await using ServiceProvider provider = services.BuildServiceProvider();
         await using HtmlRenderer renderer = new(provider, NullLoggerFactory.Instance);

@@ -23,7 +23,7 @@ HackerOs.Apps.ThemeEditor.ThemeEditorDocument.Platforms.get -> System.Collection
 HackerOs.Apps.ThemeEditor.ThemeEditorDocument.Reset(string! baseThemeId) -> void
 HackerOs.Apps.ThemeEditor.ThemeEditorDocument.SetId(string? id) -> void
 HackerOs.Apps.ThemeEditor.ThemeEditorDocument.SetValue(string! tokenName, string? value) -> void
-HackerOs.Apps.ThemeEditor.ThemeEditorDocument.ThemeEditorDocument() -> void
+HackerOs.Apps.ThemeEditor.ThemeEditorDocument.ThemeEditorDocument(Microsoft.Extensions.Localization.IStringLocalizer? text = null) -> void
 HackerOs.Apps.ThemeEditor.ThemeEditorDocument.TokenCount.get -> int
 HackerOs.Apps.ThemeEditor.ThemeEditorDocument.ToUserTheme() -> HackerOs.Theming.Abstractions.UserTheme!
 HackerOs.Apps.ThemeEditor.ThemeEditorDocument.ValidTokens.get -> System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<string!, string!>>!

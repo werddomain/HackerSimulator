@@ -1,6 +1,8 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk.Blazor
 @using HackerOs.AppSdk.Icons
+@using HackerOs.AppSdk.Globalization
+@using Microsoft.Extensions.Localization
 @using Microsoft.JSInterop
 @inherits WindowAppBase
 @implements IAsyncDisposable
@@ -9,18 +11,18 @@
 
 <div class="iconviewer-container">
     <header class="iconviewer-header">
-        <span class="iconviewer-title">HackerOS Icon Library</span>
+        <span class="iconviewer-title">@L["Header.Title"]</span>
         <input class="iconviewer-search"
                type="search"
-               placeholder="Search icons by name..."
+               placeholder="@L["Search.Placeholder"]"
                value="@_query"
                @oninput="OnQueryChanged" />
-        <span class="iconviewer-count">@_totalMatching @(_totalMatching == 1 ? "icon" : "icons")</span>
+        <span class="iconviewer-count">@Strings.Plural(L, "Count", _totalMatching)</span>
     </header>
 
-    <nav class="iconviewer-libnav" role="tablist" aria-label="Icon library filter">
+    <nav class="iconviewer-libnav" role="tablist" aria-label="@L["Library.AriaLabel"]">
         <button type="button" role="tab" aria-selected="@(_activeLibrary is null ? "true" : "false")" class="@LibraryButtonClass(null)" @onclick="() => SetLibrary(null)">
-            All (@_countAll)
+            @L["Library.All", _countAll]
         </button>
         <button type="button" role="tab" aria-selected="@(_activeLibrary == IconLibrary.Bootstrap ? "true" : "false")" class="@LibraryButtonClass(IconLibrary.Bootstrap)" @onclick="() => SetLibrary(IconLibrary.Bootstrap)">
             Bootstrap (@_countBootstrap)
@@ -52,29 +54,29 @@
 
         @if (_visible.Count == 0)
         {
-            <p class="iconviewer-empty">No icons match "@_query".</p>
+            <p class="iconviewer-empty">@L["Empty", _query]</p>
         }
         @if (_visible.Count < _totalMatching)
         {
             <button type="button" class="iconviewer-loadmore" @onclick="ShowMore">
-                Show more (@(_totalMatching - _visible.Count) remaining)
+                @L["ShowMore", _totalMatching - _visible.Count]
             </button>
         }
     </div>
 
     @if (_selected is { } selected)
     {
-        <aside class="iconviewer-detail" aria-label="Selected icon details">
-            <button type="button" class="iconviewer-detail-close" aria-label="Close details" @onclick="() => SelectIcon(null)">&times;</button>
+        <aside class="iconviewer-detail" aria-label="@L["Detail.AriaLabel"]">
+            <button type="button" class="iconviewer-detail-close" aria-label="@L["Detail.Close"]" @onclick="() => SelectIcon(null)">&times;</button>
             <HackerIcon Icon="selected" Size="56" />
             <h3>@selected.DisplayName</h3>
             <dl>
-                <dt>Library</dt>
+                <dt>@L["Detail.Library"]</dt>
                 <dd>@selected.Library@(selected.Variant is null ? "" : $" ({selected.Variant})")</dd>
-                <dt>Name</dt>
+                <dt>@L["Detail.Name"]</dt>
                 <dd>@selected.Name</dd>
             </dl>
-            <label for="iconviewer-snippet">Razor usage</label>
+            <label for="iconviewer-snippet">@L["Detail.Usage"]</label>
             <input id="iconviewer-snippet"
                    class="iconviewer-snippet"
                    readonly
@@ -82,7 +84,7 @@
                    @ref="_snippetInputRef"
                    @onclick="SelectSnippetText"
                    @onfocus="SelectSnippetText" />
-            <p class="iconviewer-hint">Click the snippet, then Ctrl+C (Cmd+C) to copy.</p>
+            <p class="iconviewer-hint">@L["Detail.Hint"]</p>
         </aside>
     }
 </div>
@@ -98,6 +100,10 @@
     private IconDescriptor? _selected;
     private IJSObjectReference? _module;
     private ElementReference _snippetInputRef;
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The Icon Viewer's texts in its own process's language (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
 
     private int _countAll;
     private int _countBootstrap;

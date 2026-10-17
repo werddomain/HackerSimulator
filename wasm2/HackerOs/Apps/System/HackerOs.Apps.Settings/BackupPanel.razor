@@ -2,52 +2,55 @@
 @using HackerOs.AppSdk.Administration
 
 <div class="setting-group backup-panel">
-    <h4>Back up this machine</h4>
+    <h4>@L["Backup.Create.Title"]</h4>
     <p class="setting-desc">
-        A backup holds <strong>everything</strong>: the files of every user, <code>/etc</code>, the accounts and
-        their password hashes. It is downloaded to your computer as one <code>.hosbak</code> archive, never kept
-        inside HackerOS, like a backup on an external disk. An administrator must confirm with their password.
-        From a terminal: <code>sudo hackbackup create</code>.
+        @LocalizedMarkup.Format(L["Backup.Create.Description"],
+            LocalizedMarkup.Strong(L["Backup.Create.Everything"]),
+            LocalizedMarkup.Code("/etc"),
+            LocalizedMarkup.Code(".hosbak"),
+            LocalizedMarkup.Code("sudo hackbackup create"))
     </p>
     <button type="button" class="btn-secondary" disabled="@IsBusy" @onclick="CreateAsync">
-        @(_operation == Operation.Create ? "Backing up..." : "Create a backup")
+        @(_operation == Operation.Create ? L["Backup.Creating"] : L["Backup.Create"])
     </button>
     @if (_lastBackup is not null)
     {
         <p class="backup-result" role="status">
-            Downloaded <code>@_lastBackup.FileName</code>: @FormatSize(_lastBackup.SizeBytes),
-            @_lastBackup.RecordCount records.
+            @LocalizedMarkup.Format(L["Backup.Result"],
+                LocalizedMarkup.Code(_lastBackup.FileName),
+                FormatSize(_lastBackup.SizeBytes),
+                _lastBackup.RecordCount.ToString("N0", Formats))
         </p>
     }
 </div>
 
 <div class="setting-group backup-panel danger-zone">
-    <h4>Restore from a backup</h4>
+    <h4>@L["Backup.Restore.Title"]</h4>
     <p class="setting-desc">
-        Pick a <code>.hosbak</code> archive on your computer. HackerOS checks it first; an archive from another
-        database version or a damaged one is refused and nothing changes. Then an administrator confirms, every
-        process stops, the backup is written and HackerOS restarts.
-        From a terminal: <code>sudo hackbackup restore --merge</code> or <code>--replace</code>.
+        @LocalizedMarkup.Format(L["Backup.Restore.Description"],
+            LocalizedMarkup.Code(".hosbak"),
+            LocalizedMarkup.Code("sudo hackbackup restore --merge"),
+            LocalizedMarkup.Code("--replace"))
     </p>
-    <div class="restore-modes" role="radiogroup" aria-label="Restore mode">
+    <div class="restore-modes" role="radiogroup" aria-label="@L["Backup.Mode.AriaLabel"]">
         <button type="button" role="radio" class="@ModeClass(HackBackupRestoreMode.Merge)"
                 aria-checked="@(_mode == HackBackupRestoreMode.Merge ? "true" : "false")"
                 disabled="@IsBusy"
                 @onclick="() => _mode = HackBackupRestoreMode.Merge">
-            <span class="restore-mode-title">Merge</span>
-            <span class="restore-mode-desc">The backup's records overwrite the same ones here; everything else stays.</span>
+            <span class="restore-mode-title">@L["Backup.Mode.Merge"]</span>
+            <span class="restore-mode-desc">@L["Backup.Mode.Merge.Description"]</span>
         </button>
         <button type="button" role="radio" class="@ModeClass(HackBackupRestoreMode.Replace)"
                 aria-checked="@(_mode == HackBackupRestoreMode.Replace ? "true" : "false")"
                 disabled="@IsBusy"
                 @onclick="() => _mode = HackBackupRestoreMode.Replace">
-            <span class="restore-mode-title">Replace</span>
-            <span class="restore-mode-desc">This machine becomes exactly the backup: anything newer is lost.</span>
+            <span class="restore-mode-title">@L["Backup.Mode.Replace"]</span>
+            <span class="restore-mode-desc">@L["Backup.Mode.Replace.Description"]</span>
         </button>
     </div>
     <button type="button" class="@(_mode == HackBackupRestoreMode.Replace ? "btn-danger" : "btn-secondary")"
             disabled="@IsBusy" @onclick="RestoreAsync">
-        @(_operation == Operation.Restore ? "Restoring..." : "Restore...")
+        @(_operation == Operation.Restore ? L["Backup.Restoring"] : L["Backup.Restore"])
     </button>
 </div>
 

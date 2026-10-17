@@ -1,0 +1,5 @@
+{
+  "name": "cut",
+  "description": "Retire des parties de chaque ligne des fichiers",
+  "terminalUsage": "cut -f liste [-d délim] [-s] | -c liste | -b liste [--complement] [fichier...]"
+}

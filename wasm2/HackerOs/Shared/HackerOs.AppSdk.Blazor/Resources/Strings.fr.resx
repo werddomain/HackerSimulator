@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Chart.AccessibleLabel" xml:space="preserve">
+    <value>{0} : {1}</value>
+  </data>
+  <data name="Chart.NoData" xml:space="preserve">
+    <value>aucune donnée</value>
+  </data>
+  <data name="Chart.Now" xml:space="preserve">
+    <value>maintenant</value>
+  </data>
+  <data name="Chart.ScaleTop" xml:space="preserve">
+    <value>Haut de l'échelle</value>
+  </data>
+  <data name="Embedded.Loading" xml:space="preserve">
+    <value>Chargement…</value>
+  </data>
+  <data name="Embedded.NotImplemented" xml:space="preserve">
+    <value>« {0} » n'implémente pas {1}.</value>
+  </data>
+  <data name="Embedded.Unavailable" xml:space="preserve">
+    <value>Les composants intégrés ne sont pas disponibles sur cet hôte.</value>
+  </data>
+  <data name="Intent.ChooseApp" xml:space="preserve">
+    <value>Choisissez l'application qui traite « {0} » :</value>
+  </data>
+  <data name="Intent.OpenWith" xml:space="preserve">
+    <value>Ouvrir avec</value>
+  </data>
+  <data name="Permission.Approval.Description" xml:space="preserve">
+    <value>« {0} » s'est vu refuser l'accès à « {1} ». Saisissez les identifiants d'un administrateur actif pour approuver cette seule action.</value>
+  </data>
+  <data name="Permission.Approval.Title" xml:space="preserve">
+    <value>Permission refusée — demander une approbation ?</value>
+  </data>
+  <data name="Permission.Approved.Message" xml:space="preserve">
+    <value>Un administrateur a approuvé cette action une fois. Veuillez la relancer.</value>
+  </data>
+  <data name="Permission.Approved.Title" xml:space="preserve">
+    <value>Accès approuvé</value>
+  </data>
+  <data name="Permission.Denied.Authority" xml:space="preserve">
+    <value>Cette opération sur « {0} » nécessite des droits élevés.</value>
+  </data>
+  <data name="Permission.Denied.Capability" xml:space="preserve">
+    <value>Cette app n'est pas autorisée à accéder à « {0} ».</value>
+  </data>
+  <data name="Permission.Denied.Other" xml:space="preserve">
+    <value>L'accès à « {0} » a été refusé.</value>
+  </data>
+  <data name="Permission.Denied.Title" xml:space="preserve">
+    <value>Permission refusée</value>
+  </data>
+  <data name="Permission.Denied.User" xml:space="preserve">
+    <value>Vous n'avez pas la permission d'accéder à « {0} ».</value>
+  </data>
+  <data name="SettingOrigin.BuiltIn" xml:space="preserve">
+    <value>intégré</value>
+  </data>
+  <data name="SettingOrigin.BuiltIn.Title" xml:space="preserve">
+    <value>Aucun fichier ne définit cette clé : la valeur par défaut intégrée à l'application s'applique.</value>
+  </data>
+  <data name="SettingOrigin.Locked" xml:space="preserve">
+    <value>verrouillé par l'administrateur</value>
+  </data>
+  <data name="SettingOrigin.Locked.Title" xml:space="preserve">
+    <value>Un administrateur a fixé cette valeur dans /etc ; elle ne peut pas être changée pour un seul utilisateur.</value>
+  </data>
+  <data name="SettingOrigin.System" xml:space="preserve">
+    <value>défaut du système</value>
+  </data>
+  <data name="SettingOrigin.System.Title" xml:space="preserve">
+    <value>Hérité du fichier /etc commun à toute la machine.</value>
+  </data>
+  <data name="SettingOrigin.User" xml:space="preserve">
+    <value>le vôtre</value>
+  </data>
+  <data name="SettingOrigin.User.Title" xml:space="preserve">
+    <value>Défini dans votre fichier ~/.config.</value>
+  </data>
+</root>

@@ -136,6 +136,7 @@ HackerOs.Infrastructure.Browser.FileSystem.IndexedDbStorageUsageProvider
 HackerOs.Infrastructure.Browser.FileSystem.IndexedDbStorageUsageProvider.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Infrastructure.Browser.FileSystem.IndexedDbStorageUsageProvider.GetUsageAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Metrics.StorageUsage>
 HackerOs.Infrastructure.Browser.FileSystem.IndexedDbStorageUsageProvider.IndexedDbStorageUsageProvider(HackerOs.Infrastructure.Browser.FileSystem.IndexedDbFileSystemProvider! fileSystem, Microsoft.JSInterop.IJSRuntime! runtime) -> void
+HackerOs.Infrastructure.Browser.Globalization.BrowserSatelliteAssemblies
 HackerOs.Infrastructure.Browser.Interop.BrowserHostClipboardChannel
 HackerOs.Infrastructure.Browser.Interop.BrowserHostClipboardChannel.AttachAsync(HackerOs.Simulation.Abstractions.Clipboard.IHostClipboardSink! sink, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.Infrastructure.Browser.Interop.BrowserHostClipboardChannel.BrowserHostClipboardChannel(Microsoft.JSInterop.IJSRuntime! runtime) -> void
@@ -261,6 +262,7 @@ HackerOs.Infrastructure.Browser.Workers.BrowserWebWorkerRuntime.StartAsync(Hacke
 HackerOs.Infrastructure.Browser.Workers.BrowserWebWorkerRuntime.WhenIdleAsync(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 static HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService.Inspect(string! backupJson) -> HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupSummary!
 static HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService.ReadArchive(byte[]! archive) -> string!
+static HackerOs.Infrastructure.Browser.Globalization.BrowserSatelliteAssemblies.LoadAsync(System.Collections.Generic.IEnumerable<string!>! cultures) -> System.Threading.Tasks.Task<bool>!
 static HackerOs.Infrastructure.Browser.Recovery.BrowserStorageRecoveryClassifier.AwaitDestructiveConfirmation(HackerOs.Simulation.Abstractions.Recovery.StorageRecoveryActions action, string! affectedData, System.Guid correlationId) -> HackerOs.Simulation.Abstractions.Recovery.StorageRecoveryPresentation!
 static HackerOs.Infrastructure.Browser.Recovery.BrowserStorageRecoveryClassifier.Classify(System.Exception! exception, HackerOs.Simulation.Abstractions.Recovery.StorageRecoveryContext context, System.Guid correlationId) -> HackerOs.Simulation.Abstractions.Recovery.StorageRecoveryPresentation!
 static HackerOs.Infrastructure.Browser.Schema.FileContentStoragePolicy.Default.get -> HackerOs.Infrastructure.Browser.Schema.FileContentStoragePolicy!

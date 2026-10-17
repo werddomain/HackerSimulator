@@ -10,26 +10,25 @@
     <DialogContent>
         <div class="conflict-container">
             <p class="conflict-title">
-                @(Conflict.DestinationIsDirectory ? "A folder" : "A file") named
-                <strong>@Conflict.Name</strong> already exists here.
+                @ExistsText.Before<strong>@Conflict.Name</strong>@ExistsText.After
             </p>
             <p class="conflict-detail">
-                Moving <span class="conflict-path">@Conflict.SourcePath</span>
+                @MovingText.Before<span class="conflict-path">@Conflict.SourcePath</span>@MovingText.After
             </p>
             @if (Conflict.DestinationIsDirectory)
             {
-                <p class="conflict-warning">Replacing deletes the existing folder and everything in it.</p>
+                <p class="conflict-warning">@L["Conflict.ReplaceWarning"]</p>
             }
             @if (ShowApplyToAll)
             {
-                <MudCheckBox T="bool" @bind-Value="_applyToAll" Label="Apply to all" Dense="true" />
+                <MudCheckBox T="bool" @bind-Value="_applyToAll" Label="@L["Conflict.ApplyToAll"]" Dense="true" />
             }
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Outlined" OnClick="() => Close(FileConflictChoice.Skip)">Skip</MudButton>
-        <MudButton Variant="Variant.Outlined" OnClick="() => Close(FileConflictChoice.KeepBoth)">Keep both</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="() => Close(FileConflictChoice.Replace)">Replace</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="() => Close(FileConflictChoice.Skip)">@L["Conflict.Skip"]</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="() => Close(FileConflictChoice.KeepBoth)">@L["Conflict.KeepBoth"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="() => Close(FileConflictChoice.Replace)">@L["Conflict.Replace"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -46,6 +45,13 @@
     public bool ShowApplyToAll { get; set; } = true;
 
     private bool _applyToAll;
+
+    // "A folder named {0} already exists here." split around the bold name.
+    private (string Before, string After) ExistsText =>
+        Strings.Around(L[Conflict.DestinationIsDirectory ? "Conflict.FolderExists" : "Conflict.FileExists"]);
+
+    // "Moving {0}" split around the styled source path.
+    private (string Before, string After) MovingText => Strings.Around(L["Conflict.Moving"]);
 
     private void Close(FileConflictChoice choice) =>
         MudDialog.Close(DialogResult.Ok(new FileConflictResolution(choice, _applyToAll)));

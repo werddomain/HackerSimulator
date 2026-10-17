@@ -1,0 +1,5 @@
+{
+  "name": "wc",
+  "description": "Compte les lignes, les mots et les octets des fichiers",
+  "terminalUsage": "wc [-l] [-w] [-c] [fichier...]"
+}

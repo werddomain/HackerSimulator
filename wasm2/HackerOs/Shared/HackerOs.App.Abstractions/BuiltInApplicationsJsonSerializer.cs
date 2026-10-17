@@ -16,7 +16,16 @@ namespace HackerOs.App.Abstractions;
 /// The assemblies the app maps and their sizes, measured by the host build (ADR 0068, image layer);
 /// <see langword="null"/> when unknown (an older document, or an app installed at run time).
 /// </param>
-public sealed record BuiltInApplication(bool IsSystemApp, AppManifest Manifest, AppImage? Image = null);
+/// <param name="Localized">
+/// The translated name, description and usage of the app, keyed by culture (<c>fr</c>), read by the
+/// host build from the files its <see cref="AppManifest.Localizations"/> point to (ADR 0104,
+/// section 4); <see langword="null"/> or empty when the app is only in English.
+/// </param>
+public sealed record BuiltInApplication(
+    bool IsSystemApp,
+    AppManifest Manifest,
+    AppImage? Image = null,
+    IReadOnlyDictionary<string, AppManifestText>? Localized = null);
 
 /// <summary>
 /// One assembly an app maps (ADR 0068, image layer): its file name, its exact size, and whether other
@@ -57,6 +66,8 @@ public sealed record AppImage(IReadOnlyList<AppImageAssembly> Assemblies)
 /// <c>{"schemaVersion":1,"applications":[{"isSystemApp":true,"manifest":{...},"image":{...}}]}</c>.
 /// The optional <c>image</c> lists the app's assemblies and their sizes (ADR 0068):
 /// <c>{"assemblies":[{"name":"X.dll","bytes":1234,"shared":false}]}</c>.
+/// The optional <c>localized</c> object holds the app's translated texts by culture (ADR 0104):
+/// <c>{"fr":{"name":"Calculatrice","description":"…"}}</c>.
 /// Same conventions as <see cref="AppManifestJsonSerializer"/>: camelCase, unknown and duplicate
 /// properties rejected, canonical output (applications sorted by id, canonical manifests).
 /// </summary>
@@ -89,6 +100,18 @@ public static class BuiltInApplicationsJsonSerializer
                 if (application.Image is { } image)
                 {
                     WriteImage(writer, image);
+                }
+
+                if (application.Localized is { Count: > 0 } localized)
+                {
+                    writer.WriteStartObject("localized");
+                    foreach (KeyValuePair<string, AppManifestText> text in localized.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+                    {
+                        writer.WritePropertyName(text.Key);
+                        AppManifestTextJsonSerializer.Write(writer, text.Value);
+                    }
+
+                    writer.WriteEndObject();
                 }
 
                 writer.WriteEndObject();
@@ -136,7 +159,7 @@ public static class BuiltInApplicationsJsonSerializer
         foreach (JsonElement entry in applications.EnumerateArray())
         {
             string path = $"applications[{index++}]";
-            RequireObject(entry, path, ["isSystemApp", "manifest", "image"]);
+            RequireObject(entry, path, ["isSystemApp", "manifest", "image", "localized"]);
             if (!entry.TryGetProperty("isSystemApp", out JsonElement isSystem)
                 || isSystem.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
             {
@@ -151,10 +174,33 @@ public static class BuiltInApplicationsJsonSerializer
             AppImage? image = entry.TryGetProperty("image", out JsonElement imageElement)
                 ? ReadImage(imageElement, $"{path}.image")
                 : null;
+            IReadOnlyDictionary<string, AppManifestText>? localized = entry.TryGetProperty("localized", out JsonElement localizedElement)
+                ? ReadLocalized(localizedElement, $"{path}.localized")
+                : null;
             result.Add(new BuiltInApplication(
                 isSystem.GetBoolean(),
                 AppManifestJsonSerializer.NormalizeOptionalCollections(AppManifestJsonSerializer.DeserializeStrict(manifest.GetRawText())),
-                image));
+                image,
+                localized));
+        }
+
+        return result;
+    }
+
+    private static Dictionary<string, AppManifestText> ReadLocalized(JsonElement element, string path)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            throw new JsonException($"'{path}' must be an object.");
+        }
+
+        Dictionary<string, AppManifestText> result = new(StringComparer.Ordinal);
+        foreach (JsonProperty property in element.EnumerateObject())
+        {
+            if (string.IsNullOrWhiteSpace(property.Name) || !result.TryAdd(property.Name, AppManifestTextJsonSerializer.Read(property.Value, $"{path}.{property.Name}")))
+            {
+                throw new JsonException($"Invalid or duplicate culture '{property.Name}' at '{path}'.");
+            }
         }
 
         return result;

@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Read;
 
@@ -20,9 +22,10 @@ public sealed class ReadCommand(AppManifest manifest) : TerminalAppBase(manifest
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         if (context.Shell is not { } shell)
         {
-            await context.StandardError.WriteLineAsync("read: no shell session");
+            await context.StandardError.WriteLineAsync(text["NoShell"]);
             return 1;
         }
 
@@ -60,8 +63,8 @@ public sealed class ReadCommand(AppManifest manifest) : TerminalAppBase(manifest
                 default:
                     if (arg.StartsWith('-') && arg.Length > 1)
                     {
-                        await context.StandardError.WriteLineAsync($"read: {arg}: invalid option");
-                        await context.StandardError.WriteLineAsync("read: usage: read [-r] [-p prompt] [-n count] [-t timeout] [-d delim] [name ...]");
+                        await context.StandardError.WriteLineAsync(text["InvalidOption", arg]);
+                        await context.StandardError.WriteLineAsync(text["Usage"]);
                         return 2;
                     }
 
@@ -74,7 +77,7 @@ public sealed class ReadCommand(AppManifest manifest) : TerminalAppBase(manifest
         {
             if (!IsName(name))
             {
-                await context.StandardError.WriteLineAsync($"read: `{name}': not a valid identifier");
+                await context.StandardError.WriteLineAsync(text["InvalidIdentifier", name]);
                 return 1;
             }
         }

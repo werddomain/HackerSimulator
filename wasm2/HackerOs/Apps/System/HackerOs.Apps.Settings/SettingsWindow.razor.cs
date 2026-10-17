@@ -1,16 +1,19 @@
+using System.Globalization;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Administration;
 using HackerOs.AppSdk.Apps;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Settings;
 using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Theming.Abstractions;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.Settings;
 
 /// <summary>
-/// The Settings app's window: appearance, file associations, granted capabilities, permissions,
+/// The Settings app's window: appearance, language, file associations, granted capabilities, permissions,
 /// installed apps, optional server connection, backup and system (restart, factory reset).
 /// </summary>
 /// <remarks>
@@ -74,8 +77,28 @@ public partial class SettingsWindow : IAsyncDisposable
     private HackSyncStatus _syncStatus = HackSyncStatus.Inactive;
     private IReadOnlyList<HackSyncConflict> _conflicts = [];
 
-    /// <summary>Index of the "Application" tab, the last one (ADR 0096 §4).</summary>
-    private const int AppPageTabIndex = 7;
+    /// <summary>
+    /// Index of the "Application" tab, the last one (ADR 0096 §4): after Appearance, Language, File
+    /// Associations, Capability Grants, Permissions, Installed Apps, Server Connection,
+    /// Synchronization, Backup (only when the host supports it) and About System.
+    /// </summary>
+    private int AppPageTabIndex => HackerOs.AppSdk.Administration.HackSystemBackup.IsSupportedFor(AppContext) ? 10 : 9;
+
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>Settings' texts in the language of its own process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
+    /// <summary>The culture of the dates shown (the process's <c>LC_TIME</c>, ADR 0104).</summary>
+    private CultureInfo Formats => AppContext.FormatCulture;
+
+    /// <summary>The user's authority, translated.</summary>
+    private string AuthorityLabel => (AppContext?.UserAuthority ?? AppAuthority.User) switch
+    {
+        AppAuthority.Administrator => L["About.Authority.Administrator"],
+        AppAuthority.System => L["About.Authority.System"],
+        _ => L["About.Authority.User"]
+    };
 
     /// <summary>Prefix of the argument naming the app whose page to show (<c>--app=&lt;id&gt;</c>).</summary>
     internal const string AppArgumentPrefix = "--app=";
@@ -199,7 +222,7 @@ public partial class SettingsWindow : IAsyncDisposable
         }
         catch (Exception exception) when (exception is NotSupportedException or IOException or UnauthorizedAccessException)
         {
-            _appearanceMessage = $"The appearance settings cannot be read: {exception.Message}";
+            _appearanceMessage = L["Appearance.Error.CannotRead", exception.Message];
         }
     }
 
@@ -309,7 +332,7 @@ public partial class SettingsWindow : IAsyncDisposable
                     },
                     SettingLayer.System,
                     CancellationToken.None);
-                _appearanceMessage = "Saved as the default for every user.";
+                _appearanceMessage = L["Appearance.SavedAsSystemDefault"];
             }
             else
             {
@@ -322,11 +345,11 @@ public partial class SettingsWindow : IAsyncDisposable
         }
         catch (UnauthorizedAccessException)
         {
-            _appearanceMessage = "Administrator approval is required to change the system default. Approve the prompt, then apply again.";
+            _appearanceMessage = L["Appearance.Error.AdminRequired"];
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or ArgumentException)
         {
-            _appearanceMessage = $"Could not save the settings file: {exception.Message}";
+            _appearanceMessage = L["Appearance.Error.CannotSave", exception.Message];
         }
         finally
         {
@@ -349,7 +372,7 @@ public partial class SettingsWindow : IAsyncDisposable
         catch (Exception exception) when (exception is UnauthorizedAccessException or NotSupportedException)
         {
             _connectionState = HackServerConnectionState.NotConnected;
-            _connectionErrorMessage = $"The server connection is not available: {exception.Message}";
+            _connectionErrorMessage = L["Server.Error.Unavailable", exception.Message];
         }
     }
 
@@ -423,9 +446,10 @@ public partial class SettingsWindow : IAsyncDisposable
             // settings are home files (ADR 0044), so they travel with the FileSystem domain.
             _syncStatus = await HackServerConnection.SyncNowAsync(AppContext, AppContext.CancellationToken);
             await RefreshSyncAsync();
+            string now = DateTimeOffset.Now.ToString("t", Formats);
             _syncStatusMessage = _conflictCount > 0
-                ? $"Last synced {DateTimeOffset.Now:t} ({_conflictCount} file conflict(s))"
-                : $"Last synced {DateTimeOffset.Now:t}";
+                ? L["Sync.LastSyncedWithConflicts", now, _conflictCount]
+                : L["Sync.LastSynced", now];
         }
         catch (HackServerConnectionException exception)
         {
@@ -446,14 +470,17 @@ public partial class SettingsWindow : IAsyncDisposable
     }
 
     private string SyncStateLabel =>
-        !_connectionState.IsConnected ? "off (not connected to a server)"
-        : !_syncStatus.IsActive ? "inactive"
-        : _syncStatus.IsPaused ? "paused"
-        : _syncStatus.IsOnline ? "running"
-        : "waiting for the server";
+        !_connectionState.IsConnected ? L["Sync.State.Off"]
+        : !_syncStatus.IsActive ? L["Sync.State.Inactive"]
+        : _syncStatus.IsPaused ? L["Sync.State.Paused"]
+        : _syncStatus.IsOnline ? L["Sync.State.Running"]
+        : L["Sync.State.WaitingForServer"];
 
-    private static string FormatInterval(TimeSpan interval) =>
-        interval.TotalMinutes is 1 ? "minute" : $"{interval.TotalMinutes:0} minutes";
+    /// <summary>The sync period as the description says it: "every minute", "every 5 minutes".</summary>
+    private string FormatInterval(TimeSpan interval) =>
+        interval.TotalMinutes is 1
+            ? L["Sync.Interval.Minute"]
+            : L["Sync.Interval.Minutes", interval.TotalMinutes.ToString("0", Formats)];
 
     private async Task SetSyncPausedAsync(bool paused)
     {
@@ -465,7 +492,7 @@ public partial class SettingsWindow : IAsyncDisposable
         }
         catch (Exception exception) when (exception is HackServerConnectionException or UnauthorizedAccessException or IOException)
         {
-            _syncStatusMessage = $"Could not change the setting: {exception.Message}";
+            _syncStatusMessage = L["Sync.Error.CannotChange", exception.Message];
         }
     }
 
@@ -491,7 +518,7 @@ public partial class SettingsWindow : IAsyncDisposable
         }
         catch (UnauthorizedAccessException)
         {
-            _systemMessage = "No administrator confirmed the restart: nothing was done.";
+            _systemMessage = L["Restart.Error.NotConfirmed"];
         }
         catch (OperationCanceledException)
         {
@@ -539,7 +566,7 @@ public partial class SettingsWindow : IAsyncDisposable
         }
         catch (UnauthorizedAccessException)
         {
-            _resetErrorMessage = "No administrator confirmed the reset: nothing was erased.";
+            _resetErrorMessage = L["Reset.Error.NotConfirmed"];
             _isResetting = false;
         }
         catch (OperationCanceledException)
@@ -548,7 +575,7 @@ public partial class SettingsWindow : IAsyncDisposable
         }
         catch (Exception exception) when (exception is IOException or NotSupportedException or InvalidOperationException)
         {
-            _resetErrorMessage = $"Reset failed: {exception.Message}";
+            _resetErrorMessage = L["Reset.Error.Failed", exception.Message];
             _isResetting = false;
         }
     }

@@ -38,9 +38,24 @@ internal sealed class AppManagementGateway : IAppManagementGateway
     private readonly bool _isRootElevated;
     private readonly IFileSystemService _fileSystem;
     private readonly ISimulationClock _clock;
+    private readonly Func<System.Globalization.CultureInfo> _language;
     private readonly Func<AppAssetStore>? _assets;
 
     /// <summary>Creates the gateway for one app instance.</summary>
+    /// <param name="catalog">The app catalog.</param>
+    /// <param name="installation">Lazily resolved installation service.</param>
+    /// <param name="agent">Lazily resolved authentication agent; <see langword="null"/> refuses machine changes.</param>
+    /// <param name="capabilities">The app's capability checker.</param>
+    /// <param name="caller">Manifest of the app asking.</param>
+    /// <param name="principal">Session user running the app.</param>
+    /// <param name="isRootElevated">Whether the app runs as root through <c>sudo</c>.</param>
+    /// <param name="fileSystem">Filesystem engine the OS writes <c>/etc/hackeros/apps.config</c> with.</param>
+    /// <param name="clock">Simulation clock.</param>
+    /// <param name="language">
+    /// Language of the calling process (ADR 0104) for the operation shown in the administrator
+    /// prompt; English when <see langword="null"/>.
+    /// </param>
+    /// <param name="assets">Integrity of the installed apps' assets (ADR 0098 §5), or <see langword="null"/>.</param>
     public AppManagementGateway(
         AppCatalog catalog,
         Func<IAppInstallationService> installation,
@@ -51,6 +66,7 @@ internal sealed class AppManagementGateway : IAppManagementGateway
         bool isRootElevated,
         IFileSystemService fileSystem,
         ISimulationClock clock,
+        Func<System.Globalization.CultureInfo>? language = null,
         Func<AppAssetStore>? assets = null)
     {
         _assets = assets;
@@ -63,6 +79,7 @@ internal sealed class AppManagementGateway : IAppManagementGateway
         _isRootElevated = isRootElevated;
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _language = language ?? (static () => HackerOs.AppSdk.Globalization.HackLocale.DefaultLanguage);
     }
 
     /// <inheritdoc />
@@ -175,11 +192,11 @@ internal sealed class AppManagementGateway : IAppManagementGateway
         IAdministratorAuthenticationAgent agent = _agent?.Invoke()
             ?? throw new HackUnauthorizedAccessException(
                 "No administrator authentication agent is available on this host.", path: AppsConfigDocument.MachinePath.Value);
-        string verb = uninstall ? "Uninstall" : "Reinstall";
+        System.Globalization.CultureInfo language = _language();
         AdministratorAuthenticationResult authentication = await agent.AuthenticateAsync(
             new AdministratorAuthenticationRequest(
                 _caller,
-                $"{verb} {target.Name} for all users",
+                Strings.For(language)[uninstall ? "Admin.App.Uninstall" : "Admin.App.Reinstall", _catalog.Localize(target, language).Name],
                 uninstall ? "apps.uninstall.machine" : "apps.reinstall.machine",
                 _principal,
                 _isRootElevated),

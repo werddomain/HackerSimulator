@@ -4,6 +4,8 @@ using HackerOs.AppSdk;
 using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.IO;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Locate;
 
@@ -43,7 +45,7 @@ public sealed class LocateCommand(AppManifest manifest) : TerminalAppBase(manife
                 default:
                     if (arg.StartsWith('-') && arg.Length > 1)
                     {
-                        await context.StandardError.WriteLineAsync($"locate: invalid option -- '{arg.TrimStart('-')}'");
+                        await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["InvalidOption", arg.TrimStart('-')]);
                         return 1;
                     }
 
@@ -55,7 +57,7 @@ public sealed class LocateCommand(AppManifest manifest) : TerminalAppBase(manife
         _ = existing;
         if (patterns.Count == 0)
         {
-            await context.StandardError.WriteLineAsync("locate: no pattern to search for specified");
+            await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["NoPattern"]);
             return 1;
         }
 

@@ -83,7 +83,7 @@ public static class CodeEditorTextSearch
         }
         catch (ArgumentException exception)
         {
-            error = $"Invalid regular expression: {exception.Message}";
+            error = Strings.Ambient["Search.InvalidRegex", exception.Message];
             return null;
         }
     }

@@ -48,7 +48,7 @@ HackerOs.Apps.FileExplorer.OpenWithDialog.OpenWithDialog() -> void
 HackerOs.Apps.FileExplorer.PublishSiteContextMenuProvider
 HackerOs.Apps.FileExplorer.PublishSiteContextMenuProvider.Customize(HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuContext! context, HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection! items) -> void
 HackerOs.Apps.FileExplorer.PublishSiteContextMenuProvider.Matches(HackerOs.AppSdk.FileView.FileViewItem! item) -> bool
-HackerOs.Apps.FileExplorer.PublishSiteContextMenuProvider.PublishSiteContextMenuProvider(System.Func<string!, string!, System.Threading.Tasks.Task!>! launch) -> void
+HackerOs.Apps.FileExplorer.PublishSiteContextMenuProvider.PublishSiteContextMenuProvider(System.Func<string!, string!, System.Threading.Tasks.Task!>! launch, Microsoft.Extensions.Localization.IStringLocalizer! text) -> void
 HackerOs.Apps.FileExplorer.PublishSiteContextMenuProvider.Scope.get -> HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope
 HackerOs.Apps.FileExplorer.TrashView
 HackerOs.Apps.FileExplorer.TrashView.ReloadAsync() -> System.Threading.Tasks.Task!
@@ -59,7 +59,7 @@ HackerOs.Apps.FileExplorer.ZipFileContextMenuProvider
 HackerOs.Apps.FileExplorer.ZipFileContextMenuProvider.Customize(HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuContext! context, HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection! items) -> void
 HackerOs.Apps.FileExplorer.ZipFileContextMenuProvider.Matches(HackerOs.AppSdk.FileView.FileViewItem! item) -> bool
 HackerOs.Apps.FileExplorer.ZipFileContextMenuProvider.Scope.get -> HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope
-HackerOs.Apps.FileExplorer.ZipFileContextMenuProvider.ZipFileContextMenuProvider(HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! fileSystem, System.Func<HackerOs.AppSdk.FileView.FileView?>! fileView, System.Action<string!>! reportError) -> void
+HackerOs.Apps.FileExplorer.ZipFileContextMenuProvider.ZipFileContextMenuProvider(HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! fileSystem, System.Func<HackerOs.AppSdk.FileView.FileView?>! fileView, System.Action<string!>! reportError, Microsoft.Extensions.Localization.IStringLocalizer! text) -> void
 HackerOs.Apps.FileExplorer._Imports
 HackerOs.Apps.FileExplorer._Imports.Execute() -> void
 HackerOs.Apps.FileExplorer._Imports._Imports() -> void

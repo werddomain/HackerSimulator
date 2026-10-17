@@ -10,10 +10,35 @@ namespace HackerOs.Platform.Blazor.Windows;
 public sealed class WindowLaunchCoordinator
 {
     private readonly WindowRuntime _windows;
+    private readonly Func<AppManifest, string> _title;
 
     /// <summary>Initializes the coordinator over the authoritative desktop window runtime.</summary>
-    public WindowLaunchCoordinator(WindowRuntime windows) =>
+    /// <param name="windows">The desktop window runtime.</param>
+    public WindowLaunchCoordinator(WindowRuntime windows)
+        : this(windows, static manifest => manifest.Name)
+    {
+    }
+
+    /// <summary>
+    /// Initializes the coordinator with the session's translations of app names (ADR 0104 section 4):
+    /// a new window's title is the app's name in the desktop language.
+    /// </summary>
+    /// <param name="windows">The desktop window runtime.</param>
+    /// <param name="catalog">The catalog holding the translated names.</param>
+    /// <param name="locale">The session language.</param>
+    [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
+    public WindowLaunchCoordinator(WindowRuntime windows, Core.AppCatalog catalog, Core.Globalization.SessionLocaleService locale)
+        : this(windows, manifest => catalog.Localize(manifest, locale.Culture).Name)
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(locale);
+    }
+
+    private WindowLaunchCoordinator(WindowRuntime windows, Func<AppManifest, string> title)
+    {
         _windows = windows ?? throw new ArgumentNullException(nameof(windows));
+        _title = title;
+    }
 
     /// <summary>
     /// Creates a desktop window for a newly launched process, or restores and focuses the
@@ -69,7 +94,7 @@ public sealed class WindowLaunchCoordinator
             WindowId.FromGuid(Guid.NewGuid()),
             manifest.Id,
             ownerInstanceId,
-            manifest.Name,
+            _title(manifest),
             manifest.Presentation.IconAssetPaths.FirstOrDefault(),
             InitialBounds(options, cascadeIndex, _windows.WorkArea),
             restoreBounds: null,

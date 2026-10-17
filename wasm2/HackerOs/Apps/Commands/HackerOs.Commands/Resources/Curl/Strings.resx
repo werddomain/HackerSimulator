@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="BadUrl" xml:space="preserve">
+    <value>curl: (3) URL using bad/illegal format or missing URL</value>
+  </data>
+  <data name="BinaryWarning.Line1" xml:space="preserve">
+    <value>Warning: Binary output can mess up your terminal. Use "--output -" to tell</value>
+  </data>
+  <data name="BinaryWarning.Line2" xml:space="preserve">
+    <value>Warning: curl to output it to your terminal anyway, or consider "--output</value>
+  </data>
+  <data name="BinaryWarning.Line3" xml:space="preserve">
+    <value>Warning: &lt;FILE&gt;" to save to a file.</value>
+  </data>
+  <data name="ConnectFailed" xml:space="preserve">
+    <value>Failed to connect to {0} port {1}: {2}</value>
+  </data>
+  <data name="HttpError" xml:space="preserve">
+    <value>curl: (22) The requested URL returned error: {0}</value>
+  </data>
+  <data name="NoUrl" xml:space="preserve">
+    <value>curl: no URL specified!</value>
+  </data>
+  <data name="ReadDataFailed" xml:space="preserve">
+    <value>curl: (26) Failed to open/read local data: {0}</value>
+  </data>
+  <data name="ResolveFailed" xml:space="preserve">
+    <value>Could not resolve host: {0}</value>
+  </data>
+  <data name="TooManyRedirects" xml:space="preserve">
+    <value>Maximum (10) redirects followed</value>
+  </data>
+  <data name="TryHelp" xml:space="preserve">
+    <value>curl: try 'curl --help' for more information</value>
+  </data>
+  <data name="Verbose.Followed" xml:space="preserve">
+    <value>* Followed {0} redirect(s) to {1}</value>
+  </data>
+  <data name="Verbose.Trying" xml:space="preserve">
+    <value>*   Trying {0}:{1}...</value>
+  </data>
+  <data name="WriteFailed" xml:space="preserve">
+    <value>curl: (23) Failure writing output to destination: {0}: {1}</value>
+  </data>
+</root>

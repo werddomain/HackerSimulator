@@ -1,0 +1,5 @@
+{
+  "name": "kill",
+  "description": "Envoie un signal à un processus ou le termine",
+  "terminalUsage": "kill [-s sig | -SIG] <pid|%tâche...> | kill -l"
+}

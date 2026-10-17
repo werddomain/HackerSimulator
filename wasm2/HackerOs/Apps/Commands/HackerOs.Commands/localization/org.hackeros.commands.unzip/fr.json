@@ -1,0 +1,5 @@
+{
+  "name": "unzip",
+  "description": "Liste, teste et extrait les fichiers d'une archive zip",
+  "terminalUsage": "unzip [-l] [-t] [-o] [-q] [-p] [-d dossier] archive.zip [fichier...]"
+}

@@ -1,6 +1,8 @@
 using HackerOs.App.Abstractions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.CodeEditor;
 
@@ -18,6 +20,11 @@ public sealed record CodeEditorNavigation(VirtualPath Path, int Line, int Column
 /// </summary>
 public partial class CodeEditorSearchView
 {
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The Code Editor's texts in its own process's language (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
     /// <summary>Pause after the last keystroke before searching.</summary>
     private static readonly TimeSpan TypingDelay = TimeSpan.FromMilliseconds(300);
 
@@ -253,7 +260,7 @@ public partial class CodeEditorSearchView
     {
         if (_searching)
         {
-            return "Searching...";
+            return L["Search.Searching"];
         }
 
         if (_text.Length == 0 || _result.Error is not null)
@@ -263,11 +270,11 @@ public partial class CodeEditorSearchView
 
         if (_result.MatchCount == 0)
         {
-            return $"No results found ({_result.FilesSearched} files searched). Review your settings for configured exclusions.";
+            return Strings.Count(L, "Search.NoResults", _result.FilesSearched);
         }
 
-        string summary = $"{_result.MatchCount} result{(_result.MatchCount == 1 ? null : "s")} in {_result.Files.Count} file{(_result.Files.Count == 1 ? null : "s")}";
-        return _result.Truncated ? summary + " - the result set only contains a subset of all matches. Be more specific." : summary;
+        string summary = L["Search.Summary", Strings.Count(L, "Search.ResultCount", _result.MatchCount), Strings.Count(L, "Search.FileCount", _result.Files.Count)];
+        return _result.Truncated ? L["Search.Truncated", summary] : summary;
     }
 
     private static string Before(CodeEditorSearchMatch match) =>

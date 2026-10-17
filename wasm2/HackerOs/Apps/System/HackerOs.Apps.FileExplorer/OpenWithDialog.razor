@@ -5,7 +5,7 @@
 <MudDialog Class="gothic-dialog">
     <DialogContent>
         <div class="openwith-container">
-            <p class="openwith-subtitle">Select an installed app to open <strong>@FilePath</strong>:</p>
+            <p class="openwith-subtitle">@PromptText.Before<strong>@FilePath</strong>@PromptText.After</p>
             <MudList T="HackAppInfo" SelectionMode="SelectionMode.SingleSelection" SelectedValue="_selectedApp" SelectedValueChanged="HandleSelectedAppChanged">
                 @foreach (HackAppInfo manifest in AvailableApps)
                 {
@@ -20,8 +20,8 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_selectedApp is null)" OnClick="Confirm">Open</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel">@L["OpenWith.Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_selectedApp is null)" OnClick="Confirm">@L["OpenWith.Open"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -36,6 +36,9 @@
     public IReadOnlyList<HackAppInfo> AvailableApps { get; set; } = [];
 
     private HackAppInfo? _selectedApp;
+
+    // "Select an installed app to open {0}:" split around the bold file path.
+    private (string Before, string After) PromptText => Strings.Around(L["OpenWith.Prompt"]);
 
     private void HandleSelectedAppChanged(HackAppInfo manifest)
     {

@@ -1,8 +1,9 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Simulation.Abstractions.FileSystem;
-using System.Globalization;
 using System.Text;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Nano;
 
@@ -42,10 +43,11 @@ public sealed class NanoCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
         if (context.FullScreen is null)
         {
-            context.StandardError.WriteLine("nano: this terminal does not provide full-screen editing");
+            context.StandardError.WriteLine(text["NoFullScreen"]);
             return 2;
         }
 
@@ -66,16 +68,16 @@ public sealed class NanoCommand : TerminalAppBase
 
         string targetFile = files.Count > 0 ? files[0] : "new_file.txt";
         VirtualPath path = VirtualPath.Parse(ResolvePath(context.WorkingDirectory, targetFile));
-        LoadResult load = await LoadAsync(context, path, cancellationToken);
+        LoadResult load = await LoadAsync(context, text, path, cancellationToken);
         if (!load.Succeeded)
         {
-            context.StandardError.WriteLine($"nano: {targetFile}: {load.Error}");
+            context.StandardError.WriteLine(text["OpenFailed", targetFile, load.Error!]);
             return 1;
         }
 
-        EditorState state = new(path, targetFile, load.Content!, load.Revision)
+        EditorState state = new(text, path, targetFile, load.Content!, load.Revision)
         {
-            Status = load.Revision is null ? "New File" : $"Read {CountLines(load.Content!)} lines"
+            Status = load.Revision is null ? text["Status.NewFile"] : text["Status.ReadLines", CountLines(load.Content!)]
         };
         state.Row = Math.Clamp(startLine - 1, 0, state.Lines.Count - 1);
         IFullScreenTerminalSession terminal = context.FullScreen;
@@ -93,10 +95,10 @@ public sealed class NanoCommand : TerminalAppBase
                     {
                         case "o":
                             string? name = await PromptAsync(
-                                terminal, state, "File Name to Write: ", key.Shift ? string.Empty : state.DisplayName, cancellationToken);
+                                terminal, state, text["Prompt.FileName"], key.Shift ? string.Empty : state.DisplayName, cancellationToken);
                             if (string.IsNullOrWhiteSpace(name))
                             {
-                                state.Status = "Cancelled";
+                                state.Status = text["Status.Cancelled"];
                                 continue;
                             }
 
@@ -123,7 +125,7 @@ public sealed class NanoCommand : TerminalAppBase
                             string? query = await PromptAsync(terminal, state, LastSearchLabel(state), string.Empty, cancellationToken);
                             if (query is null)
                             {
-                                state.Status = "Cancelled";
+                                state.Status = text["Status.Cancelled"];
                                 continue;
                             }
 
@@ -140,7 +142,7 @@ public sealed class NanoCommand : TerminalAppBase
                             state.Status = Position(state);
                             break;
                         case "g":
-                            await ShowHelpAsync(terminal, cancellationToken);
+                            await ShowHelpAsync(terminal, text, cancellationToken);
                             break;
                         case "a":
                             state.Column = 0;
@@ -186,12 +188,12 @@ public sealed class NanoCommand : TerminalAppBase
     {
         int lines = state.Lines.Count - (state.Lines[^1].Length == 0 && state.Lines.Count > 1 ? 1 : 0);
         state.Status = await SaveAsync(context, state, cancellationToken)
-            ? $"Wrote {lines} line{(lines == 1 ? string.Empty : "s")}"
-            : state.Status ?? "Error writing file";
+            ? state.Text[lines == 1 ? "Status.WroteOne" : "Status.WroteMany", lines]
+            : state.Status ?? state.Text["Status.WriteError"];
     }
 
     private static string LastSearchLabel(EditorState state) =>
-        state.LastSearch.Length > 0 ? $"Search [{state.LastSearch}]: " : "Search: ";
+        state.LastSearch.Length > 0 ? state.Text["Prompt.SearchLast", state.LastSearch] : state.Text["Prompt.Search"];
 
     private static int CountLines(string content)
     {
@@ -205,7 +207,7 @@ public sealed class NanoCommand : TerminalAppBase
     }
 
     private static async ValueTask<LoadResult> LoadAsync(
-        TerminalExecutionContext context, VirtualPath path, CancellationToken cancellationToken)
+        TerminalExecutionContext context, IStringLocalizer<Strings> text, VirtualPath path, CancellationToken cancellationToken)
     {
         FileSystemResult<FileSystemContentReadHandle> result = await context.App.FileSystem.ReadAsync(
             new FileSystemReadRequest(path), cancellationToken);
@@ -213,17 +215,17 @@ public sealed class NanoCommand : TerminalAppBase
         {
             return result.Error?.Code == FileSystemErrorCode.NotFound
                 ? new LoadResult(true, string.Empty, null, null)
-                : new LoadResult(false, null, null, result.Error?.Code.ToString() ?? "read failed");
+                : new LoadResult(false, null, null, result.Error?.Code.ToString() ?? text["Error.ReadFailed"]);
         }
 
         await using FileSystemContentReadHandle handle = result.Value;
         if (handle.Entry.Metadata is FileMetadata fileMetadata && fileMetadata.Length > MaxDocumentBytes)
-            return new LoadResult(false, null, null, $"file exceeds {MaxDocumentBytes} bytes");
+            return new LoadResult(false, null, null, text["Error.TooLarge", MaxDocumentBytes]);
 
         using StreamReader reader = new(handle.Content, Encoding.UTF8, true, leaveOpen: true);
         string content = await reader.ReadToEndAsync(cancellationToken);
         return Encoding.UTF8.GetByteCount(content) > MaxDocumentBytes
-            ? new LoadResult(false, null, null, $"file exceeds {MaxDocumentBytes} bytes")
+            ? new LoadResult(false, null, null, text["Error.TooLarge", MaxDocumentBytes])
             : new LoadResult(true, content, handle.Entry.Metadata.Revision, null);
     }
 
@@ -233,7 +235,7 @@ public sealed class NanoCommand : TerminalAppBase
         string content = state.GetContent();
         if (Encoding.UTF8.GetByteCount(content) > MaxDocumentBytes)
         {
-            state.Status = $"Buffer exceeds {MaxDocumentBytes} bytes";
+            state.Status = state.Text["Status.BufferTooLarge", MaxDocumentBytes];
             return false;
         }
 
@@ -271,29 +273,31 @@ public sealed class NanoCommand : TerminalAppBase
         EditorState state,
         CancellationToken cancellationToken)
     {
-        state.Prompt = "Save modified buffer?  Y Yes  N No  ^C Cancel";
+        IStringLocalizer<Strings> text = state.Text;
+        state.Prompt = text["Prompt.SaveModified"];
         try
         {
             while (true)
             {
                 await RenderAsync(terminal, state, cancellationToken);
                 TerminalKeyEvent key = await terminal.ReadKeyAsync(cancellationToken);
-                if (IsCharacter(key, "n"))
+                // Like GNU nano, the answers follow the language ("O Oui" in French); "y"/"n" always work.
+                if (IsCharacter(key, "n") || IsCharacter(key, text["Prompt.NoKey"]))
                 {
                     return true;
                 }
 
                 if (IsCharacter(key, "c") || key.Key is TerminalKey.Escape)
                 {
-                    state.Status = "Cancelled";
+                    state.Status = text["Status.Cancelled"];
                     return false;
                 }
 
-                if (IsCharacter(key, "y"))
+                if (IsCharacter(key, "y") || IsCharacter(key, text["Prompt.YesKey"]))
                 {
                     state.Prompt = null;
                     bool saved = await SaveAsync(context, state, cancellationToken);
-                    state.Status = saved ? $"Wrote {state.Path.Value}" : "Error writing file; exit cancelled";
+                    state.Status = saved ? text["Status.WroteFile", state.Path.Value] : text["Status.WriteErrorExitCancelled"];
                     return saved;
                 }
             }
@@ -447,7 +451,7 @@ public sealed class NanoCommand : TerminalAppBase
     {
         if (state.CutBuffer.Count == 0)
         {
-            state.Status = "Cutbuffer is empty";
+            state.Status = state.Text["Status.CutBufferEmpty"];
             return;
         }
 
@@ -462,7 +466,7 @@ public sealed class NanoCommand : TerminalAppBase
     {
         if (query.Length == 0)
         {
-            state.Status = "No current search pattern";
+            state.Status = state.Text["Status.NoSearchPattern"];
             return;
         }
 
@@ -478,7 +482,7 @@ public sealed class NanoCommand : TerminalAppBase
             {
                 if (step > 0 && row <= state.Row)
                 {
-                    state.Status = "Search Wrapped";
+                    state.Status = state.Text["Status.SearchWrapped"];
                 }
 
                 state.Row = row;
@@ -487,7 +491,7 @@ public sealed class NanoCommand : TerminalAppBase
             }
         }
 
-        state.Status = $"\"{query}\" not found";
+        state.Status = state.Text["Status.NotFound", query];
     }
 
     private static string Position(EditorState state)
@@ -497,8 +501,10 @@ public sealed class NanoCommand : TerminalAppBase
         int lineLength = state.Lines[state.Row].Length + 1;
         int totalChars = state.Lines.Sum(line => line.Length + 1) - 1;
         int charIndex = state.Lines.Take(state.Row).Sum(line => line.Length + 1) + state.Column;
-        return string.Create(CultureInfo.InvariantCulture,
-            $"line {state.Row + 1}/{lines} ({100 * (state.Row + 1) / lines}%), col {column}/{lineLength} ({100 * column / lineLength}%), char {charIndex}/{totalChars} ({(totalChars == 0 ? 0 : 100 * charIndex / totalChars)}%)");
+        return state.Text["Status.Position",
+            state.Row + 1, lines, 100 * (state.Row + 1) / lines,
+            column, lineLength, 100 * column / lineLength,
+            charIndex, totalChars, totalChars == 0 ? 0 : 100 * charIndex / totalChars];
     }
 
     private static void MovePage(EditorState state, IFullScreenTerminalSession terminal, int direction)
@@ -509,27 +515,27 @@ public sealed class NanoCommand : TerminalAppBase
         state.Column = Math.Min(state.Column, state.Lines[state.Row].Length);
     }
 
-    private static async ValueTask ShowHelpAsync(IFullScreenTerminalSession terminal, CancellationToken cancellationToken)
+    private static async ValueTask ShowHelpAsync(IFullScreenTerminalSession terminal, IStringLocalizer<Strings> text, CancellationToken cancellationToken)
     {
         string[] help =
         [
-            Inverse + "  GNU nano (HackerOS) help" + Plain,
+            Inverse + text["Help.Title"] + Plain,
             string.Empty,
-            " The editor's commands are Ctrl key combinations, shown as ^ in the bars below.",
+            text["Help.Intro"],
             string.Empty,
-            "  ^O  Write Out: save, asking the file name (change it to save as)",
-            "  ^S  Save the file without asking",
-            "  ^X  Exit (asks to save a modified buffer)",
-            "  ^W  Where Is: search forward (^F too); Enter on an empty answer repeats",
-            "  ^K  Cut the current line (repeat to cut several)",
-            "  ^U  Paste the cut lines",
-            "  ^C  Show the cursor position",
-            "  ^A  Start of line         ^E  End of line",
-            "  ^Y  Previous page         ^V  Next page",
+            text["Help.WriteOut"],
+            text["Help.Save"],
+            text["Help.Exit"],
+            text["Help.WhereIs"],
+            text["Help.Cut"],
+            text["Help.Paste"],
+            text["Help.Location"],
+            text["Help.LineEnds"],
+            text["Help.Pages"],
             string.Empty,
-            " Press any key to return to the buffer."
+            text["Help.Return"]
         ];
-        await terminal.RenderAsync(new TerminalScreenFrame(help, new TerminalCursor(0, 0, Visible: false), "nano help"), cancellationToken);
+        await terminal.RenderAsync(new TerminalScreenFrame(help, new TerminalCursor(0, 0, Visible: false), text["Frame.Help"]), cancellationToken);
         await terminal.ReadKeyAsync(cancellationToken);
     }
 
@@ -555,8 +561,9 @@ public sealed class NanoCommand : TerminalAppBase
 
         // Title bar: version on the left, file in the middle, "Modified" on the right.
         string left = "  GNU nano 7.2";
-        string middle = state.Revision is null && !state.Dirty ? $"New Buffer: {state.DisplayName}" : state.DisplayName;
-        string right = state.Dirty ? "Modified  " : string.Empty;
+        IStringLocalizer<Strings> text = state.Text;
+        string middle = state.Revision is null && !state.Dirty ? text["Title.NewBuffer", state.DisplayName] : state.DisplayName;
+        string right = state.Dirty ? text["Title.Modified"] + "  " : string.Empty;
         int middleStart = Math.Max(left.Length + 1, (width - middle.Length) / 2);
         string title = (left.PadRight(middleStart) + middle).PadRight(Math.Max(0, width - right.Length)) + right;
         List<string> lines = [Inverse + Fit(title, width).PadRight(width) + Plain];
@@ -590,8 +597,8 @@ public sealed class NanoCommand : TerminalAppBase
                 ? new string(' ', Math.Max(0, (width - message.Length - 4) / 2)) + Inverse + Fit($"[ {message} ]", width) + Plain
                 : string.Empty;
         lines.Add(status);
-        lines.Add(Shortcuts(width, ("^G", "Help"), ("^O", "Write Out"), ("^W", "Where Is"), ("^K", "Cut"), ("^C", "Location"), ("^Y", "Prev Page")));
-        lines.Add(Shortcuts(width, ("^X", "Exit"), ("^S", "Save"), ("^F", "Search"), ("^U", "Paste"), ("^A", "Line Start"), ("^V", "Next Page")));
+        lines.Add(Shortcuts(width, ("^G", text["Shortcut.Help"]), ("^O", text["Shortcut.WriteOut"]), ("^W", text["Shortcut.WhereIs"]), ("^K", text["Shortcut.Cut"]), ("^C", text["Shortcut.Location"]), ("^Y", text["Shortcut.PrevPage"])));
+        lines.Add(Shortcuts(width, ("^X", text["Shortcut.Exit"]), ("^S", text["Shortcut.Save"]), ("^F", text["Shortcut.Search"]), ("^U", text["Shortcut.Paste"]), ("^A", text["Shortcut.LineStart"]), ("^V", text["Shortcut.NextPage"])));
         if (state.Prompt is null)
         {
             state.Status = null;
@@ -602,7 +609,7 @@ public sealed class NanoCommand : TerminalAppBase
         return terminal.RenderAsync(new TerminalScreenFrame(
             lines,
             new TerminalCursor(cursorX, cursorRow),
-            $"Nano editor, {state.Path.Value}"), cancellationToken);
+            text["Frame.Editor", state.Path.Value]), cancellationToken);
     }
 
     private static string Shortcuts(int width, params (string Key, string Label)[] items)
@@ -672,8 +679,9 @@ public sealed class NanoCommand : TerminalAppBase
 
     private sealed class EditorState
     {
-        public EditorState(VirtualPath path, string displayName, string content, long? revision)
+        public EditorState(IStringLocalizer<Strings> text, VirtualPath path, string displayName, string content, long? revision)
         {
+            Text = text;
             Path = path;
             DisplayName = displayName;
             Revision = revision;
@@ -683,6 +691,8 @@ public sealed class NanoCommand : TerminalAppBase
                 Lines.Add(new StringBuilder());
         }
 
+        /// <summary>The editor's texts, in the language of the nano process (ADR 0104).</summary>
+        public IStringLocalizer<Strings> Text { get; }
         public VirtualPath Path { get; set; }
         public string DisplayName { get; set; }
         public List<StringBuilder> Lines { get; }

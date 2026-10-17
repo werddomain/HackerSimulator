@@ -29,7 +29,7 @@ public sealed partial class ShellInterpreter
         string prefix = ErrorPrefix(exec);
         if (session.Host is null)
         {
-            await exec.Err.WriteLineAsync($"{prefix}{path}: cannot run programs without a calling app").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(prefix + exec.Text["Shell.NoCallingAppPrograms", path]).ConfigureAwait(false);
             exec.Line.LastFailure = ShellFailure.Fault;
             return NotExecutableExitCode;
         }
@@ -41,7 +41,7 @@ public sealed partial class ShellInterpreter
             {
                 if (await HackDirectory.ExistsAsync(path, exec.Token).ConfigureAwait(false))
                 {
-                    await exec.Err.WriteLineAsync($"{prefix}{path}: Is a directory").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync(prefix + exec.Text["Shell.Error", path, exec.Text["Errno.IsDirectory"]]).ConfigureAwait(false);
                     exec.Line.LastFailure = ShellFailure.Fault;
                     return NotExecutableExitCode;
                 }
@@ -49,7 +49,7 @@ public sealed partial class ShellInterpreter
                 HackFileInfo file = await HackFileInfo.GetAsync(path, exec.Token).ConfigureAwait(false);
                 if (!file.Exists)
                 {
-                    await exec.Err.WriteLineAsync($"{prefix}{path}: No such file or directory").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync(prefix + exec.Text["Shell.Error", path, exec.Text["Errno.NoSuchFile"]]).ConfigureAwait(false);
                     exec.Line.LastFailure = ShellFailure.CommandNotFound;
                     return CommandNotFoundExitCode;
                 }
@@ -57,9 +57,9 @@ public sealed partial class ShellInterpreter
                 if (!IsExecutableBy(file, session))
                 {
                     // execve(2) refuses a file without the execute bit: EACCES. The hint is ours.
-                    await exec.Err.WriteLineAsync($"{prefix}{path}: Permission denied").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync(prefix + exec.Text["Shell.Error", path, exec.Text["Errno.PermissionDenied"]]).ConfigureAwait(false);
                     await exec.Err.WriteLineAsync(
-                        $"{prefix}hint: '{path}' is not executable. Make it executable with: chmod +x {QuoteForTrace(path)}  (or run it with: sh {QuoteForTrace(path)})")
+                        prefix + exec.Text["Shell.NotExecutableHint", path, QuoteForTrace(path)])
                         .ConfigureAwait(false);
                     exec.Line.LastFailure = ShellFailure.Fault;
                     return NotExecutableExitCode;
@@ -70,14 +70,14 @@ public sealed partial class ShellInterpreter
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            await exec.Err.WriteLineAsync($"{prefix}{path}: {ShellErrorText.Describe(exception)}").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(prefix + exec.Text["Shell.Error", path, ShellText.DescribeError(exception, exec.Text)]).ConfigureAwait(false);
             exec.Line.LastFailure = ShellFailure.Fault;
             return NotExecutableExitCode;
         }
 
         if (content.Contains('\0'))
         {
-            await exec.Err.WriteLineAsync($"{prefix}{path}: cannot execute binary file: Exec format error").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(prefix + exec.Text["Shell.BinaryFile", path]).ConfigureAwait(false);
             exec.Line.LastFailure = ShellFailure.Fault;
             return NotExecutableExitCode;
         }
@@ -99,7 +99,7 @@ public sealed partial class ShellInterpreter
                 ShellCommandResolution? resolution = Resolver.Resolve(interpreterName, []);
                 if (resolution is null || !_enablement.IsEnabled(resolution.AppId))
                 {
-                    await exec.Err.WriteLineAsync($"{prefix}{path}: {interpreter}: bad interpreter: No such file or directory").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync(prefix + exec.Text["Shell.BadInterpreter", path, interpreter]).ConfigureAwait(false);
                     exec.Line.LastFailure = ShellFailure.CommandNotFound;
                     return NotExecutableExitCode;
                 }
@@ -195,7 +195,7 @@ public sealed partial class ShellInterpreter
             {
                 if (index + 1 >= arguments.Count)
                 {
-                    await exec.Err.WriteLineAsync($"{name}: -c: option requires an argument").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync(exec.Text["Shell.OptionRequiresArgument", name, "-c"]).ConfigureAwait(false);
                     return SyntaxErrorExitCode;
                 }
 
@@ -220,8 +220,8 @@ public sealed partial class ShellInterpreter
 
             if (argument.StartsWith('-') && argument.Length > 1)
             {
-                await exec.Err.WriteLineAsync($"{name}: {argument}: invalid option").ConfigureAwait(false);
-                await exec.Err.WriteLineAsync($"usage: {name} [-exuf] [-c command [name [args...]]] [script [args...]]").ConfigureAwait(false);
+                await exec.Err.WriteLineAsync(exec.Text["Shell.InvalidOption", name, argument]).ConfigureAwait(false);
+                await exec.Err.WriteLineAsync(exec.Text["Shell.ShUsage", name]).ConfigureAwait(false);
                 return SyntaxErrorExitCode;
             }
 
@@ -258,7 +258,7 @@ public sealed partial class ShellInterpreter
         ShellSession session = exec.Session;
         if (session.Host is null)
         {
-            await exec.Err.WriteLineAsync($"{name}: {path}: cannot open files without a calling app").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync($"{name}: " + exec.Text["Shell.NoCallingAppFiles", path]).ConfigureAwait(false);
             return null;
         }
 
@@ -268,7 +268,7 @@ public sealed partial class ShellInterpreter
             {
                 if (await HackDirectory.ExistsAsync(path, exec.Token).ConfigureAwait(false))
                 {
-                    await exec.Err.WriteLineAsync($"{name}: {path}: Is a directory").ConfigureAwait(false);
+                    await exec.Err.WriteLineAsync($"{name}: " + exec.Text["Shell.Error", path, exec.Text["Errno.IsDirectory"]]).ConfigureAwait(false);
                     return null;
                 }
 
@@ -277,7 +277,7 @@ public sealed partial class ShellInterpreter
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            await exec.Err.WriteLineAsync($"{name}: {path}: {ShellErrorText.Describe(exception)}").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync($"{name}: " + exec.Text["Shell.Error", path, ShellText.DescribeError(exception, exec.Text)]).ConfigureAwait(false);
             return null;
         }
     }
@@ -299,13 +299,13 @@ public sealed partial class ShellInterpreter
         ShellSession parent = exec.Session;
         if (parent.Host is null)
         {
-            await exec.Err.WriteLineAsync($"hsh: {scriptName}: cannot run scripts without a calling app").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync("hsh: " + exec.Text["Shell.NoCallingAppScripts", scriptName]).ConfigureAwait(false);
             return NotExecutableExitCode;
         }
 
         if (parent.CallDepth >= MaximumCallDepth)
         {
-            await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{scriptName}: maximum nesting level exceeded").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.NestingExceeded", scriptName]).ConfigureAwait(false);
             return 1;
         }
 
@@ -317,7 +317,7 @@ public sealed partial class ShellInterpreter
             parsed = ShellParser.Parse(text.Content);
             if (parsed.Error is { } error)
             {
-                await exec.Err.WriteLineAsync($"{scriptName}: line {LineOf(text.Content, error.Offset)}: {error.Message}").ConfigureAwait(false);
+                await exec.Err.WriteLineAsync(exec.Text["Shell.ScriptLineError", scriptName, LineOf(text.Content, error.Offset), error.Localize(exec.Text)]).ConfigureAwait(false);
                 return SyntaxErrorExitCode;
             }
         }
@@ -439,7 +439,7 @@ public sealed partial class ShellInterpreter
             pending.Clear();
             if (parsed.Error is { } error)
             {
-                await exec.Err.WriteLineAsync($"{exec.Session.ScriptName}: {error.Message}").ConfigureAwait(false);
+                await exec.Err.WriteLineAsync(exec.Text["Shell.Error", exec.Session.ScriptName, error.Localize(exec.Text)]).ConfigureAwait(false);
                 status = SyntaxErrorExitCode;
                 exec.Session.LastExitCode = status;
                 continue;
@@ -455,7 +455,7 @@ public sealed partial class ShellInterpreter
 
         if (pending.Length > 0 && ShellParser.Parse(pending.ToString()).Error is { } unfinished)
         {
-            await exec.Err.WriteLineAsync($"{exec.Session.ScriptName}: {unfinished.Message}").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(exec.Text["Shell.Error", exec.Session.ScriptName, unfinished.Localize(exec.Text)]).ConfigureAwait(false);
             status = SyntaxErrorExitCode;
         }
 

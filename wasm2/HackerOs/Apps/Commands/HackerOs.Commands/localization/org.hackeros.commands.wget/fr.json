@@ -1,0 +1,5 @@
+{
+  "name": "wget",
+  "description": "Télécharge des fichiers depuis le réseau",
+  "terminalUsage": "wget [-O fichier] [-P dossier] [-q] [-S] [--spider] url..."
+}

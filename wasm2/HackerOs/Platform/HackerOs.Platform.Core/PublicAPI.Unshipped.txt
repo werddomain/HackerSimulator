@@ -74,6 +74,8 @@ const HackerOs.Platform.Core.Processes.LoginEnvironment.DefaultHostName = "hacke
 const HackerOs.Platform.Core.Processes.LoginEnvironment.DefaultLanguage = "en_US.UTF-8" -> string!
 const HackerOs.Platform.Core.Processes.LoginEnvironment.DefaultPath = "/bin:/usr/bin" -> string!
 const HackerOs.Platform.Core.Processes.LoginEnvironment.DefaultShell = "/bin/hsh" -> string!
+const HackerOs.Platform.Core.Processes.LoginEnvironment.DefaultSystemLocaleFileContent = "# /etc/locale.conf: system locale (ADR 0104), changed with 'localectl set-locale'.\nLANG=en_US.UTF-8\n" -> string!
+const HackerOs.Platform.Core.Processes.LoginEnvironment.UserLocaleFileRelativePath = ".config/locale.conf" -> string!
 const HackerOs.Platform.Core.ServerConnection.SyncSettingsDocuments.DefaultIntervalMinutes = 5 -> int
 const HackerOs.Platform.Core.ServerConnection.SyncSettingsDocuments.IntervalKey = "intervalMinutes" -> string!
 const HackerOs.Platform.Core.ServerConnection.SyncSettingsDocuments.PausedKey = "paused" -> string!
@@ -156,6 +158,8 @@ HackerOs.Platform.Core.AppCatalog.CommandOwners.get -> System.Collections.Generi
 HackerOs.Platform.Core.AppCatalog.DeactivationOrder.get -> System.Collections.Generic.IReadOnlyList<string!>!
 HackerOs.Platform.Core.AppCatalog.FindCommandOwner(string! commandName) -> string?
 HackerOs.Platform.Core.AppCatalog.IsSystemApp(string! appId) -> bool
+HackerOs.Platform.Core.AppCatalog.Localize(HackerOs.App.Abstractions.AppManifest! manifest, System.Globalization.CultureInfo! culture) -> HackerOs.App.Abstractions.AppManifest!
+HackerOs.Platform.Core.AppCatalog.Localized.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.App.Abstractions.AppManifestText!>!>!
 HackerOs.Platform.Core.AppCatalog.Manifests.get -> System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.App.Abstractions.AppManifest!>!
 HackerOs.Platform.Core.AppCatalog.Rejected.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.AppCatalogRejection!>!
 HackerOs.Platform.Core.AppCatalog.SystemAppIds.get -> System.Collections.Generic.IReadOnlySet<string!>!
@@ -759,6 +763,18 @@ HackerOs.Platform.Core.FileSystem.Virtual.VirtualFileSystemProvider.RelativeSegm
 HackerOs.Platform.Core.FileSystem.Virtual.VirtualFileSystemProvider.SetPermissionsAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemSetPermissionsRequest! request, HackerOs.Simulation.Abstractions.FileSystem.FileSystemAuthorizationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemMutationResult!>
 HackerOs.Platform.Core.FileSystem.Virtual.VirtualFileSystemProvider.StableId(HackerOs.App.Abstractions.VirtualPath path) -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemEntryId
 HackerOs.Platform.Core.FileSystem.Virtual.VirtualFileSystemProvider.VirtualFileSystemProvider(HackerOs.App.Abstractions.VirtualPath mountPath, HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, System.Func<System.Guid>? transactionIdFactory) -> void
+HackerOs.Platform.Core.Globalization.PlatformLocalizationServiceCollectionExtensions
+HackerOs.Platform.Core.Globalization.SessionLocaleService
+HackerOs.Platform.Core.Globalization.SessionLocaleService.Apply(System.Collections.Generic.IReadOnlyDictionary<string!, string!>! variables) -> void
+HackerOs.Platform.Core.Globalization.SessionLocaleService.Changed -> System.Action?
+HackerOs.Platform.Core.Globalization.SessionLocaleService.Culture.get -> System.Globalization.CultureInfo!
+HackerOs.Platform.Core.Globalization.SessionLocaleService.FormatCulture.get -> System.Globalization.CultureInfo!
+HackerOs.Platform.Core.Globalization.SessionLocaleService.LocaleName.get -> string!
+HackerOs.Platform.Core.Globalization.SessionLocaleService.SessionLocaleService(HackerOs.Platform.Core.Processes.LoginEnvironmentProvider! loginEnvironment, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemService! fileSystem, HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, Microsoft.Extensions.Logging.ILogger<HackerOs.Platform.Core.Globalization.SessionLocaleService!>? logger = null) -> void
+HackerOs.Platform.Core.Globalization.SessionLocaleService.UseSessionLocaleAsync(HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal! principal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Globalization.SessionLocaleService.UseSystemLocaleAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Globalization.SessionStringLocalizer<TResource>
+HackerOs.Platform.Core.Globalization.SessionStringLocalizer<TResource>.SessionStringLocalizer(HackerOs.Platform.Core.Globalization.SessionLocaleService! locale) -> void
 HackerOs.Platform.Core.Intents.AppIntentDispatcher
 HackerOs.Platform.Core.Intents.AppIntentDispatcher.AppIntentDispatcher(HackerOs.Platform.Core.Lifecycle.AppLifecycleOrchestrator! orchestrator, HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry! enablement, HackerOs.Platform.Core.Intents.FileAssociationResolver! associations, HackerOs.App.Abstractions.Policy.ICapabilityGrantRepository! grants, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemService! fileSystem) -> void
 HackerOs.Platform.Core.Intents.AppIntentDispatcher.DispatchAsync(HackerOs.App.Abstractions.AppIntentRequest! request, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal! principal, HackerOs.AppSdk.IFullScreenTerminalSession? fullScreen = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken), HackerOs.Platform.Core.Policy.IDangerousCapabilityApprovalPrompt? approvalPrompt = null, HackerOs.AppSdk.IAppExecutionContext? callerContext = null) -> System.Threading.Tasks.ValueTask<HackerOs.Platform.Core.Intents.AppIntentDispatchResult!>
@@ -1247,6 +1263,7 @@ HackerOs.Platform.Core.Policy.CapabilityGrantRepository.CurrentPolicyRevision.ge
 HackerOs.Platform.Core.Policy.CapabilityGrantRepository.Evaluate(string! appId, string! userId, string! capability, HackerOs.App.Abstractions.AppAuthority actingAuthority, HackerOs.App.Abstractions.AppAuthority requiredAuthority, HackerOs.App.Abstractions.Policy.CapabilityResourceCandidate? resourceCandidate = null) -> HackerOs.App.Abstractions.Policy.CapabilityPolicyEvaluation
 HackerOs.Platform.Core.Policy.CapabilityGrantRepository.Grant(string! appId, string! userId, string! capability, HackerOs.App.Abstractions.Policy.CapabilityGrantSource source, HackerOs.App.Abstractions.AppAuthority actingAuthority, System.Collections.Generic.IEnumerable<HackerOs.App.Abstractions.Policy.CapabilityConstraint!>? constraints = null) -> HackerOs.App.Abstractions.Policy.CapabilityGrantMutationResult!
 HackerOs.Platform.Core.Policy.CapabilityGrantRepository.Revoke(HackerOs.App.Abstractions.Policy.CapabilityGrantId grantId, HackerOs.App.Abstractions.AppAuthority actingAuthority) -> HackerOs.App.Abstractions.Policy.CapabilityGrantMutationResult!
+HackerOs.Platform.Core.Policy.CapabilityText
 HackerOs.Platform.Core.Policy.CleanProfileCapabilityGrantSeeder
 HackerOs.Platform.Core.Policy.DangerousCapabilityApprovalAttempt
 HackerOs.Platform.Core.Policy.DangerousCapabilityApprovalAttempt.DangerousCapabilityApprovalAttempt(bool Succeeded, int RemainingAttempts, string? FailureReason = null) -> void
@@ -1689,6 +1706,9 @@ HackerOs.Platform.Core.Shell.IPlatformEnvironmentProbe
 HackerOs.Platform.Core.Shell.IPlatformEnvironmentProbe.Changed -> System.Action?
 HackerOs.Platform.Core.Shell.IPlatformEnvironmentProbe.Current.get -> HackerOs.Platform.Core.Shell.PlatformEnvironmentSnapshot!
 HackerOs.Platform.Core.Shell.IPlatformEnvironmentProbe.InitializeAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Shell.IShellLocalizableError
+HackerOs.Platform.Core.Shell.IShellLocalizableError.TextArguments.get -> System.Collections.Generic.IReadOnlyList<object!>!
+HackerOs.Platform.Core.Shell.IShellLocalizableError.TextKey.get -> string!
 HackerOs.Platform.Core.Shell.KeyChord
 HackerOs.Platform.Core.Shell.KeyChord.Alt.get -> bool
 HackerOs.Platform.Core.Shell.KeyChord.Alt.init -> void
@@ -1740,7 +1760,9 @@ HackerOs.Platform.Core.Shell.ShellArithmetic
 HackerOs.Platform.Core.Shell.ShellArithmetic.Evaluate(string! expression) -> long
 HackerOs.Platform.Core.Shell.ShellArithmetic.ShellArithmetic(System.Func<string!, string?>! getVariable, System.Action<string!, string!>! setVariable) -> void
 HackerOs.Platform.Core.Shell.ShellArithmeticException
-HackerOs.Platform.Core.Shell.ShellArithmeticException.ShellArithmeticException(string! message) -> void
+HackerOs.Platform.Core.Shell.ShellArithmeticException.ShellArithmeticException(string! expression, HackerOs.Platform.Core.Shell.ShellLocalizedText! reason) -> void
+HackerOs.Platform.Core.Shell.ShellArithmeticException.TextArguments.get -> System.Collections.Generic.IReadOnlyList<object!>!
+HackerOs.Platform.Core.Shell.ShellArithmeticException.TextKey.get -> string!
 HackerOs.Platform.Core.Shell.ShellArithmeticPart
 HackerOs.Platform.Core.Shell.ShellArithmeticPart.Expression.get -> HackerOs.Platform.Core.Shell.ShellWord!
 HackerOs.Platform.Core.Shell.ShellArithmeticPart.Expression.init -> void
@@ -1833,7 +1855,10 @@ HackerOs.Platform.Core.Shell.ShellExitStatusPart.Quoted.get -> bool
 HackerOs.Platform.Core.Shell.ShellExitStatusPart.Quoted.init -> void
 HackerOs.Platform.Core.Shell.ShellExitStatusPart.ShellExitStatusPart(bool Quoted = false) -> void
 HackerOs.Platform.Core.Shell.ShellExpansionException
-HackerOs.Platform.Core.Shell.ShellExpansionException.ShellExpansionException(string! message) -> void
+HackerOs.Platform.Core.Shell.ShellExpansionException.ShellExpansionException(HackerOs.Platform.Core.Shell.ShellArithmeticException! inner) -> void
+HackerOs.Platform.Core.Shell.ShellExpansionException.ShellExpansionException(HackerOs.Platform.Core.Shell.ShellLocalizedText! text) -> void
+HackerOs.Platform.Core.Shell.ShellExpansionException.TextArguments.get -> System.Collections.Generic.IReadOnlyList<object!>!
+HackerOs.Platform.Core.Shell.ShellExpansionException.TextKey.get -> string!
 HackerOs.Platform.Core.Shell.ShellFailure
 HackerOs.Platform.Core.Shell.ShellFailure.CommandNotFound = 2 -> HackerOs.Platform.Core.Shell.ShellFailure
 HackerOs.Platform.Core.Shell.ShellFailure.Disabled = 3 -> HackerOs.Platform.Core.Shell.ShellFailure
@@ -1879,8 +1904,8 @@ HackerOs.Platform.Core.Shell.ShellIfCommand.Else.init -> void
 HackerOs.Platform.Core.Shell.ShellIfCommand.ShellIfCommand(System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Shell.ShellIfBranch!>! Branches, HackerOs.Platform.Core.Shell.ShellCommandList? Else) -> void
 HackerOs.Platform.Core.Shell.ShellInterpreter
 HackerOs.Platform.Core.Shell.ShellInterpreter.ExecuteAsync(HackerOs.Platform.Core.Shell.ShellSession! session, string! commandLine, HackerOs.Platform.Core.Shell.ShellExecutionOptions! options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Platform.Core.Shell.ShellExecutionResult!>!
-HackerOs.Platform.Core.Shell.ShellInterpreter.GetInstalledCommands() -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.ShellCommandInfo!>!
-HackerOs.Platform.Core.Shell.ShellInterpreter.GetLaunchableApplications() -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.ShellCommandInfo!>!
+HackerOs.Platform.Core.Shell.ShellInterpreter.GetInstalledCommands(System.Globalization.CultureInfo? culture = null) -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.ShellCommandInfo!>!
+HackerOs.Platform.Core.Shell.ShellInterpreter.GetLaunchableApplications(System.Globalization.CultureInfo? culture = null) -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.ShellCommandInfo!>!
 HackerOs.Platform.Core.Shell.ShellInterpreter.Resolver.get -> HackerOs.Platform.Core.Shell.ShellCommandResolver!
 HackerOs.Platform.Core.Shell.ShellInterpreter.ShellInterpreter(HackerOs.Platform.Core.Lifecycle.AppLifecycleOrchestrator! orchestrator, HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry! enablement, HackerOs.Simulation.Abstractions.Processes.IKernelMemoryLedger? kernelMemory = null) -> void
 HackerOs.Platform.Core.Shell.ShellJob
@@ -1910,6 +1935,14 @@ HackerOs.Platform.Core.Shell.ShellLiteralPart.Quoted.init -> void
 HackerOs.Platform.Core.Shell.ShellLiteralPart.ShellLiteralPart(string! Text, bool Quoted) -> void
 HackerOs.Platform.Core.Shell.ShellLiteralPart.Text.get -> string!
 HackerOs.Platform.Core.Shell.ShellLiteralPart.Text.init -> void
+HackerOs.Platform.Core.Shell.ShellLocalizableErrorExtensions
+HackerOs.Platform.Core.Shell.ShellLocalizedText
+HackerOs.Platform.Core.Shell.ShellLocalizedText.ShellLocalizedText(string! textKey, params object![]! arguments) -> void
+HackerOs.Platform.Core.Shell.ShellLocalizedText.ShellLocalizedText(string! TextKey, System.Collections.Generic.IReadOnlyList<object!>! TextArguments) -> void
+HackerOs.Platform.Core.Shell.ShellLocalizedText.TextArguments.get -> System.Collections.Generic.IReadOnlyList<object!>!
+HackerOs.Platform.Core.Shell.ShellLocalizedText.TextArguments.init -> void
+HackerOs.Platform.Core.Shell.ShellLocalizedText.TextKey.get -> string!
+HackerOs.Platform.Core.Shell.ShellLocalizedText.TextKey.init -> void
 HackerOs.Platform.Core.Shell.ShellLoopCommand
 HackerOs.Platform.Core.Shell.ShellLoopCommand.Body.get -> HackerOs.Platform.Core.Shell.ShellCommandList!
 HackerOs.Platform.Core.Shell.ShellLoopCommand.Body.init -> void
@@ -2032,11 +2065,16 @@ HackerOs.Platform.Core.Shell.ShellSyntaxError.Code.get -> string!
 HackerOs.Platform.Core.Shell.ShellSyntaxError.Code.init -> void
 HackerOs.Platform.Core.Shell.ShellSyntaxError.Length.get -> int
 HackerOs.Platform.Core.Shell.ShellSyntaxError.Length.init -> void
+HackerOs.Platform.Core.Shell.ShellSyntaxError.Localize(Microsoft.Extensions.Localization.IStringLocalizer! texts) -> string!
 HackerOs.Platform.Core.Shell.ShellSyntaxError.Message.get -> string!
 HackerOs.Platform.Core.Shell.ShellSyntaxError.Message.init -> void
 HackerOs.Platform.Core.Shell.ShellSyntaxError.Offset.get -> int
 HackerOs.Platform.Core.Shell.ShellSyntaxError.Offset.init -> void
 HackerOs.Platform.Core.Shell.ShellSyntaxError.ShellSyntaxError(string! Code, string! Message, int Offset, int Length) -> void
+HackerOs.Platform.Core.Shell.ShellSyntaxError.TextArguments.get -> System.Collections.Generic.IReadOnlyList<object!>!
+HackerOs.Platform.Core.Shell.ShellSyntaxError.TextArguments.init -> void
+HackerOs.Platform.Core.Shell.ShellSyntaxError.TextKey.get -> string?
+HackerOs.Platform.Core.Shell.ShellSyntaxError.TextKey.init -> void
 HackerOs.Platform.Core.Shell.ShellSyntaxErrorCodes
 HackerOs.Platform.Core.Shell.ShellTildePart
 HackerOs.Platform.Core.Shell.ShellVariablePart
@@ -2125,7 +2163,8 @@ HackerOs.Platform.Core.Storage.StorageSpaceMonitor.LastCapacity.get -> HackerOs.
 HackerOs.Platform.Core.Storage.StorageSpaceMonitor.RefreshAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 HackerOs.Platform.Core.Storage.StorageSpaceMonitor.RequestRefresh() -> void
 HackerOs.Platform.Core.Storage.StorageSpaceMonitor.Start() -> void
-HackerOs.Platform.Core.Storage.StorageSpaceMonitor.StorageSpaceMonitor(HackerOs.Simulation.Abstractions.Metrics.IStorageCapacityProbe! probe, HackerOs.Simulation.Abstractions.Notifications.INotificationQueue? notifications = null, System.Func<HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal?>? currentUser = null, System.TimeProvider? time = null) -> void
+HackerOs.Platform.Core.Storage.StorageSpaceMonitor.StorageSpaceMonitor(HackerOs.Simulation.Abstractions.Metrics.IStorageCapacityProbe! probe, HackerOs.Simulation.Abstractions.Notifications.INotificationQueue? notifications = null, System.Func<HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal?>? currentUser = null, System.TimeProvider? time = null, System.Func<System.Globalization.CultureInfo!>? language = null) -> void
+HackerOs.Platform.Core.Strings
 HackerOs.Platform.Core.Time.ManualSimulationClock
 HackerOs.Platform.Core.Time.ManualSimulationClock.Advance(int tickCount = 1) -> void
 HackerOs.Platform.Core.Time.ManualSimulationClock.CurrentTick.get -> long
@@ -2186,6 +2225,7 @@ override HackerOs.Platform.Core.Shell.ShellArithmeticPart.IsQuoted.get -> bool
 override HackerOs.Platform.Core.Shell.ShellCommandSubstitutionPart.IsQuoted.get -> bool
 override HackerOs.Platform.Core.Shell.ShellExitStatusPart.IsQuoted.get -> bool
 override HackerOs.Platform.Core.Shell.ShellLiteralPart.IsQuoted.get -> bool
+override HackerOs.Platform.Core.Shell.ShellLocalizedText.ToString() -> string!
 override HackerOs.Platform.Core.Shell.ShellParameterExpansionPart.IsQuoted.get -> bool
 override HackerOs.Platform.Core.Shell.ShellSpecialParameterPart.IsQuoted.get -> bool
 override HackerOs.Platform.Core.Shell.ShellVariablePart.IsQuoted.get -> bool
@@ -2231,6 +2271,7 @@ static HackerOs.Platform.Core.FileSystem.Virtual.VirtualFileSystemProvider.Child
 static HackerOs.Platform.Core.FileSystem.Virtual.VirtualFileSystemProvider.Failure<T>(HackerOs.Simulation.Abstractions.FileSystem.FileSystemOperation operation, HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode code, HackerOs.App.Abstractions.VirtualPath path) -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemResult<T>!
 static HackerOs.Platform.Core.FileSystem.Virtual.VirtualFileSystemProvider.TextHandle(HackerOs.App.Abstractions.VirtualPath path, HackerOs.Simulation.Abstractions.FileSystem.FileSystemEntryMetadata! metadata, string! text) -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemResult<HackerOs.Simulation.Abstractions.FileSystem.FileSystemContentReadHandle!>!
 static HackerOs.Platform.Core.FileSystem.Virtual.VirtualFileSystemProvider.Timestamps(System.DateTimeOffset createdAtUtc, System.DateTimeOffset contentModifiedAtUtc) -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemTimestamps!
+static HackerOs.Platform.Core.Globalization.PlatformLocalizationServiceCollectionExtensions.AddHackerOsPlatformLocalization(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static HackerOs.Platform.Core.Intents.FileAssociationIndex.Build(string! content) -> HackerOs.Platform.Core.Intents.FileAssociationIndex!
 static HackerOs.Platform.Core.Intents.FileAssociationIndex.Serialize(System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Intents.FileAssociationEntry!>! entries) -> string!
 static HackerOs.Platform.Core.Intents.FileAssociationSettingsDocuments.File.get -> HackerOs.Platform.Core.Settings.OsSettingsFile!
@@ -2259,6 +2300,8 @@ static HackerOs.Platform.Core.Policy.AppPermissionsDocument.RemoveDecision(strin
 static HackerOs.Platform.Core.Policy.AppPermissionsDocument.SetDecision(string? content, string! defaultContent, string! appId, string! capability, HackerOs.Platform.Core.Policy.AppPermissionDecision decision) -> string!
 static HackerOs.Platform.Core.Policy.AppPermissionsDocument.ToValue(HackerOs.Platform.Core.Policy.AppPermissionDecision decision) -> string!
 static HackerOs.Platform.Core.Policy.AppPermissionsDocument.UserFile.get -> HackerOs.Platform.Core.Settings.OsSettingsFile!
+static HackerOs.Platform.Core.Policy.CapabilityText.Describe(string! capability, System.Globalization.CultureInfo? language) -> HackerOs.App.Abstractions.CapabilityDescription!
+static HackerOs.Platform.Core.Policy.CapabilityText.Localize(HackerOs.App.Abstractions.CapabilityDescription! description, System.Globalization.CultureInfo? language) -> HackerOs.App.Abstractions.CapabilityDescription!
 static HackerOs.Platform.Core.Policy.CleanProfileCapabilityGrantSeeder.SeedDeclaredCapabilities(HackerOs.App.Abstractions.Policy.ICapabilityGrantRepository! repository, HackerOs.App.Abstractions.AppManifest! manifest, string! userId, bool isSystemApp) -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.Policy.CapabilityGrantMutationResult!>!
 static HackerOs.Platform.Core.Policy.DangerousCapabilityEvaluator.DeclaresDangerousCapabilities(HackerOs.App.Abstractions.AppManifest! manifest) -> bool
 static HackerOs.Platform.Core.Policy.DangerousCapabilityEvaluator.Evaluate(HackerOs.App.Abstractions.AppManifest! manifest, bool isSystemApp, HackerOs.Platform.Core.Policy.DangerousCapabilityPolicy policy, HackerOs.Platform.Core.Policy.AppPermissionDecisions! decisions) -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Policy.DangerousCapabilityStatus!>!
@@ -2277,8 +2320,9 @@ static HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingBuildSuppor
 static HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingPlan.Disabled.get -> HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingPlan!
 static HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingPlan.Resolve(HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingBuildSupport build, HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingSettings! settings) -> HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingPlan!
 static HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingSettings.Default.get -> HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingSettings!
-static HackerOs.Platform.Core.Processes.LoginEnvironment.Build(string! loginName, string! homeDirectory, string? environmentFile, System.Collections.Generic.ICollection<string!>? warnings = null) -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+static HackerOs.Platform.Core.Processes.LoginEnvironment.Build(string! loginName, string! homeDirectory, string? environmentFile, System.Collections.Generic.ICollection<string!>? warnings = null, string? systemLocaleFile = null, string? userLocaleFile = null) -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
 static HackerOs.Platform.Core.Processes.LoginEnvironment.ParseHostName(string? hostNameFile) -> string!
+static HackerOs.Platform.Core.Processes.LoginEnvironment.UserLocaleFilePath(string! homeDirectory) -> HackerOs.App.Abstractions.VirtualPath
 static HackerOs.Platform.Core.ServerConnection.FileSystemSyncService.BuildConflictCopyName(string! fileName, string! stamp, string! device) -> string!
 static HackerOs.Platform.Core.ServerConnection.FileSystemSyncService.IsDeviceLocal(string! relativePath) -> bool
 static HackerOs.Platform.Core.ServerConnection.SyncPassResult.Empty.get -> HackerOs.Platform.Core.ServerConnection.SyncPassResult!
@@ -2291,6 +2335,7 @@ static HackerOs.Platform.Core.Sessions.LocalPasswordHasher.Create(string! passwo
 static HackerOs.Platform.Core.Sessions.LocalPasswordHasher.CreateAsync(string! password, int iterations = 210000, HackerOs.Platform.Core.Sessions.KeyDerivationAsyncDelegate? asyncHasher = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Sessions.LocalPasswordCredential!>
 static HackerOs.Platform.Core.Sessions.LocalPasswordHasher.Verify(string! password, HackerOs.Simulation.Abstractions.Sessions.LocalPasswordCredential! credential) -> bool
 static HackerOs.Platform.Core.Sessions.LocalPasswordHasher.VerifyAsync(string! password, HackerOs.Simulation.Abstractions.Sessions.LocalPasswordCredential! credential, HackerOs.Platform.Core.Sessions.KeyDerivationAsyncDelegate? asyncHasher = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+static HackerOs.Platform.Core.Sessions.LoginProgressTracker.DescribeStep(string! stepName, System.Globalization.CultureInfo! culture) -> string!
 static HackerOs.Platform.Core.Sessions.ServiceAccount.CreatePrincipal(HackerOs.Simulation.Abstractions.Sessions.InstallationId installationId, HackerOs.Simulation.Abstractions.Sessions.DeviceId deviceId, System.DateTimeOffset startedAtUtc) -> HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal!
 static HackerOs.Platform.Core.Sessions.ServiceAccount.GroupId.get -> HackerOs.Simulation.Abstractions.Sessions.LocalGroupId
 static HackerOs.Platform.Core.Sessions.ServiceAccount.IsReserved(string! loginName) -> bool
@@ -2304,6 +2349,7 @@ static HackerOs.Platform.Core.Shell.PlatformEnvironmentPolicy.Decide(HackerOs.Pl
 static HackerOs.Platform.Core.Shell.ShellCommandResolver.ShortName(string! appId) -> string!
 static HackerOs.Platform.Core.Shell.ShellHostService.ShellManifest.get -> HackerOs.App.Abstractions.AppManifest!
 static HackerOs.Platform.Core.Shell.ShellInterpreter.ReservedNames.get -> System.Collections.Generic.IReadOnlySet<string!>!
+static HackerOs.Platform.Core.Shell.ShellLocalizableErrorExtensions.Localize(this HackerOs.Platform.Core.Shell.IShellLocalizableError! error, Microsoft.Extensions.Localization.IStringLocalizer! texts) -> string!
 static HackerOs.Platform.Core.Shell.ShellParser.Parse(string! source) -> HackerOs.Platform.Core.Shell.ShellParseResult!
 static HackerOs.Platform.Core.Shell.ShellPattern.Escape(string! text) -> string!
 static HackerOs.Platform.Core.Shell.ShellPattern.HasWildcards(string! pattern) -> bool
@@ -2320,6 +2366,7 @@ static HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.Document.
 static HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.KeyOf(HackerOs.Platform.Core.Shell.WindowKeyboardAction action) -> string!
 static HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.Schema.get -> HackerOs.Simulation.Abstractions.Settings.SettingsSchema!
 static HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.ToBindings(HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot! snapshot, out System.Collections.Generic.IReadOnlyList<string!>! problems) -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Shell.WindowKeyBinding!>!
+static HackerOs.Platform.Core.Strings.For(System.Globalization.CultureInfo! culture) -> Microsoft.Extensions.Localization.IStringLocalizer!
 static HackerOs.Platform.Core.WebData.WebSiteDatabaseNames.Require(string! databaseName) -> void
 static readonly HackerOs.Platform.Core.Diagnostics.LogFileTarget.AppLogDirectory -> HackerOs.App.Abstractions.VirtualPath
 static readonly HackerOs.Platform.Core.Diagnostics.LogFileTarget.AuditLog -> HackerOs.Platform.Core.Diagnostics.LogFileTarget!
@@ -2334,6 +2381,7 @@ static readonly HackerOs.Platform.Core.Network.Local.HackDnsResolver.HostsFilePa
 static readonly HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingSettings.DefaultUnresponsiveThreshold -> System.TimeSpan
 static readonly HackerOs.Platform.Core.Processes.LoginEnvironment.EnvironmentFilePath -> HackerOs.App.Abstractions.VirtualPath
 static readonly HackerOs.Platform.Core.Processes.LoginEnvironment.HostNameFilePath -> HackerOs.App.Abstractions.VirtualPath
+static readonly HackerOs.Platform.Core.Processes.LoginEnvironment.SystemLocaleFilePath -> HackerOs.App.Abstractions.VirtualPath
 static readonly HackerOs.Platform.Core.Processes.ResourceSamplingService.DefaultInterval -> System.TimeSpan
 static readonly HackerOs.Platform.Core.ServerConnection.FileSystemSyncService.TombstoneRetention -> System.TimeSpan
 static readonly HackerOs.Platform.Core.ServerConnection.SyncScheduler.ChangeDebounce -> System.TimeSpan

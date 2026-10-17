@@ -5,37 +5,37 @@
     <div class="proc-toolbar">
         <input class="proc-filter"
                type="search"
-               placeholder="Filter by name, app id or PID"
-               aria-label="Filter processes"
+               placeholder="@L["Processes.Filter.Placeholder"]"
+               aria-label="@L["Processes.Filter.AriaLabel"]"
                value="@Table.Filter"
                @oninput="OnFilterInput" />
         <span class="proc-count">
-            @Table.Visible.Count / @Table.Rows.Count processes
+            @L["Processes.Count", Table.Visible.Count, Table.Rows.Count]
             @if (Table.Selected.Count > 0)
             {
-                <span class="proc-count-selected"> · @Table.Selected.Count selected</span>
+                <span class="proc-count-selected"> · @L["Processes.Selected", Table.Selected.Count]</span>
             }
         </span>
-        <button class="sysmon-btn" disabled="@(Table.Selected.Count != 1)" @onclick="ShowSelectedDetails" title="Details (Enter)">Details</button>
-        <button class="sysmon-btn btn-danger" disabled="@(Table.Selected.Count == 0)" @onclick="EndSelectedAsync" title="Ask the selected processes to stop: SIGTERM, forced after 5 s (Delete)">End task</button>
+        <button class="sysmon-btn" disabled="@(Table.Selected.Count != 1)" @onclick="ShowSelectedDetails" title="@L["Processes.Details.Title"]">@L["Processes.Details"]</button>
+        <button class="sysmon-btn btn-danger" disabled="@(Table.Selected.Count == 0)" @onclick="EndSelectedAsync" title="@L["Processes.EndTask.Title"]">@L["EndTask.Title"]</button>
     </div>
 
     @* ADR 0069: the row menu adds "Force kill" (SIGKILL) next to the polite "End task" (SIGTERM).
        The activator is only a positioning anchor; the menu opens at the cursor from a row's right click. *@
     <MudMenu @ref="_rowMenu" PositionAtCursor="true">
         <ActivatorContent>
-            <span class="visually-hidden">Process menu</span>
+            <span class="visually-hidden">@L["Processes.Menu"]</span>
         </ActivatorContent>
         <ChildContent>
             <MudMenuItem OnClick="ShowSelectedDetails" Disabled="@(Table.Selected.Count != 1)">
-                <span class="proc-menu-item">Details<span class="proc-menu-key">Enter</span></span>
+                <span class="proc-menu-item">@L["Processes.Details"]<span class="proc-menu-key">@L["Processes.Menu.DetailsKey"]</span></span>
             </MudMenuItem>
             <MudDivider />
             <MudMenuItem OnClick="EndSelectedAsync">
-                <span class="proc-menu-item">End task<span class="proc-menu-key">SIGTERM · Del</span></span>
+                <span class="proc-menu-item">@L["EndTask.Title"]<span class="proc-menu-key">@L["Processes.Menu.EndKey"]</span></span>
             </MudMenuItem>
             <MudMenuItem OnClick="ForceKillSelectedAsync">
-                <span class="proc-menu-item proc-menu-danger">Force kill<span class="proc-menu-key">SIGKILL · Shift+Del</span></span>
+                <span class="proc-menu-item proc-menu-danger">@L["ForceKill.Title"]<span class="proc-menu-key">@L["Processes.Menu.KillKey"]</span></span>
             </MudMenuItem>
         </ChildContent>
     </MudMenu>
@@ -55,7 +55,7 @@
                     </ul>
                 }
             </div>
-            <button class="sysmon-btn sysmon-btn-ghost" @onclick="OnDismissReport" aria-label="Dismiss">&#x2715;</button>
+            <button class="sysmon-btn sysmon-btn-ghost" @onclick="OnDismissReport" aria-label="@L["Common.Dismiss"]">&#x2715;</button>
         </div>
     }
 
@@ -64,14 +64,14 @@
             <table class="sysmon-table proc-table" aria-multiselectable="true">
                 <thead>
                     <tr>
-                        @foreach ((ProcessColumn column, string label, bool numeric) in Columns)
+                        @foreach ((ProcessColumn column, string labelKey, bool numeric) in Columns)
                         {
                             <th class="sortable @(numeric ? "num" : null) @(Table.SortColumn == column ? "sorted" : null)"
                                 aria-sort="@AriaSort(column)"
                                 @onclick="() => Table.ToggleSort(column)">
-                                @label@if (Table.IsEstimated(column))
+                                @L[labelKey]@if (Table.IsEstimated(column))
                                 {
-                                    <span class="est-tag" title="Simulated from the app's resource profile, not measured (CpuSource/MemSource in /proc/&lt;pid&gt;/status)">estimated</span>
+                                    <span class="est-tag" title="@L["Processes.Estimated.Title"]">@L["Processes.Estimated"]</span>
                                 }<span class="sort-indicator" aria-hidden="true">@SortGlyph(column)</span>
                             </th>
                         }
@@ -96,22 +96,22 @@
                             <td>
                                 @if (row.Responding)
                                 {
-                                    <span class="state state-@row.StateCode">@row.State</span>
+                                    <span class="state state-@row.StateCode">@StateLabel(row.State)</span>
                                 }
                                 else
                                 {
-                                    <span class="state state-not-responding" title="One slice of this process held the thread longer than the OS threshold (Responding: 0 in /proc/&lt;pid&gt;/status). Nothing was stopped.">@ProcessRow.NotRespondingText</span>
+                                    <span class="state state-not-responding" title="@L["Processes.NotResponding.Title"]">@L["Processes.NotResponding"]</span>
                                 }
                             </td>
-                            <td class="num">@Units.Percent(row.CpuPercent)</td>
-                            <td class="num">@Units.Bytes(row.MemoryBytes)</td>
-                            <td class="num">@Units.Rate(row.ReadPerSecond)</td>
-                            <td class="num">@Units.Rate(row.WritePerSecond)</td>
+                            <td class="num">@Units.Percent(row.CpuPercent, Formats)</td>
+                            <td class="num">@Units.Bytes(row.MemoryBytes, Formats)</td>
+                            <td class="num">@Units.Rate(row.ReadPerSecond, Formats)</td>
+                            <td class="num">@Units.Rate(row.WritePerSecond, Formats)</td>
                         </tr>
                     }
                     @if (Table.Visible.Count == 0)
                     {
-                        <tr class="proc-empty"><td colspan="8">@(Table.Rows.Count == 0 ? "No process visible (process.list grants the others)." : "No process matches the filter.")</td></tr>
+                        <tr class="proc-empty"><td colspan="8">@(Table.Rows.Count == 0 ? L["Processes.Empty.None"] : L["Processes.Empty.Filter"])</td></tr>
                     }
                 </tbody>
             </table>

@@ -1,12 +1,14 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Settings;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Theming.Abstractions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.ThemeEditor;
 
@@ -18,7 +20,9 @@ namespace HackerOs.Apps.ThemeEditor;
 /// </summary>
 public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
 {
-    private readonly ThemeEditorDocument _document = new();
+    // Replaced at initialization by a document reading the window's texts (ADR 0104).
+    private ThemeEditorDocument _document = new();
+    private IStringLocalizer<Strings>? _localizer;
     private UserThemeLibraryResult _library = UserThemeLibraryResult.Empty;
     private string _newBaseThemeId = WellKnownThemeIds.HackerOs;
     private ThemePlatform _previewPlatform = ThemePlatform.Desktop;
@@ -26,19 +30,26 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
     private bool _messageIsError;
     private bool _busy;
 
+    /// <summary>The Theme Editor's texts in its own process's language (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
     /// <summary>Gets the window title: <c>name — Theme Editor</c>, prefixed with <c>*</c> while unsaved.</summary>
     internal string WindowTitle =>
-        $"{(_document.IsDirty ? "*" : string.Empty)}{(string.IsNullOrWhiteSpace(_document.Name) ? "Untitled" : _document.Name)} — Theme Editor";
+        $"{(_document.IsDirty ? "*" : string.Empty)}{L["Title.Format", DisplayName]}";
+
+    /// <summary>The theme's name, or "Untitled" in the app's language while it has none.</summary>
+    private string DisplayName => string.IsNullOrWhiteSpace(_document.Name) ? L["Title.Untitled"] : _document.Name;
 
     private string HomeDirectory => HackUser.Describe(AppContext).HomeDirectory;
 
     private string SavePathHint => ThemeFile.IsValidId(_document.Id)
-        ? $"Saves to {UserThemeLibrary.GetUserThemePath(HomeDirectory, _document.Id)}"
-        : "Not saved";
+        ? L["Sidebar.SavesTo", UserThemeLibrary.GetUserThemePath(HomeDirectory, _document.Id)]
+        : L["Sidebar.NotSaved"];
 
     /// <inheritdoc />
     protected override async Task OnAppInitializedAsync()
     {
+        _document = new ThemeEditorDocument(L);
         await RefreshLibraryAsync();
 
         // A .theme file opened from the File Explorer, "Open with" or `theme-editor <file>`.
@@ -61,7 +72,7 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
         }
 
         MessageBoxDialogResult answer = await MessageBox(
-            "Unsaved theme", $"Close and discard the changes to {_document.Name}?", MessageBoxType.YesNo, cancellationToken);
+            L["Dialog.Unsaved.Title"], L["Dialog.Unsaved.Close", _document.Name], MessageBoxType.YesNo, cancellationToken);
         return answer.Result == MessageBoxResult.Yes;
     }
 
@@ -109,7 +120,7 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
 
         OpenFileDialogResult result = await OpenFileAsync(new OpenFileDialogRequest
         {
-            Title = "Open Theme",
+            Title = L["Dialog.Open.Title"],
             InitialDirectory = VirtualPath.Parse(HomeDirectory),
             Filters = [new FileDialogFilter("HackerOS themes", [ThemeFile.Extension], [ThemeFile.MediaType])],
             RequestedAccess = SelectedFileAccess.Read
@@ -143,7 +154,7 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
         if (_library.Themes.FirstOrDefault(other => other.Id == theme.Id) is { } existing
             && existing.SourcePath != UserThemeLibrary.GetUserThemePath(HomeDirectory, theme.Id))
         {
-            Show($"The id '{theme.Id}' is already used by {existing.SourcePath}. Choose another id.", isError: true);
+            Show(L["Message.IdInUse", theme.Id, existing.SourcePath ?? string.Empty], isError: true);
             return;
         }
 
@@ -155,12 +166,12 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
             string? error = await ThemeFileIo.WriteAsync(AppContext.FileSystem, VirtualPath.Parse(path), ThemeFile.Serialize(theme), AppContext.CancellationToken);
             if (error is not null)
             {
-                Show($"Cannot save {path}: {error}", isError: true);
+                Show(L["Message.SaveFailed", path, error], isError: true);
                 return;
             }
 
             _document.MarkSaved(path);
-            Show($"Saved to {path}.", isError: false);
+            Show(L["Message.Saved", path], isError: false);
             await RefreshLibraryAsync();
         });
     }
@@ -175,7 +186,7 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
 
         SaveFileDialogResult result = await SaveFileAsync(new SaveFileDialogRequest
         {
-            Title = "Export Theme",
+            Title = L["Dialog.Export.Title"],
             InitialDirectory = VirtualPath.Parse(HomeDirectory),
             SuggestedFileName = $"{_document.Id}{ThemeFile.Extension}",
             DefaultExtension = ThemeFile.Extension,
@@ -192,7 +203,7 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
         await RunAsync(async () =>
         {
             string? error = await ThemeFileIo.WriteAsync(fileSystem, target, ThemeFile.Serialize(_document.ToUserTheme()), AppContext.CancellationToken);
-            Show(error is null ? $"Exported to {target.Value}." : $"Cannot export to {target.Value}: {error}", error is not null);
+            Show(error is null ? L["Message.Exported", target.Value] : L["Message.ExportFailed", target.Value, error], error is not null);
         });
     }
 
@@ -213,7 +224,7 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
             await using HackSettingsDocument appearance = await HackSettings.OpenSystemAsync(AppContext, "appearance", AppContext.CancellationToken);
             string key = platform == ThemePlatform.Mobile ? "mobileThemeId" : "desktopThemeId";
             await appearance.SetAsync(key, _document.Id, SettingLayer.User, AppContext.CancellationToken);
-            Show($"{_document.Name} is now your {ThemeFile.FormatPlatform(platform)} theme.", isError: false);
+            Show(L[platform == ThemePlatform.Mobile ? "Message.NowMobile" : "Message.NowDesktop", _document.Name], isError: false);
         });
     }
 
@@ -224,14 +235,14 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
         (string? content, string? error) = await ThemeFileIo.ReadAsync(fileSystem, path, AppContext.CancellationToken);
         if (content is null)
         {
-            Show($"Cannot open {path.Value}: {error}", isError: true);
+            Show(L["Message.OpenFailed", path.Value, error ?? L["Error.Unknown"]], isError: true);
             return;
         }
 
         ThemeFileParseResult parsed = ThemeFile.Parse(content, ThemeOrigin.User, path.Value);
         if (parsed.Theme is null)
         {
-            Show($"Cannot open {path.Value}: {string.Join(" ", parsed.Diagnostics.Where(static d => d.IsError).Select(static d => d.Message))}", isError: true);
+            Show(L["Message.OpenFailed", path.Value, string.Join(" ", parsed.Diagnostics.Where(static d => d.IsError).Select(d => d.GetMessage(Strings.CultureOf(L))))], isError: true);
             return;
         }
 
@@ -242,8 +253,8 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
         _previewPlatform = parsed.Theme.Platforms[0];
         int warnings = parsed.Diagnostics.Count(static d => !d.IsError);
         Show(warnings == 0
-                ? $"Opened {path.Value}."
-                : $"Opened {path.Value}; {warnings} line(s) were ignored: {string.Join(" ", parsed.Diagnostics.Select(static d => d.ToString()))}",
+                ? L["Message.Opened", path.Value]
+                : L["Message.OpenedWithWarnings", path.Value, warnings, string.Join(" ", parsed.Diagnostics.Select(d => d.ToString(Strings.CultureOf(L))))],
             isError: warnings > 0);
     }
 
@@ -283,7 +294,7 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
         }
 
         MessageBoxDialogResult answer = await MessageBox(
-            "Unsaved theme", $"Discard the changes to {_document.Name}?", MessageBoxType.YesNo);
+            L["Dialog.Unsaved.Title"], L["Dialog.Unsaved.Discard", _document.Name], MessageBoxType.YesNo);
         return answer.Result == MessageBoxResult.Yes;
     }
 
@@ -310,25 +321,14 @@ public partial class ThemeEditorWindow : WindowAppBase, IWindowCloseGuard
         _messageIsError = isError;
     }
 
-    private static string GroupLabel(ThemeTokenGroup group) => group switch
-    {
-        ThemeTokenGroup.Colors => "Colors",
-        ThemeTokenGroup.Typography => "Typography",
-        ThemeTokenGroup.Spacing => "Spacing",
-        ThemeTokenGroup.Windows => "Windows",
-        ThemeTokenGroup.Taskbar => "Taskbar",
-        ThemeTokenGroup.Animations => "Animations",
-        _ => group.ToString()
-    };
+    private string GroupLabel(ThemeTokenGroup group) => Strings.GroupLabel(L, group);
 
-    private static string GroupIntro(ThemeTokenGroup group) => group switch
+    private string GroupIntro(ThemeTokenGroup group)
     {
-        ThemeTokenGroup.Colors => "Surfaces, text, borders, accent and status colors. Buttons, inputs and tables derive from them.",
-        ThemeTokenGroup.Typography => "Fonts of the interface and of fixed-width text, title and taskbar sizes.",
-        ThemeTokenGroup.Spacing => "Corner radii and the height of controls.",
-        ThemeTokenGroup.Windows => "Window frame, title bar and the minimize, maximize and close buttons.",
-        ThemeTokenGroup.Taskbar => "Taskbar, task buttons and the app launcher.",
-        ThemeTokenGroup.Animations => "Transition durations. They are ignored when animations are turned off in Settings.",
-        _ => string.Empty
-    };
+        LocalizedString intro = L[$"Group.{group}.Intro"];
+        return intro.ResourceNotFound ? string.Empty : intro.Value;
+    }
+
+    /// <summary>"desktop" or "mobile" in the app's language, after a base theme's name.</summary>
+    private string PlatformText(ThemePlatform platform) => L[platform == ThemePlatform.Mobile ? "Platform.Mobile" : "Platform.Desktop"];
 }

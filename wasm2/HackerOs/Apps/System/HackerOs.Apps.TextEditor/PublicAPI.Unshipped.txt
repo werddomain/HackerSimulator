@@ -17,7 +17,7 @@ HackerOs.Apps.TextEditor.TextEditorDocument.MediaType.get -> string!
 HackerOs.Apps.TextEditor.TextEditorDocument.Path.get -> HackerOs.App.Abstractions.VirtualPath?
 HackerOs.Apps.TextEditor.TextEditorDocument.ResetToNew() -> void
 HackerOs.Apps.TextEditor.TextEditorDocument.RestoreDraft(string! content, string? originalPath) -> void
-HackerOs.Apps.TextEditor.TextEditorDocument.TextEditorDocument() -> void
+HackerOs.Apps.TextEditor.TextEditorDocument.TextEditorDocument(Microsoft.Extensions.Localization.IStringLocalizer? text = null) -> void
 HackerOs.Apps.TextEditor.TextEditorDocument.Title.get -> string!
 HackerOs.Apps.TextEditor.TextEditorFindEngine
 HackerOs.Apps.TextEditor.TextEditorFindOptions
@@ -69,7 +69,7 @@ override HackerOs.Apps.TextEditor.TextEditorWindow.OnAppAfterRenderAsync(bool fi
 override HackerOs.Apps.TextEditor.TextEditorWindow.OnAppInitializedAsync() -> System.Threading.Tasks.Task!
 override HackerOs.Apps.TextEditor.TextEditorWindow.OnAppStopRequestedAsync(HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs! e) -> System.Threading.Tasks.Task!
 override HackerOs.Apps.TextEditor.TextEditorWindow.OnPermissionErrorRaised(HackerOs.Simulation.Abstractions.Gateways.AppPermissionErrorEventArgs! e) -> void
-static HackerOs.Apps.TextEditor.TextEditorFindEngine.DescribeReplacementCount(int count) -> string!
+static HackerOs.Apps.TextEditor.TextEditorFindEngine.DescribeReplacementCount(int count, Microsoft.Extensions.Localization.IStringLocalizer? text = null) -> string!
 static HackerOs.Apps.TextEditor.TextEditorFindEngine.FindMatches(string! content, string! query) -> System.Collections.Generic.List<int>!
 static HackerOs.Apps.TextEditor.TextEditorFindEngine.FindMatches(string! content, string! query, HackerOs.Apps.TextEditor.TextEditorFindOptions options) -> System.Collections.Generic.List<int>!
 static HackerOs.Apps.TextEditor.TextEditorFindEngine.FindNextFrom(string! content, string! query, int fromOffset, HackerOs.Apps.TextEditor.TextEditorFindOptions options = default(HackerOs.Apps.TextEditor.TextEditorFindOptions)) -> int

@@ -1,12 +1,14 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Which;
 
 /// <summary>
 /// <c>which [-a] NAME...</c> (ADR 0064): prints where each installed command lives, as
 /// <c>/usr/bin/NAME</c> (the shell's <c>sh</c> as <c>/bin/sh</c>); exit 1 when one is missing.
-/// The list comes from the calling shell (<see cref="IShellSession.GetCommands"/>), like <c>PATH</c>.
+/// The list comes from the calling shell (<see cref="IShellSession.GetCommands()"/>), like <c>PATH</c>.
 /// </summary>
 public sealed class WhichCommand(AppManifest manifest) : TerminalAppBase(manifest)
 {
@@ -16,7 +18,7 @@ public sealed class WhichCommand(AppManifest manifest) : TerminalAppBase(manifes
         ArgumentNullException.ThrowIfNull(context);
         if (context.Shell is not { } shell)
         {
-            await context.StandardError.WriteLineAsync("which: no shell session");
+            await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["NoShell"]);
             return 1;
         }
 

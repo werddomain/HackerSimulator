@@ -32,6 +32,20 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 - `Common/` : `CommandIO` (fichiers ou entrée standard, tailles `-h`),
   `Wildcard`, `SystemSnapshot` (`top`, `htop`), `NetworkInfo` (`ip`,
   `netstat`).
+- **Langue** ([`localization.md`](localization.md), ADR 0104) : chaque
+  commande écrit ses messages (erreurs, usage, invites, résumés) dans la langue
+  de **son** processus (`LANG=fr_FR.UTF-8 mkdir` → `mkdir : opérande
+  manquant`), avec un dossier `Resources/<Commande>/Strings*.resx` par
+  commande et les textes `errno` partagés de `Common/CommandText`. Restent en
+  anglais, comme sous Linux, les sorties lues par des scripts : colonnes et
+  états de `ps`, `top`, `netstat`, `systemctl list-units` et du bloc
+  `systemctl status`, lignes d'enregistrement de `nslookup`, lignes de
+  progression de `zip`/`unzip` (`adding:`, `inflating:`), ligne `rtt` de
+  `ping`. Les invites de `nano` acceptent `o`/`n` en français en plus de
+  `y`/`n`. Description et usage de chaque commande sont traduits dans
+  `Resources/AppManifest.fr.resx` (clés `<appId>.Description` et
+  `<appId>.Terminal.Usage`, sans `Name` : les noms de commandes ne changent
+  pas).
 
 ## Texte
 
@@ -87,6 +101,7 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 
 | Commande | Options | Notes |
 |---|---|---|
+| `localectl` | `status` (défaut), `list-locales`, `set-locale [VARIABLE=]LOCALE…` | Locale du système dans `/etc/locale.conf` (ADR 0104) : `status` affiche `System Locale: LANG=…` ; `list-locales` liste les 8 locales connues (`C.UTF-8`, `en_CA/GB/US`, `fr_BE/CA/CH/FR`, toutes `.UTF-8`) ; `set-locale` remplace le fichier, seulement en root (`sudo localectl set-locale LANG=fr_CA.UTF-8`), sinon `Access denied (try sudo)` et code 1. Prend effet à l'écran de connexion au prochain démarrage et, pour les utilisateurs sans `~/.config/locale.conf`, à leur prochaine connexion ([`localization.md`](localization.md)). |
 | `hackbackup` | `create`, `restore [--merge\|--replace]`, `-h` | Sauvegarde de toute la machine (ADR 0099 §1) : doit tourner en root (`sudo hackbackup create`), sinon `must be run as root` et code 1. `create` télécharge `hackeros-AAAAMMJJ-HHMMSSZ.hosbak` sur l'ordinateur hôte ; `restore` ouvre le sélecteur de fichiers du navigateur (Entrée compte comme geste), fusion par défaut, puis la machine redémarre ; sélecteur fermé ou archive refusée : code 1 ; usage invalide : code 2 ([`system-backup.md`](system-backup.md)). |
 
 Plus de place : une écriture refusée affiche `No space left on device`
@@ -122,8 +137,8 @@ Plus de place : une écriture refusée affiche `No space left on device`
 - `Tests/HackerOs.Commands.Wave5.Tests` : `chmod`, `kill`, `sort`, `head`,
   `tail`, `mkdir` (`-p`, `-v`, dossier existant, fichier sur le chemin, `..`), `hackbackup` avec les passerelles factices.
 - `Tests/HackerOs.Commands.Tests/XdgOpenCommandTests.cs` : chemin relatif, dossier, fichier absent, aucune app, plusieurs apps, URI, schéma inconnu, ligne de commande, refus (`v3/4`). Le scénario de parité (`CommandParityTests`) compare la commande dans un Web Worker et sur le fil principal.
-- `Tests/HackerOs.Ecosystem.Tests` : 84 apps intégrées dont 67 commandes (`stress` ajoutée par `rebuild/5-worker-processes`, `nslookup` par `web/3`, `ausearch` par `v3/8-settings-security`, `xdg-open` par `v3/4`, `hackbackup` par `v3/7`).
-- `Tests/HackerOs.Commands.Tests` : filtres d'`ausearch`.
+- `Tests/HackerOs.Ecosystem.Tests` : 85 apps intégrées dont 68 commandes (`stress` ajoutée par `rebuild/5-worker-processes`, `nslookup` par `web/3`, `ausearch` par `v3/8-settings-security`, `xdg-open` par `v3/4`, `hackbackup` par `v3/7`, `localectl` par `v3/12`).
+- `Tests/HackerOs.Commands.Tests` : filtres d'`ausearch` ; `LocalizedCommandsTests` et `LocalizedCommandsMzTests` exécutent des commandes avec `LANG=fr_FR.UTF-8` (`mkdir`, `rm`, `seq`, `sleep`, `printf`, `test`, `sudo`, `xdg-open`…), vérifient les mêmes clés en anglais et en français et la description et l'usage français des 68 commandes générés dans `localization/`. `NanoCommandTests` dessine les barres de `nano` en français, `LocalizationShellTests` (WorkerHost) passe par le vrai shell.
 
 ## Liste des tâches
 
@@ -137,6 +152,7 @@ Plus de place : une écriture refusée affiche `No space left on device`
 - [x] `systemctl`/`service`.
 - [x] `wget`, `ip`/`ifconfig`, `netstat`/`ss`.
 - [x] `test`/`[`, `true`, `false`, `read`.
+- [x] Messages des commandes en anglais et en français, description et usage traduits (`v3/12`).
 - [x] `ausearch` (`v3/8-settings-security`, ADR 0100).
 - [x] `xdg-open` (`v3/4-intents`, ADR 0096).
 - [x] Tests et documentation.

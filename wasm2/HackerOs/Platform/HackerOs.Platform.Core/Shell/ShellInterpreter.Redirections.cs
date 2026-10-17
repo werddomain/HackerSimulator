@@ -31,7 +31,7 @@ public sealed partial class ShellInterpreter
             int descriptor = redirection.EffectiveDescriptor;
             if (descriptor > 2)
             {
-                await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{descriptor}: Bad file descriptor").ConfigureAwait(false);
+                await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.BadFileDescriptor", descriptor]).ConfigureAwait(false);
                 await scope.CloseAsync().ConfigureAwait(false);
                 return null;
             }
@@ -54,7 +54,7 @@ public sealed partial class ShellInterpreter
                         };
                         if (input is null)
                         {
-                            await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{source}: Bad file descriptor").ConfigureAwait(false);
+                            await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.BadFileDescriptor", source]).ConfigureAwait(false);
                             await scope.CloseAsync().ConfigureAwait(false);
                             return null;
                         }
@@ -71,7 +71,7 @@ public sealed partial class ShellInterpreter
                     };
                     if (copy is null)
                     {
-                        await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{source}: Bad file descriptor").ConfigureAwait(false);
+                        await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.BadFileDescriptor", source]).ConfigureAwait(false);
                         await scope.CloseAsync().ConfigureAwait(false);
                         return null;
                     }
@@ -91,7 +91,7 @@ public sealed partial class ShellInterpreter
             List<string> targets = await expander.ExpandFieldsAsync([redirection.Target]).ConfigureAwait(false);
             if (targets.Count != 1)
             {
-                await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{RawText(redirection.Target)}: ambiguous redirect").ConfigureAwait(false);
+                await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.AmbiguousRedirect", RawText(redirection.Target)]).ConfigureAwait(false);
                 await scope.CloseAsync().ConfigureAwait(false);
                 return null;
             }
@@ -154,7 +154,7 @@ public sealed partial class ShellInterpreter
         ShellSession session = exec.Session;
         if (session.Host is null)
         {
-            await exec.Err.WriteLineAsync($"hsh: {target}: cannot open files without a calling app").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync("hsh: " + exec.Text["Shell.NoCallingAppFiles", target]).ConfigureAwait(false);
             return null;
         }
 
@@ -168,7 +168,7 @@ public sealed partial class ShellInterpreter
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{target}: {ShellErrorText.Describe(exception)}").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.Error", target, ShellText.DescribeError(exception, exec.Text)]).ConfigureAwait(false);
             return null;
         }
     }
@@ -183,7 +183,7 @@ public sealed partial class ShellInterpreter
         ShellSession session = exec.Session;
         if (session.Host is null)
         {
-            await exec.Err.WriteLineAsync($"hsh: {target}: cannot open files without a calling app").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync("hsh: " + exec.Text["Shell.NoCallingAppFiles", target]).ConfigureAwait(false);
             return null;
         }
 
@@ -215,7 +215,7 @@ public sealed partial class ShellInterpreter
                 await DisposeQuietlyAsync(stream).ConfigureAwait(false);
             }
 
-            await exec.Err.WriteLineAsync($"{ErrorPrefix(exec)}{target}: {ShellErrorText.Describe(exception)}").ConfigureAwait(false);
+            await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.Error", target, ShellText.DescribeError(exception, exec.Text)]).ConfigureAwait(false);
             return null;
         }
 
@@ -269,7 +269,8 @@ public sealed partial class ShellInterpreter
                 }
                 catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
                 {
-                    await error.WriteLineAsync($"hsh: {target}: {ShellErrorText.Describe(exception)}").ConfigureAwait(false);
+                    Microsoft.Extensions.Localization.IStringLocalizer texts = Exec is null ? ShellText.English : Exec.Text;
+                    await error.WriteLineAsync("hsh: " + texts["Shell.Error", target, ShellText.DescribeError(exception, texts)]).ConfigureAwait(false);
                     success = false;
                 }
             }

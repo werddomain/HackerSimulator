@@ -121,6 +121,10 @@ HackerOs.Commands.Ln.LnApp
 HackerOs.Commands.Ln.LnApp.LnApp() -> void
 HackerOs.Commands.Ln.LnCommand
 HackerOs.Commands.Ln.LnCommand.LnCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
+HackerOs.Commands.Localectl.LocalectlApp
+HackerOs.Commands.Localectl.LocalectlApp.LocalectlApp() -> void
+HackerOs.Commands.Localectl.LocalectlCommand
+HackerOs.Commands.Localectl.LocalectlCommand.LocalectlCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
 HackerOs.Commands.Locate.LocateApp
 HackerOs.Commands.Locate.LocateApp.LocateApp() -> void
 HackerOs.Commands.Locate.LocateCommand
@@ -597,6 +601,17 @@ override HackerOs.Commands.Ln.LnApp.PublisherId.get -> string!
 override HackerOs.Commands.Ln.LnApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 override HackerOs.Commands.Ln.LnApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
 override HackerOs.Commands.Ln.LnCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
+override HackerOs.Commands.Localectl.LocalectlApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Commands.Localectl.LocalectlApp.Description.get -> string!
+override HackerOs.Commands.Localectl.LocalectlApp.EntryPoint.get -> System.Type!
+override HackerOs.Commands.Localectl.LocalectlApp.Id.get -> string!
+override HackerOs.Commands.Localectl.LocalectlApp.Kind.get -> HackerOs.App.Abstractions.AppKind
+override HackerOs.Commands.Localectl.LocalectlApp.LaunchVisibility.get -> HackerOs.App.Abstractions.AppLaunchVisibility
+override HackerOs.Commands.Localectl.LocalectlApp.Name.get -> string!
+override HackerOs.Commands.Localectl.LocalectlApp.PublisherId.get -> string!
+override HackerOs.Commands.Localectl.LocalectlApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
+override HackerOs.Commands.Localectl.LocalectlApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
+override HackerOs.Commands.Localectl.LocalectlCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
 override HackerOs.Commands.Locate.LocateApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
 override HackerOs.Commands.Locate.LocateApp.Description.get -> string!
 override HackerOs.Commands.Locate.LocateApp.EntryPoint.get -> System.Type!

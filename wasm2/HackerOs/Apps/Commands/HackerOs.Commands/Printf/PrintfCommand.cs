@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Printf;
 
@@ -17,6 +19,7 @@ public sealed class PrintfCommand(AppManifest manifest) : TerminalAppBase(manife
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         IReadOnlyList<string> args = context.Arguments;
         if (args.Count > 0 && args[0] == "--")
         {
@@ -25,23 +28,23 @@ public sealed class PrintfCommand(AppManifest manifest) : TerminalAppBase(manife
 
         if (args.Count == 0)
         {
-            await context.StandardError.WriteLineAsync("printf: usage: printf format [arguments]");
+            await context.StandardError.WriteLineAsync(text["Usage"]);
             return 2;
         }
 
-        Formatter formatter = new(args[0], [.. args.Skip(1)]);
+        Formatter formatter = new(args[0], [.. args.Skip(1)], text);
         string output = formatter.Run();
         await context.StandardOutput.WriteAsync(output);
         foreach (string error in formatter.Errors)
         {
-            await context.StandardError.WriteLineAsync($"printf: {error}");
+            await context.StandardError.WriteLineAsync(text["Error", error]);
         }
 
         return formatter.Errors.Count > 0 ? 1 : 0;
     }
 
-    /// <summary>Formats like printf(1).</summary>
-    internal sealed class Formatter(string format, IReadOnlyList<string> arguments)
+    /// <summary>Formats like printf(1); <paramref name="messages"/> words the errors in the process language.</summary>
+    internal sealed class Formatter(string format, IReadOnlyList<string> arguments, IStringLocalizer<Strings> messages)
     {
         private int _next;
 
@@ -120,7 +123,7 @@ public sealed class PrintfCommand(AppManifest manifest) : TerminalAppBase(manife
 
                 if (i >= format.Length)
                 {
-                    Errors.Add($"%{format[(start + 1)..]}: invalid conversion specification");
+                    Errors.Add(messages["InvalidConversion", format[(start + 1)..]]);
                     output.Append(format[start..]);
                     break;
                 }
@@ -229,7 +232,7 @@ public sealed class PrintfCommand(AppManifest manifest) : TerminalAppBase(manife
 
                     break;
                 default:
-                    Errors.Add($"%{conversion}: invalid conversion specification");
+                    Errors.Add(messages["InvalidConversion", conversion]);
                     text = "%" + conversion;
                     break;
             }
@@ -306,7 +309,7 @@ public sealed class PrintfCommand(AppManifest manifest) : TerminalAppBase(manife
 
             if (trimmed.Length > 0)
             {
-                Errors.Add($"{text}: invalid number");
+                Errors.Add(messages["InvalidNumber", text]);
             }
 
             return 0;
@@ -319,7 +322,7 @@ public sealed class PrintfCommand(AppManifest manifest) : TerminalAppBase(manife
                 return value;
             }
 
-            Errors.Add($"{text}: invalid number");
+            Errors.Add(messages["InvalidNumber", text]);
             return 0;
         }
 

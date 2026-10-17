@@ -52,8 +52,25 @@ internal sealed partial class BrowserWorkerAssemblyLoader : ResolvedAssemblyLoad
         return ResolveType(assemblyFile, typeName);
     }
 
+    private bool _satellitesLoaded;
+
     private async Task LoadLazyAsync(string assemblyFile)
     {
+        if (!_satellitesLoaded)
+        {
+            // ADR 0104: a command prints in its own process's language; the French satellites are
+            // loaded once, before the first app assembly, as the page does at start.
+            _satellitesLoaded = true;
+            try
+            {
+                await LoadSatelliteAssemblies(["fr"]).ConfigureAwait(true);
+            }
+            catch (JSException)
+            {
+                // Texts stay in English.
+            }
+        }
+
         string name = Path.GetFileNameWithoutExtension(assemblyFile);
         if (!_loaded.Add(name) || AppDomain.CurrentDomain.GetAssemblies().Any(assembly => assembly.GetName().Name == name))
         {
@@ -73,4 +90,8 @@ internal sealed partial class BrowserWorkerAssemblyLoader : ResolvedAssemblyLoad
     /// <summary>The runtime's own lazy loader (the API behind Blazor's <c>LazyAssemblyLoader</c>).</summary>
     [JSImport("INTERNAL.loadLazyAssembly")]
     private static partial Task<bool> LoadLazyAssembly(string assemblyNameToLoad);
+
+    /// <summary>The runtime's satellite loader (the API behind Blazor's culture loader).</summary>
+    [JSImport("INTERNAL.loadSatelliteAssemblies")]
+    private static partial Task LoadSatelliteAssemblies(string[] culturesToLoad);
 }

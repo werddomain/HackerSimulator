@@ -1,0 +1,4 @@
+{
+  "name": "Moniteur système",
+  "description": "Gestionnaire des tâches : processus, activité du processeur, de la mémoire, du disque et du réseau, et services d'arrière-plan, lus dans /proc"
+}

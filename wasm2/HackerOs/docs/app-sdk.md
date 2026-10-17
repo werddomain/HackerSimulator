@@ -192,6 +192,11 @@ Passerelles de `IAppExecutionContext` : `FileSystem`, `Events`,
 
 `ShellErrorText` (texte court d'une erreur de fichier, pour les commandes comme
 `cd`) est aussi dans le SDK, à côté de `IShellSession` (`4-sdk-network`).
+`ShellErrorText.Describe(exception)` reste en anglais (texte identique à
+`strerror` en locale C) ; `Describe(exception, context)` le donne dans la
+langue du processus de l'app (ADR 0104). De même,
+`HackWebSiteFile.Validate(site, scope, context)` traduit les messages de
+validation d'un `.site` affichés par une app.
 
 ### Utilisateur courant (ADR 0056 §1)
 

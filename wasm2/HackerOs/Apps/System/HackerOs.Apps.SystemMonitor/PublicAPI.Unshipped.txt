@@ -378,10 +378,15 @@ static HackerOs.Apps.SystemMonitor.Metrics.ProcReader.ReadAsync(System.Threading
 static HackerOs.Apps.SystemMonitor.Metrics.ProcReader.ReadCpuInfoAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.Apps.SystemMonitor.Metrics.ProcCpuInfoEntry!>!>!
 static HackerOs.Apps.SystemMonitor.Metrics.ProcReader.ReadDrivesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.IO.HackDriveInfo!>!>!
 static HackerOs.Apps.SystemMonitor.Metrics.Units.Bytes(double bytes) -> string!
+static HackerOs.Apps.SystemMonitor.Metrics.Units.Bytes(double bytes, System.Globalization.CultureInfo! culture) -> string!
 static HackerOs.Apps.SystemMonitor.Metrics.Units.Count(long value) -> string!
+static HackerOs.Apps.SystemMonitor.Metrics.Units.Count(long value, System.Globalization.CultureInfo! culture) -> string!
 static HackerOs.Apps.SystemMonitor.Metrics.Units.Duration(System.TimeSpan duration) -> string!
+static HackerOs.Apps.SystemMonitor.Metrics.Units.Duration(System.TimeSpan duration, System.Globalization.CultureInfo! culture) -> string!
 static HackerOs.Apps.SystemMonitor.Metrics.Units.Percent(double percent) -> string!
+static HackerOs.Apps.SystemMonitor.Metrics.Units.Percent(double percent, System.Globalization.CultureInfo! culture) -> string!
 static HackerOs.Apps.SystemMonitor.Metrics.Units.Rate(double bytesPerSecond) -> string!
+static HackerOs.Apps.SystemMonitor.Metrics.Units.Rate(double bytesPerSecond, System.Globalization.CultureInfo! culture) -> string!
 static HackerOs.Apps.SystemMonitor.Processes.EndTaskRunner.End(HackerOs.AppSdk.Diagnostics.HackProcess! process, HackerOs.Apps.SystemMonitor.Processes.EndTaskMode mode, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 static HackerOs.Apps.SystemMonitor.Processes.EndTaskRunner.EndAsync(System.Collections.Generic.IReadOnlyList<HackerOs.Apps.SystemMonitor.Processes.ProcessRow!>! rows, System.Func<HackerOs.Apps.SystemMonitor.Processes.ProcessRow!, System.Threading.Tasks.Task!>! end) -> System.Threading.Tasks.Task<HackerOs.Apps.SystemMonitor.Processes.EndTaskReport!>!
 static readonly HackerOs.Apps.SystemMonitor.SystemMonitorWindow.RefreshInterval -> System.TimeSpan

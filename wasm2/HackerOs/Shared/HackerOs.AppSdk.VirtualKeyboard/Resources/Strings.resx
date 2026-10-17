@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Key.Alt" xml:space="preserve">
+    <value>Alt</value>
+  </data>
+  <data name="Key.Control" xml:space="preserve">
+    <value>Ctrl</value>
+  </data>
+  <data name="Key.Delete" xml:space="preserve">
+    <value>Del</value>
+  </data>
+  <data name="Key.End" xml:space="preserve">
+    <value>End</value>
+  </data>
+  <data name="Key.Enter" xml:space="preserve">
+    <value>Enter</value>
+  </data>
+  <data name="Key.Escape" xml:space="preserve">
+    <value>Esc</value>
+  </data>
+  <data name="Key.Home" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Key.PageDown" xml:space="preserve">
+    <value>PgDn</value>
+  </data>
+  <data name="Key.PageUp" xml:space="preserve">
+    <value>PgUp</value>
+  </data>
+  <data name="Key.Shift" xml:space="preserve">
+    <value>Shift</value>
+  </data>
+  <data name="Key.Space" xml:space="preserve">
+    <value>Space</value>
+  </data>
+  <data name="Key.Tab" xml:space="preserve">
+    <value>Tab</value>
+  </data>
+  <data name="Keyboard.Label" xml:space="preserve">
+    <value>Virtual keyboard</value>
+  </data>
+</root>

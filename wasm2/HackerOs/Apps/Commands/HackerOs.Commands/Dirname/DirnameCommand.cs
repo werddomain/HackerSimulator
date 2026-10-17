@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Dirname;
 
@@ -12,7 +14,7 @@ public sealed class DirnameCommand(AppManifest manifest) : TerminalAppBase(manif
         ArgumentNullException.ThrowIfNull(context);
         if (context.Arguments.Count == 0)
         {
-            await context.StandardError.WriteLineAsync("dirname: missing operand");
+            await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["MissingOperand"]);
             return 1;
         }
 
