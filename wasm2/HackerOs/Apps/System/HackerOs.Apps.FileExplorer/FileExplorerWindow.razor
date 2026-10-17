@@ -353,8 +353,9 @@
                     folder ??= path;
                 }
             }
-            catch (FormatException)
+            catch (Exception exception) when (exception is FormatException or ArgumentException)
             {
+                // A malformed path is ignored, like an unknown option.
             }
         }
 

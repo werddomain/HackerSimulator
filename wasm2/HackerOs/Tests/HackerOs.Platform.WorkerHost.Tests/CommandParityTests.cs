@@ -78,6 +78,7 @@ public sealed class CommandParityTests
         new("wget", ["wget -q -O page.html http://example.hackeros/", "wget --spider http://example.hackeros/", "wget http://nowhere.invalid/"]),
         new("which", ["which ls", "which -a cd nope"]),
         new("whoami", ["whoami"]),
+        new("xdg-open", ["xdg-open missing.txt", "xdg-open", "xdg-open notes.txt", "xdg-open docs", "xdg-open nope://thing"]),
         new("zip", ["zip -q notes.zip notes.txt words.txt", "zip -r docs.zip docs", "unzip -l docs.zip"])
     ];
 
@@ -104,7 +105,7 @@ public sealed class CommandParityTests
             .Where(name => !covered.Contains(name))];
 
         Assert.Empty(missing);
-        Assert.Equal(65, OsFixture.BuiltInCommands.Count);
+        Assert.Equal(66, OsFixture.BuiltInCommands.Count);
     }
 
     [Fact]
