@@ -178,8 +178,10 @@ réussie de `syslog`, il ajoute une seule ligne
 
 ## Cache PWA abîmé (ADR 0099 §3)
 
-Voir la section du même nom dans
-[`building-and-testing.md`](building-and-testing.md#cache-pwa-abîmé-et-test-de-quota-adr-0099-3).
+Au démarrage, une erreur d'intégrité ou de chargement des ressources de
+Blazor fait vider le cache du service worker et recharger la page une seule
+fois ; hors ligne, un écran explique qu'il faut se reconnecter une fois. Voir
+[`pwa-cache-recovery.md`](pwa-cache-recovery.md).
 
 ## Montées de version IndexedDB (ADR 0099 §4)
 
