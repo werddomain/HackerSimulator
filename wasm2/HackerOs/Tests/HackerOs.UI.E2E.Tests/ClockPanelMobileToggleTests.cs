@@ -52,7 +52,7 @@ public sealed class ClockPanelMobileToggleTests(ITestOutputHelper output)
             // (no-reload) swap directly. This test's own focus is that the choice survives a reload
             // into the same Mobile shell. The swap happens once the choice is written to
             // ~/.config/hackeros (a settings file on the virtual disk, ADR 0044), which takes a
-            // couple of seconds in the browser; reloading before that would test a write that
+            // few hundred milliseconds in the browser (ADR 0090); reloading before that would test a write that
             // never finished, as pulling the plug mid-save would on a real machine. So the
             // reload waits for the Mobile shell to appear first.
             await page.GetByRole(AriaRole.Button, new() { Name = "Back" })
