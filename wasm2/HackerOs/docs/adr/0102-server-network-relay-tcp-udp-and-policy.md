@@ -80,7 +80,11 @@ Section `HackerOs:Proxy` de `appsettings.json`, lue au démarrage par des
 
 - Au démarrage, le serveur écrit un **avertissement** pour chaque réglage
   risqué (`AllowAllPorts`, `AllowPrivateNetworks`, quotas désactivés) et rappelle
-  qu'il est mono-utilisateur (ADR 0027).
+  qu'il est mono-utilisateur.
+- Le relais est une API du serveur, indépendante de la façon dont le serveur
+  sert l'interface : il marche de la même façon aujourd'hui (rendu côté serveur,
+  ADR 0027) et quand le serveur enverra l'OS en WebAssembly avec seulement son
+  API (choix de Benoit du 2026-10-17, chantier `exec/8`).
 - `GET /api/proxy/policy` renvoie la politique effective, que l'OS affiche
   dans Paramètres (connexion au serveur).
 - Le commentaire de `Program.cs` dit ce qui existe vraiment.

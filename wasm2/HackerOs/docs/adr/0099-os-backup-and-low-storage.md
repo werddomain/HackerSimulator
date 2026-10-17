@@ -106,7 +106,10 @@ Accepté le 2026-10-17 (chantier `v3/1-adr`, pour le chantier `v3/7-storage-back
 - `v3/7` enregistre `IndexedDbBackupService` dans l'hôte Ecosystem (et l'hôte de
   test), ajoute la page de Paramètres, `hackbackup`, les codes `NoSpace` et
   `FileTooLarge`, la réserve root, la récupération du cache et les tests.
-- L'hôte Server (rendu côté serveur) n'a pas IndexedDB : la page de sauvegarde
-  y est masquée.
-- `sdk-reference.md` (codes d'erreur), `linux-commands.md`, `system-administration.md`,
+- Tant que l'hôte Server rend l'interface côté serveur (ADR 0027), il n'a pas
+  IndexedDB et la page de sauvegarde y est masquée. Quand il enverra le même OS
+  en WebAssembly que l'Ecosystem (choix de Benoit du 2026-10-17, chantier
+  `exec/8`), la sauvegarde y marchera comme dans l'Ecosystem, sans rien de
+  propre au serveur.
+- `sdk-reference.md` (codes d'erreur), `linux-commands.md`, `system-administration.md`
   et `building-and-testing.md` sont mis à jour.
