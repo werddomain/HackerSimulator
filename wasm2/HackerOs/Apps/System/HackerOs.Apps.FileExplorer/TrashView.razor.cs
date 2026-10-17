@@ -1,8 +1,11 @@
 using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.AppSdk.Globalization;
+using System.Globalization;
 using HackerOs.AppSdk.IO;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.FileExplorer;
 
@@ -17,6 +20,12 @@ public partial class TrashView
     private IReadOnlyList<HackTrashItem> _items = [];
     private string? _error;
     private bool _busy;
+
+    /// <summary>The explorer's texts in the language of its process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => AppContext.GetLocalizer<Strings>();
+
+    /// <summary>The culture of the dates and sizes shown, from the explorer's locale.</summary>
+    private CultureInfo FormatCulture => AppContext?.FormatCulture ?? HackLocale.DefaultFormatCulture;
 
     /// <summary>Gets or sets the ecosystem dialog service used for the confirmations.</summary>
     [Inject]
@@ -40,7 +49,7 @@ public partial class TrashView
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             _items = [];
-            _error = $"Cannot read the trash: {exception.Message}";
+            _error = L["Trash.ReadError", exception.Message];
         }
 
         StateHasChanged();
@@ -103,10 +112,10 @@ public partial class TrashView
     {
         IReadOnlyList<HackTrashItem> items = SelectedItems();
         if (items.Count == 0 || !await ConfirmAsync(
-                "Delete permanently",
+                L["Dialog.DeletePermanently.Title"],
                 items.Count == 1
-                    ? $"Permanently delete '{DisplayName(items[0])}'? This cannot be undone."
-                    : $"Permanently delete these {items.Count} items? This cannot be undone."))
+                    ? L["Dialog.DeletePermanently.One", DisplayName(items[0])]
+                    : L["Dialog.DeletePermanently.Many", items.Count]))
         {
             return;
         }
@@ -123,7 +132,7 @@ public partial class TrashView
 
     private async Task EmptyAsync()
     {
-        if (!await ConfirmAsync("Empty trash", $"Permanently delete all {_items.Count} item(s) in the trash? This cannot be undone."))
+        if (!await ConfirmAsync(L["Trash.Empty"], L["Trash.EmptyConfirm", _items.Count]))
         {
             return;
         }
@@ -147,7 +156,7 @@ public partial class TrashView
         catch (OperationCanceledException)
         {
             // The app was asked to stop (ADR 0069): the items done so far stay done, the rest stay in the trash.
-            _error = "Stopped: the remaining items were left untouched.";
+            _error = L["Trash.Stopped"];
         }
         finally
         {
@@ -173,15 +182,18 @@ public partial class TrashView
     internal static string DisplayName(HackTrashItem item) =>
         item.OriginalPath is { } path ? HackPath.GetFileName(path) ?? item.Name : item.Name;
 
-    internal static string OriginalLocation(HackTrashItem item) =>
-        item.OriginalPath is { } path ? HackPath.GetDirectoryName(path) ?? "/" : "Unknown";
+    /// <summary>The folder the element was deleted from, or <see langword="null"/> when the origin is unknown.</summary>
+    internal static string? OriginalLocation(HackTrashItem item) =>
+        item.OriginalPath is { } path ? HackPath.GetDirectoryName(path) ?? "/" : null;
 
-    internal static string FormatDate(DateTimeOffset? deletedAt) =>
-        deletedAt?.ToString("yyyy-MM-dd HH:mm") ?? "—";
+    /// <summary>The deletion date as a short date and time of <paramref name="culture"/>.</summary>
+    internal static string FormatDate(DateTimeOffset? deletedAt, CultureInfo culture) =>
+        deletedAt?.ToString("g", culture) ?? "—";
 
-    internal static string FormatBytes(long bytes)
+    /// <summary>A size in B, KB, MB or GB (o, Ko, Mo, Go in French), with the decimal separator of <paramref name="culture"/>.</summary>
+    internal static string FormatBytes(long bytes, CultureInfo culture, IStringLocalizer text)
     {
-        string[] units = ["B", "KB", "MB", "GB"];
+        string[] units = [text["Size.Bytes"], text["Size.Kilobytes"], text["Size.Megabytes"], text["Size.Gigabytes"]];
         double size = bytes;
         int unitIndex = 0;
         while (size >= 1024 && unitIndex < units.Length - 1)
@@ -190,6 +202,6 @@ public partial class TrashView
             unitIndex++;
         }
 
-        return $"{size:0.#} {units[unitIndex]}";
+        return $"{size.ToString("0.#", culture)} {units[unitIndex]}";
     }
 }

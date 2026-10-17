@@ -6,37 +6,37 @@
     <DialogContent>
         <div class="properties-container">
             <div class="prop-row">
-                <span class="prop-label">Name:</span>
+                <span class="prop-label">@L["Properties.Name"]</span>
                 <span class="prop-value">@EntryName</span>
             </div>
             <div class="prop-row">
-                <span class="prop-label">Path:</span>
+                <span class="prop-label">@L["Properties.Path"]</span>
                 <span class="prop-value">@Path</span>
             </div>
             <div class="prop-row">
-                <span class="prop-label">Kind:</span>
-                <span class="prop-value">@Metadata?.Kind</span>
+                <span class="prop-label">@L["Properties.Kind"]</span>
+                <span class="prop-value">@KindText</span>
             </div>
             <div class="prop-row">
-                <span class="prop-label">Size:</span>
-                <span class="prop-value">@(Metadata is FileMetadata fm ? $"{fm.Length} bytes" : "--")</span>
+                <span class="prop-label">@L["Properties.Size"]</span>
+                <span class="prop-value">@(Metadata is FileMetadata fm ? L["Properties.Bytes", fm.Length.ToString(FormatCulture)] : "--")</span>
             </div>
             <div class="prop-row">
-                <span class="prop-label">Owner:</span>
+                <span class="prop-label">@L["Properties.Owner"]</span>
                 <span class="prop-value">@Metadata?.OwnerId</span>
             </div>
             <div class="prop-row">
-                <span class="prop-label">Permissions:</span>
+                <span class="prop-label">@L["Properties.Permissions"]</span>
                 <span class="prop-value">@Metadata?.Permissions.ToString()</span>
             </div>
             <div class="prop-row">
-                <span class="prop-label">Modified:</span>
-                <span class="prop-value">@Metadata?.Timestamps.ContentModifiedAtUtc.ToString("f")</span>
+                <span class="prop-label">@L["Properties.Modified"]</span>
+                <span class="prop-value">@Metadata?.Timestamps.ContentModifiedAtUtc.ToString("f", FormatCulture)</span>
             </div>
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">OK</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">@L["Properties.Ok"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -52,6 +52,16 @@
 
     [Parameter]
     public FileSystemEntryMetadata? Metadata { get; set; }
+
+    // The entry kind in words; kinds without a text keep their enum name.
+    private string? KindText => Metadata?.Kind switch
+    {
+        null => null,
+        FileSystemEntryKind.File => L["Kind.File"],
+        FileSystemEntryKind.Directory => L["Kind.Directory"],
+        FileSystemEntryKind.SymbolicLink => L["Kind.SymbolicLink"],
+        { } kind => kind.ToString()
+    };
 
     private void Close() => MudDialog.Close(DialogResult.Ok(true));
 }

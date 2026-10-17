@@ -4,6 +4,7 @@ using HackerOs.AppSdk.FileView.ContextMenu;
 using HackerOs.AppSdk.FileView.Icons;
 using HackerOs.AppSdk.Icons;
 using HackerOs.Simulation.Abstractions.Gateways;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.FileExplorer;
 
@@ -18,6 +19,7 @@ public sealed class ZipFileContextMenuProvider : IFileViewContextMenuProvider
     private readonly IAppFileSystemGateway _fileSystem;
     private readonly Func<FileView?> _fileView;
     private readonly Action<string> _reportError;
+    private readonly IStringLocalizer _text;
 
     /// <param name="fileSystem">The host app's own scoped filesystem gateway.</param>
     /// <param name="fileView">
@@ -25,11 +27,13 @@ public sealed class ZipFileContextMenuProvider : IFileViewContextMenuProvider
     /// component's own <c>@ref</c> is captured, so a direct instance can't be passed at construction time.
     /// </param>
     /// <param name="reportError">Invoked with a human-readable message when extraction fails.</param>
-    public ZipFileContextMenuProvider(IAppFileSystemGateway fileSystem, Func<FileView?> fileView, Action<string> reportError)
+    /// <param name="text">The explorer's texts in its language (ADR 0104), for the menu label and the errors.</param>
+    public ZipFileContextMenuProvider(IAppFileSystemGateway fileSystem, Func<FileView?> fileView, Action<string> reportError, IStringLocalizer text)
     {
         _fileSystem = fileSystem;
         _fileView = fileView;
         _reportError = reportError;
+        _text = text ?? throw new ArgumentNullException(nameof(text));
     }
 
     /// <inheritdoc />
@@ -49,7 +53,7 @@ public sealed class ZipFileContextMenuProvider : IFileViewContextMenuProvider
 
         items.InsertAfter("open", new FileViewMenuItem(
             "unzip-here",
-            "UnZip Here…",
+            _text["Menu.UnzipHere"],
             ShellIconDescriptor.Vector(IconLibrary.Lucide, "package-open"),
             () => ExtractAsync(item)));
     }
@@ -67,7 +71,7 @@ public sealed class ZipFileContextMenuProvider : IFileViewContextMenuProvider
         VirtualPath destinationDirectory = VirtualPath.Parse(
             currentDirectory == "/" ? $"/{folderName}" : $"{currentDirectory}/{folderName}");
 
-        string? error = await FileExplorerZipService.ExtractAsync(_fileSystem, item.FullPath, destinationDirectory, CancellationToken.None);
+        string? error = await FileExplorerZipService.ExtractAsync(_fileSystem, item.FullPath, destinationDirectory, _text, CancellationToken.None);
         if (error is not null)
         {
             _reportError(error);
