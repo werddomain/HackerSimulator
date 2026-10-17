@@ -78,8 +78,10 @@ Comme ASP.NET Core :
   corps ; `text/plain; charset=utf-8` pour le rendu texte d'une page
   historique ; aucun quand il n'y a ni corps ni page, comme un vrai 204 ou
   302), `Content-Length`, `Set-Cookie`.
-- Le relais vers le réseau réel (serveur optionnel) reste limité à `GET` et
-  `HEAD` : `ProxyHttpRequest` ne transporte pas de corps de requête.
+- Le relais vers le réseau réel (serveur optionnel) transporte toutes les
+  méthodes et le corps de la requête depuis `v3/10-server-proxy`
+  (`ProxyHttpRequest.Body`, taille et hash vérifiés par le serveur,
+  [`server-network-relay.md`](server-network-relay.md)).
 - Comptage `/proc/net/dev` (ADR 0057) : la taille de la requête inclut
   `Content-Type`, `Content-Length` et le corps.
 
@@ -209,8 +211,9 @@ archive) n'est pas écrit dans le terminal : `curl` affiche l'avertissement
   comportement par défaut du vrai `curl` est d'afficher le corps d'une erreur.
 - **HTML montré en source** dans ce chantier : le rendu réel exige l'iframe
   isolée et le chargeur de sous-ressources de l'ADR 0075 (`web/4`).
-- **Pas de corps de requête vers le réseau réel** : le contrat du proxy ne le
-  transporte pas ; l'étendre est un chantier serveur à part.
+- **Pas de corps de requête vers le réseau réel** dans ce chantier : le
+  contrat du proxy ne le transportait pas. Fait depuis par
+  `v3/10-server-proxy` (ADR 0102, [`server-network-relay.md`](server-network-relay.md)).
 - L'ADR 0021 (« pas de HTML brut ») est marqué remplacé en partie par les
   ADR 0074 §1 et 0075.
 

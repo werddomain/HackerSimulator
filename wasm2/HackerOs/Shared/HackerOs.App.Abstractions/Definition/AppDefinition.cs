@@ -84,6 +84,13 @@ public abstract class AppDefinition
     /// <summary>Gets whether the app participates in platform Back navigation (window apps only).</summary>
     public virtual bool SupportsBack => false;
 
+    /// <summary>
+    /// Gets the window sizes of a window app (ADR 0095 §2): initial, minimum and maximum size and
+    /// whether the user can resize it. <see langword="null"/> (the default) keeps the OS defaults,
+    /// <see cref="WindowOptions.Default"/>. Window apps only.
+    /// </summary>
+    public virtual WindowOptions? Window => null;
+
     /// <summary>Gets the estimated simulation resource weights. Defaults to the zero profile.</summary>
     public virtual AppResourceProfileManifest Resources => AppResourceProfileManifest.None;
 

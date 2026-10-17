@@ -4,6 +4,8 @@ HackerOs.Apps.Settings.AppPermissionsPanel.AppPermissionsPanel() -> void
 HackerOs.Apps.Settings.InstalledAppsPanel
 HackerOs.Apps.Settings.InstalledAppsPanel.Dispose() -> void
 HackerOs.Apps.Settings.InstalledAppsPanel.InstalledAppsPanel() -> void
+HackerOs.Apps.Settings.ServerRelayPolicyPanel
+HackerOs.Apps.Settings.ServerRelayPolicyPanel.ServerRelayPolicyPanel() -> void
 HackerOs.Apps.Settings.SettingsApp
 HackerOs.Apps.Settings.SettingsApp.SettingsApp() -> void
 HackerOs.Apps.Settings.SettingsWindow

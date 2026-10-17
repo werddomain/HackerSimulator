@@ -21,6 +21,19 @@
         </section>
 
         <section class="sample-section">
+            <h3>Window Events</h3>
+            <div class="output-box" data-sample-window-state>
+                @(IsWindowActive ? "Active" : "Inactive") · @WindowState@(WindowSize is { } size ? $" · {size.Width:0}×{size.Height:0}" : string.Empty)
+            </div>
+            <ul class="event-log" data-sample-window-events>
+                @foreach (string entry in _windowEvents)
+                {
+                    <li>@entry</li>
+                }
+            </ul>
+        </section>
+
+        <section class="sample-section">
             <h3>Capability Check</h3>
             <div class="button-row">
                 <button class="sample-btn" @onclick="TestCapabilityAccessAsync">Test Private Storage</button>
@@ -31,7 +44,30 @@
 </div>
 
 @code {
+    private readonly List<string> _windowEvents = [];
     private string _fileStatus = "No file operation performed.";
+
+    // ADR 0095 §1: the window manager's events, newest first, at most eight.
+    protected override void OnWindowActivated() => RecordWindowEvent("activated");
+
+    protected override void OnWindowDeactivated() => RecordWindowEvent("deactivated");
+
+    protected override void OnWindowStateChanged(HackWindowState previous, HackWindowState current) =>
+        RecordWindowEvent($"{previous} → {current}");
+
+    protected override void OnWindowResized(HackWindowSize size) =>
+        RecordWindowEvent($"resized to {size.Width:0}×{size.Height:0}");
+
+    private void RecordWindowEvent(string entry)
+    {
+        _windowEvents.Insert(0, entry);
+        if (_windowEvents.Count > 8)
+        {
+            _windowEvents.RemoveAt(_windowEvents.Count - 1);
+        }
+
+        StateHasChanged();
+    }
     private string _capabilityStatus = "Click button to test capability access.";
 
     private async Task OpenFileAsync()

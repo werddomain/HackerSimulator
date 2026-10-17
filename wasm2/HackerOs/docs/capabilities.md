@@ -37,7 +37,7 @@ classement.
 | `process.manage`, `services.manage`, `windows.manage` | **dangereuse** |
 | `notifications.post`, `clipboard.read`, `clipboard.write` | normale |
 | `network.simulated.read`, `network.simulated.write` | normale |
-| `network.real.access` | **dangereuse** |
+| `network.real.access` | **dangereuse** (vérifiée aussi par le serveur optionnel avant de relayer, ADR 0102 §4 et 0108 §1) |
 | `network.listen` | normale (écouter un port qui n'est pas une URL de son manifeste, [`listening-ports-and-dns.md`](listening-ports-and-dns.md)) |
 | `network.listen.privileged` | **dangereuse** (écouter un port sous 1024, comme `CAP_NET_BIND_SERVICE`) |
 | `shell.control` | normale (ADR 0051 : n'agit que sur le shell de l'utilisateur qui a tapé la commande, voir [`shell-commands.md`](shell-commands.md)) |

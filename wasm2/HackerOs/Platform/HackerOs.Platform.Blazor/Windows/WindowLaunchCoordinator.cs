@@ -64,20 +64,55 @@ public sealed class WindowLaunchCoordinator
         }
 
         int cascadeIndex = _windows.Windows.Count % 8;
+        WindowOptions options = manifest.Window ?? WindowOptions.Default;
         WindowRuntimeState state = new(
             WindowId.FromGuid(Guid.NewGuid()),
             manifest.Id,
             ownerInstanceId,
             manifest.Name,
             manifest.Presentation.IconAssetPaths.FirstOrDefault(),
-            new WindowBounds(48 + (cascadeIndex * 28), 42 + (cascadeIndex * 28), 800, 560),
+            InitialBounds(options, cascadeIndex, _windows.WorkArea),
             restoreBounds: null,
             zOrder: 0,
             visualState: WindowVisualState.Normal,
-            constraints: new WindowConstraints(isResizable: true, minWidth: 360, minHeight: 240),
+            constraints: ToConstraints(options),
             modality: WindowModality.Modeless,
             supportsBack: manifest.SupportsBack);
         _windows.Apply(new CreateWindowCommand(state));
         return true;
+    }
+
+    /// <summary>
+    /// Maps an app's declared window sizes (ADR 0095 §2) to window-manager constraints. The declared
+    /// maximum only limits the user's resizes; maximizing still fills the work area.
+    /// </summary>
+    /// <param name="options">Declared or default window options.</param>
+    public static WindowConstraints ToConstraints(WindowOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return new WindowConstraints(
+            isResizable: options.Resizable,
+            minWidth: options.MinWidth,
+            minHeight: options.MinHeight,
+            maxWidth: options.MaxWidth,
+            maxHeight: options.MaxHeight);
+    }
+
+    /// <summary>
+    /// Places a new window at its cascade slot with its declared default size, shrunk to the work area
+    /// on a smaller screen but never below the declared minimum (the window then overflows, as on a
+    /// small real screen).
+    /// </summary>
+    /// <param name="options">Declared or default window options.</param>
+    /// <param name="cascadeIndex">Cascade slot, 0 to 7.</param>
+    /// <param name="workArea">Current desktop work area.</param>
+    public static WindowBounds InitialBounds(WindowOptions options, int cascadeIndex, WindowBounds workArea)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        double x = workArea.X + 48 + (cascadeIndex * 28);
+        double y = workArea.Y + 42 + (cascadeIndex * 28);
+        double width = Math.Max(options.MinWidth, Math.Min(options.DefaultWidth, workArea.Width));
+        double height = Math.Max(options.MinHeight, Math.Min(options.DefaultHeight, workArea.Height));
+        return new WindowBounds(x, y, width, height);
     }
 }

@@ -82,6 +82,38 @@ HackerOs.AppSdk.Administration.HackServerConnectionState.IsConnected.get -> bool
 HackerOs.AppSdk.Administration.HackServerConnectionState.IsConnected.init -> void
 HackerOs.AppSdk.Administration.HackServerConnectionState.ServerUrl.get -> System.Uri?
 HackerOs.AppSdk.Administration.HackServerConnectionState.ServerUrl.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.AllowAllPorts.get -> bool
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.AllowAllPorts.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.AllowPrivateNetworks.get -> bool
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.AllowPrivateNetworks.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.Enabled.get -> bool
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.Enabled.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.GrantedApps.get -> System.Collections.Generic.IReadOnlyList<string!>!
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.GrantedApps.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.HackServerRelayPolicy(bool Enabled, System.Collections.Generic.IReadOnlyList<int>! HttpPorts, System.Collections.Generic.IReadOnlyList<int>! TcpPorts, System.Collections.Generic.IReadOnlyList<int>! UdpPorts, bool AllowAllPorts, bool AllowPrivateNetworks, bool QuotasEnabled, long MaxRequestBytes, long MaxResponseBytes, int MaxConcurrentRequests, int MaxStreams, int OpenStreams, System.TimeSpan StreamIdleTimeout, System.Collections.Generic.IReadOnlyList<string!>! GrantedApps, System.Collections.Generic.IReadOnlyList<string!>! Warnings) -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.HttpPorts.get -> System.Collections.Generic.IReadOnlyList<int>!
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.HttpPorts.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.MaxConcurrentRequests.get -> int
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.MaxConcurrentRequests.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.MaxRequestBytes.get -> long
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.MaxRequestBytes.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.MaxResponseBytes.get -> long
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.MaxResponseBytes.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.MaxStreams.get -> int
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.MaxStreams.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.OpenStreams.get -> int
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.OpenStreams.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.QuotasEnabled.get -> bool
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.QuotasEnabled.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.StreamIdleTimeout.get -> System.TimeSpan
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.StreamIdleTimeout.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.TcpPorts.get -> System.Collections.Generic.IReadOnlyList<int>!
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.TcpPorts.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.UdpPorts.get -> System.Collections.Generic.IReadOnlyList<int>!
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.UdpPorts.init -> void
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.Warnings.get -> System.Collections.Generic.IReadOnlyList<string!>!
+HackerOs.AppSdk.Administration.HackServerRelayPolicy.Warnings.init -> void
 HackerOs.AppSdk.Administration.HackStorageDiagnostics
 HackerOs.AppSdk.Administration.HackStorageSnapshot
 HackerOs.AppSdk.Administration.HackStorageSnapshot.CapturedAtUtc.get -> System.DateTimeOffset
@@ -162,6 +194,7 @@ HackerOs.AppSdk.Administration.IAppServerConnectionGateway.ConnectAsync(System.U
 HackerOs.AppSdk.Administration.IAppServerConnectionGateway.CreateAccountAsync(System.Uri! serverUrl, string! login, string! password, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Administration.HackServerConnectionState!>
 HackerOs.AppSdk.Administration.IAppServerConnectionGateway.DisconnectAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.AppSdk.Administration.IAppServerConnectionGateway.GetConflictsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackSyncConflict!>!>
+HackerOs.AppSdk.Administration.IAppServerConnectionGateway.GetRelayPolicyAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Administration.HackServerRelayPolicy?>
 HackerOs.AppSdk.Administration.IAppServerConnectionGateway.GetStateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Administration.HackServerConnectionState!>
 HackerOs.AppSdk.Administration.IAppServerConnectionGateway.SyncAsync(HackerOs.AppSdk.Administration.HackSyncDomain domain, HackerOs.AppSdk.Administration.HackSyncDirection direction, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.AppSdk.Administration.IAppStorageDiagnosticsGateway
@@ -874,6 +907,9 @@ HackerOs.AppSdk.Net.HackNetworkResult<T>.Error.get -> HackerOs.AppSdk.Net.HackNe
 HackerOs.AppSdk.Net.HackNetworkResult<T>.Message.get -> string?
 HackerOs.AppSdk.Net.HackNetworkResult<T>.Succeeded.get -> bool
 HackerOs.AppSdk.Net.HackNetworkResult<T>.Value.get -> T?
+HackerOs.AppSdk.Net.HackNetworkStream
+HackerOs.AppSdk.Net.HackNetworkStream.DataAvailable.get -> bool
+HackerOs.AppSdk.Net.HackNetworkStream.RemoteEndPoint.get -> System.Net.IPEndPoint!
 HackerOs.AppSdk.Net.HackOsFingerprint
 HackerOs.AppSdk.Net.HackOsFingerprint.Accuracy.get -> int
 HackerOs.AppSdk.Net.HackOsFingerprint.Accuracy.init -> void
@@ -927,6 +963,19 @@ HackerOs.AppSdk.Net.HackTcpListenerInfo.ProcessId.get -> long?
 HackerOs.AppSdk.Net.HackTcpListenerInfo.ProcessId.init -> void
 HackerOs.AppSdk.Net.HackTcpListenerInfo.ProgramName.get -> string?
 HackerOs.AppSdk.Net.HackTcpListenerInfo.ProgramName.init -> void
+HackerOs.AppSdk.Net.HackUdpClient
+HackerOs.AppSdk.Net.HackUdpClient.Dispose() -> void
+HackerOs.AppSdk.Net.HackUdpClient.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.AppSdk.Net.HackUdpClient.ReceiveAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Net.HackUdpReceiveResult>
+HackerOs.AppSdk.Net.HackUdpClient.RemoteEndPoint.get -> System.Net.IPEndPoint!
+HackerOs.AppSdk.Net.HackUdpClient.SendAsync(System.ReadOnlyMemory<byte> datagram, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<int>
+HackerOs.AppSdk.Net.HackUdpReceiveResult
+HackerOs.AppSdk.Net.HackUdpReceiveResult.Buffer.get -> byte[]!
+HackerOs.AppSdk.Net.HackUdpReceiveResult.Buffer.init -> void
+HackerOs.AppSdk.Net.HackUdpReceiveResult.HackUdpReceiveResult() -> void
+HackerOs.AppSdk.Net.HackUdpReceiveResult.HackUdpReceiveResult(byte[]! Buffer, System.Net.IPEndPoint! RemoteEndPoint) -> void
+HackerOs.AppSdk.Net.HackUdpReceiveResult.RemoteEndPoint.get -> System.Net.IPEndPoint!
+HackerOs.AppSdk.Net.HackUdpReceiveResult.RemoteEndPoint.init -> void
 HackerOs.AppSdk.Net.Hosting.HackBlazorBootJsonContext
 HackerOs.AppSdk.Net.Hosting.HackBlazorBootJsonContext.HackBlazorBootJsonContext() -> void
 HackerOs.AppSdk.Net.Hosting.HackBlazorBootJsonContext.HackBlazorBootJsonContext(System.Text.Json.JsonSerializerOptions! options) -> void
@@ -972,6 +1021,8 @@ HackerOs.AppSdk.Net.Hosting.HackWebSiteScope
 HackerOs.AppSdk.Net.Hosting.HackWebSiteScope.System = 0 -> HackerOs.AppSdk.Net.Hosting.HackWebSiteScope
 HackerOs.AppSdk.Net.Hosting.HackWebSiteScope.User = 1 -> HackerOs.AppSdk.Net.Hosting.HackWebSiteScope
 HackerOs.AppSdk.Net.IAppNetworkGateway
+HackerOs.AppSdk.Net.IAppNetworkGateway.ConnectTcpAsync(string! hostNameOrAddress, int port, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Net.HackNetworkResult<HackerOs.AppSdk.Net.IHackSocket!>!>
+HackerOs.AppSdk.Net.IAppNetworkGateway.ConnectUdpAsync(string! hostNameOrAddress, int port, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Net.HackNetworkResult<HackerOs.AppSdk.Net.IHackSocket!>!>
 HackerOs.AppSdk.Net.IAppNetworkGateway.DetectOperatingSystemAsync(string! hostNameOrAddress, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Net.HackNetworkResult<HackerOs.AppSdk.Net.HackOsFingerprint?>!>
 HackerOs.AppSdk.Net.IAppNetworkGateway.GetTcpListenersAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Net.HackTcpListenerInfo!>!>
 HackerOs.AppSdk.Net.IAppNetworkGateway.ListenHttpAsync(System.Collections.Generic.IReadOnlyList<string!>! prefixes, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Net.HackNetworkResult<HackerOs.AppSdk.Net.IHackHttpListenerSocket!>!>
@@ -984,6 +1035,10 @@ HackerOs.AppSdk.Net.IHackHttpListenerSocket
 HackerOs.AppSdk.Net.IHackHttpListenerSocket.AcceptAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Net.HackHttpListenerExchange?>
 HackerOs.AppSdk.Net.IHackHttpListenerSocket.Prefixes.get -> System.Collections.Generic.IReadOnlyList<string!>!
 HackerOs.AppSdk.Net.IHackHttpListenerSocket.Respond(long exchangeId, HackerOs.AppSdk.Net.HackHttpListenerReply! reply) -> void
+HackerOs.AppSdk.Net.IHackSocket
+HackerOs.AppSdk.Net.IHackSocket.ReceiveAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<byte[]?>
+HackerOs.AppSdk.Net.IHackSocket.RemoteEndPoint.get -> System.Net.IPEndPoint!
+HackerOs.AppSdk.Net.IHackSocket.SendAsync(System.ReadOnlyMemory<byte> data, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.AppSdk.ServiceAppBase
 HackerOs.AppSdk.ServiceAppBase.RunAsync(HackerOs.AppSdk.IAppExecutionContext! context, System.Threading.CancellationToken sessionCancellationToken) -> System.Threading.Tasks.Task!
 HackerOs.AppSdk.ServiceAppBase.ServiceAppBase(HackerOs.App.Abstractions.AppManifest! manifest) -> void
@@ -1348,6 +1403,24 @@ override HackerOs.AppSdk.IO.HackFileStream.WriteAsync(byte[]! buffer, int offset
 override HackerOs.AppSdk.IO.HackFileStream.WriteAsync(System.ReadOnlyMemory<byte> buffer, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 override HackerOs.AppSdk.IO.HackFileSystemInfo.ToString() -> string!
 override HackerOs.AppSdk.Net.HackHttpListenerException.ToString() -> string!
+override HackerOs.AppSdk.Net.HackNetworkStream.CanRead.get -> bool
+override HackerOs.AppSdk.Net.HackNetworkStream.CanSeek.get -> bool
+override HackerOs.AppSdk.Net.HackNetworkStream.CanWrite.get -> bool
+override HackerOs.AppSdk.Net.HackNetworkStream.DisposeAsync() -> System.Threading.Tasks.ValueTask
+override HackerOs.AppSdk.Net.HackNetworkStream.Flush() -> void
+override HackerOs.AppSdk.Net.HackNetworkStream.FlushAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+override HackerOs.AppSdk.Net.HackNetworkStream.Length.get -> long
+override HackerOs.AppSdk.Net.HackNetworkStream.Position.get -> long
+override HackerOs.AppSdk.Net.HackNetworkStream.Position.set -> void
+override HackerOs.AppSdk.Net.HackNetworkStream.Read(byte[]! buffer, int offset, int count) -> int
+override HackerOs.AppSdk.Net.HackNetworkStream.Read(System.Span<byte> buffer) -> int
+override HackerOs.AppSdk.Net.HackNetworkStream.ReadAsync(byte[]! buffer, int offset, int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<int>!
+override HackerOs.AppSdk.Net.HackNetworkStream.ReadAsync(System.Memory<byte> buffer, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<int>
+override HackerOs.AppSdk.Net.HackNetworkStream.Seek(long offset, System.IO.SeekOrigin origin) -> long
+override HackerOs.AppSdk.Net.HackNetworkStream.SetLength(long value) -> void
+override HackerOs.AppSdk.Net.HackNetworkStream.Write(byte[]! buffer, int offset, int count) -> void
+override HackerOs.AppSdk.Net.HackNetworkStream.WriteAsync(byte[]! buffer, int offset, int count, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+override HackerOs.AppSdk.Net.HackNetworkStream.WriteAsync(System.ReadOnlyMemory<byte> buffer, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 override HackerOs.AppSdk.Net.Hosting.HackBlazorBootJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
 override HackerOs.AppSdk.ServiceProcess.HackServiceController.ToString() -> string!
 override HackerOs.AppSdk.Shell.HackCredential.ToString() -> string!
@@ -1371,6 +1444,8 @@ static HackerOs.AppSdk.Administration.HackServerConnection.DisconnectAsync(Hacke
 static HackerOs.AppSdk.Administration.HackServerConnection.DisconnectAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 static HackerOs.AppSdk.Administration.HackServerConnection.GetConflictsAsync(HackerOs.AppSdk.IAppExecutionContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackSyncConflict!>!>!
 static HackerOs.AppSdk.Administration.HackServerConnection.GetConflictsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackSyncConflict!>!>!
+static HackerOs.AppSdk.Administration.HackServerConnection.GetRelayPolicyAsync(HackerOs.AppSdk.IAppExecutionContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Administration.HackServerRelayPolicy?>!
+static HackerOs.AppSdk.Administration.HackServerConnection.GetRelayPolicyAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Administration.HackServerRelayPolicy?>!
 static HackerOs.AppSdk.Administration.HackServerConnection.GetStateAsync(HackerOs.AppSdk.IAppExecutionContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Administration.HackServerConnectionState!>!
 static HackerOs.AppSdk.Administration.HackServerConnection.GetStateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Administration.HackServerConnectionState!>!
 static HackerOs.AppSdk.Administration.HackServerConnection.SyncAsync(HackerOs.AppSdk.Administration.HackSyncDomain domain, HackerOs.AppSdk.Administration.HackSyncDirection direction, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
@@ -1520,8 +1595,10 @@ static HackerOs.AppSdk.Net.HackNetworkResult<T>.Failure(HackerOs.AppSdk.Net.Hack
 static HackerOs.AppSdk.Net.HackNetworkResult<T>.Success(T value) -> HackerOs.AppSdk.Net.HackNetworkResult<T>!
 static HackerOs.AppSdk.Net.HackPing.SendAsync(string! hostNameOrAddress, System.TimeSpan? timeout = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Net.HackPingReply!>!
 static HackerOs.AppSdk.Net.HackPing.SendAsync(System.Net.IPAddress! address, System.TimeSpan? timeout = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Net.HackPingReply!>!
+static HackerOs.AppSdk.Net.HackTcpClient.ConnectAsync(string! hostNameOrAddress, int port, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Net.HackNetworkStream!>!
 static HackerOs.AppSdk.Net.HackTcpClient.DetectOperatingSystemAsync(string! hostNameOrAddress, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Net.HackOsFingerprint?>!
 static HackerOs.AppSdk.Net.HackTcpClient.ProbeAsync(string! hostNameOrAddress, int firstPort, int lastPort, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Net.HackPortProbeResult!>!>!
+static HackerOs.AppSdk.Net.HackUdpClient.ConnectAsync(string! hostNameOrAddress, int port, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Net.HackUdpClient!>!
 static HackerOs.AppSdk.Net.Hosting.HackBlazorBootJsonContext.Default.get -> HackerOs.AppSdk.Net.Hosting.HackBlazorBootJsonContext!
 static HackerOs.AppSdk.Net.Hosting.HackWebSiteFile.GetPath(string! directory, string! name) -> string!
 static HackerOs.AppSdk.Net.Hosting.HackWebSiteFile.GetUserSitesDirectory(string! homeDirectory) -> string!

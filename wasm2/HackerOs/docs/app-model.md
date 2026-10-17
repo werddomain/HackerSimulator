@@ -36,6 +36,7 @@ Valeurs par défaut des membres facultatifs :
 | `Components` | liste vide ; `components` est alors omis du manifeste (ADR 0063, [`embedded-components.md`](embedded-components.md)) |
 | `SingleInstancePerUser`, `AutoStart`, `SupportsBack` | `false` |
 | `Resources` | `AppResourceProfileManifest.None` |
+| `Window` | `null` : la fenêtre prend `WindowOptions.Default` (800×560, minimum 360×240) ; l'objet `window` est alors omis du manifeste (ADR 0095, [`window-model.md`](window-model.md)). Déclaré seulement par une app de genre `Window` (`manifest.window.*`). |
 
 Exemple :
 

@@ -72,8 +72,10 @@ backend capabilities:
   connection via Settings).
 - **Proxy** — server-validated HTTP/TCP/UDP proxying for authorized apps
   reaching the real network. Consumed client-side per ADR 0028
-  (`IProxyClient`), currently wired into `ping`'s real-host fallback only —
-  see `docs/server-implementation-pass.md` for the rest.
+  (`IProxyClient`). Since `v3/10-server-proxy` it relays every HTTP method
+  with its body, TCP and UDP streams over WebSockets, checks the app's grant
+  itself and reads its policy from `appsettings.json` — see
+  [`../server-network-relay.md`](../server-network-relay.md).
 
 Browser-local storage (IndexedDB) remains the source of truth regardless of
 whether a device is connected to the optional server — connecting is always

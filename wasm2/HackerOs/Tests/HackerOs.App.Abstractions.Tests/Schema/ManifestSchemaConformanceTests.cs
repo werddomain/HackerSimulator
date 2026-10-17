@@ -21,7 +21,8 @@ public sealed class ManifestSchemaConformanceTests
         "service.valid.json",
         "window-multi-platform.valid.json",
         "web.valid.json",
-        "web-blazor.valid.json"
+        "web-blazor.valid.json",
+        "window-sized.valid.json"
     };
 
     public static TheoryData<string> InvalidFixtureNames => new()
@@ -37,7 +38,8 @@ public sealed class ManifestSchemaConformanceTests
         "invalid-settings-enum-missing-allowed-values.json",
         "invalid-platform-ambiguous.json",
         "invalid-web-missing-web-block.json",
-        "invalid-web-on-service.json"
+        "invalid-web-on-service.json",
+        "invalid-window-on-service.json"
     };
 
     [Theory]

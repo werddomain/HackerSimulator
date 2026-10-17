@@ -103,6 +103,7 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
     // ── Detached window (ADR 0078 §3) ────────────────────────────────────
     private IDisplaySurfaceService? _surfaces;
     private IDisplaySurface? _surface;
+    private IDisposable? _surfaceTracking;
     private string? _detachMessage;
     private bool _detaching;
 
@@ -630,6 +631,8 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
                     _detachMessage = null;
                     _surface = surface;
                     surface.Changed += OnSurfaceChanged;
+                    // ADR 0095 §1: the detached window's focus and size reach the window hooks too.
+                    _surfaceTracking = TrackDisplaySurface(surface);
                     await RewriteFrameAsync();
                     break;
                 case DisplaySurfaceOpenStatus.Blocked:
@@ -676,6 +679,8 @@ public sealed partial class BrowserWindow : WindowAppBase, IAsyncDisposable
         {
             surface.Changed -= OnSurfaceChanged;
             _surface = null;
+            _surfaceTracking?.Dispose();
+            _surfaceTracking = null;
         }
     }
 

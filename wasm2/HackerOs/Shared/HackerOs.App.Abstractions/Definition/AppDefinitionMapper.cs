@@ -71,6 +71,8 @@ public static class AppDefinitionMapper
             SingleInstancePerUser = definition.SingleInstancePerUser,
             AutoStart = definition.AutoStart,
             SupportsBack = definition.SupportsBack,
+            // ADR 0095 §2: omitted when undeclared, so manifests of apps using the defaults keep their bytes.
+            Window = definition.Window,
             // ADR 0070, section 1: always written resolved, so the host never guesses a default.
             Execution = AppExecutionHosts.Resolve(definition.Kind, DeclaredExecution(definition)),
             // ADR 0073: only a web app has a web part; omitted otherwise so other manifests keep their bytes.

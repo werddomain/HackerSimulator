@@ -10,6 +10,7 @@
 @inject WindowCloseCoordinator CloseCoordinator
 @inject WindowCloseGuardRegistry CloseGuards
 @inject AppBackHandlerRegistry BackHandlers
+@inject WindowAppEventDispatcher WindowEvents
 @inject IJSRuntime JSRuntime
 
 <div class="mobile-shell">
@@ -28,7 +29,8 @@
                                        Descriptor="descriptor"
                                        AppContext="context"
                                        CloseGuards="CloseGuards"
-                                       BackHandlers="BackHandlers" />
+                                       BackHandlers="BackHandlers"
+                                       WindowEvents="WindowEvents" />
                 }
                 else
                 {

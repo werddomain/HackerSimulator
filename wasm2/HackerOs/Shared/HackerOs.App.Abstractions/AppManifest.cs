@@ -128,6 +128,14 @@ public sealed record AppManifest
     public bool SupportsBack { get; init; }
 
     /// <summary>
+    /// Gets the window sizes a <see cref="AppKind.Window"/> app declares (ADR 0095 §2), or
+    /// <see langword="null"/> (omitted from <c>manifest.json</c>) when it declares none, in which case
+    /// the OS uses <see cref="WindowOptions.Default"/>. <see cref="AppManifestValidator"/> rejects it
+    /// for every other kind.
+    /// </summary>
+    public WindowOptions? Window { get; init; }
+
+    /// <summary>
     /// Gets where the OS runs this app (ADR 0070, section 1): <c>mainThread</c>, <c>pool</c> or
     /// <c>dedicated</c>. The generator always writes the resolved value; <see langword="null"/> only for
     /// a manifest written before ADR 0070, read as the default of its <see cref="Kind"/>

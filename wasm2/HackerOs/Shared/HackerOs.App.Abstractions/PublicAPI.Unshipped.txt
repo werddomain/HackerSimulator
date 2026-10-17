@@ -51,6 +51,10 @@ const HackerOs.App.Abstractions.VirtualPath.MaximumPathUtf8ByteLength = 4096 -> 
 const HackerOs.App.Abstractions.VirtualPath.MaximumSegmentUtf8ByteLength = 255 -> int
 const HackerOs.App.Abstractions.WebAppUrls.FirstUnprivilegedPort = 1024 -> int
 const HackerOs.App.Abstractions.WebAppUrls.InternalDomain = "hack" -> string!
+const HackerOs.App.Abstractions.WindowOptions.StandardHeight = 560 -> int
+const HackerOs.App.Abstractions.WindowOptions.StandardMinHeight = 240 -> int
+const HackerOs.App.Abstractions.WindowOptions.StandardMinWidth = 360 -> int
+const HackerOs.App.Abstractions.WindowOptions.StandardWidth = 800 -> int
 HackerOs.App.Abstractions.AppAuthority
 HackerOs.App.Abstractions.AppAuthority.Administrator = 1 -> HackerOs.App.Abstractions.AppAuthority
 HackerOs.App.Abstractions.AppAuthority.System = 2 -> HackerOs.App.Abstractions.AppAuthority
@@ -197,6 +201,8 @@ HackerOs.App.Abstractions.AppManifest.Version.get -> string!
 HackerOs.App.Abstractions.AppManifest.Version.init -> void
 HackerOs.App.Abstractions.AppManifest.Web.get -> HackerOs.App.Abstractions.WebAppManifest?
 HackerOs.App.Abstractions.AppManifest.Web.init -> void
+HackerOs.App.Abstractions.AppManifest.Window.get -> HackerOs.App.Abstractions.WindowOptions?
+HackerOs.App.Abstractions.AppManifest.Window.init -> void
 HackerOs.App.Abstractions.AppManifestAttribute
 HackerOs.App.Abstractions.AppManifestAttribute.AppManifestAttribute() -> void
 HackerOs.App.Abstractions.AppManifestAttribute.Execution.get -> HackerOs.App.Abstractions.AppExecutionHost
@@ -725,6 +731,22 @@ HackerOs.App.Abstractions.WebBlazorManifest.Type.init -> void
 HackerOs.App.Abstractions.WebBlazorManifest.WebBlazorManifest(string! Assembly, string! Type) -> void
 HackerOs.App.Abstractions.WellKnownAppPlatformCapabilities
 HackerOs.App.Abstractions.WellKnownAppPlatforms
+HackerOs.App.Abstractions.WindowOptions
+HackerOs.App.Abstractions.WindowOptions.DefaultHeight.get -> int
+HackerOs.App.Abstractions.WindowOptions.DefaultHeight.init -> void
+HackerOs.App.Abstractions.WindowOptions.DefaultWidth.get -> int
+HackerOs.App.Abstractions.WindowOptions.DefaultWidth.init -> void
+HackerOs.App.Abstractions.WindowOptions.MaxHeight.get -> int?
+HackerOs.App.Abstractions.WindowOptions.MaxHeight.init -> void
+HackerOs.App.Abstractions.WindowOptions.MaxWidth.get -> int?
+HackerOs.App.Abstractions.WindowOptions.MaxWidth.init -> void
+HackerOs.App.Abstractions.WindowOptions.MinHeight.get -> int
+HackerOs.App.Abstractions.WindowOptions.MinHeight.init -> void
+HackerOs.App.Abstractions.WindowOptions.MinWidth.get -> int
+HackerOs.App.Abstractions.WindowOptions.MinWidth.init -> void
+HackerOs.App.Abstractions.WindowOptions.Resizable.get -> bool
+HackerOs.App.Abstractions.WindowOptions.Resizable.init -> void
+HackerOs.App.Abstractions.WindowOptions.WindowOptions(int defaultWidth = 800, int defaultHeight = 560, int minWidth = 360, int minHeight = 240, int? maxWidth = null, int? maxHeight = null, bool resizable = true) -> void
 override HackerOs.App.Abstractions.AppManifestJsonSerializerContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
 override HackerOs.App.Abstractions.AppPlatformId.ToString() -> string!
 override HackerOs.App.Abstractions.Policy.CapabilityGrantId.ToString() -> string!
@@ -792,6 +814,7 @@ static HackerOs.App.Abstractions.WellKnownAppPlatformCapabilities.Desktop.get ->
 static HackerOs.App.Abstractions.WellKnownAppPlatformCapabilities.Mobile.get -> HackerOs.App.Abstractions.AppPlatformCapabilities!
 static HackerOs.App.Abstractions.WellKnownAppPlatforms.Desktop.get -> HackerOs.App.Abstractions.AppPlatformId
 static HackerOs.App.Abstractions.WellKnownAppPlatforms.Mobile.get -> HackerOs.App.Abstractions.AppPlatformId
+static HackerOs.App.Abstractions.WindowOptions.Default.get -> HackerOs.App.Abstractions.WindowOptions!
 virtual HackerOs.App.Abstractions.AppDefinition.Assets.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AssetManifest!>!
 virtual HackerOs.App.Abstractions.AppDefinition.AutoStart.get -> bool
 virtual HackerOs.App.Abstractions.AppDefinition.BlazorRoot.get -> System.Type?
@@ -816,6 +839,7 @@ virtual HackerOs.App.Abstractions.AppDefinition.SupportsBack.get -> bool
 virtual HackerOs.App.Abstractions.AppDefinition.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
 virtual HackerOs.App.Abstractions.AppDefinition.Urls.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual HackerOs.App.Abstractions.AppDefinition.Version.get -> string!
+virtual HackerOs.App.Abstractions.AppDefinition.Window.get -> HackerOs.App.Abstractions.WindowOptions?
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.AppComponentManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppComponentManifest>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.AppDependencyManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppDependencyManifest>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.AppEntryPointManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppEntryPointManifest>
@@ -859,3 +883,5 @@ virtual HackerOs.App.Abstractions.AppDefinition.Version.get -> string!
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.UpdateManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.UpdateManifest>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.WebAppManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.WebAppManifest>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.WebBlazorManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.WebBlazorManifest>
+~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.NullableInt32.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<int?>
+~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.WindowOptions.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.WindowOptions>

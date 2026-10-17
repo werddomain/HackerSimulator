@@ -1,14 +1,30 @@
 #nullable enable
 const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.BlockedAddress = "BLOCKED_ADDRESS" -> string!
 const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.BlockedPort = "BLOCKED_PORT" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.BodyMismatch = "BODY_MISMATCH" -> string!
 const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.CapabilityDenied = "CAPABILITY_DENIED" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.ConnectionRefused = "CONNECTION_REFUSED" -> string!
 const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.DnsRebindingBlocked = "DNS_REBINDING_BLOCKED" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.GrantMissing = "GRANT_MISSING" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.HostUnreachable = "HOST_UNREACHABLE" -> string!
 const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.MalformedRequest = "MALFORMED_REQUEST" -> string!
 const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.PayloadTooLarge = "PAYLOAD_TOO_LARGE" -> string!
 const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.QuotaExceeded = "QUOTA_EXCEEDED" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.RelayDisabled = "RELAY_DISABLED" -> string!
 const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.SimulatedDomainBlocked = "SIMULATED_DOMAIN_BLOCKED" -> string!
 const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.Timeout = "TIMEOUT" -> string!
 const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.TooManyRedirects = "TOO_MANY_REDIRECTS" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyStreamCloseCodes.IdleTimeout = 4002 -> int
+const HackerOs.Server.Contracts.Proxy.ProxyStreamCloseCodes.Rejected = 4001 -> int
+const HackerOs.Server.Contracts.Proxy.ProxyStreamCloseCodes.RemoteClosed = 4000 -> int
+const HackerOs.Server.Contracts.Proxy.ProxyStreamRoutes.AccessTokenParameter = "access_token" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyStreamRoutes.AppIdParameter = "appId" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyStreamRoutes.HostParameter = "host" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyStreamRoutes.MaxChunkBytes = 65536 -> int
+const HackerOs.Server.Contracts.Proxy.ProxyStreamRoutes.MaxDatagramBytes = 65507 -> int
+const HackerOs.Server.Contracts.Proxy.ProxyStreamRoutes.PortParameter = "port" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyStreamRoutes.TcpPath = "api/proxy/tcp" -> string!
+const HackerOs.Server.Contracts.Proxy.ProxyStreamRoutes.UdpPath = "api/proxy/udp" -> string!
 const HackerOs.Server.Contracts.Sync.SyncDomain.AppCatalog = "app_catalog" -> string!
 const HackerOs.Server.Contracts.Sync.SyncDomain.FileAssociations = "file_associations" -> string!
 const HackerOs.Server.Contracts.Sync.SyncDomain.FileSystem = "filesystem" -> string!
@@ -182,6 +198,12 @@ HackerOs.Server.Contracts.Identity.RegisterDeviceResponse.DeviceName.init -> voi
 HackerOs.Server.Contracts.Identity.RegisterDeviceResponse.RegisterDeviceResponse(System.Guid DeviceId, string! DeviceName, System.DateTimeOffset RegisteredUtc) -> void
 HackerOs.Server.Contracts.Identity.RegisterDeviceResponse.RegisteredUtc.get -> System.DateTimeOffset
 HackerOs.Server.Contracts.Identity.RegisterDeviceResponse.RegisteredUtc.init -> void
+HackerOs.Server.Contracts.Proxy.IProxyStreamChannel
+HackerOs.Server.Contracts.Proxy.IProxyStreamChannel.Closure.get -> HackerOs.Server.Contracts.Proxy.ProxyStreamClosure?
+HackerOs.Server.Contracts.Proxy.IProxyStreamChannel.Protocol.get -> HackerOs.Server.Contracts.Proxy.ProxyProtocol
+HackerOs.Server.Contracts.Proxy.IProxyStreamChannel.ReceiveAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<byte[]?>
+HackerOs.Server.Contracts.Proxy.IProxyStreamChannel.Remote.get -> HackerOs.Server.Contracts.Proxy.ProxyStreamOpened!
+HackerOs.Server.Contracts.Proxy.IProxyStreamChannel.SendAsync(System.ReadOnlyMemory<byte> data, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext
 HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyContractsJsonContext() -> void
 HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyContractsJsonContext(System.Text.Json.JsonSerializerOptions! options) -> void
@@ -205,10 +227,14 @@ HackerOs.Server.Contracts.Proxy.ProxyHeader.Value.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.AppId.get -> string!
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.AppId.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.Body.get -> byte[]?
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.Body.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.BodyBytes.get -> long
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.BodyBytes.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.BodyHash.get -> string?
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.BodyHash.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.ContentType.get -> string?
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.ContentType.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.Headers.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Proxy.ProxyHeader!>!
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.Headers.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.HttpMethod.get -> string?
@@ -217,7 +243,7 @@ HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.IncludeBody.get -> bool
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.IncludeBody.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.Protocol.get -> HackerOs.Server.Contracts.Proxy.ProxyProtocol
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.Protocol.init -> void
-HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.ProxyHttpRequest(System.Guid RequestId, HackerOs.Server.Contracts.Proxy.ProxyProtocol Protocol, string! TargetUrl, string? HttpMethod, System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Proxy.ProxyHeader!>! Headers, string? BodyHash, long BodyBytes, int TimeoutSeconds, string! AppId, bool IncludeBody = false) -> void
+HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.ProxyHttpRequest(System.Guid RequestId, HackerOs.Server.Contracts.Proxy.ProxyProtocol Protocol, string! TargetUrl, string? HttpMethod, System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Proxy.ProxyHeader!>! Headers, string? BodyHash, long BodyBytes, int TimeoutSeconds, string! AppId, bool IncludeBody = false, byte[]? Body = null, string? ContentType = null) -> void
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.RequestId.get -> System.Guid
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.RequestId.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.TargetUrl.get -> string!
@@ -247,14 +273,26 @@ HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.RequestId.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.StatusCode.get -> int
 HackerOs.Server.Contracts.Proxy.ProxyHttpResponse.StatusCode.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.AllowAllPorts.get -> bool
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.AllowAllPorts.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.AllowedProtocols.get -> System.Collections.Generic.IReadOnlyList<string!>!
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.AllowedProtocols.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.AllowPrivateNetworks.get -> bool
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.AllowPrivateNetworks.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.AuditRetentionDays.get -> int
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.AuditRetentionDays.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.CurrentConcurrentRequests.get -> int
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.CurrentConcurrentRequests.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.CurrentStreams.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.CurrentStreams.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.DeviceId.get -> System.Guid
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.DeviceId.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.Enabled.get -> bool
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.Enabled.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.GrantedApps.get -> System.Collections.Generic.IReadOnlyList<string!>?
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.GrantedApps.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.HttpPorts.get -> System.Collections.Generic.IReadOnlyList<int>?
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.HttpPorts.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxConcurrentRequests.get -> int
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxConcurrentRequests.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxDurationSeconds.get -> int
@@ -263,14 +301,54 @@ HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxPayloadBytes.get -> long
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxPayloadBytes.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxRedirectHops.get -> int
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxRedirectHops.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxRequestBytes.get -> long
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxRequestBytes.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxStreamsPerDevice.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.MaxStreamsPerDevice.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.OperatorWeakeningWarnings.get -> System.Collections.Generic.IReadOnlyList<string!>!
 HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.OperatorWeakeningWarnings.init -> void
-HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.ProxyPolicyResponse(System.Guid DeviceId, int MaxConcurrentRequests, int CurrentConcurrentRequests, long MaxPayloadBytes, int MaxDurationSeconds, int MaxRedirectHops, System.Collections.Generic.IReadOnlyList<string!>! AllowedProtocols, int AuditRetentionDays, System.Collections.Generic.IReadOnlyList<string!>! OperatorWeakeningWarnings) -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.ProxyPolicyResponse(System.Guid DeviceId, int MaxConcurrentRequests, int CurrentConcurrentRequests, long MaxPayloadBytes, int MaxDurationSeconds, int MaxRedirectHops, System.Collections.Generic.IReadOnlyList<string!>! AllowedProtocols, int AuditRetentionDays, System.Collections.Generic.IReadOnlyList<string!>! OperatorWeakeningWarnings, bool Enabled = true, System.Collections.Generic.IReadOnlyList<int>? HttpPorts = null, System.Collections.Generic.IReadOnlyList<int>? TcpPorts = null, System.Collections.Generic.IReadOnlyList<int>? UdpPorts = null, bool AllowAllPorts = false, bool AllowPrivateNetworks = false, bool QuotasEnabled = true, long MaxRequestBytes = 0, int MaxStreamsPerDevice = 0, int CurrentStreams = 0, int StreamIdleTimeoutSeconds = 0, System.Collections.Generic.IReadOnlyList<string!>? GrantedApps = null) -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.QuotasEnabled.get -> bool
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.QuotasEnabled.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.StreamIdleTimeoutSeconds.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.StreamIdleTimeoutSeconds.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.TcpPorts.get -> System.Collections.Generic.IReadOnlyList<int>?
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.TcpPorts.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.UdpPorts.get -> System.Collections.Generic.IReadOnlyList<int>?
+HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse.UdpPorts.init -> void
 HackerOs.Server.Contracts.Proxy.ProxyProtocol
 HackerOs.Server.Contracts.Proxy.ProxyProtocol.Http = 0 -> HackerOs.Server.Contracts.Proxy.ProxyProtocol
 HackerOs.Server.Contracts.Proxy.ProxyProtocol.HttpConnect = 1 -> HackerOs.Server.Contracts.Proxy.ProxyProtocol
 HackerOs.Server.Contracts.Proxy.ProxyProtocol.Tcp = 2 -> HackerOs.Server.Contracts.Proxy.ProxyProtocol
 HackerOs.Server.Contracts.Proxy.ProxyProtocol.Udp = 3 -> HackerOs.Server.Contracts.Proxy.ProxyProtocol
+HackerOs.Server.Contracts.Proxy.ProxyStreamCloseCodes
+HackerOs.Server.Contracts.Proxy.ProxyStreamClosure
+HackerOs.Server.Contracts.Proxy.ProxyStreamClosure.CloseCode.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyStreamClosure.CloseCode.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamClosure.ProxyStreamClosure(int CloseCode, string? Reason) -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamClosure.Reason.get -> string?
+HackerOs.Server.Contracts.Proxy.ProxyStreamClosure.Reason.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamException
+HackerOs.Server.Contracts.Proxy.ProxyStreamException.ErrorCode.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyStreamException.ProxyStreamException() -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamException.ProxyStreamException(string! errorCode, string! message) -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamException.ProxyStreamException(string! message) -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamException.ProxyStreamException(string! message, System.Exception! innerException) -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamOpened
+HackerOs.Server.Contracts.Proxy.ProxyStreamOpened.ProxyStreamOpened(string! RemoteAddress, int RemotePort) -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamOpened.RemoteAddress.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyStreamOpened.RemoteAddress.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamOpened.RemotePort.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyStreamOpened.RemotePort.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamRequest
+HackerOs.Server.Contracts.Proxy.ProxyStreamRequest.AppId.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyStreamRequest.AppId.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamRequest.Host.get -> string!
+HackerOs.Server.Contracts.Proxy.ProxyStreamRequest.Host.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamRequest.Port.get -> int
+HackerOs.Server.Contracts.Proxy.ProxyStreamRequest.Port.init -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamRequest.ProxyStreamRequest(string! Host, int Port, string! AppId) -> void
+HackerOs.Server.Contracts.Proxy.ProxyStreamRoutes
 HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest
 HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest.AppId.get -> string!
 HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest.AppId.init -> void
@@ -531,6 +609,10 @@ override HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.Get
 static HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Admin.AdminContractsJsonContext!
 static HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext!
 static HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext!
+static HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.Create(System.Guid requestId, string! targetUrl, string! httpMethod, System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Proxy.ProxyHeader!>! headers, byte[]? body, string? contentType, int timeoutSeconds, string! appId, bool includeBody) -> HackerOs.Server.Contracts.Proxy.ProxyHttpRequest!
+static HackerOs.Server.Contracts.Proxy.ProxyStreamException.FromCloseReason(string? reason) -> HackerOs.Server.Contracts.Proxy.ProxyStreamException!
+static HackerOs.Server.Contracts.Proxy.ProxyStreamException.ToCloseReason(string! errorCode, string! message) -> string!
+static HackerOs.Server.Contracts.Proxy.ProxyStreamRoutes.PathOf(HackerOs.Server.Contracts.Proxy.ProxyProtocol protocol) -> string!
 static HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext!
 static HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Sync.SyncContractsJsonContext!
 static HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext!
@@ -624,3 +706,6 @@ static HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.Defau
 ~HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.IReadOnlyListApiVersionEntry.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Versioning.ApiVersionEntry>>
 ~HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.NullableDateTimeOffset.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.DateTimeOffset?>
 ~HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.String.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<string>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ByteArray.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<byte[]>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.IReadOnlyListInt32.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<int>>
+~HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.ProxyStreamOpened.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Proxy.ProxyStreamOpened>

@@ -91,6 +91,9 @@ const HackerOs.Platform.Core.Shell.StartMenuSettingsDocuments.EmptyDocumentConte
 const HackerOs.Platform.Core.Shell.StartMenuSettingsDocuments.MaximumPinnedAppCount = 64 -> int
 const HackerOs.Platform.Core.Shell.UiPlatformPreferenceSettingsDocuments.ExplicitPlatformKey = "explicitPlatformId" -> string!
 const HackerOs.Platform.Core.Shell.UiPlatformPreferenceSettingsDocuments.SelectionSourceKey = "selectionSource" -> string!
+const HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.DocumentId = "keybindings" -> string!
+const HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.FallbackGroup = "fallback" -> string!
+const HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.LinuxGroup = "linux" -> string!
 const HackerOs.Platform.Core.Time.SimulationClockDriver.DefaultMaxTicksPerBeat = 50 -> int
 HackerOs.Platform.Core.Administration.IStorageInspector
 HackerOs.Platform.Core.Administration.IStorageInspector.CaptureAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Administration.HackStorageSnapshot!>!
@@ -103,7 +106,9 @@ HackerOs.Platform.Core.Administration.ServerConnectionGatewayServices.FileSystem
 HackerOs.Platform.Core.Administration.ServerConnectionGatewayServices.FileSystemSync.init -> void
 HackerOs.Platform.Core.Administration.ServerConnectionGatewayServices.GrantsSync.get -> System.Func<HackerOs.Platform.Core.ServerConnection.IGrantsSyncService!>?
 HackerOs.Platform.Core.Administration.ServerConnectionGatewayServices.GrantsSync.init -> void
-HackerOs.Platform.Core.Administration.ServerConnectionGatewayServices.ServerConnectionGatewayServices(System.Func<HackerOs.Platform.Core.ServerConnection.IServerConnectionService!>! Connection, System.Func<HackerOs.Platform.Core.ServerConnection.IFileSystemSyncService!>? FileSystemSync = null, System.Func<HackerOs.Platform.Core.ServerConnection.IGrantsSyncService!>? GrantsSync = null, System.Func<HackerOs.Platform.Core.ServerConnection.IFileAssociationsSyncService!>? FileAssociationsSync = null) -> void
+HackerOs.Platform.Core.Administration.ServerConnectionGatewayServices.Proxy.get -> System.Func<HackerOs.Platform.Core.ServerConnection.IProxyClient!>?
+HackerOs.Platform.Core.Administration.ServerConnectionGatewayServices.Proxy.init -> void
+HackerOs.Platform.Core.Administration.ServerConnectionGatewayServices.ServerConnectionGatewayServices(System.Func<HackerOs.Platform.Core.ServerConnection.IServerConnectionService!>! Connection, System.Func<HackerOs.Platform.Core.ServerConnection.IFileSystemSyncService!>? FileSystemSync = null, System.Func<HackerOs.Platform.Core.ServerConnection.IGrantsSyncService!>? GrantsSync = null, System.Func<HackerOs.Platform.Core.ServerConnection.IFileAssociationsSyncService!>? FileAssociationsSync = null, System.Func<HackerOs.Platform.Core.ServerConnection.IProxyClient!>? Proxy = null) -> void
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.AuthenticationAgent.get -> System.Func<HackerOs.Platform.Core.Elevation.IAdministratorAuthenticationAgent!>?
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.AuthenticationAgent.init -> void
@@ -882,6 +887,8 @@ HackerOs.Platform.Core.Metrics.ProcessIoAccounting.RecordWrite(HackerOs.Simulati
 HackerOs.Platform.Core.Metrics.ProcessIoAccounting.Retain(System.Collections.Generic.IReadOnlyCollection<HackerOs.Simulation.Abstractions.Processes.ProcessId>! livePids) -> void
 HackerOs.Platform.Core.Network.AppNetworkGateway
 HackerOs.Platform.Core.Network.AppNetworkGateway.AppNetworkGateway(HackerOs.Simulation.Abstractions.Network.ISimulatedNetworkService! network, HackerOs.Simulation.Abstractions.Gateways.ICapabilityChecker! capabilities, string! appId, HackerOs.Platform.Core.ServerConnection.IServerConnectionService? serverConnection = null, HackerOs.Platform.Core.ServerConnection.IProxyClient? proxy = null, HackerOs.Simulation.Abstractions.Metrics.INetworkInterfaceStatistics? statistics = null, HackerOs.Simulation.Abstractions.Metrics.IProcessIoAccounting? processIo = null, HackerOs.Simulation.Abstractions.Processes.ProcessId? pid = null, HackerOs.Simulation.Abstractions.Processes.IKernelMemoryLedger? kernelMemory = null, HackerOs.Platform.Core.Network.Local.LocalNetworkCaller? local = null) -> void
+HackerOs.Platform.Core.Network.AppNetworkGateway.ConnectTcpAsync(string! hostNameOrAddress, int port, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Net.HackNetworkResult<HackerOs.AppSdk.Net.IHackSocket!>!>
+HackerOs.Platform.Core.Network.AppNetworkGateway.ConnectUdpAsync(string! hostNameOrAddress, int port, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Net.HackNetworkResult<HackerOs.AppSdk.Net.IHackSocket!>!>
 HackerOs.Platform.Core.Network.AppNetworkGateway.DetectOperatingSystemAsync(string! hostNameOrAddress, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Net.HackNetworkResult<HackerOs.AppSdk.Net.HackOsFingerprint?>!>
 HackerOs.Platform.Core.Network.AppNetworkGateway.GetTcpListenersAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Net.HackTcpListenerInfo!>!>
 HackerOs.Platform.Core.Network.AppNetworkGateway.ListenHttpAsync(System.Collections.Generic.IReadOnlyList<string!>! prefixes, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Net.HackNetworkResult<HackerOs.AppSdk.Net.IHackHttpListenerSocket!>!>
@@ -1271,6 +1278,8 @@ HackerOs.Platform.Core.ServerConnection.HttpProxyClient.ExecuteHttpRequestAsync(
 HackerOs.Platform.Core.ServerConnection.HttpProxyClient.ExecuteTcpProbeAsync(System.Uri! serverBaseUrl, string! accessToken, HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Server.Contracts.Proxy.ProxyTcpProbeResponse!>!
 HackerOs.Platform.Core.ServerConnection.HttpProxyClient.GetPolicyAsync(System.Uri! serverBaseUrl, string! accessToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse!>!
 HackerOs.Platform.Core.ServerConnection.HttpProxyClient.HttpProxyClient(System.Net.Http.HttpClient! httpClient) -> void
+HackerOs.Platform.Core.ServerConnection.HttpProxyClient.HttpProxyClient(System.Net.Http.HttpClient! httpClient, System.Func<System.Uri!, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Net.WebSockets.WebSocket!>!>? webSocketConnector = null) -> void
+HackerOs.Platform.Core.ServerConnection.HttpProxyClient.OpenStreamAsync(System.Uri! serverBaseUrl, string! accessToken, HackerOs.Server.Contracts.Proxy.ProxyProtocol protocol, HackerOs.Server.Contracts.Proxy.ProxyStreamRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Server.Contracts.Proxy.IProxyStreamChannel!>!
 HackerOs.Platform.Core.ServerConnection.HttpSyncClient
 HackerOs.Platform.Core.ServerConnection.HttpSyncClient.HttpSyncClient(System.Net.Http.HttpClient! httpClient) -> void
 HackerOs.Platform.Core.ServerConnection.HttpSyncClient.PullAsync(System.Uri! serverBaseUrl, string! accessToken, HackerOs.Server.Contracts.Sync.PullRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Server.Contracts.Sync.PullResponse!>!
@@ -1299,6 +1308,7 @@ HackerOs.Platform.Core.ServerConnection.IProxyClient
 HackerOs.Platform.Core.ServerConnection.IProxyClient.ExecuteHttpRequestAsync(System.Uri! serverBaseUrl, string! accessToken, HackerOs.Server.Contracts.Proxy.ProxyHttpRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Server.Contracts.Proxy.ProxyHttpResponse!>!
 HackerOs.Platform.Core.ServerConnection.IProxyClient.ExecuteTcpProbeAsync(System.Uri! serverBaseUrl, string! accessToken, HackerOs.Server.Contracts.Proxy.ProxyTcpProbeRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Server.Contracts.Proxy.ProxyTcpProbeResponse!>!
 HackerOs.Platform.Core.ServerConnection.IProxyClient.GetPolicyAsync(System.Uri! serverBaseUrl, string! accessToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Server.Contracts.Proxy.ProxyPolicyResponse!>!
+HackerOs.Platform.Core.ServerConnection.IProxyClient.OpenStreamAsync(System.Uri! serverBaseUrl, string! accessToken, HackerOs.Server.Contracts.Proxy.ProxyProtocol protocol, HackerOs.Server.Contracts.Proxy.ProxyStreamRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Server.Contracts.Proxy.IProxyStreamChannel!>!
 HackerOs.Platform.Core.ServerConnection.IServerConnectionService
 HackerOs.Platform.Core.ServerConnection.IServerConnectionService.ConnectWithExistingAccountAsync(System.Uri! serverBaseUrl, string! username, string! password, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.ServerConnection.ServerConnectionState!>!
 HackerOs.Platform.Core.ServerConnection.IServerConnectionService.ConnectWithNewAccountAsync(System.Uri! serverBaseUrl, string! username, string! password, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.ServerConnection.ServerConnectionState!>!
@@ -1419,6 +1429,21 @@ HackerOs.Platform.Core.Shell.IPlatformEnvironmentProbe
 HackerOs.Platform.Core.Shell.IPlatformEnvironmentProbe.Changed -> System.Action?
 HackerOs.Platform.Core.Shell.IPlatformEnvironmentProbe.Current.get -> HackerOs.Platform.Core.Shell.PlatformEnvironmentSnapshot!
 HackerOs.Platform.Core.Shell.IPlatformEnvironmentProbe.InitializeAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Shell.KeyChord
+HackerOs.Platform.Core.Shell.KeyChord.Alt.get -> bool
+HackerOs.Platform.Core.Shell.KeyChord.Alt.init -> void
+HackerOs.Platform.Core.Shell.KeyChord.Control.get -> bool
+HackerOs.Platform.Core.Shell.KeyChord.Control.init -> void
+HackerOs.Platform.Core.Shell.KeyChord.DomCode.get -> string?
+HackerOs.Platform.Core.Shell.KeyChord.DomKey.get -> string?
+HackerOs.Platform.Core.Shell.KeyChord.Key.get -> string!
+HackerOs.Platform.Core.Shell.KeyChord.Key.init -> void
+HackerOs.Platform.Core.Shell.KeyChord.KeyChord(bool Control, bool Alt, bool Shift, bool Super, string! Key) -> void
+HackerOs.Platform.Core.Shell.KeyChord.Matches(bool control, bool alt, bool shift, bool super, string? domKey, string? domCode) -> bool
+HackerOs.Platform.Core.Shell.KeyChord.Shift.get -> bool
+HackerOs.Platform.Core.Shell.KeyChord.Shift.init -> void
+HackerOs.Platform.Core.Shell.KeyChord.Super.get -> bool
+HackerOs.Platform.Core.Shell.KeyChord.Super.init -> void
 HackerOs.Platform.Core.Shell.PlatformEnvironmentPolicy
 HackerOs.Platform.Core.Shell.PlatformEnvironmentSignals
 HackerOs.Platform.Core.Shell.PlatformEnvironmentSignals.HasHover.get -> bool
@@ -1806,6 +1831,32 @@ HackerOs.Platform.Core.Shell.UiPlatformPreferenceState.UiPlatformPreferenceState
 HackerOs.Platform.Core.Shell.UiPlatformSelectionSource
 HackerOs.Platform.Core.Shell.UiPlatformSelectionSource.Auto = 0 -> HackerOs.Platform.Core.Shell.UiPlatformSelectionSource
 HackerOs.Platform.Core.Shell.UiPlatformSelectionSource.Explicit = 1 -> HackerOs.Platform.Core.Shell.UiPlatformSelectionSource
+HackerOs.Platform.Core.Shell.WindowKeyBinding
+HackerOs.Platform.Core.Shell.WindowKeyBinding.Action.get -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyBinding.Action.init -> void
+HackerOs.Platform.Core.Shell.WindowKeyBinding.Chord.get -> HackerOs.Platform.Core.Shell.KeyChord!
+HackerOs.Platform.Core.Shell.WindowKeyBinding.Chord.init -> void
+HackerOs.Platform.Core.Shell.WindowKeyBinding.Set.get -> HackerOs.Platform.Core.Shell.WindowKeyBindingSet
+HackerOs.Platform.Core.Shell.WindowKeyBinding.Set.init -> void
+HackerOs.Platform.Core.Shell.WindowKeyBinding.WindowKeyBinding(HackerOs.Platform.Core.Shell.WindowKeyboardAction Action, HackerOs.Platform.Core.Shell.WindowKeyBindingSet Set, HackerOs.Platform.Core.Shell.KeyChord! Chord) -> void
+HackerOs.Platform.Core.Shell.WindowKeyBindingSet
+HackerOs.Platform.Core.Shell.WindowKeyBindingSet.Fallback = 1 -> HackerOs.Platform.Core.Shell.WindowKeyBindingSet
+HackerOs.Platform.Core.Shell.WindowKeyBindingSet.Linux = 0 -> HackerOs.Platform.Core.Shell.WindowKeyBindingSet
+HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments
+HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyboardAction.Close = 2 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyboardAction.Maximize = 7 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyboardAction.Minimize = 6 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyboardAction.Move = 4 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyboardAction.Resize = 5 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyboardAction.RestoreOrMinimize = 8 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyboardAction.SnapLeft = 10 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyboardAction.SnapRight = 11 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyboardAction.SwitchNext = 0 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyboardAction.SwitchPrevious = 1 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyboardAction.ToggleFullScreen = 12 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyboardAction.ToggleMaximize = 9 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
+HackerOs.Platform.Core.Shell.WindowKeyboardAction.WindowMenu = 3 -> HackerOs.Platform.Core.Shell.WindowKeyboardAction
 HackerOs.Platform.Core.Time.ManualSimulationClock
 HackerOs.Platform.Core.Time.ManualSimulationClock.Advance(int tickCount = 1) -> void
 HackerOs.Platform.Core.Time.ManualSimulationClock.CurrentTick.get -> long
@@ -1861,6 +1912,7 @@ override HackerOs.Platform.Core.Network.Websites.HackerSearchController.Theme.ge
 override HackerOs.Platform.Core.Network.Websites.HackMailController.PrimaryHostname.get -> string!
 override HackerOs.Platform.Core.Network.Websites.HackMailController.SiteName.get -> string!
 override HackerOs.Platform.Core.Network.Websites.HackMailController.Theme.get -> string!
+override HackerOs.Platform.Core.Shell.KeyChord.ToString() -> string!
 override HackerOs.Platform.Core.Shell.ShellArithmeticPart.IsQuoted.get -> bool
 override HackerOs.Platform.Core.Shell.ShellCommandSubstitutionPart.IsQuoted.get -> bool
 override HackerOs.Platform.Core.Shell.ShellExitStatusPart.IsQuoted.get -> bool
@@ -1961,6 +2013,8 @@ static HackerOs.Platform.Core.Sessions.LocalPasswordHasher.Verify(string! passwo
 static HackerOs.Platform.Core.Sessions.LocalPasswordHasher.VerifyAsync(string! password, HackerOs.Simulation.Abstractions.Sessions.LocalPasswordCredential! credential, HackerOs.Platform.Core.Sessions.KeyDerivationAsyncDelegate? asyncHasher = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
 static HackerOs.Platform.Core.Settings.OsSettingsDocumentRegistry.DocumentIds.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 static HackerOs.Platform.Core.Settings.OsSettingsDocumentRegistry.TryGet(string! documentId, out HackerOs.Platform.Core.Settings.OsSettingsDocument! document) -> bool
+static HackerOs.Platform.Core.Shell.KeyChord.Parse(string! text) -> HackerOs.Platform.Core.Shell.KeyChord!
+static HackerOs.Platform.Core.Shell.KeyChord.TryParse(string? text, out HackerOs.Platform.Core.Shell.KeyChord! chord) -> bool
 static HackerOs.Platform.Core.Shell.PlatformEnvironmentPolicy.Decide(HackerOs.Platform.Core.Shell.PlatformEnvironmentSignals! signals) -> HackerOs.Platform.Core.Shell.PlatformEnvironmentSnapshot!
 static HackerOs.Platform.Core.Shell.ShellCommandResolver.ShortName(string! appId) -> string!
 static HackerOs.Platform.Core.Shell.ShellHostService.ShellManifest.get -> HackerOs.App.Abstractions.AppManifest!
@@ -1975,6 +2029,12 @@ static HackerOs.Platform.Core.Shell.StartMenuSettingsDocuments.File.get -> Hacke
 static HackerOs.Platform.Core.Shell.StartMenuSettingsDocuments.Key.get -> HackerOs.Simulation.Abstractions.Settings.SettingsDocumentKey
 static HackerOs.Platform.Core.Shell.UiPlatformPreferenceSettingsDocuments.Document.get -> HackerOs.Platform.Core.Settings.OsSettingsDocument!
 static HackerOs.Platform.Core.Shell.UiPlatformPreferenceSettingsDocuments.Schema.get -> HackerOs.Simulation.Abstractions.Settings.SettingsSchema!
+static HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.DefaultBindings.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Shell.WindowKeyBinding!>!
+static HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.DefaultSystemFileContent.get -> string!
+static HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.Document.get -> HackerOs.Platform.Core.Settings.OsSettingsDocument!
+static HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.KeyOf(HackerOs.Platform.Core.Shell.WindowKeyboardAction action) -> string!
+static HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.Schema.get -> HackerOs.Simulation.Abstractions.Settings.SettingsSchema!
+static HackerOs.Platform.Core.Shell.WindowKeyBindingsSettingsDocuments.ToBindings(HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot! snapshot, out System.Collections.Generic.IReadOnlyList<string!>! problems) -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Shell.WindowKeyBinding!>!
 static HackerOs.Platform.Core.WebData.WebSiteDatabaseNames.Require(string! databaseName) -> void
 static readonly HackerOs.Platform.Core.Diagnostics.LogFileTarget.AppLogDirectory -> HackerOs.App.Abstractions.VirtualPath
 static readonly HackerOs.Platform.Core.Diagnostics.LogFileTarget.AuthLog -> HackerOs.Platform.Core.Diagnostics.LogFileTarget!

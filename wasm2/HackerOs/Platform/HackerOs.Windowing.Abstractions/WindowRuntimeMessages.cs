@@ -15,6 +15,13 @@ public sealed record MoveWindowCommand(WindowId WindowId, double X, double Y) : 
 /// <summary>Requests new position and dimensions for an edge/corner resize.</summary>
 public sealed record ResizeWindowCommand(WindowId WindowId, WindowBounds Bounds) : WindowCommand;
 
+/// <summary>
+/// Ends an interactive resize (pointer released, keyboard resize validated): the runtime reports one
+/// <see cref="WindowResizeCompletedEvent"/>, like the configure notification an X11 client receives
+/// once the window manager releases its grab, instead of one per intermediate size.
+/// </summary>
+public sealed record CompleteWindowResizeCommand(WindowId WindowId) : WindowCommand;
+
 /// <summary>Requests taskbar minimization for a window.</summary>
 public sealed record MinimizeWindowCommand(WindowId WindowId) : WindowCommand;
 
@@ -50,6 +57,9 @@ public sealed record WindowMovedEvent(WindowId WindowId, WindowBounds PreviousBo
 
 /// <summary>Reports a completed resize.</summary>
 public sealed record WindowResizedEvent(WindowId WindowId, WindowBounds PreviousBounds, WindowBounds Bounds) : WindowEvent;
+
+/// <summary>Reports that an interactive resize ended with the window at <paramref name="Bounds"/>.</summary>
+public sealed record WindowResizeCompletedEvent(WindowId WindowId, WindowBounds Bounds) : WindowEvent;
 
 /// <summary>Reports a visual-state transition.</summary>
 public sealed record WindowVisualStateChangedEvent(

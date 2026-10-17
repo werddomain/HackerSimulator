@@ -166,6 +166,19 @@ HackerOs.AppSdk.Blazor.HackComponentBase
 HackerOs.AppSdk.Blazor.HackComponentBase.AppContext.get -> HackerOs.AppSdk.IAppExecutionContext?
 HackerOs.AppSdk.Blazor.HackComponentBase.AppContext.set -> void
 HackerOs.AppSdk.Blazor.HackComponentBase.HackComponentBase() -> void
+HackerOs.AppSdk.Blazor.HackWindowSize
+HackerOs.AppSdk.Blazor.HackWindowSize.DisplaySurfaceId.get -> string?
+HackerOs.AppSdk.Blazor.HackWindowSize.DisplaySurfaceId.init -> void
+HackerOs.AppSdk.Blazor.HackWindowSize.HackWindowSize() -> void
+HackerOs.AppSdk.Blazor.HackWindowSize.HackWindowSize(double Width, double Height) -> void
+HackerOs.AppSdk.Blazor.HackWindowSize.Height.get -> double
+HackerOs.AppSdk.Blazor.HackWindowSize.Height.init -> void
+HackerOs.AppSdk.Blazor.HackWindowSize.Width.get -> double
+HackerOs.AppSdk.Blazor.HackWindowSize.Width.init -> void
+HackerOs.AppSdk.Blazor.HackWindowState
+HackerOs.AppSdk.Blazor.HackWindowState.Maximized = 2 -> HackerOs.AppSdk.Blazor.HackWindowState
+HackerOs.AppSdk.Blazor.HackWindowState.Minimized = 1 -> HackerOs.AppSdk.Blazor.HackWindowState
+HackerOs.AppSdk.Blazor.HackWindowState.Normal = 0 -> HackerOs.AppSdk.Blazor.HackWindowState
 HackerOs.AppSdk.Blazor.IAppBackHandler
 HackerOs.AppSdk.Blazor.IAppBackHandler.CanNavigateBack.get -> bool
 HackerOs.AppSdk.Blazor.IAppBackHandler.CanNavigateBackChanged -> System.Action?
@@ -186,6 +199,11 @@ HackerOs.AppSdk.Blazor.Interop.BrowserFileDownloader
 HackerOs.AppSdk.Blazor.Interop.BrowserFileDownloader.BrowserFileDownloader(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
 HackerOs.AppSdk.Blazor.Interop.BrowserFileDownloader.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.AppSdk.Blazor.Interop.BrowserFileDownloader.DownloadFileFromStreamAsync(string! fileName, System.IO.Stream! stream) -> System.Threading.Tasks.ValueTask
+HackerOs.AppSdk.Blazor.IWindowAppEventTarget
+HackerOs.AppSdk.Blazor.IWindowAppEventTarget.NotifyActivatedAsync() -> System.Threading.Tasks.Task!
+HackerOs.AppSdk.Blazor.IWindowAppEventTarget.NotifyDeactivatedAsync() -> System.Threading.Tasks.Task!
+HackerOs.AppSdk.Blazor.IWindowAppEventTarget.NotifyResizedAsync(HackerOs.AppSdk.Blazor.HackWindowSize size) -> System.Threading.Tasks.Task!
+HackerOs.AppSdk.Blazor.IWindowAppEventTarget.NotifyStateChangedAsync(HackerOs.AppSdk.Blazor.HackWindowState previous, HackerOs.AppSdk.Blazor.HackWindowState current) -> System.Threading.Tasks.Task!
 HackerOs.AppSdk.Blazor.IWindowAppFrameworkLifecycle
 HackerOs.AppSdk.Blazor.IWindowAppFrameworkLifecycle.OnAfterRenderAsync(HackerOs.AppSdk.Blazor.WindowAppBase! app, bool firstRender) -> System.Threading.Tasks.Task!
 HackerOs.AppSdk.Blazor.IWindowCloseGuard
@@ -326,6 +344,7 @@ HackerOs.AppSdk.Blazor.WindowAppBase.ElevationVerifier.get -> HackerOs.App.Abstr
 HackerOs.AppSdk.Blazor.WindowAppBase.ElevationVerifier.set -> void
 HackerOs.AppSdk.Blazor.WindowAppBase.FileDialogs.get -> HackerOs.AppSdk.Blazor.IFileDialogService!
 HackerOs.AppSdk.Blazor.WindowAppBase.FileDialogs.set -> void
+HackerOs.AppSdk.Blazor.WindowAppBase.IsWindowActive.get -> bool
 HackerOs.AppSdk.Blazor.WindowAppBase.LaunchArguments.get -> System.Collections.Generic.IReadOnlyList<string!>!
 HackerOs.AppSdk.Blazor.WindowAppBase.LaunchFile.get -> HackerOs.App.Abstractions.VirtualPath?
 HackerOs.AppSdk.Blazor.WindowAppBase.Manifest.get -> HackerOs.App.Abstractions.AppManifest!
@@ -334,7 +353,10 @@ HackerOs.AppSdk.Blazor.WindowAppBase.OpenFileAsync(HackerOs.AppSdk.Blazor.OpenFi
 HackerOs.AppSdk.Blazor.WindowAppBase.SaveFileAsync(HackerOs.AppSdk.Blazor.SaveFileDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.SaveFileDialogResult!>
 HackerOs.AppSdk.Blazor.WindowAppBase.SelectFolderAsync(HackerOs.AppSdk.Blazor.SelectFolderDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.SelectFolderDialogResult!>
 HackerOs.AppSdk.Blazor.WindowAppBase.TextInput(string! title, string! content, string? defaultValue = null, string? placeholder = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.TextInputDialogResult!>
+HackerOs.AppSdk.Blazor.WindowAppBase.TrackDisplaySurface(HackerOs.AppSdk.Blazor.Display.IDisplaySurface! surface) -> System.IDisposable!
 HackerOs.AppSdk.Blazor.WindowAppBase.WindowAppBase() -> void
+HackerOs.AppSdk.Blazor.WindowAppBase.WindowSize.get -> HackerOs.AppSdk.Blazor.HackWindowSize?
+HackerOs.AppSdk.Blazor.WindowAppBase.WindowState.get -> HackerOs.AppSdk.Blazor.HackWindowState
 HackerOs.AppSdk.Blazor._Imports
 HackerOs.AppSdk.Blazor._Imports.Execute() -> void
 HackerOs.AppSdk.Blazor._Imports._Imports() -> void
@@ -396,6 +418,14 @@ virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnAppParametersSet() -> void
 virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnAppParametersSetAsync() -> System.Threading.Tasks.Task!
 virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnAppStopRequestedAsync(HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs! e) -> System.Threading.Tasks.Task!
 virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnPermissionErrorRaised(HackerOs.Simulation.Abstractions.Gateways.AppPermissionErrorEventArgs! e) -> void
+virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnWindowActivated() -> void
+virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnWindowActivatedAsync() -> System.Threading.Tasks.Task!
+virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnWindowDeactivated() -> void
+virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnWindowDeactivatedAsync() -> System.Threading.Tasks.Task!
+virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnWindowResized(HackerOs.AppSdk.Blazor.HackWindowSize size) -> void
+virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnWindowResizedAsync(HackerOs.AppSdk.Blazor.HackWindowSize size) -> System.Threading.Tasks.Task!
+virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnWindowStateChanged(HackerOs.AppSdk.Blazor.HackWindowState previous, HackerOs.AppSdk.Blazor.HackWindowState current) -> void
+virtual HackerOs.AppSdk.Blazor.WindowAppBase.OnWindowStateChangedAsync(HackerOs.AppSdk.Blazor.HackWindowState previous, HackerOs.AppSdk.Blazor.HackWindowState current) -> System.Threading.Tasks.Task!
 virtual HackerOs.AppSdk.Blazor.WindowAppBase.ShouldRenderApp() -> bool
 ~override HackerOs.AppSdk.Blazor.Charts.HackLineChart.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.AppSdk.Blazor.Components.HackEmbeddedComponent<TController>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

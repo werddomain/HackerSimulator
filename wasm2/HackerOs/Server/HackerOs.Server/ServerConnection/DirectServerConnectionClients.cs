@@ -184,6 +184,34 @@ public sealed class DirectProxyClient(IServiceScopeFactory scopeFactory, ITokenS
         }
     }
 
+    /// <summary>
+    /// Opens the stream in process: the OS hosted by this server (ADR 0027) uses the server's own
+    /// socket, with the same validation as the WebSocket route. The request scope stays open until
+    /// the channel is disposed, since the close is audited through it.
+    /// </summary>
+    public async Task<IProxyStreamChannel> OpenStreamAsync(
+        Uri serverBaseUrl, string accessToken, ProxyProtocol protocol, ProxyStreamRequest request, CancellationToken cancellationToken = default)
+    {
+        (Guid accountId, Guid deviceId) = await ValidateAsync(accessToken, cancellationToken).ConfigureAwait(false);
+        AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+        try
+        {
+            IProxyService service = scope.ServiceProvider.GetRequiredService<IProxyService>();
+            IProxyStreamChannel channel = await service.OpenStreamAsync(accountId, deviceId, protocol, request, cancellationToken).ConfigureAwait(false);
+            return new ScopedStreamChannel(channel, scope);
+        }
+        catch (ProxyRequestException ex)
+        {
+            await scope.DisposeAsync().ConfigureAwait(false);
+            throw new ProxyStreamException(ex.ErrorCode, ex.Message);
+        }
+        catch
+        {
+            await scope.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
     private async Task<(Guid AccountId, Guid DeviceId)> ValidateAsync(string accessToken, CancellationToken cancellationToken)
     {
         TokenValidationResult result = await tokenService.ValidateAccessTokenAsync(accessToken, cancellationToken).ConfigureAwait(false);
@@ -192,5 +220,27 @@ public sealed class DirectProxyClient(IServiceScopeFactory scopeFactory, ITokenS
             throw new ServerConnectionException(result.FailureReason ?? "The access token is invalid or has expired.");
         }
         return (result.AccountId, result.DeviceId);
+    }
+
+    /// <summary>A stream channel that disposes its request scope after itself.</summary>
+    private sealed class ScopedStreamChannel(IProxyStreamChannel inner, AsyncServiceScope scope) : IProxyStreamChannel
+    {
+        public ProxyProtocol Protocol => inner.Protocol;
+
+        public ProxyStreamOpened Remote => inner.Remote;
+
+        public ProxyStreamClosure? Closure => inner.Closure;
+
+        public ValueTask SendAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default) =>
+            inner.SendAsync(data, cancellationToken);
+
+        public ValueTask<byte[]?> ReceiveAsync(CancellationToken cancellationToken = default) =>
+            inner.ReceiveAsync(cancellationToken);
+
+        public async ValueTask DisposeAsync()
+        {
+            await inner.DisposeAsync().ConfigureAwait(false);
+            await scope.DisposeAsync().ConfigureAwait(false);
+        }
     }
 }

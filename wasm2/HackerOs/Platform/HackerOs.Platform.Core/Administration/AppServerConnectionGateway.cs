@@ -1,6 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Administration;
 using HackerOs.Platform.Core.ServerConnection;
+using HackerOs.Server.Contracts.Proxy;
 using HackerOs.Simulation.Abstractions.Gateways;
 using ServerState = HackerOs.Simulation.Abstractions.ServerConnection.ServerConnectionState;
 
@@ -14,11 +15,13 @@ namespace HackerOs.Platform.Core.Administration;
 /// <param name="FileSystemSync">Home directory sync (ADR 0030).</param>
 /// <param name="GrantsSync">Grant pull (ADR 0031).</param>
 /// <param name="FileAssociationsSync">File association sync (ADR 0033).</param>
+/// <param name="Proxy">Network relay client, read for its policy (ADR 0102 §5).</param>
 public sealed record ServerConnectionGatewayServices(
     Func<IServerConnectionService> Connection,
     Func<IFileSystemSyncService>? FileSystemSync = null,
     Func<IGrantsSyncService>? GrantsSync = null,
-    Func<IFileAssociationsSyncService>? FileAssociationsSync = null);
+    Func<IFileAssociationsSyncService>? FileAssociationsSync = null,
+    Func<IProxyClient>? Proxy = null);
 
 /// <summary>
 /// Trusted <see cref="IAppServerConnectionGateway"/> (ADR 0056, section 10) over the server
@@ -122,6 +125,50 @@ internal sealed class AppServerConnectionGateway : IAppServerConnectionGateway
             ? [.. fileSystemSync().UnresolvedConflicts.Select(path => new HackSyncConflict(HackSyncDomain.FileSystem, path))]
             : [];
         return ValueTask.FromResult(conflicts);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<HackServerRelayPolicy?> GetRelayPolicyAsync(CancellationToken cancellationToken = default)
+    {
+        _capabilities.Require(AppCapabilities.ServerConnectionManage);
+        if (_services?.Proxy is not { } proxyFactory)
+        {
+            return null;
+        }
+
+        IServerConnectionService connection = _services.Connection();
+        try
+        {
+            ServerState? state = await connection.GetStateAsync(cancellationToken).ConfigureAwait(false);
+            if (state is null || await connection.EnsureAccessTokenAsync(cancellationToken).ConfigureAwait(false) is not { } token)
+            {
+                return null;
+            }
+
+            ProxyPolicyResponse policy = await proxyFactory()
+                .GetPolicyAsync(new Uri(state.ServerBaseUrl), token, cancellationToken)
+                .ConfigureAwait(false);
+            return new HackServerRelayPolicy(
+                policy.Enabled,
+                policy.HttpPorts ?? [],
+                policy.TcpPorts ?? [],
+                policy.UdpPorts ?? [],
+                policy.AllowAllPorts,
+                policy.AllowPrivateNetworks,
+                policy.QuotasEnabled,
+                policy.MaxRequestBytes,
+                policy.MaxPayloadBytes,
+                policy.MaxConcurrentRequests,
+                policy.MaxStreamsPerDevice,
+                policy.CurrentStreams,
+                TimeSpan.FromSeconds(policy.StreamIdleTimeoutSeconds),
+                policy.GrantedApps ?? [],
+                policy.OperatorWeakeningWarnings);
+        }
+        catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException)
+        {
+            throw new HackServerConnectionException($"Could not read the relay policy: {exception.Message}", exception);
+        }
     }
 
     private async ValueTask<HackServerConnectionState> ConnectCoreAsync(

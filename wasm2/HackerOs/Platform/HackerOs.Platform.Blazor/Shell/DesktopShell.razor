@@ -19,6 +19,8 @@
 @inject WindowCloseCoordinator CloseCoordinator
 @inject WindowCloseGuardRegistry CloseGuards
 @inject AppBackHandlerRegistry BackHandlers
+@inject WindowAppEventDispatcher WindowEvents
+@inject WindowKeyboardCommands KeyboardCommands
 @inject ISessionService SessionService
 @inject ISimulationClock SimulationClock
 @inject IEventBus EventBus
@@ -34,6 +36,7 @@
                      OnToggleMaximize="HandleToggleMaximize"
                      OnClose="HandleClose"
                      OnBack="HandleBack"
+                     OnWindowMenu="HandleWindowMenu"
                      OnGesture="HandleGesture">
             <WindowContent Context="window">
                 @if (window.Content is not null)
@@ -46,7 +49,8 @@
                                        Descriptor="descriptor"
                                        AppContext="context"
                                        CloseGuards="CloseGuards"
-                                       BackHandlers="BackHandlers" />
+                                       BackHandlers="BackHandlers"
+                                       WindowEvents="WindowEvents" />
                 }
                 else
                 {
@@ -91,6 +95,9 @@
             }
         </div>
     }
+
+    @* ADR 0095 §3: window switcher, keyboard move/resize and window menu. *@
+    <WindowManagerOverlays Commands="KeyboardCommands" />
 
     @* ADR 0049: secure-desktop approval, above every window and the taskbar. *@
     <DangerousCapabilityApprovalOverlay />
@@ -230,6 +237,9 @@
         await BackHandlers.NavigateBackAsync(id, new AppBackRequest(AppBackSource.DesktopChromeButton));
     }
 
+    private void HandleWindowMenu(WindowMenuRequest request) =>
+        KeyboardCommands.OpenMenu(request.WindowId, request.ClientX, request.ClientY);
+
     private void HandleGesture(WindowCommand command)
     {
         try
@@ -279,11 +289,14 @@
     }
 
     private IDisposable? _processSubscription;
+    private Func<WindowId, Task>? _closeWindow;
 
     protected override void OnInitialized()
     {
         WindowRuntime.StateChanged += Rerender;
         FileDialogAdapter.Changed += Rerender;
+        _closeWindow = HandleClose;
+        KeyboardCommands.CloseWindow = _closeWindow;
         _processSubscription = EventBus.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
 
         _taskbarWindowSource = new TaskbarWindowSourceAdapter(WindowRuntime);
@@ -372,6 +385,11 @@
     {
         WindowRuntime.StateChanged -= Rerender;
         FileDialogAdapter.Changed -= Rerender;
+        if (ReferenceEquals(KeyboardCommands.CloseWindow, _closeWindow))
+        {
+            KeyboardCommands.CloseWindow = null;
+        }
+
         _processSubscription?.Dispose();
         _launcher.Changed -= Rerender;
         _clockPanel.Changed -= Rerender;

@@ -176,7 +176,7 @@ Façades statiques existantes au début de la phase 4 :
 | `HackEnvironment` | arguments, répertoire courant, variables | [`process-environment.md`](process-environment.md) |
 | `HackSettings` | paramètres en fichiers | [`settings-files.md`](settings-files.md) |
 | `HackTrash` | corbeille | [`trash.md`](trash.md) |
-| `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient` | réseau, repli réel décidé par l'OS (`4-sdk-network`) | [`sdk-network.md`](sdk-network.md) |
+| `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient`, `HackUdpClient` | réseau, repli réel décidé par l'OS (`4-sdk-network`), sockets relayés (`v3/10`) | [`sdk-network.md`](sdk-network.md) |
 | `HackDriveInfo` | taille et espace libre des disques (`4-proc-metrics`) | [`system-metrics.md`](system-metrics.md) |
 | `HackClipboard` | presse-papiers de session, texte et liste de fichiers (`4-file-explorer`) | [`file-explorer.md`](file-explorer.md) |
 | `HackTextContent` | texte ou binaire décidé sur le contenu, comme `file` (`4-file-explorer`) | [`text-editor.md`](text-editor.md) |
@@ -441,6 +441,16 @@ enfants et gardent leurs propres capacités. Le terminal lit les identifiants
 un chemin absolu. Ouvrir un fichier depuis l'explorateur ou avec `open` lance
 l'app associée avec ce chemin : une app de document lit son fichier initial là
 (voir [`text-editor.md`](text-editor.md)).
+
+### Événements et tailles de fenêtre (ADR 0095)
+
+`WindowAppBase` reçoit les crochets `OnWindowActivated`, `OnWindowDeactivated`,
+`OnWindowStateChanged` et `OnWindowResized` (avec leurs versions `Async`) et
+l'état `IsWindowActive`, `WindowState`, `WindowSize`. Les types `HackWindowState`,
+`HackWindowSize` et `IWindowAppEventTarget` sont dans `HackerOs.AppSdk.Blazor` ;
+`WindowOptions` (tailles déclarées par `AppDefinition.Window`) est dans
+`HackerOs.App.Abstractions`. Aucune app n'injecte de service pour les recevoir :
+l'OS les appelle. Voir [`window-model.md`](window-model.md).
 
 ### API ajoutées après la phase 4 (ADR 0061 à 0065)
 

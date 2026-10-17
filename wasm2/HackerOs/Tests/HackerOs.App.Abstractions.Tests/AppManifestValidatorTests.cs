@@ -70,6 +70,42 @@ public sealed class AppManifestValidatorTests
     }
 
     [Fact]
+    public void Validate_accepts_declared_window_sizes_on_a_window_app()
+    {
+        AppManifest manifest = CreateValidManifest() with
+        {
+            Window = new WindowOptions { DefaultWidth = 420, DefaultHeight = 600, MinWidth = 300, MinHeight = 400, MaxWidth = 640 }
+        };
+
+        Assert.True(AppManifestValidator.Validate(manifest).IsValid);
+    }
+
+    [Theory]
+    [InlineData(AppKind.Service, 800, 560, 360, 240, null, "manifest.window.forbidden")]
+    [InlineData(AppKind.Window, 0, 560, 360, 240, null, "manifest.window.size.invalid")]
+    [InlineData(AppKind.Window, 800, 560, -1, 240, null, "manifest.window.size.invalid")]
+    [InlineData(AppKind.Window, 800, 560, 900, 240, null, "manifest.window.minimum.exceedsDefault")]
+    [InlineData(AppKind.Window, 800, 560, 360, 240, 700, "manifest.window.default.exceedsMaximum")]
+    public void Validate_rejects_inconsistent_window_sizes(
+        AppKind kind, int defaultWidth, int defaultHeight, int minWidth, int minHeight, int? maxWidth, string code)
+    {
+        AppManifest manifest = CreateValidManifest() with
+        {
+            Kind = kind,
+            Window = new WindowOptions
+            {
+                DefaultWidth = defaultWidth,
+                DefaultHeight = defaultHeight,
+                MinWidth = minWidth,
+                MinHeight = minHeight,
+                MaxWidth = maxWidth
+            }
+        };
+
+        Assert.Contains(AppManifestValidator.Validate(manifest).Errors, error => error.Code == code);
+    }
+
+    [Fact]
     public void Validate_rejects_an_inverted_sdk_version_range()
     {
         AppManifest manifest = CreateValidManifest() with

@@ -538,7 +538,8 @@ public static class EcosystemServiceCollectionExtensions
                     () => provider.GetRequiredService<IServerConnectionService>(),
                     () => provider.GetRequiredService<IFileSystemSyncService>(),
                     () => provider.GetRequiredService<IGrantsSyncService>(),
-                    () => provider.GetRequiredService<IFileAssociationsSyncService>()),
+                    () => provider.GetRequiredService<IFileAssociationsSyncService>(),
+                    () => provider.GetRequiredService<IProxyClient>()),
                 () => provider.GetRequiredService<SystemPowerService>(),
                 () => provider.GetRequiredService<IStorageInspector>(),
                 () => provider.GetRequiredService<IAdministratorAuthenticationAgent>())));
@@ -688,6 +689,16 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<WindowLaunchCoordinator>();
         services.AddScoped<WindowCloseGuardRegistry>();
         services.AddScoped<AppBackHandlerRegistry>();
+        // ADR 0095: window events to apps' OnWindow* hooks, and the window manager's keyboard
+        // commands. Scoped like WindowRuntime; the probe depends on IJSRuntime (see the scoping note).
+        services.AddScoped<IWindowClientAreaProbe, BrowserWindowClientAreaProbe>();
+        services.AddScoped(provider => new WindowAppEventDispatcher(
+            provider.GetRequiredService<WindowRuntime>(),
+            provider.GetService<IWindowClientAreaProbe>()));
+        services.AddScoped(provider => new WindowKeyboardCommands(
+            provider.GetRequiredService<WindowRuntime>(),
+            provider.GetService<IOsSettingsService>(),
+            provider.GetService<ILogger<WindowKeyboardCommands>>()));
         // Depends on AppLifecycleOrchestrator, which is Scoped (see above) — see this file's
         // IJSRuntime scoping note.
         services.AddScoped<WindowCloseCoordinator>();

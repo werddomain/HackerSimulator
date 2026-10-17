@@ -71,3 +71,16 @@
     color: #8b949e;
     min-height: 24px;
 }
+
+.event-log {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: #7ee787;
+}
+
+.event-log li + li {
+    color: #6e7681;
+}

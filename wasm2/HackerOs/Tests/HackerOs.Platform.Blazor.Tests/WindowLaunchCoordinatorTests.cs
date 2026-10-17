@@ -129,6 +129,62 @@ public sealed class WindowLaunchCoordinatorTests
         Assert.Empty(runtime.Windows);
     }
 
+    [Fact]
+    public void An_app_without_declared_sizes_keeps_the_former_800_by_560_window()
+    {
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
+        WindowLaunchCoordinator coordinator = new(runtime);
+
+        coordinator.Present(CreateManifest(), CreateProcess());
+
+        WindowRuntimeState window = Assert.Single(runtime.Windows);
+        Assert.Equal(800, window.Bounds.Width);
+        Assert.Equal(560, window.Bounds.Height);
+        Assert.Equal(360, window.Constraints.MinWidth);
+        Assert.Equal(240, window.Constraints.MinHeight);
+        Assert.Null(window.Constraints.MaxWidth);
+        Assert.True(window.Constraints.IsResizable);
+    }
+
+    [Fact]
+    public void Declared_window_sizes_set_the_initial_size_and_the_constraints()
+    {
+        // ADR 0095 §2.
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
+        WindowLaunchCoordinator coordinator = new(runtime);
+        AppManifest manifest = CreateManifest() with
+        {
+            Window = new WindowOptions
+            {
+                DefaultWidth = 420,
+                DefaultHeight = 600,
+                MinWidth = 300,
+                MinHeight = 400,
+                MaxWidth = 640,
+                MaxHeight = 700,
+                Resizable = false,
+            },
+        };
+
+        coordinator.Present(manifest, CreateProcess());
+
+        WindowRuntimeState window = Assert.Single(runtime.Windows);
+        Assert.Equal(420, window.Bounds.Width);
+        Assert.Equal(600, window.Bounds.Height);
+        Assert.Equal(new WindowConstraints(false, 300, 400, 640, 700), window.Constraints);
+    }
+
+    [Fact]
+    public void The_initial_size_shrinks_to_a_small_screen_but_never_below_the_minimum()
+    {
+        WindowOptions options = new() { DefaultWidth = 1200, DefaultHeight = 900, MinWidth = 500, MinHeight = 700 };
+
+        WindowBounds bounds = WindowLaunchCoordinator.InitialBounds(options, 0, new WindowBounds(0, 0, 1024, 600));
+
+        Assert.Equal(1024, bounds.Width);
+        Assert.Equal(700, bounds.Height);
+    }
+
     private static AppManifest CreateManifest() => new()
     {
         Id = "org.hackeros.test-window",
