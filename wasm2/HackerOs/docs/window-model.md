@@ -102,7 +102,8 @@ public override WindowOptions? Window => new()
 - Agrandir ignore le maximum. `Resizable = false` : pas de poignées, pas de bouton Agrandir, et
   les commandes clavier redimensionner, agrandir et ancrer ne font rien.
 - `WindowGeometryPersistence` (`~/.local/state/hackeros/windows/<appId>.config`) est enregistré
-  mais aucun shell ne relit encore la géométrie à l'ouverture : ce chantier n'y touche pas.
+  dans l'injection de dépendances, mais rien ne l'appelle : la géométrie n'est ni écrite ni relue.
+  L'ADR 0116 (chantier `v3.1/2-window-geometry`) le branche.
 - Le shell mobile ignore ces tailles.
 
 ## 3. Commandes clavier (ADR 0095 §3)
