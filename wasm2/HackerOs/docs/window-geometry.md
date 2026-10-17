@@ -1,16 +1,18 @@
-# Géométrie des fenêtres enregistrée et restaurée
+# Taille des fenêtres enregistrée et restaurée
 
 ## Objet
 
-Une fenêtre d'app rouvre là où l'utilisateur l'a laissée : même taille, même
-position, et agrandie si elle l'était. Mis en œuvre par le chantier
-`v3.1/2-window-geometry` selon l'[ADR 0116](adr/0116-window-geometry-restore.md)
-(série [`v3-1-series-plan.md`](v3-1-series-plan.md)), qui met en œuvre le §10
-de l'[ADR 0044](adr/0044-settings-as-files.md).
+Une fenêtre d'app rouvre avec la taille que l'utilisateur lui a donnée, et
+agrandie si elle l'était, mais toujours à sa place de cascade : sa position
+n'est pas retenue. Mis en œuvre par le chantier `v3.1/2-window-geometry` selon
+l'[ADR 0116](adr/0116-window-geometry-restore.md), corrigé par
+l'[ADR 0122](adr/0122-window-size-only-not-position.md) (taille seulement,
+réponse de Benoit), dans la série [`v3-1-series-plan.md`](v3-1-series-plan.md).
+C'est le §10 de l'[ADR 0044](adr/0044-settings-as-files.md).
 
-Comme sous KWin ou Mutter, c'est le gestionnaire de fenêtres qui retient la
-place, pas l'app : HackerOS tient la géométrie en C# (ADR 0009), il l'écrit donc
-lui-même.
+C'est le modèle de GNOME : une app GTK retient sa taille et son état agrandi,
+le gestionnaire de fenêtres place la fenêtre. HackerOS tient la géométrie en C#
+(ADR 0009) ; il écrit donc lui-même cette taille, pour toutes les apps.
 
 ## Fichier d'état
 
@@ -18,73 +20,72 @@ Un fichier par app et par utilisateur, propre à l'appareil, jamais synchronisé
 `~/.local/state/hackeros/windows/<appId>.config`.
 
 ```ini
-# Window geometry of org.hackeros.text-editor (ADR 0116)
-x=312
-y=96
+# Window size of org.hackeros.text-editor (ADR 0116, ADR 0122)
 width=900
 height=640
 maximized=false
 ```
 
-- `x`, `y`, `width`, `height` : géométrie **normale** en pixels CSS, culture
-  invariante. Une fenêtre agrandie y garde sa géométrie de restauration.
+- `width`, `height` : taille **normale** en pixels CSS, culture invariante.
+  Une fenêtre agrandie y garde sa taille de restauration.
 - `maximized` : facultatif, `false` s'il manque. Seul `true` agrandit : une
   faute de frappe laisse la fenêtre normale.
-- Un fichier sans les quatre nombres est ignoré : la fenêtre s'ouvre à sa place
-  de cascade.
-- Oublier la place d'une app : `rm ~/.local/state/hackeros/windows/<appId>.config`.
+- Un fichier sans `width` et `height` valides est ignoré : la fenêtre s'ouvre à
+  sa taille déclarée.
+- Un fichier écrit avant l'ADR 0122 (avec `x=` et `y=`) garde sa taille ; sa
+  position est ignorée, et la prochaine écriture le réécrit sans ces clés.
+- Oublier la taille d'une app : `rm ~/.local/state/hackeros/windows/<appId>.config`.
 
 ## Architecture
 
 | Classe (Platform.Blazor, `Windows/`) | Rôle |
 |---|---|
 | `WindowGeometrySettings` | Chemin du fichier, `Parse` et `Serialize`. |
-| `SavedWindowGeometry` | Bornes normales et état agrandi lus ou à écrire. |
+| `SavedWindowGeometry` | Taille normale (`Width`, `Height`) et état agrandi lus ou à écrire. |
 | `WindowGeometryPersistence` | Lit et écrit le fichier par `IOsSettingsService`, sous l'identité de l'utilisateur ; n'écrit que si le contenu change ; un échec (pas de session, dossier en lecture seule) est ignoré. |
-| `WindowGeometryRecorder` | Écoute `WindowRuntime.EventsApplied`, garde en mémoire la dernière géométrie normale de chaque fenêtre suivie et l'écrit après 500 ms sans changement, ou tout de suite à la fermeture. |
-| `WindowLaunchCoordinator` | `PresentAsync` lit le fichier avant d'ouvrir la fenêtre, corrige la géométrie (`RestoredBounds`), agrandit si besoin, puis confie la fenêtre au recorder. |
+| `WindowGeometryRecorder` | Écoute `WindowRuntime.EventsApplied`, garde en mémoire la dernière taille normale et l'état agrandi de chaque fenêtre suivie et l'écrit après 500 ms sans changement, ou tout de suite à la fermeture. |
+| `WindowLaunchCoordinator` | `PresentAsync` lit le fichier avant d'ouvrir la fenêtre, place la fenêtre à sa place de cascade avec la taille lue et corrigée (`RestoredBounds`), agrandit si besoin, puis confie la fenêtre au recorder. |
 
 Les trois services sont `Scoped`, comme `WindowRuntime`
 (`EcosystemServiceCollectionExtensions`).
 
 ### Écriture
 
-- Déclencheurs : tout lot de faits de `WindowRuntime` qui change la géométrie
-  normale ou l'état agrandi d'une fenêtre suivie (déplacement, fin de
-  redimensionnement, agrandir, restaurer, changement de zone de travail). Le
+- Déclencheurs : tout lot de faits de `WindowRuntime` qui change la taille
+  normale ou l'état agrandi d'une fenêtre suivie (redimensionnement, agrandir,
+  restaurer, changement de zone de travail). Un déplacement seul n'écrit rien. Le
   recorder relit l'état du runtime après chaque lot plutôt que chaque fait, pour
   enregistrer les bornes réellement appliquées.
-- Regroupement : un glisser produit un déplacement par mouvement du pointeur ;
-  les changements d'une même app sont écrits une fois, 500 ms après le dernier.
-- Fermeture : écriture immédiate de la dernière géométrie connue.
+- Regroupement : un glisser produit un redimensionnement par mouvement du
+  pointeur ; les changements d'une même app sont écrits une fois, 500 ms après
+  le dernier.
+- Fermeture : écriture immédiate de la dernière taille connue.
 - Les écritures d'une même app passent l'une après l'autre ; ouvrir une fenêtre
   lance tout de suite l'écriture qui attendait encore et attend la fin des
   écritures de l'app avant de lire le fichier. Une fenêtre rouverte juste après
   sa fermeture, ou une deuxième fenêtre ouverte pendant le regroupement, voit
-  donc la dernière place.
+  donc la dernière taille.
 - Jamais enregistré : l'état réduit (la fenêtre garde ce qu'elle avait avant) et
-  la moitié d'écran d'une fenêtre ancrée (elle garde sa géométrie d'avant
+  la moitié d'écran d'une fenêtre ancrée (elle garde sa taille d'avant
   l'ancrage et rouvre comme une fenêtre normale).
 
-### Lecture (ADR 0116 §4)
+### Lecture (ADR 0116 §4, ADR 0122)
 
 1. Pas de fichier, fichier invalide ou `RememberGeometry = false` : place de
    cascade, taille déclarée (`InitialBounds`, comportement d'avant).
-2. Taille ramenée entre le minimum et le maximum que l'app déclare **aujourd'hui**
-   (une fenêtre de taille fixe prend sa taille déclarée), puis à la zone de
-   travail sans descendre sous le minimum.
-3. Position corrigée : au moins 48 px de la barre de titre visibles
-   horizontalement, le haut de la fenêtre dans la zone de travail.
-   `WindowRuntime` applique ensuite sa propre contrainte et garde une fenêtre
-   normale entière dans la zone de travail.
-4. Deuxième fenêtre de la même app : décalée de 28 px par fenêtre déjà ouverte.
-5. `maximized=true` : la fenêtre s'ouvre agrandie, la géométrie lue devient sa
-   géométrie de restauration. Une fenêtre de taille fixe ne rouvre jamais agrandie.
+2. Sinon, place de cascade (`InitialBounds`), avec la taille lue ramenée entre
+   le minimum et le maximum que l'app déclare **aujourd'hui** (une fenêtre de
+   taille fixe prend sa taille déclarée), puis à la zone de travail sans
+   descendre sous le minimum.
+3. Une deuxième fenêtre de la même app prend la place de cascade suivante,
+   comme toute nouvelle fenêtre, avec la même taille.
+4. `maximized=true` : la fenêtre s'ouvre agrandie, la taille lue devient sa
+   taille de restauration. Une fenêtre de taille fixe ne rouvre jamais agrandie.
 
 ## Usage pour une app
 
-Rien à faire : toute app de genre `Window` retient sa géométrie. Pour refuser
-(une calculatrice, un assistant qui doit toujours s'ouvrir au même endroit) :
+Rien à faire : toute app de genre `Window` retient sa taille. Pour refuser
+(une calculatrice, un assistant qui doit toujours s'ouvrir à la même taille) :
 
 ```csharp
 public override WindowOptions? Window => new()
@@ -107,7 +108,8 @@ aussi.
 - Fenêtres détachées (ADR 0078, 0081) : placées par le système hôte.
 - Fenêtres de l'OS qui ne sont pas des apps (boîtes de dialogue de fichiers,
   agent d'authentification, « Ouvrir avec ») : jamais suivies.
-- Pas de bouton « oublier la position » dans Paramètres.
+- La position : jamais retenue (ADR 0122).
+- Pas de bouton « oublier la taille » dans Paramètres.
 
 ## Décisions de mise en œuvre
 
@@ -124,8 +126,11 @@ aussi.
   `PublicAPI.Unshipped.txt` de Platform.Blazor (hors promesse du SDK, ADR 0114 §2).
 - **Échecs journalisés** : `WindowGeometryPersistence` écrit un avertissement
   quand le fichier ne peut être lu ou écrit, puis continue.
-- **Contenu comparé avant écriture** : fermer une fenêtre qui n'a pas bougé ne
-  réécrit pas le fichier et ne réveille pas les observateurs.
+- **Contenu comparé avant écriture** : fermer une fenêtre dont la taille n'a pas
+  changé ne réécrit pas le fichier et ne réveille pas les observateurs.
+- **Taille seulement (ADR 0122)** : livré d'abord avec la position (ADR 0116
+  §1), puis corrigé sur la réponse de Benoit ; `RestoredBounds` prend la taille
+  et l'indice de cascade, `MinimumVisibleTitleBarWidth` a disparu.
 - **En-tête commenté** dans le fichier, comme les autres documents de l'OS.
 
 ## Tests
@@ -133,18 +138,18 @@ aussi.
 - `WindowGeometryPersistenceTests` (Platform.Blazor) : chemin, aller-retour,
   état agrandi, `maximized` facultatif, fichier invalide, pas de réécriture,
   pas de session.
-- `WindowGeometryRestoreTests` (Platform.Blazor) : réouverture au même endroit,
-  nouvelle session, agrandie, réduite ou ancrée, regroupement d'un glisser,
-  écriture en attente vidée à l'ouverture, `RememberGeometry = false`, fichier
-  invalide, deuxième instance, double
-  présentation, écran plus petit, position hors écran, tailles déclarées
-  changées, fenêtre fixe, fenêtre de l'OS non suivie.
+- `WindowGeometryRestoreTests` (Platform.Blazor) : réouverture avec la même
+  taille à la place de cascade, nouvelle session, déplacement seul sans
+  écriture, agrandie, réduite ou ancrée, regroupement d'un glisser, écriture en
+  attente vidée à l'ouverture, `RememberGeometry = false`, fichier invalide,
+  fichier d'avant l'ADR 0122, double présentation, écran plus petit, tailles
+  déclarées changées, fenêtre fixe, fenêtre de l'OS non suivie.
 - `AppManifestJsonSerializerTests`, `ManifestSchemaConformanceTests`
   (App.Abstractions) : `rememberGeometry` écrit seulement à `false`, relu, accepté
   par le schéma.
 - E2E `WindowGeometryRestoreTests` (UI.E2E) : glisser la barre de titre et le
-  coin d'une fenêtre, la fermer, la rouvrir au même endroit, recharger la page,
-  se reconnecter et la retrouver au même endroit.
+  coin d'une fenêtre, la fermer, la rouvrir avec la même taille à sa place de
+  cascade, recharger la page, se reconnecter et la retrouver ainsi.
 
 ## Liste des tâches
 
@@ -155,3 +160,4 @@ aussi.
 - [x] `DesktopShell` et injection de dépendances.
 - [x] Tests unitaires et E2E.
 - [x] `window-model.md`, `settings-files.md`, `sdk-developer-guide.md`, `sdk-reference.md`, `app-sdk.md`, bilan v3, plan v3.1, index.
+- [x] ADR 0122 : taille seulement ; position retirée du fichier, de la lecture et des tests.

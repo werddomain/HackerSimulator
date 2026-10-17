@@ -7,13 +7,14 @@
 *REMOVED*static HackerOs.Platform.Blazor.Windows.WindowGeometrySettings.Parse(string? content) -> HackerOs.Windowing.Abstractions.WindowBounds?
 *REMOVED*static HackerOs.Platform.Blazor.Windows.WindowGeometrySettings.Serialize(HackerOs.Windowing.Abstractions.WindowBounds bounds) -> string!
 const HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.CascadeStep = 28 -> double
-const HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.MinimumVisibleTitleBarWidth = 48 -> double
 HackerOs.Platform.Blazor.Windows.SavedWindowGeometry
-HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.Bounds.get -> HackerOs.Windowing.Abstractions.WindowBounds
-HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.Bounds.init -> void
+HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.Height.get -> double
+HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.Height.init -> void
 HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.IsMaximized.get -> bool
 HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.IsMaximized.init -> void
-HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.SavedWindowGeometry(HackerOs.Windowing.Abstractions.WindowBounds Bounds, bool IsMaximized) -> void
+HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.SavedWindowGeometry(double Width, double Height, bool IsMaximized) -> void
+HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.Width.get -> double
+HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.Width.init -> void
 HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence.RestoreAsync(string! appId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Platform.Blazor.Windows.SavedWindowGeometry?>
 HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence.SaveAsync(string! appId, HackerOs.Platform.Blazor.Windows.SavedWindowGeometry! geometry, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
 HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder
@@ -29,6 +30,6 @@ HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.WindowLaunchCoordinator
 HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.WindowLaunchCoordinator(HackerOs.Windowing.Core.WindowRuntime! windows, HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Globalization.SessionLocaleService! locale, HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder? geometry = null) -> void
 static HackerOs.Platform.Blazor.Windows.WindowGeometrySettings.Parse(string? content) -> HackerOs.Platform.Blazor.Windows.SavedWindowGeometry?
 static HackerOs.Platform.Blazor.Windows.WindowGeometrySettings.Serialize(string! appId, HackerOs.Platform.Blazor.Windows.SavedWindowGeometry! geometry) -> string!
-static HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.RestoredBounds(HackerOs.App.Abstractions.WindowOptions! options, HackerOs.Windowing.Abstractions.WindowBounds saved, int sameAppWindows, HackerOs.Windowing.Abstractions.WindowBounds workArea) -> HackerOs.Windowing.Abstractions.WindowBounds
+static HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.RestoredBounds(HackerOs.App.Abstractions.WindowOptions! options, double savedWidth, double savedHeight, int cascadeIndex, HackerOs.Windowing.Abstractions.WindowBounds workArea) -> HackerOs.Windowing.Abstractions.WindowBounds
 static readonly HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder.DefaultDebounce -> System.TimeSpan
 HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence.WindowGeometryPersistence(HackerOs.Platform.Core.Settings.IOsSettingsService! settings, Microsoft.Extensions.Logging.ILogger<HackerOs.Platform.Blazor.Windows.WindowGeometryPersistence!>? logger) -> void

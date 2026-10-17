@@ -210,7 +210,12 @@ public sealed class WindowGeometryRecorder : IDisposable
                 break;
         }
 
-        if (normal is null || (normal == tracked.NormalBounds && maximized == tracked.IsMaximized))
+        // Only the size is saved (ADR 0122): a move alone changes nothing worth writing.
+        if (normal is not WindowBounds next
+            || (tracked.NormalBounds is WindowBounds previous
+                && next.Width == previous.Width
+                && next.Height == previous.Height
+                && maximized == tracked.IsMaximized))
         {
             return false;
         }
@@ -348,7 +353,7 @@ public sealed class WindowGeometryRecorder : IDisposable
         public bool IsMaximized { get; set; }
 
         public SavedWindowGeometry? Snapshot() =>
-            NormalBounds is WindowBounds bounds ? new SavedWindowGeometry(bounds, IsMaximized) : null;
+            NormalBounds is WindowBounds bounds ? new SavedWindowGeometry(bounds.Width, bounds.Height, IsMaximized) : null;
     }
 
     /// <summary>One grouped write waiting for quiet.</summary>

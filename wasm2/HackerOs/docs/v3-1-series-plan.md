@@ -34,7 +34,7 @@ La série v3.1 garde donc deux chantiers de code, plus la publication de la 1.1.
 | Chantier | Contenu | ADR | Dépend de |
 |---|---|---|---|
 | `v3.1/1-adr` | Ce plan et les ADR de la série | 0116, 0117 | — |
-| `v3.1/2-window-geometry` | Taille, position et état agrandi enregistrés et restaurés ; `WindowOptions.RememberGeometry` — **fait**, voir [`window-geometry.md`](window-geometry.md) | [0116](adr/0116-window-geometry-restore.md) | `v3.1/1` |
+| `v3.1/2-window-geometry` | Taille et état agrandi enregistrés et restaurés, pas la position (ADR 0122, réponse de Benoit) ; `WindowOptions.RememberGeometry` — **fait**, voir [`window-geometry.md`](window-geometry.md) | [0116](adr/0116-window-geometry-restore.md), [0122](adr/0122-window-size-only-not-position.md) | `v3.1/1` |
 | `v3.1/3-window-title` | `WindowAppBase.SetWindowTitleAsync`, événement `WindowTitleChanged`, adoption par Hack Paint, les éditeurs et l'explorateur | [0117](adr/0117-sdk-window-title-and-sdk-1-1.md) §1-4 | `v3.1/1` |
 | `v3.1/sync-v3-base` | Fusion de `v3/base` (associations par utilisateur, `passwd`) dans `v3.1/base` | — | ces deux PR fusionnées dans `v3/base` |
 | `v3.1/4-sdk-1-1` | `Unshipped` versé dans `Shipped`, version 1.1.0, app de compatibilité 1.0 chargée sur 1.1, vérification complète, bilan mis à jour | [0117](adr/0117-sdk-window-title-and-sdk-1-1.md) §5 | `v3.1/2`, `v3.1/3`, `v3.1/sync-v3-base` |
@@ -44,7 +44,8 @@ La série v3.1 garde donc deux chantiers de code, plus la publication de la 1.1.
   `PublicAPI.Unshipped.txt` : le second fusionné reprend l'autre avant.
 - Numéros d'ADR réservés à la série : 0116 à 0119 ; 0118 et 0119 restent
   libres pour un ajustement de mise en œuvre (un ADR par chantier qui s'écarte
-  de sa décision).
+  de sa décision). L'ADR 0122 (taille seulement, sans la position) corrige
+  l'ADR 0116 après la réponse de Benoit.
 
 ## Barre de fusion
 

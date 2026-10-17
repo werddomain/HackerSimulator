@@ -27,9 +27,11 @@ public static class WindowGeometrySettings
     }
 
     /// <summary>
-    /// Parses a geometry file (<c>x=</c>, <c>y=</c>, <c>width=</c>, <c>height=</c>, invariant culture,
-    /// plus the optional <c>maximized=</c> of ADR 0116 §2). Returns <see langword="null"/> for an
-    /// empty, partial or invalid file: a bad state file only means the window opens at its default place.
+    /// Parses a geometry file (<c>width=</c>, <c>height=</c>, invariant culture, plus the optional
+    /// <c>maximized=</c>; ADR 0122). Returns <see langword="null"/> for an empty, partial or invalid
+    /// file: a bad state file only means the window opens at its declared size. The <c>x=</c> and
+    /// <c>y=</c> keys written before ADR 0122 are ignored: only the size is remembered, as GTK apps
+    /// under GNOME do.
     /// </summary>
     /// <param name="content">File content, or <see langword="null"/> when absent.</param>
     public static SavedWindowGeometry? Parse(string? content)
@@ -60,35 +62,34 @@ public static class WindowGeometrySettings
             }
         }
 
-        return values.TryGetValue("x", out double x)
-            && values.TryGetValue("y", out double y)
-            && values.TryGetValue("width", out double width) && width > 0
+        return values.TryGetValue("width", out double width) && width > 0
             && values.TryGetValue("height", out double height) && height > 0
-            ? new SavedWindowGeometry(new WindowBounds(x, y, width, height), maximized)
+            ? new SavedWindowGeometry(width, height, maximized)
             : null;
     }
 
     /// <summary>Serializes geometry in the format read by <see cref="Parse"/>.</summary>
     /// <param name="appId">App the geometry belongs to, named in the header comment.</param>
-    /// <param name="geometry">Normal (restore) bounds and maximized state to save.</param>
+    /// <param name="geometry">Normal (restore) size and maximized state to save.</param>
     public static string Serialize(string appId, SavedWindowGeometry geometry)
     {
         ArgumentNullException.ThrowIfNull(geometry);
-        WindowBounds bounds = geometry.Bounds;
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"# Window geometry of {appId} (ADR 0116)\nx={bounds.X}\ny={bounds.Y}\nwidth={bounds.Width}\nheight={bounds.Height}\nmaximized={(geometry.IsMaximized ? "true" : "false")}\n");
+            $"# Window size of {appId} (ADR 0116, ADR 0122)\nwidth={geometry.Width}\nheight={geometry.Height}\nmaximized={(geometry.IsMaximized ? "true" : "false")}\n");
     }
 }
 
 /// <summary>
-/// Geometry the window manager remembers for one app (ADR 0116 §2): the <em>normal</em> bounds (never
-/// the maximized or snapped ones, so a maximized window keeps its restore geometry, as under X11) and
-/// whether the window was maximized.
+/// Geometry the window manager remembers for one app (ADR 0116 §2, ADR 0122): the size of the
+/// <em>normal</em> window (never the maximized or snapped one, so a maximized window keeps its restore
+/// size, as under X11) and whether the window was maximized. The position is not remembered: a window
+/// always opens at its cascade slot, like a GTK app under GNOME.
 /// </summary>
-/// <param name="Bounds">Normal window bounds in CSS pixels.</param>
+/// <param name="Width">Normal window width in CSS pixels.</param>
+/// <param name="Height">Normal window height in CSS pixels.</param>
 /// <param name="IsMaximized">Whether the window was maximized when the geometry was saved.</param>
-public sealed record SavedWindowGeometry(WindowBounds Bounds, bool IsMaximized);
+public sealed record SavedWindowGeometry(double Width, double Height, bool IsMaximized);
 
 /// <summary>
 /// Reads and writes the window geometry state file of an app through <see cref="IOsSettingsService"/>,
@@ -149,7 +150,7 @@ public sealed class WindowGeometryPersistence
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(geometry);
-        if (geometry.Bounds.Width <= 0 || geometry.Bounds.Height <= 0)
+        if (geometry.Width <= 0 || geometry.Height <= 0)
         {
             return false;
         }
