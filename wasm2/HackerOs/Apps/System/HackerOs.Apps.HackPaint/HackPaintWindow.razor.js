@@ -19,19 +19,21 @@ export function setViewport(canvas, x, y, scale) { if (canvas) canvas.style.tran
  * @param {Uint8Array} bytes File content, already checked for size by C#.
  * @param {string} mediaType Media type detected from the header.
  * @param {number} maxDimension Largest width or height accepted.
- * @returns {Promise<{width:number,height:number,pixels:Uint8Array}|{error:string}>}
+ * @returns {Promise<{width:number,height:number,pixels:Uint8Array}|{width?:number,height?:number,error:string}>}
+ *   The error is a code the C# side turns into a sentence in the app's language:
+ *   "decode-failed", or "too-large" with the image's own width and height.
  */
 export async function decodeImage(bytes, mediaType, maxDimension) {
     let bitmap;
     try {
         bitmap = await createImageBitmap(new Blob([bytes], { type: mediaType }));
     } catch {
-        return { error: "The browser could not decode this image; the file may be damaged." };
+        return { error: "decode-failed" };
     }
 
     try {
         if (bitmap.width > maxDimension || bitmap.height > maxDimension) {
-            return { error: `The image is ${bitmap.width} × ${bitmap.height} pixels; the limit is ${maxDimension} × ${maxDimension}.` };
+            return { width: bitmap.width, height: bitmap.height, error: "too-large" };
         }
 
         const canvas = document.createElement("canvas");
