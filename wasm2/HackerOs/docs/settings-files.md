@@ -61,7 +61,7 @@ publiques. Détails : [`sensitive-settings.md`](sensitive-settings.md).
 | Platform.Core | `IOsSettingsService`, `OsSettingsService` | Documents de l'OS (`OsSettingsDocument`) et fichiers entiers (`OsSettingsFile`), pour la session courante. |
 | Platform.Core | `SettingsStoreToFilesMigration` | Migration unique depuis IndexedDB, puis fichiers par défaut. |
 | Infrastructure.Browser | `IndexedDbLegacySettingsStore` | Lecture `getAll` du magasin `settings`, sans changer la version du schéma. |
-| Platform.Blazor | `WindowGeometryPersistence` | Restaure et enregistre la géométrie des fenêtres. |
+| Platform.Blazor | `WindowGeometryPersistence` | Lit et écrit la géométrie des fenêtres ; pas encore appelé, branché par `v3.1/2-window-geometry` (ADR 0116). |
 
 ### Ordre des couches
 

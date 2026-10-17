@@ -77,6 +77,11 @@ relevé sur `v3/base` depuis `v3/12`. Sans IPv6, la suite se replie sur
 
 ### Lacunes connues
 
+La série v3.1 ([`v3-1-series-plan.md`](v3-1-series-plan.md)) traite la
+géométrie des fenêtres (ADR 0116) et le titre de fenêtre (ADR 0117, SDK 1.1) ;
+les associations par utilisateur et `passwd` sont faits par les fils `v3/4`
+et `v3/8` dans `v3/base`.
+
 | Lacune | Origine | Effet |
 |---|---|---|
 | La géométrie des fenêtres est enregistrée mais jamais relue : une fenêtre ne rouvre pas à sa dernière position. | `v3/3` | Écart avec l'ADR 0095. |
