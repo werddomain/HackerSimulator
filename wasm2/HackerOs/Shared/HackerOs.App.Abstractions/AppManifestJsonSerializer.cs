@@ -50,6 +50,7 @@ public static class AppManifestJsonSerializer
             "singleInstancePerUser",
             "autoStart",
             "supportsBack",
+            "window",
             "execution",
             "web"
         });
@@ -215,6 +216,9 @@ public static class AppManifestJsonSerializer
                 case "components":
                     ValidateArray(property.Value, $"{path}.components", ["contract", "assembly", "type"]);
                     break;
+                case "window":
+                    ValidateObject(property.Value, $"{path}.window", ["defaultWidth", "defaultHeight", "minWidth", "minHeight", "maxWidth", "maxHeight", "resizable"]);
+                    break;
                 case "web":
                     ValidateObject(property.Value, $"{path}.web", ["urls", "blazor"]);
                     if (property.Value.ValueKind == JsonValueKind.Object
@@ -269,6 +273,7 @@ public static class AppManifestJsonSerializer
 [JsonSerializable(typeof(FileHandlerManifest))]
 [JsonSerializable(typeof(TerminalCommandManifest))]
 [JsonSerializable(typeof(AppComponentManifest))]
+[JsonSerializable(typeof(WindowOptions))]
 [JsonSerializable(typeof(WebAppManifest))]
 [JsonSerializable(typeof(WebBlazorManifest))]
 [JsonSerializable(typeof(AppKind))]

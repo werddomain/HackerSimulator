@@ -268,6 +268,29 @@ Le composant peut aussi implémenter :
 - `IAppBackHandler` pour gérer le bouton Retour (mobile et barre de titre) ;
   déclarer alors `SupportsBack => true`.
 
+### Événements et taille de la fenêtre
+
+Surcharger `OnWindowActivated[Async]`, `OnWindowDeactivated[Async]`,
+`OnWindowStateChanged[Async](previous, current)` et `OnWindowResized[Async](size)`
+pour réagir au focus, à la réduction, à l'agrandissement, à la restauration et à
+la fin d'un redimensionnement ; `IsWindowActive`, `WindowState` et `WindowSize`
+donnent le dernier état. Une exception dans un crochet est écrite dans
+`/var/log/apps/<appId>.log` sans bloquer la fenêtre.
+
+La taille de la fenêtre se déclare dans la définition :
+
+```csharp
+public override WindowOptions? Window => new()
+{
+    DefaultWidth = 720, DefaultHeight = 520, MinWidth = 480, MinHeight = 360,
+};
+```
+
+Sans déclaration, la fenêtre fait 800×560 avec un minimum de 360×240.
+`Resizable = false` retire les poignées et le bouton Agrandir. Détails, ordre
+des crochets et raccourcis clavier du gestionnaire de fenêtres :
+[`window-model.md`](window-model.md).
+
 ### Lancée depuis le terminal
 
 Taper le dernier segment de l'identifiant de l'app dans le terminal la lance

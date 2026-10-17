@@ -114,6 +114,13 @@ public sealed class SettingsStoreToFilesMigration : IUserProfileInitializer
             FileAssociationSettingsDocuments.DefaultContent,
             cancellationToken).ConfigureAwait(false);
 
+        // ADR 0095, section 3: the window manager's shortcuts, every line commented out.
+        await WriteIfAbsentAsync(
+            system,
+            Shell.WindowKeyBindingsSettingsDocuments.Document.SystemPath,
+            Shell.WindowKeyBindingsSettingsDocuments.DefaultSystemFileContent,
+            cancellationToken).ConfigureAwait(false);
+
         // ADR 0049: the dangerous-capability policy and the (empty) machine decisions.
         await WriteIfAbsentAsync(
             system,

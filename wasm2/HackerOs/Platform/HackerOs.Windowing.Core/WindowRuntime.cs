@@ -13,6 +13,16 @@ public sealed class WindowRuntime
     /// <summary>Event raised whenever window state or active windows change.</summary>
     public event Action? StateChanged;
 
+    /// <summary>
+    /// Event raised with the ordered facts of every command that changed something, before
+    /// <see cref="StateChanged"/>. Observers that need the transitions themselves (focus moving from
+    /// one window to another, the end of a resize) listen here instead of diffing snapshots.
+    /// </summary>
+    public event Action<IReadOnlyList<WindowEvent>>? EventsApplied;
+
+    /// <summary>Gets the current desktop work area.</summary>
+    public WindowBounds WorkArea => _workArea;
+
     /// <summary>Creates a runtime for the supplied desktop work area.</summary>
     public WindowRuntime(WindowBounds workArea) => _workArea = workArea;
 
@@ -35,6 +45,7 @@ public sealed class WindowRuntime
             FocusWindowCommand focus => Focus(focus.WindowId),
             MoveWindowCommand move => Move(move),
             ResizeWindowCommand resize => Resize(resize),
+            CompleteWindowResizeCommand complete => CompleteResize(complete.WindowId),
             MinimizeWindowCommand minimize => ChangeVisualState(minimize.WindowId, WindowVisualState.Minimized),
             MaximizeWindowCommand maximize => ChangeVisualState(maximize.WindowId, WindowVisualState.Maximized),
             RestoreWindowCommand restore => ChangeVisualState(restore.WindowId, WindowVisualState.Normal),
@@ -48,6 +59,7 @@ public sealed class WindowRuntime
 
         if (events.Count > 0)
         {
+            EventsApplied?.Invoke(events);
             StateChanged?.Invoke();
         }
 
@@ -130,6 +142,12 @@ public sealed class WindowRuntime
         return [new WindowResizedEvent(current.Id, current.Bounds, bounds)];
     }
 
+    private IReadOnlyList<WindowEvent> CompleteResize(WindowId id)
+    {
+        WindowRuntimeState current = Get(id);
+        return [new WindowResizeCompletedEvent(id, current.Bounds)];
+    }
+
     private IReadOnlyList<WindowEvent> ChangeVisualState(WindowId id, WindowVisualState requestedState)
     {
         WindowRuntimeState current = Get(id);
@@ -166,8 +184,9 @@ public sealed class WindowRuntime
         {
             events.AddRange(FocusTopVisible(id));
         }
-        else if (!retainFocus)
+        else if (requestedState != WindowVisualState.Minimized && !retainFocus)
         {
+            // Minimizing a background window leaves the focus where it is.
             events.AddRange(Focus(id));
         }
 
@@ -268,16 +287,21 @@ public sealed class WindowRuntime
 
     private int NextZOrder() => checked(++_nextZOrder);
 
+    /// <summary>
+    /// Keeps a normal window inside the work area. The declared minimum always wins (ADR 0095 §2):
+    /// on a work area smaller than it, the window keeps its minimum size and overflows to the right
+    /// and bottom, as on a small real screen, with its title bar kept reachable at the top-left.
+    /// </summary>
     private WindowBounds Constrain(WindowBounds requested, WindowConstraints constraints)
     {
-        double minimumWidth = Math.Min(constraints.MinWidth, _workArea.Width);
-        double minimumHeight = Math.Min(constraints.MinHeight, _workArea.Height);
-        double maximumWidth = Math.Min(constraints.MaxWidth ?? _workArea.Width, _workArea.Width);
-        double maximumHeight = Math.Min(constraints.MaxHeight ?? _workArea.Height, _workArea.Height);
+        double minimumWidth = constraints.MinWidth;
+        double minimumHeight = constraints.MinHeight;
+        double maximumWidth = Math.Max(minimumWidth, Math.Min(constraints.MaxWidth ?? _workArea.Width, _workArea.Width));
+        double maximumHeight = Math.Max(minimumHeight, Math.Min(constraints.MaxHeight ?? _workArea.Height, _workArea.Height));
         double width = Math.Clamp(requested.Width, minimumWidth, maximumWidth);
         double height = Math.Clamp(requested.Height, minimumHeight, maximumHeight);
-        double x = Math.Clamp(requested.X, _workArea.X, _workArea.X + _workArea.Width - width);
-        double y = Math.Clamp(requested.Y, _workArea.Y, _workArea.Y + _workArea.Height - height);
+        double x = Math.Max(_workArea.X, Math.Min(requested.X, _workArea.X + _workArea.Width - width));
+        double y = Math.Max(_workArea.Y, Math.Min(requested.Y, _workArea.Y + _workArea.Height - height));
         return new WindowBounds(x, y, width, height);
     }
 

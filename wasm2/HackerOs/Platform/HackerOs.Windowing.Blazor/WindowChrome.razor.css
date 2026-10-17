@@ -201,3 +201,19 @@
 .resize-top-right { top: 0; right: 0; cursor: nesw-resize; }
 .resize-bottom-right { right: 0; bottom: 0; cursor: nwse-resize; }
 .resize-bottom-left { bottom: 0; left: 0; cursor: nesw-resize; }
+
+/* ADR 0095 §3: the window icon doubles as the window menu button, like the system menu of
+   classic window managers. It keeps the look of the bare icon until hovered or focused. */
+.chrome-button-menu {
+    width: auto;
+    min-width: 1.35rem;
+    height: 1.35rem;
+    padding: 0.05rem;
+    border-color: transparent;
+    background: transparent;
+    cursor: default;
+}
+
+.chrome-button-menu .window-icon {
+    pointer-events: none;
+}

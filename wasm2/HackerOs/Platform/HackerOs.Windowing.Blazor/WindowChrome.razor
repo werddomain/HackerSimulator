@@ -4,7 +4,10 @@
 @inject IJSRuntime JSRuntime
 
 <div class="chrome-interaction-layer" @ref="_interactionLayer" @onpointerdown:stopPropagation>
-<header class="window-chrome @(Window.IsFocused ? "is-focused" : "is-background")" data-window-gesture="@(Window.Constraints.IsMovable ? "move" : null)">
+<header class="window-chrome @(Window.IsFocused ? "is-focused" : "is-background")"
+        data-window-gesture="@(Window.Constraints.IsMovable ? "move" : null)"
+        @oncontextmenu="OpenWindowMenuAtPointerAsync"
+        @oncontextmenu:preventDefault="true">
     <div class="window-identity">
         @if (Window.SupportsBack)
         {
@@ -14,7 +17,25 @@
                 </svg>
             </button>
         }
-        @if (!string.IsNullOrWhiteSpace(Window.IconAssetPath))
+        @if (OnWindowMenu.HasDelegate)
+        {
+            @* The window menu button (ADR 0095 §3): every window command stays reachable without a shortcut. *@
+            <button type="button" class="chrome-button chrome-button-menu" aria-label="Window menu" title="Window menu (Alt+Space, Alt+F3)" aria-haspopup="menu" @onclick="OpenWindowMenuFromButtonAsync">
+                @if (!string.IsNullOrWhiteSpace(Window.IconAssetPath))
+                {
+                    <img class="window-icon" src="@Window.IconAssetPath" alt="" />
+                }
+                else
+                {
+                    <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+                        <line x1="2" y1="3" x2="10" y2="3" />
+                        <line x1="2" y1="6" x2="10" y2="6" />
+                        <line x1="2" y1="9" x2="10" y2="9" />
+                    </svg>
+                }
+            </button>
+        }
+        else if (!string.IsNullOrWhiteSpace(Window.IconAssetPath))
         {
             <img class="window-icon" src="@Window.IconAssetPath" alt="" />
         }
@@ -26,6 +47,8 @@
                 <line x1="2" y1="9" x2="10" y2="9" />
             </svg>
         </button>
+        @if (Window.Constraints.IsResizable)
+        {
         <button type="button" class="chrome-button chrome-button-maximize" aria-label="@ToggleLabel" title="@ToggleLabel" @onclick="ToggleMaximizeAsync">
             @if (Window.VisualState == WindowVisualState.Maximized)
             {
@@ -41,6 +64,7 @@
                 </svg>
             }
         </button>
+        }
         <button type="button" class="chrome-button chrome-button-close" aria-label="Close" title="Close" @onclick="CloseAsync">
             <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
                 <line x1="2" y1="2" x2="10" y2="10" />
@@ -91,6 +115,13 @@
     [Parameter]
     public EventCallback<WindowId> OnBack { get; set; }
 
+    /// <summary>
+    /// Gets or sets the window menu request callback (ADR 0095 §3): raised by a right click on the
+    /// title bar or by the window menu button, which is only shown when this callback is set.
+    /// </summary>
+    [Parameter]
+    public EventCallback<WindowMenuRequest> OnWindowMenu { get; set; }
+
     /// <summary>Gets or sets the C# command callback for pointer gestures.</summary>
     [Parameter]
     public EventCallback<WindowCommand> OnGesture { get; set; }
@@ -120,6 +151,23 @@
         await OnClose.InvokeAsync(Window.Id);
     }
 
+    private async Task OpenWindowMenuAtPointerAsync(MouseEventArgs args)
+    {
+        if (!OnWindowMenu.HasDelegate)
+        {
+            return;
+        }
+
+        await OnFocus.InvokeAsync(Window.Id);
+        await OnWindowMenu.InvokeAsync(new WindowMenuRequest(Window.Id, args.ClientX, args.ClientY));
+    }
+
+    private async Task OpenWindowMenuFromButtonAsync()
+    {
+        await OnFocus.InvokeAsync(Window.Id);
+        await OnWindowMenu.InvokeAsync(new WindowMenuRequest(Window.Id, null, null));
+    }
+
     private async Task BackAsync()
     {
         await OnFocus.InvokeAsync(Window.Id);
@@ -139,6 +187,19 @@
             "./_content/HackerOs.Windowing.Blazor/WindowChrome.razor.js");
         _selfReference = DotNetObjectReference.Create(this);
         await _module.InvokeVoidAsync("attachWindowGestures", _interactionLayer, _selfReference);
+    }
+
+    /// <summary>
+    /// Ends a pointer resize: the runtime then reports one completed resize (ADR 0095 §1) instead
+    /// of one per pointer move.
+    /// </summary>
+    [JSInvokable]
+    public async Task ReportGestureCompletedAsync(string mode)
+    {
+        if (string.Equals(mode, "resize", StringComparison.Ordinal))
+        {
+            await OnGesture.InvokeAsync(new CompleteWindowResizeCommand(Window.Id));
+        }
     }
 
     /// <summary>Converts a cumulative browser-reported pointer delta into an authoritative C# command.</summary>

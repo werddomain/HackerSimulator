@@ -32,6 +32,27 @@ public sealed class AppManifestJsonSerializerTests
     }
 
     [Fact]
+    public void Window_sizes_round_trip_and_are_omitted_when_undeclared()
+    {
+        // ADR 0095 §2: a manifest without "window" keeps its exact bytes.
+        AppManifest manifest = CreateManifest() with
+        {
+            Window = new WindowOptions { DefaultWidth = 420, DefaultHeight = 600, MinWidth = 300, MinHeight = 400, MaxWidth = 640, Resizable = false }
+        };
+
+        string json = AppManifestJsonSerializer.SerializeCanonical(manifest);
+        AppManifest roundTripped = AppManifestJsonSerializer.DeserializeStrict(json);
+
+        Assert.Equal(manifest.Window, roundTripped.Window);
+        Assert.Contains("\"window\":{\"defaultWidth\":420,\"defaultHeight\":600,\"minWidth\":300,\"minHeight\":400,\"maxWidth\":640,\"resizable\":false}", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"window\":{", AppManifestJsonSerializer.SerializeCanonical(manifest with { Window = null }), StringComparison.Ordinal);
+        Assert.Equal(new WindowOptions { MinWidth = 100 }, AppManifestJsonSerializer.DeserializeStrict(
+            json.Replace("\"window\":{\"defaultWidth\":420,\"defaultHeight\":600,\"minWidth\":300,\"minHeight\":400,\"maxWidth\":640,\"resizable\":false}", "\"window\":{\"minWidth\":100}", StringComparison.Ordinal)).Window);
+        Assert.Throws<JsonException>(() => AppManifestJsonSerializer.DeserializeStrict(
+            json.Replace("\"resizable\":false", "\"resizable\":false,\"x\":1", StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public void Components_round_trip_and_are_omitted_when_none()
     {
         AppManifest manifest = CreateManifest();
