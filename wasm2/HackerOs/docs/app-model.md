@@ -224,6 +224,7 @@ avec le nom complet de la classe en cause : `App.csproj : error HOSAPP0005: [Ns.
 | `HOSAPP0021` | Agrégation : catalogue invalide (identifiant en double, dépendance manquante ou cyclique). |
 | `HOSAPP0030` | Frontière du SDK : `ProjectReference` interdite dans un projet d'app (ADR 0055 §2, numéro fixé par l'ADR 0059). Émis par la cible `ValidateHackerOsSdkBoundary`. Voir [`app-sdk.md`](app-sdk.md). |
 | `HOSAPP0031` | Frontière du SDK : service injecté qui n'est ni un type du SDK, ni MudBlazor, ni `IJSRuntime` (ADR 0055 §3, ADR 0059). Voir [`app-sdk.md`](app-sdk.md). |
+| `HOSAPP0040` | Traductions du manifeste (ADR 0104 §4) : `Resources/AppManifest.<culture>.resx` illisible, nom de culture invalide, clé autre que `Name`, `Description`, `Terminal.Usage` (préfixées de l'id dans un projet à plusieurs apps), `Terminal.Usage` pour une app qui n'est pas une commande, ou fichier `localization/` référencé illisible à l'agrégation. Voir [`localization.md`](localization.md). |
 | `HOSAPP0090` | Arguments de l'outil invalides. |
 | `HOSAPP0091` | Assembly de l'app impossible à charger. |
 | `HOSAPP0099` | L'outil a échoué sans diagnostic (plantage). |
@@ -300,6 +301,21 @@ déclarent la capacité `shell.control`. Une commande tierce reste un projet à 
   `Tests/ManifestGenerator.Fixtures.SingleApp`, `.MultiApp` et `.NoDefinition`
   (`HOSAPP0001`).
 
+### Traductions du manifeste (ADR 0104 §4)
+
+Après l'inspection, `generate` lit `Resources/AppManifest.<culture>.resx`
+(`ManifestLocalizationGenerator`) : clés `Name`, `Description`,
+`Terminal.Usage`, préfixées de l'id de l'app dans un projet à plusieurs apps
+(`org.hackeros.commands.ls.Description`). Une clé absente garde le texte
+anglais. Il écrit `localization/<culture>.json` (une app) ou
+`localization/<appId>/<culture>.json` (plusieurs apps), au format
+`{"name","description","terminalUsage"?}`, ajoute l'entrée
+`localizations: [{"culture":"fr","resourcePath":"localization/fr.json"}]` et
+supprime les fichiers périmés. Ces `.resx` ne sont pas compilés dans
+l'assembly ; les fichiers générés sont committés comme `manifest.json` et ne
+sont pas déclarés comme assets. Erreur : `HOSAPP0040`. Voir
+[`localization.md`](localization.md).
+
 ## Agrégation dans l'hôte : `BuiltInApplications.json`
 
 ### Déclarer un hôte
@@ -326,7 +342,9 @@ la préparation des ressources et avant les cibles Blazor) :
    (pas de recompilation inutile) ; elle y mesure aussi l'**image** de chaque
    app (ADR 0068) à partir du chemin de son assembly et de sa liste de
    dépendances, que `GetHackerOsAppManifests` renvoie (`AssemblyPath`,
-   `DependenciesFile`) ;
+   `DependenciesFile`) ; enfin elle recopie les textes traduits que référence
+   `localizations` dans la propriété facultative `localized` de chaque entrée
+   (`{"fr":{"name":…}}`, ADR 0104), que `AppCatalog.Localize` applique ;
 4. ajoute ce fichier en `EmbeddedResource` (`HackerOs.BuiltInApplications.json`) ;
 5. ajoute un `BlazorWebAssemblyLazyLoad` pour l'assembly de chaque app (en
    retirant d'abord un éventuel doublon écrit à la main).
@@ -459,4 +477,5 @@ dangereuses accordées d'office arrivent avec l'ADR 0049.
 - [x] `rebuild/2-app-uninstall` (ADR 0048 §2-6) : désinstallation par `apps.config`, voir [`app-installation.md`](app-installation.md).
 - [x] `rebuild/5-worker-processes` (ADR 0070) : `AppManifestAttribute.Execution`, `AppExecutionHost`, champ `execution` (schéma, liste blanche, validateur, fixture canonique), défauts par genre dans le mappeur, chaque commande et service déclare son hôte ou reçoit le défaut.
 - [x] `v3/4-intents` (ADR 0096) : intents déclarés reçus par l'app, schémas d'URI `x-scheme-handler/<schéma>`, commande `xdg-open`.
+- [x] `v3/12-localization` (ADR 0104) : `AppManifest.<culture>.resx` → `localization/`, `HOSAPP0040`, propriété `localized` de `BuiltInApplications.json`, `AppCatalog.Localize`.
 - [x] `rebuild/2-app-migration` : classes `[AppManifest]` pour les 43 autres apps, test d'égalité avec les anciens JSON, suppression des `app.manifest.json`, `StaticManifest`, des listes manuelles de l'hôte et de la cible `_HackerOsMarkLegacySystemManifests`, de la règle `Content Update` de `Directory.Build.targets` et des exceptions « transition ».
