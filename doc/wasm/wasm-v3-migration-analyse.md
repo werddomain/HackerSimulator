@@ -1,5 +1,12 @@
 # HackerOS WebAssembly v3 Migration Analysis
 
+> **Mise à jour du 2026-10-17 :** le jeu n'est plus dans ce dépôt. La phase
+> « gameplay systems » (vague 6) est retirée : le jeu vivra dans un autre dépôt
+> qui utilise l'écosystème HackerOS ([ADR 0092](../../wasm2/HackerOs/docs/adr/0092-game-in-a-separate-repository.md)).
+> Ce qui reste à faire de cette analyse est planifié dans
+> [`wasm-v3-completion-plan.md`](../../wasm2/HackerOs/docs/wasm-v3-completion-plan.md).
+
+
 **Status:** Approved for phased implementation  
 **Date:** 2026-08-01  
 **Scope:** Requirements, feasibility analysis, architecture, and delivery plan only. No implementation is defined by this document.

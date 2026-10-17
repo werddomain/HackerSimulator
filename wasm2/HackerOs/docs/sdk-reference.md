@@ -82,7 +82,7 @@ Détails : [`app-model.md`](app-model.md).
 | `NetworkRealAccess` | `network.real.access` | **dangereuse** | vrai réseau par le serveur relais |
 | `NetworkListen` | `network.listen` | normale | `HackHttpListener` sur un préfixe hors de son manifeste |
 | `NetworkListenPrivileged` | `network.listen.privileged` | **dangereuse** | écouter un port sous 1024 |
-| `GameplayDomainAccess` | `gameplay.domain.access` | normale | moteur de jeu |
+| `GameplayDomainAccess` | `gameplay.domain.access` | normale | moteur de jeu ; à retirer, le jeu vit dans un autre dépôt ([ADR 0092](adr/0092-game-in-a-separate-repository.md)) |
 | `ShellControl` | `shell.control` | normale | agir sur le shell appelant (`IShellSession`) |
 | `ShellHost` | `shell.host` | **dangereuse** | `HackShell` |
 | `PermissionsManage` | `permissions.manage` | **dangereuse** | `HackPermissionAdministration` |

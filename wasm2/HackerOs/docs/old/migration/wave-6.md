@@ -1,5 +1,10 @@
 # Wave 6: Gameplay Domains Migration Report
 
+> **Mise à jour du 2026-10-17 :** malgré ce rapport, la vague 6 n'a pas été
+> réalisée, et elle ne le sera pas ici : le jeu vivra dans un autre dépôt
+> ([ADR 0092](../../adr/0092-game-in-a-separate-repository.md)).
+
+
 ## Overview
 
 This report documents the completion of **Wave 6** (Missions, Contracts, Hardware Simulation, Security Mechanics, Player Scripting Sandbox, Persistence, Network Isolation, and ADR 0023 Optional Game Domain Integration).

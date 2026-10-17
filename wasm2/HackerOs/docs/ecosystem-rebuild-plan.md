@@ -28,7 +28,9 @@ place aux bugs d'intégration.
 Le périmètre est l'écosystème : système de fichiers, modèle d'app, services de
 l'OS et apps de base (explorateur de fichiers, console, gestionnaire de
 tâches, éditeur de texte). Les autres apps, le serveur, le mobile et le contenu
-de jeu sont hors périmètre.
+de jeu sont hors périmètre. Depuis le 2026-10-17, le jeu n'est plus du tout dans
+ce dépôt : il vivra dans un autre dépôt qui utilise cet écosystème
+([ADR 0092](adr/0092-game-in-a-separate-repository.md)).
 
 ## 2. Constat de départ
 

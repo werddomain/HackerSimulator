@@ -147,7 +147,7 @@ rather than an edit to the old one (see the doc-maintenance rule in
 | [0020](../adr/0020-editor-framework-and-script-sandbox.md) | Code editor framework and script sandbox policy |
 | [0021](../adr/0021-simulated-network-and-browser-rendering.md) | Simulated network contracts and browser rendering model |
 | [0022](../adr/0022-multi-monitor-requirement-position.md) | Multi-monitor requirement position |
-| [0023](../adr/0023-optional-game-domain-and-proxy-fallback.md) | Optional Game Domain integration and network proxy fallback |
+| [0023](../adr/0023-optional-game-domain-and-proxy-fallback.md) | Optional Game Domain integration and network proxy fallback (remplacé par l'[ADR 0092](../adr/0092-game-in-a-separate-repository.md) : le jeu vit dans un autre dépôt) |
 | [0024](../adr/0024-server-identity-and-device-registration.md) | Server identity and device registration |
 | [0025](../adr/0025-record-synchronization-envelope-and-conflict-model.md) | Record synchronization envelope, conflict model, and cursor strategy |
 | [0026](../adr/0026-icon-library-support.md) | Shared icon library support (Bootstrap, Font Awesome, Lucide, Simple Icons) |

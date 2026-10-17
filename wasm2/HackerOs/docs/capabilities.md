@@ -40,7 +40,7 @@ classement.
 | `network.real.access` | **dangereuse** |
 | `network.listen` | normale (écouter un port qui n'est pas une URL de son manifeste, [`listening-ports-and-dns.md`](listening-ports-and-dns.md)) |
 | `network.listen.privileged` | **dangereuse** (écouter un port sous 1024, comme `CAP_NET_BIND_SERVICE`) |
-| `gameplay.domain.access` | normale |
+| `gameplay.domain.access` | normale (à retirer : le jeu vit dans un autre dépôt, [ADR 0092](adr/0092-game-in-a-separate-repository.md)) |
 | `shell.control` | normale (ADR 0051 : n'agit que sur le shell de l'utilisateur qui a tapé la commande, voir [`shell-commands.md`](shell-commands.md)) |
 | `permissions.manage` | **dangereuse** (`HackPermissionAdministration`, ADR 0056 §9 ; déclarée par Paramètres) |
 | `server.connection.manage` | **dangereuse** (`HackServerConnection`, ADR 0056 §10 ; déclarée par Paramètres) |
