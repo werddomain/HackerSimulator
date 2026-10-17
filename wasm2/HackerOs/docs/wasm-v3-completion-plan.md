@@ -1,8 +1,7 @@
 # Fin de la migration wasm v3 : plan des chantiers
 
-**Statut :** proposé le 2026-10-17, **en attente de validation par Benoit**.
-Aucun code n'est écrit avant sa validation (réponse de Benoit du 2026-10-17 :
-« Plan d'abord »). Les questions ouvertes sont à la section 7.
+**Statut :** proposé le 2026-10-17, **validé par Benoit le 2026-10-17**
+(réponses aux cinq questions, section 7). Le premier chantier est `v3/1-adr`.
 
 Ce plan termine ce que l'analyse d'origine
 [`doc/wasm/wasm-v3-migration-analyse.md`](../../../doc/wasm/wasm-v3-migration-analyse.md)
@@ -53,7 +52,7 @@ Conséquences pour ce plan :
 | Interface de récupération si Paramètres et Terminal sont désactivés (décision différée n°12) | Sans objet : les apps système ne se désinstallent pas (ADR 0048). Constaté dans l'ADR du chantier `v3/1`. |
 | Checklist manuelle d'accessibilité | Écartée par Benoit ; seuls des tests automatisés (`v3/13`). |
 | Suites de la phase 5 (quotas et tueur OOM, apps à fenêtre dans des workers, workers sur l'hôte Server, COOP/COEP) | Plan séparé (fil « Plan : suites de l'étape 5 »), à faire **après** cette migration (Benoit, 2026-10-17). |
-| Installation d'apps au runtime (R1, R2, décisions différées n°2 et n°10) | Recommandé : plan séparé plus tard (question 1). |
+| Installation d'apps au runtime (R1, R2, décisions différées n°2 et n°10) | Plan séparé plus tard (question 1). |
 
 ## 3. Principes
 
@@ -74,7 +73,9 @@ Conséquences pour ce plan :
 
 ## 4. Chantiers
 
-Branche d'intégration proposée : `v3/base` (question 5). Chaque chantier part
+Branche d'intégration : `v3/base`, créée depuis `web/base` après la fusion de
+`web/12` à `web/15` (question 5). Benoit décide quand `web/base` revient dans
+`main`. Chaque chantier part
 de `v3/base`, s'appelle `v3/<n>-<sujet>` et sa PR vise `v3/base`. Rien n'est
 fusionné dans `main` sans Benoit.
 
@@ -127,7 +128,7 @@ numéro libre ; plusieurs fils écrivent des ADR en parallèle).
 
 - Tout le contenu de jeu (section 1).
 - Installation d'apps au runtime, format et signature des paquets, magasin
-  d'apps, si la question 1 confirme le report.
+  d'apps : reportés à un plan à part (question 1).
 - Suites de la phase 5 : plan séparé.
 - AOT, compilation d'apps dans l'OS.
 
@@ -143,15 +144,17 @@ numéro libre ; plusieurs fils écrivent des ADR en parallèle).
 - **Tests sans CI** : la porte est locale (section 3, principe 6). Les suites
   PWA ne tournent pas en conteneur (pas d'IPv6).
 
-## 7. Questions ouvertes
+## 7. Décisions (questions du 2026-10-17)
 
-| # | Question | Recommandation |
+Réponses de Benoit du 2026-10-17 05:52Z.
+
+| # | Question | Réponse |
 |---|---|---|
-| 1 | Installation d'apps au runtime (paquets, signature, transaction, migrations de données) : dans ce plan ou plus tard ? | **Plus tard**, dans un plan à part après celui-ci : c'est le plus gros morceau restant et rien d'autre n'en dépend. |
-| 2 | Comment le dépôt du jeu consomme-t-il l'écosystème ? | **Paquets NuGet** (flux local, puis GitHub Packages quand la CI remarchera), plutôt qu'un sous-module git. |
-| 3 | Langues de la localisation ? | **Anglais et français**, anglais par défaut ; les autres langues de `docs/old/localization.md` ne sont pas reprises. |
-| 4 | Porter l'éditeur de thèmes de `src/` ? | **Oui**, comme app système sur le SDK public. |
-| 5 | Branche d'intégration ? | **`v3/base`**, créée depuis `web/base` une fois `web/12` à `web/15` fusionnés. |
+| 1 | Installation d'apps au runtime (paquets, signature, transaction, migrations de données) | **Plus tard**, dans un plan à part. |
+| 2 | Comment le dépôt du jeu consomme l'écosystème | « Pas important » : on garde la recommandation, **paquets NuGet** (flux local, puis GitHub Packages quand la CI remarchera). |
+| 3 | Langues de la localisation | **Anglais et français**, anglais par défaut. |
+| 4 | Porter l'éditeur de thèmes de `src/` | **Oui**, comme app système sur le SDK public. |
+| 5 | Branche d'intégration | **`v3/base`**, créée depuis `web/base` une fois `web/12` à `web/15` fusionnés ; Benoit décide quand ramener `web/base` vers `main`. |
 
 ## 8. Liste des tâches
 
@@ -159,8 +162,8 @@ numéro libre ; plusieurs fils écrivent des ADR en parallèle).
 - [x] Relevé de ce qui reste (2026-10-16), revérifié sur `web/base` 34952e2.
 - [x] Décision « le jeu dans un autre dépôt » consignée (ADR 0092).
 - [x] Ce plan.
-- [ ] Validation du plan et réponses aux questions par Benoit.
-- [ ] Création de `v3/base`.
+- [x] Validation du plan et réponses aux questions par Benoit (2026-10-17).
+- [x] Création de `v3/base` depuis `web/base` (après `web/12` à `web/15`).
 
 ### Chantiers
 - [ ] `v3/1-adr`
