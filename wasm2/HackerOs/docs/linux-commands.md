@@ -51,6 +51,7 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 
 | Commande | Options | Notes |
 |---|---|---|
+| `mkdir` | `-p`/`--parents`, `-v`/`--verbose`, `--` | Comme coreutils : sans `-p`, le parent doit exister et un dossier existant donne « File exists » ; avec `-p`, chaque composant manquant est créé (un `mkdir(2)` par composant, avec la révision du parent), un dossier existant n'est pas une erreur et un fichier sur le chemin donne « Not a directory ». `-v` affiche `mkdir: created directory '…'` pour chaque dossier créé. Mode `0755`. |
 | `chmod` | `MODE` octal ou symbolique (`+x`, `u+x`, `go-w`, `a=r`, `u=rwx,g=rx,o=`, `g+u`, `X`), `-R`, `-v`, `-c`, `-f` | Sans lettre de classe, le masque `022` s'applique (`+w` = propriétaire seul) ; les bits spéciaux (4ᵉ chiffre) sont ignorés. |
 | `ln` | `-s`, `-f`, `-n`, `-v`, `CIBLE [LIEN]`, `CIBLE… DOSSIER` | Liens symboliques par `HackFile.CreateSymbolicLinkAsync` ; le texte de la cible est gardé tel quel. Sans `-s` : `Operation not supported` (pas de liens physiques dans le système de fichiers HackerOS) et le conseil d'utiliser `-s`. |
 | `locate` | `-i -b -c -e`, `-l N` | Pas de base `updatedb` : parcours en direct avec les droits de l'utilisateur, `/proc`, `/dev`, `/sys`, `/run` exclus ; un motif sans joker est cherché partout dans le chemin. Code 1 sans résultat. |
@@ -103,7 +104,7 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
   `du`, `locate`, `jobs` et `kill %1`, `kill PID` et `kill -9 PID` sur un vrai
   processus, `grep -r`, `ip`, `top -b`.
 - `Tests/HackerOs.Commands.Wave5.Tests` : `chmod`, `kill`, `sort`, `head`,
-  `tail` avec les passerelles factices.
+  `tail`, `mkdir` (`-p`, `-v`, dossier existant, fichier sur le chemin, `..`) avec les passerelles factices.
 - `Tests/HackerOs.Ecosystem.Tests` : 75 apps intégrées dont 63 commandes (`stress` ajoutée par `rebuild/5-worker-processes`).
 
 ## Liste des tâches
@@ -114,6 +115,7 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 - [x] `ln -s` et `HackFile.CreateSymbolicLinkAsync`.
 - [x] `locate`, `du`, `df`, `zip`, `unzip`.
 - [x] `top`, `htop` (couleurs dans les cadres plein écran), `watch`, `jobs`, `sleep`, `whoami`, `which`.
+- [x] `mkdir -p` et `-v` (`rebuild/5-ui-a11y-mkdir`, 2026-10-16).
 - [x] `systemctl`/`service`.
 - [x] `wget`, `ip`/`ifconfig`, `netstat`/`ss`.
 - [x] `test`/`[`, `true`, `false`, `read`.

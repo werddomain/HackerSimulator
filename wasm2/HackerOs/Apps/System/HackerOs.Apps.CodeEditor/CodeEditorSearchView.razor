@@ -46,19 +46,19 @@
                        @oninput="OnTextInput"
                        @onkeydown="OnSearchKeyDownAsync" />
                 <span class="search-toggles">
-                    <button type="button" class="toggle @(_matchCase ? "is-on" : null)" title="Match Case" aria-label="Match Case" aria-pressed="@_matchCase" @onclick="ToggleMatchCase">
+                    <button type="button" class="toggle @(_matchCase ? "is-on" : null)" title="Match Case" aria-label="Match Case" aria-pressed="@(_matchCase ? "true" : "false")" @onclick="ToggleMatchCase">
                         <HackerIcon Library="IconLibrary.Lucide" Name="case-sensitive" Size="15" />
                     </button>
-                    <button type="button" class="toggle @(_wholeWord ? "is-on" : null)" title="Match Whole Word" aria-label="Match Whole Word" aria-pressed="@_wholeWord" @onclick="ToggleWholeWord">
+                    <button type="button" class="toggle @(_wholeWord ? "is-on" : null)" title="Match Whole Word" aria-label="Match Whole Word" aria-pressed="@(_wholeWord ? "true" : "false")" @onclick="ToggleWholeWord">
                         <HackerIcon Library="IconLibrary.Lucide" Name="whole-word" Size="15" />
                     </button>
-                    <button type="button" class="toggle @(_useRegex ? "is-on" : null)" title="Use Regular Expression" aria-label="Use Regular Expression" aria-pressed="@_useRegex" @onclick="ToggleRegex">
+                    <button type="button" class="toggle @(_useRegex ? "is-on" : null)" title="Use Regular Expression" aria-label="Use Regular Expression" aria-pressed="@(_useRegex ? "true" : "false")" @onclick="ToggleRegex">
                         <HackerIcon Library="IconLibrary.Lucide" Name="regex" Size="15" />
                     </button>
                 </span>
             </div>
 
-            <button type="button" class="details-toggle" aria-expanded="@_showDetails" @onclick="ToggleDetails">
+            <button type="button" class="details-toggle" aria-expanded="@(_showDetails ? "true" : "false")" @onclick="ToggleDetails">
                 @(_showDetails ? "Hide search details" : "Toggle search details")
             </button>
             @if (_showDetails)
@@ -88,7 +88,7 @@
             {
                 bool collapsed = _collapsed.Contains(file.File.RelativePath);
                 <div class="result-file" @key="file.File.RelativePath">
-                    <button type="button" class="file-row" title="@file.File.Path.Value" aria-expanded="@(!collapsed)" @onclick="() => ToggleFile(file.File.RelativePath)">
+                    <button type="button" class="file-row" title="@file.File.Path.Value" aria-expanded="@(!collapsed ? "true" : "false")" @onclick="() => ToggleFile(file.File.RelativePath)">
                         <HackerIcon Library="IconLibrary.Lucide" Name="@(collapsed ? "chevron-right" : "chevron-down")" Size="14" />
                         <HackerIcon Library="IconLibrary.Lucide" Name="file-text" Size="14" />
                         <span class="file-name">@file.File.Name</span>

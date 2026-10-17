@@ -19,7 +19,7 @@
 
     <label class="name-control">
         <span>File name</span>
-        <input value="@_fileName" @oninput="ChangeName" aria-invalid="@(_error is not null)" />
+        <input value="@_fileName" @oninput="ChangeName" aria-invalid="@(_error is not null ? "true" : "false")" />
     </label>
 
     @if (_error is not null)

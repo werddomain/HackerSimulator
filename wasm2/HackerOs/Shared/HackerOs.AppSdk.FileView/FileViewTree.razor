@@ -6,7 +6,7 @@
     FileViewTreeNode, without changing Owner.CurrentDirectory. See
     docs/Global-FileView-And-MessagingSystem/FileViewControl.md.
 *@
-<ul class="file-view-tree" role="tree" aria-multiselectable="@Owner.AllowMultiSelect">
+<ul class="file-view-tree" role="tree" aria-multiselectable="@(Owner.AllowMultiSelect ? "true" : "false")">
     @foreach (FileViewTreeNodeState node in RootNodes)
     {
         <FileViewTreeNode Owner="Owner" Root="this" Node="node" Depth="1" />

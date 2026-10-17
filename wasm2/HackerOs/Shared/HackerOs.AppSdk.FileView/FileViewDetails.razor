@@ -6,7 +6,7 @@
     Modified) so migrating FileExplorerWindow onto FileView is behavior-preserving (see integrationPlan.md
     Phase 4). Inline rename swaps the "name" cell's label for a textbox in place — no dialog (FV-005).
 *@
-<table class="file-view-details" role="grid" aria-multiselectable="@Owner.AllowMultiSelect">
+<table class="file-view-details" role="grid" aria-multiselectable="@(Owner.AllowMultiSelect ? "true" : "false")">
     <thead>
         <tr role="row">
             @foreach (FileViewColumn column in EffectiveColumns)

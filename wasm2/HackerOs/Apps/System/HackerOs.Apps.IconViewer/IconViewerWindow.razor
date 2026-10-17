@@ -19,19 +19,19 @@
     </header>
 
     <nav class="iconviewer-libnav" role="tablist" aria-label="Icon library filter">
-        <button type="button" role="tab" aria-selected="@(_activeLibrary is null)" class="@LibraryButtonClass(null)" @onclick="() => SetLibrary(null)">
+        <button type="button" role="tab" aria-selected="@(_activeLibrary is null ? "true" : "false")" class="@LibraryButtonClass(null)" @onclick="() => SetLibrary(null)">
             All (@_countAll)
         </button>
-        <button type="button" role="tab" aria-selected="@(_activeLibrary == IconLibrary.Bootstrap)" class="@LibraryButtonClass(IconLibrary.Bootstrap)" @onclick="() => SetLibrary(IconLibrary.Bootstrap)">
+        <button type="button" role="tab" aria-selected="@(_activeLibrary == IconLibrary.Bootstrap ? "true" : "false")" class="@LibraryButtonClass(IconLibrary.Bootstrap)" @onclick="() => SetLibrary(IconLibrary.Bootstrap)">
             Bootstrap (@_countBootstrap)
         </button>
-        <button type="button" role="tab" aria-selected="@(_activeLibrary == IconLibrary.FontAwesome)" class="@LibraryButtonClass(IconLibrary.FontAwesome)" @onclick="() => SetLibrary(IconLibrary.FontAwesome)">
+        <button type="button" role="tab" aria-selected="@(_activeLibrary == IconLibrary.FontAwesome ? "true" : "false")" class="@LibraryButtonClass(IconLibrary.FontAwesome)" @onclick="() => SetLibrary(IconLibrary.FontAwesome)">
             Font Awesome (@_countFontAwesome)
         </button>
-        <button type="button" role="tab" aria-selected="@(_activeLibrary == IconLibrary.Lucide)" class="@LibraryButtonClass(IconLibrary.Lucide)" @onclick="() => SetLibrary(IconLibrary.Lucide)">
+        <button type="button" role="tab" aria-selected="@(_activeLibrary == IconLibrary.Lucide ? "true" : "false")" class="@LibraryButtonClass(IconLibrary.Lucide)" @onclick="() => SetLibrary(IconLibrary.Lucide)">
             Lucide (@_countLucide)
         </button>
-        <button type="button" role="tab" aria-selected="@(_activeLibrary == IconLibrary.SimpleIcons)" class="@LibraryButtonClass(IconLibrary.SimpleIcons)" @onclick="() => SetLibrary(IconLibrary.SimpleIcons)">
+        <button type="button" role="tab" aria-selected="@(_activeLibrary == IconLibrary.SimpleIcons ? "true" : "false")" class="@LibraryButtonClass(IconLibrary.SimpleIcons)" @onclick="() => SetLibrary(IconLibrary.SimpleIcons)">
             Simple Icons (@_countSimpleIcons)
         </button>
     </nav>
