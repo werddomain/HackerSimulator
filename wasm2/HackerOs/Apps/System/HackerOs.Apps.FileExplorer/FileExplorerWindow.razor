@@ -267,10 +267,15 @@
     {
         base.OnAppInitialized();
         string homePath = GetHomePath();
-        _state = new FileExplorerState(homePath);
-        _initialDirectory = VirtualPath.Parse(homePath);
-        _homeDirectory = _initialDirectory;
-        _addressInput = homePath;
+        _homeDirectory = VirtualPath.Parse(homePath);
+        // Opening a folder (inode/directory, ADR 0039) starts the explorer on it; "Show in folder"
+        // adds --select=<path> (RevealFileIntent, ADR 0096 section 1).
+        (VirtualPath? folder, VirtualPath? select) = ParseLaunchArguments(LaunchArguments);
+        _pendingReveal = select;
+        string startPath = (folder ?? _homeDirectory).Value;
+        _state = new FileExplorerState(startPath);
+        _initialDirectory = VirtualPath.Parse(startPath);
+        _addressInput = startPath;
         _searchFilter = MatchesSearchQuery;
         _contextMenuProviders =
         [
@@ -307,6 +312,80 @@
             _fileView.SelectionChanged += OnFileViewSelectionChanged;
             // The breadcrumb and the Places drop zones need the view instance: render them now.
             StateHasChanged();
+            if (_pendingReveal is { } reveal && _fileView.CurrentDirectory == ParentOf(reveal))
+            {
+                // The view already listed the folder: select the item now rather than on OnPathChange.
+                _pendingReveal = null;
+                _ = InvokeAsync(() => RevealAsync(reveal));
+            }
+        }
+    }
+
+    /// <summary>Item to select once the view lists its folder (<c>--select=</c>, ADR 0096 section 1).</summary>
+    private VirtualPath? _pendingReveal;
+
+    /// <summary>
+    /// Reads the explorer's command line, like Nautilus's: a folder to open and <c>--select=&lt;path&gt;</c>
+    /// for "Show in folder". A file given as the folder opens its parent and selects it; anything
+    /// malformed is ignored (the explorer then opens the home folder).
+    /// </summary>
+    internal static (VirtualPath? Folder, VirtualPath? Select) ParseLaunchArguments(IReadOnlyList<string> arguments)
+    {
+        VirtualPath? folder = null;
+        VirtualPath? select = null;
+        foreach (string argument in arguments)
+        {
+            string value = argument.StartsWith(SelectPrefix, StringComparison.Ordinal) ? argument[SelectPrefix.Length..] : argument;
+            if (!value.StartsWith('/'))
+            {
+                continue;
+            }
+
+            try
+            {
+                VirtualPath path = VirtualPath.Parse(value);
+                if (argument.StartsWith(SelectPrefix, StringComparison.Ordinal))
+                {
+                    select = path;
+                }
+                else
+                {
+                    folder ??= path;
+                }
+            }
+            catch (FormatException)
+            {
+            }
+        }
+
+        return (select is { } item && folder is null ? ParentOf(item) : folder, select);
+    }
+
+    private const string SelectPrefix = "--select=";
+
+    private static VirtualPath ParentOf(VirtualPath path)
+    {
+        int separator = path.Value.LastIndexOf('/');
+        return separator <= 0 ? VirtualPath.Parse("/") : VirtualPath.Parse(path.Value[..separator]);
+    }
+
+    private async Task RevealAsync(VirtualPath path)
+    {
+        if (_fileView is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!await _fileView.RevealAsync(path))
+            {
+                ReportError($"'{path.Value}' is no longer in this folder.");
+            }
+        }
+        catch (InvalidOperationException exception)
+        {
+            ReportError(exception.Message);
         }
     }
 
@@ -332,6 +411,11 @@
         _addressInput = _state.CurrentPath;
         _errorMessage = null;
         _ = InvokeAsync(StateHasChanged);
+        if (_pendingReveal is { } reveal && e.Path == ParentOf(reveal))
+        {
+            _pendingReveal = null;
+            _ = InvokeAsync(() => RevealAsync(reveal));
+        }
     }
 
     private async void OnFileViewItemOpened(object? sender, FileViewOpenedEventArgs e)

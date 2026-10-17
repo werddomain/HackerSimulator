@@ -13,7 +13,8 @@
     </header>
 
     <div class="settings-body">
-        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="settings-tabs" TabHeaderClass="hos-tab-header">
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="settings-tabs" TabHeaderClass="hos-tab-header"
+                 @bind-ActivePanelIndex="_activeTab">
             <MudTabPanel Text="Appearance" Icon="@Icons.Material.Filled.Palette">
                 <div class="setting-group layer-picker">
                     <h4>Apply changes to</h4>
@@ -335,6 +336,14 @@
                     </button>
                 </div>
             </MudTabPanel>
+
+            @if (_appPageId is not null)
+            {
+                @* ShowAppSettingsIntent for an app without its own settings page (ADR 0096 §4): kept last so the other tabs keep their index. *@
+                <MudTabPanel Text="Application" Icon="@Icons.Material.Filled.Info">
+                    <AppDetailsPanel AppId="@_appPageId" />
+                </MudTabPanel>
+            }
         </MudTabs>
     </div>
 

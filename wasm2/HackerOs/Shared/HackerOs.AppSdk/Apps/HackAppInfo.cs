@@ -37,6 +37,12 @@ public sealed record HackAppInfo(
     /// </summary>
     public IReadOnlyList<string> Urls { get; init; } = [];
 
+    /// <summary>
+    /// Gets the capabilities the app's manifest declares (ADR 0096, section 4: the app's page in
+    /// Settings). Declared is not granted: dangerous ones still need an administrator's decision.
+    /// </summary>
+    public IReadOnlyList<string> Capabilities { get; init; } = [];
+
     /// <summary>Builds the public description of a manifest. Called by the platform's catalog gateway.</summary>
     /// <param name="manifest">Validated manifest.</param>
     /// <param name="isSystemApp">Whether the host declares the app as a system app.</param>
@@ -57,7 +63,8 @@ public sealed record HackAppInfo(
             [.. manifest.FileHandlers.Select(static handler =>
                 new HackAppFileHandler(handler.MediaType, [.. handler.Extensions], [.. handler.Actions]))])
         {
-            Urls = manifest.Web is { } web ? [.. web.Urls] : []
+            Urls = manifest.Web is { } web ? [.. web.Urls] : [],
+            Capabilities = [.. manifest.Capabilities]
         };
     }
 }
