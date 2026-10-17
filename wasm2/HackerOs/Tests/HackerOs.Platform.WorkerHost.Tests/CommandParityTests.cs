@@ -15,6 +15,7 @@ public sealed class CommandParityTests
     private static readonly Scenario[] All =
     [
         new("alias", ["alias ll='ls -l'", "alias", "alias ll"]),
+        new("ausearch", ["ausearch --help", "ausearch -f /etc/hostname", "ausearch --bogus"]),
         new("basename", ["basename /a/b/c.txt .txt", "basename -a /x/y /z"]),
         new("cat", ["cat notes.txt", "cat missing.txt", "cat notes.txt numbers.txt | cat"]),
         new("cd", ["cd docs && pwd", "cd /nope"]),
@@ -103,7 +104,7 @@ public sealed class CommandParityTests
             .Where(name => !covered.Contains(name))];
 
         Assert.Empty(missing);
-        Assert.Equal(64, OsFixture.BuiltInCommands.Count);
+        Assert.Equal(65, OsFixture.BuiltInCommands.Count);
     }
 
     [Fact]

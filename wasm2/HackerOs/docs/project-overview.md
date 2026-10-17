@@ -143,12 +143,12 @@ Les emplacements à connaître :
 
 | Chemin | Contenu |
 |---|---|
-| `/home/<login>` | Dossier personnel ; `~/.config/<appId>/` paramètres de l'app, `~/.local/share/Trash` corbeille. |
+| `/home/<login>` | Dossier personnel ; `~/.config/<appId>/` paramètres de l'app, `~/.local/share/Trash` corbeille, `~/.local/share/keyrings/login.keyring` trousseau chiffré (ADR 0100). |
 | `/root` | Dossier de `root` (processus lancés par `sudo`). |
 | `/etc/hackeros/` | Configuration de l'OS : `apps.config`, `security.config`, `app-permissions.config`, `appearance.config`, `policy.config`, `ui-platform-preference.config`, `file-associations.json`. |
-| `/etc/<appId>/` | Couche système des paramètres d'une app, avec la section `[locked]`. |
+| `/etc/<appId>/` | Couche système des paramètres d'une app, avec la section `[locked]` ; clés sensibles dans `<doc>.private.config` (`0600`, ADR 0100). |
 | `/etc/environment`, `/etc/hostname` | Environnement de connexion et nom de machine. |
-| `/var/log/` | `syslog`, `auth.log`, `apps/<appId>.log`, avec rotation. |
+| `/var/log/` | `syslog`, `auth.log`, `audit.log` (écritures sous `/etc`, `/bin`, `/var`, ADR 0100), `apps/<appId>.log`, avec rotation. |
 | `/proc/` | Virtuel : processus, `stat`, `diskstats`, `net/dev`, `mounts`… |
 | `/dev/` | Virtuel : `null`, `zero`, `random`, `urandom`. |
 

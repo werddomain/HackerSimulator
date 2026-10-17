@@ -13,8 +13,20 @@ namespace HackerOs.Platform.Core.Settings;
 /// When <see langword="true"/> the user layer is never read nor written (for example the
 /// administrator policy): only <c>/etc/hackeros</c> applies.
 /// </param>
+/// <remarks>
+/// OS documents hold no sensitive keys (ADR 0100): <see cref="OsSettingsService"/> reads only the
+/// public files, so a schema with a non-<see cref="SettingSensitivity.Public"/> field is refused here
+/// rather than having its values silently ignored.
+/// </remarks>
 public sealed record OsSettingsDocument(string DocumentId, SettingsSchema Schema, bool SystemOnly = false)
 {
+    /// <summary>Gets the declared schema; every field is public.</summary>
+    public SettingsSchema Schema { get; init; } = SettingsPrivateFiles.HasPrivateFields(Schema)
+        ? throw new ArgumentException(
+            $"OS settings document '{DocumentId}' declares sensitive keys; OS documents hold public keys only (ADR 0100).",
+            nameof(Schema))
+        : Schema;
+
     /// <summary>Directory of every OS system-layer file.</summary>
     public const string SystemDirectory = "/etc/hackeros";
 

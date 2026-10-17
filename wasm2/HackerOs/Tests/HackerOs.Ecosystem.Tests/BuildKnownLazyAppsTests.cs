@@ -12,10 +12,11 @@ public sealed class BuildKnownLazyAppsTests
         AppCatalog catalog = BuildKnownLazyApps.Catalog;
 
         // 13 window apps, the hackwebd service (ADR 0077), the sample Blazor site (ADR 0084), the Intranet
-        // sample (web/11) and 64 commands (stress joined with ADR 0070, nslookup with ADR 0074).
-        Assert.Equal(80, catalog.Manifests.Count);
+        // sample (web/11) and 65 commands (stress joined with ADR 0070, nslookup with ADR 0074,
+        // ausearch with ADR 0100).
+        Assert.Equal(81, catalog.Manifests.Count);
         // ADR 0064: the Linux commands added with the POSIX shell.
-        foreach (string command in new[] { "locate", "zip", "unzip", "cut", "tee", "whoami", "df", "du", "top", "htop", "systemctl", "watch", "jobs", "wget", "ip", "netstat", "ln", "test", "read", "stress", "nslookup" })
+        foreach (string command in new[] { "locate", "zip", "unzip", "cut", "tee", "whoami", "df", "du", "top", "htop", "systemctl", "watch", "jobs", "wget", "ip", "netstat", "ln", "test", "read", "stress", "nslookup", "ausearch" })
         {
             Assert.Contains($"org.hackeros.commands.{command}", catalog.Manifests.Keys);
         }
@@ -121,7 +122,7 @@ public sealed class BuildKnownLazyAppsTests
         string[] commands = [.. catalog.Manifests.Values
             .Where(manifest => manifest.Kind == AppKind.Terminal)
             .Select(manifest => manifest.Id)];
-        Assert.Equal(64, commands.Length);
+        Assert.Equal(65, commands.Length);
 
         Assert.Equal(
             systemWindows.Concat(commands).Order(StringComparer.Ordinal),

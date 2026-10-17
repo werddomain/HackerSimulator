@@ -58,7 +58,8 @@ public partial class ErrorLogViewerWindow
     private async Task ReloadAllAsync()
     {
         _errorMessage = null;
-        _sources = [.. await _reader.ListSourcesAsync(IncludeArchives, _lifetime.Token)];
+        bool administrator = AppContext.IsRootElevated || AppContext.UserAuthority >= AppAuthority.Administrator;
+        _sources = [.. await _reader.ListSourcesAsync(IncludeArchives, includeAudit: administrator, _lifetime.Token)];
         if (SelectedPath.Length > 0 && SelectedSource is null)
         {
             SelectedPath = string.Empty;
@@ -76,7 +77,7 @@ public partial class ErrorLogViewerWindow
     private Task OnSelectionChangedAsync() => ReloadAllAsync();
 
     private IEnumerable<LogSource> VisibleSources() =>
-        SelectedSource is LogSource selected ? [selected] : _sources;
+        SelectedSource is LogSource selected ? [selected] : _sources.Where(static source => !source.RequiresRoot);
 
     /// <summary>Merges every loaded file, newest first; file order then line order break ties.</summary>
     private void RebuildRows()

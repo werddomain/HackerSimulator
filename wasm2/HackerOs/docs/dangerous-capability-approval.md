@@ -3,7 +3,8 @@
 ## Objectif
 
 Une app non système ne reçoit jamais en silence une capacité dangereuse
-(`process.manage`, `network.real.access`, `filesystem.system.write`…, voir
+(`process.manage`, `network.real.access`, `filesystem.system.write`,
+`keyring.read-all` de l'ADR 0100…, voir
 [`capabilities.md`](capabilities.md)). Au lancement, l'OS demande à un
 administrateur de l'approuver, comme le « bureau sécurisé » de l'UAC de Windows,
 et mémorise la décision dans de vrais fichiers. Ce document décrit

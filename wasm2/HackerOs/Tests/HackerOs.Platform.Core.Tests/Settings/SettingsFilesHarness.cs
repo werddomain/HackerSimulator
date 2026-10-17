@@ -26,7 +26,7 @@ internal sealed class SettingsFilesHarness
     private int _transactionId = 100;
     private readonly DateTimeOffset _now = new(2026, 10, 10, 12, 0, 0, TimeSpan.Zero);
 
-    internal SettingsFilesHarness(ILegacySettingsStore? legacyStore = null)
+    internal SettingsFilesHarness(ILegacySettingsStore? legacyStore = null, bool withKeyring = false)
     {
         TimeProvider timeProvider = new FixedTimeProvider(_now);
         InMemoryFileSystemRepository repository = new(
@@ -57,19 +57,27 @@ internal sealed class SettingsFilesHarness
             LocalLoginName.Parse("bob"), "Bob", AppAuthority.User, bobGroup.Id,
             credential: LocalPasswordHasher.Create(Password, iterations: 100));
 
+        // ADR 0100: a keyring with .NET's AES-GCM and a tiny work factor, unlocked by the session.
+        Keyring = withKeyring
+            ? new HackerOs.Platform.Core.Keyring.UserKeyringService(
+                FileSystem, Clock, new HackerOs.Platform.Core.Keyring.ManagedKeyringCipher(), Audit, iterations: 10)
+            : null;
         Session = new LocalSessionService(
             Users,
             new FileSystemSeeder(FileSystem, timeProvider),
             EventBus,
-            new BoundedAuditLog(maxEntries: 100),
+            Audit,
             InstallationId.FromGuid(Guid.NewGuid()),
             DeviceId.FromGuid(Guid.NewGuid()),
             () => _now,
-            profileInitializer: Migration);
+            profileInitializer: Migration,
+            keyring: Keyring);
         Settings = new OsSettingsService(FileSystem, Session, Clock, TopicBus, EventBus);
     }
 
     internal FileSystemService FileSystem { get; }
+    internal BoundedAuditLog Audit { get; } = new(maxEntries: 100);
+    internal HackerOs.Platform.Core.Keyring.UserKeyringService? Keyring { get; }
     internal CapabilityGrantRepository Grants { get; }
     internal InMemoryTopicMessageBus TopicBus { get; }
     internal InMemoryEventBus EventBus { get; }

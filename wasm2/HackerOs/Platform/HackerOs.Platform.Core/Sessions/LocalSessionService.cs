@@ -33,6 +33,7 @@ public sealed class LocalSessionService : ISessionService
     private readonly ICapabilityGrantRepository? _grantRepository;
     private readonly AppCatalog? _catalog;
     private readonly IUserProfileInitializer? _profileInitializer;
+    private readonly Keyring.ISessionKeyring? _keyring;
 
     /// <summary>Initializes a session service in the <see cref="SessionState.Uninitialized"/> state.</summary>
     /// <param name="users">Repository used to look up and authenticate local users.</param>
@@ -50,6 +51,10 @@ public sealed class LocalSessionService : ISessionService
     /// Optional per-user preparation run right after the home directory is seeded, before the
     /// session becomes active (the one-time settings-to-files migration of ADR 0044).
     /// </param>
+    /// <param name="keyring">
+    /// Optional user keyring (ADR 0100 section 2), unlocked with the typed password once the home is
+    /// ready and locked again at logout.
+    /// </param>
     public LocalSessionService(
         ILocalUserRepository users,
         FileSystemSeeder homeSeeder,
@@ -62,7 +67,8 @@ public sealed class LocalSessionService : ISessionService
         KeyDerivationAsyncDelegate? asyncHasher = null,
         ICapabilityGrantRepository? grantRepository = null,
         AppCatalog? catalog = null,
-        IUserProfileInitializer? profileInitializer = null)
+        IUserProfileInitializer? profileInitializer = null,
+        Keyring.ISessionKeyring? keyring = null)
     {
         _users = users ?? throw new ArgumentNullException(nameof(users));
         _homeSeeder = homeSeeder ?? throw new ArgumentNullException(nameof(homeSeeder));
@@ -76,6 +82,7 @@ public sealed class LocalSessionService : ISessionService
         _grantRepository = grantRepository;
         _catalog = catalog;
         _profileInitializer = profileInitializer;
+        _keyring = keyring;
     }
 
     /// <inheritdoc />
@@ -173,6 +180,13 @@ public sealed class LocalSessionService : ISessionService
                 _deviceId,
                 _clock());
 
+            if (_keyring is not null)
+            {
+                // Like pam_gnome_keyring: the password just verified unlocks the login keyring.
+                // Never fails the login; an unreadable keyring stays locked or is set aside.
+                await _keyring.UnlockAsync(principal, user.Credential is null ? null : password, cancellationToken).ConfigureAwait(false);
+            }
+
             using (_progressTracker.BeginStep("Starting Session"))
             {
                 lock (_gate)
@@ -221,6 +235,7 @@ public sealed class LocalSessionService : ISessionService
 
         rootSource.Cancel();
         rootSource.Dispose();
+        _keyring?.Lock();
 
         lock (_gate)
         {
@@ -259,6 +274,7 @@ public sealed class LocalSessionService : ISessionService
 
         rootSource?.Cancel();
         rootSource?.Dispose();
+        _keyring?.Lock();
 
         lock (_gate)
         {

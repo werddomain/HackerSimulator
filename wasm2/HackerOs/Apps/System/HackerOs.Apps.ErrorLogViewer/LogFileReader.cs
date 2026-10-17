@@ -11,7 +11,15 @@ namespace HackerOs.Apps.ErrorLogViewer;
 /// <param name="Path">Canonical file path.</param>
 /// <param name="Label">Short label shown in the source picker, e.g. <c>syslog</c> or <c>apps/org.x.log.1</c>.</param>
 /// <param name="IsArchive">Whether the file is a rotated archive (<c>.1</c> to <c>.5</c>), never written again.</param>
-public sealed record LogSource(VirtualPath Path, string Label, bool IsArchive);
+public sealed record LogSource(VirtualPath Path, string Label, bool IsArchive)
+{
+    /// <summary>
+    /// Gets whether only root may read the file (<c>audit.log</c>, ADR 0100 section 3): it is read
+    /// only when picked on its own, never as part of "every log", so opening the viewer never asks
+    /// for an administrator.
+    /// </summary>
+    public bool RequiresRoot { get; init; }
+}
 
 /// <summary>One parsed log line and the file it came from.</summary>
 /// <param name="Line">Parsed line.</param>
@@ -35,6 +43,9 @@ public sealed record LogFileContent(
 /// capability-checked filesystem gateway: <c>syslog</c>, every <c>apps/*.log</c>, and on demand their
 /// archives. Lines are decoded with <see cref="LogLineFormat.TryParse"/>. The reader never touches
 /// <c>auth.log</c> (mode <c>0600</c>): reading it is an administrator action, done with <c>sudo cat</c>.
+/// It does list <c>audit.log</c> (ADR 0100 section 3, also <c>0600</c>, decoded with
+/// <see cref="AuditLineFormat.TryParse"/>): opening it is denied for everybody but root, and the
+/// window host then offers the administrator approval of ADR 0042 for that one read.
 /// </summary>
 /// <remarks>
 /// This deliberately goes through <see cref="IAppFileSystemGateway"/>, like any other app: the viewer
@@ -67,7 +78,11 @@ public sealed class LogFileReader
     /// Lists the log files that exist now: <c>syslog</c> then each app log in name order, each
     /// followed by its archives when <paramref name="includeArchives"/> is set.
     /// </summary>
-    public async Task<IReadOnlyList<LogSource>> ListSourcesAsync(bool includeArchives, CancellationToken cancellationToken = default)
+    /// <param name="includeArchives">Also list the rotated archives.</param>
+    /// <param name="includeAudit">Also list <c>audit.log</c> (for an administrator, ADR 0100 section 3).</param>
+    /// <param name="cancellationToken">Cancels the listing.</param>
+    public async Task<IReadOnlyList<LogSource>> ListSourcesAsync(
+        bool includeArchives, bool includeAudit = false, CancellationToken cancellationToken = default)
     {
         List<LogSource> sources = [];
 
@@ -76,6 +91,16 @@ public sealed class LogFileReader
         if (logDirectory.Succeeded)
         {
             AddFamily(sources, logDirectory.Value!, "syslog", label => label, includeArchives);
+            if (includeAudit)
+            {
+                // ADR 0100 section 3: 0600 root, so reading it asks for the administrator approval.
+                int first = sources.Count;
+                AddFamily(sources, logDirectory.Value!, "audit.log", label => label, includeArchives);
+                for (int index = first; index < sources.Count; index++)
+                {
+                    sources[index] = sources[index] with { RequiresRoot = true };
+                }
+            }
         }
 
         FileSystemResult<FileSystemDirectorySnapshot> appDirectory = await _fileSystem.EnumerateAsync(
@@ -155,6 +180,10 @@ public sealed class LogFileReader
             {
                 rows.Add(new LogRow(parsed, source, lineNumber));
             }
+            else if (AuditLineFormat.TryParse(line, out AuditRecord? audit))
+            {
+                rows.Add(new LogRow(ToLogLine(audit), source, lineNumber));
+            }
             else
             {
                 unparsed++;
@@ -162,6 +191,30 @@ public sealed class LogFileReader
         }
 
         return new LogFileContent(source, rows, unparsed, null);
+    }
+
+    /// <summary>
+    /// Shows one <c>audit.log</c> record (ADR 0100 section 3) as a log row: a refused write is a
+    /// warning, an allowed one information; the source is the app that wrote.
+    /// </summary>
+    private static LogLine ToLogLine(AuditRecord audit)
+    {
+        string target = audit.NewPath is null ? audit.Path : $"{audit.Path} -> {audit.NewPath}";
+        string outcome = audit.Succeeded ? "success" : $"refused ({audit.Error})";
+        Dictionary<string, string> properties = new(StringComparer.Ordinal)
+        {
+            ["op"] = audit.Operation,
+            ["path"] = audit.Path,
+            ["uid"] = audit.Uid,
+            ["auid"] = audit.Auid
+        };
+        return new LogLine(
+            audit.TimestampUtc,
+            audit.Succeeded ? DiagnosticSeverity.Information : DiagnosticSeverity.Warning,
+            audit.AppId,
+            audit.ProcessId == 0 ? null : audit.ProcessId,
+            $"audit #{audit.Serial}: {audit.Operation} {target} uid={audit.Uid} auid={audit.Auid}: {outcome}",
+            properties);
     }
 
     /// <summary>Adds <paramref name="fileName"/> if present, then its existing archives in order.</summary>

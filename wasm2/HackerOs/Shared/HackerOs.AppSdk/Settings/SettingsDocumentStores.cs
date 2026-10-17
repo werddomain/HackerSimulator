@@ -1,4 +1,5 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.Keyring;
 using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -19,6 +20,16 @@ internal interface ISettingsDocumentStore : IAsyncDisposable
 
     /// <summary>Gets the user layer path (empty for a system-only document).</summary>
     string UserPath { get; }
+
+    /// <summary>Gets the document id, the file name without <c>.config</c>.</summary>
+    string DocumentId { get; }
+
+    /// <summary>
+    /// Gets the calling app's keyring, which holds the secrets of its
+    /// <see cref="SettingSensitivity.SecretReference"/> keys (ADR 0100 section 2), or
+    /// <see langword="null"/> for an OS document.
+    /// </summary>
+    IAppKeyringGateway? Keyring { get; }
 
     /// <summary>Reads and merges both layers.</summary>
     /// <param name="cancellationToken">Cancels the reads.</param>
@@ -56,6 +67,9 @@ internal sealed class AppSettingsDocumentStore : ISettingsDocumentStore
     private readonly SettingsSchema _schema;
     private readonly VirtualPath _systemPath;
     private readonly VirtualPath _userPath;
+    private readonly VirtualPath _systemPrivatePath;
+    private readonly VirtualPath _userPrivatePath;
+    private readonly bool _hasPrivateFields;
     private readonly HashSet<string> _loggedRevisions = new(StringComparer.Ordinal);
     private SettingsFilesWatcher? _watcher;
 
@@ -67,9 +81,15 @@ internal sealed class AppSettingsDocumentStore : ISettingsDocumentStore
         _fileSystem = context.FileSystem;
         _watch = TryGet(() => context.Watch);
         _logging = TryGet(() => context.Logging);
+        Keyring = TryGet(() => context.Keyring);
         _schema = schema;
+        DocumentId = documentId;
         _systemPath = VirtualPath.Parse($"/etc/{appId}/{documentId}.config");
         _userPath = VirtualPath.Parse($"{home}/.config/{appId}/{documentId}.config");
+        _systemPrivatePath = VirtualPath.Parse(SettingsPrivateFiles.GetPrivatePath(_systemPath.Value));
+        _userPrivatePath = VirtualPath.Parse(SettingsPrivateFiles.GetPrivatePath(_userPath.Value));
+        // ADR 0100: a document without sensitive keys never touches (nor pays for) private files.
+        _hasPrivateFields = SettingsPrivateFiles.HasPrivateFields(schema);
     }
 
     /// <inheritdoc />
@@ -77,6 +97,12 @@ internal sealed class AppSettingsDocumentStore : ISettingsDocumentStore
 
     /// <inheritdoc />
     public string UserPath => _userPath.Value;
+
+    /// <inheritdoc />
+    public string DocumentId { get; }
+
+    /// <inheritdoc />
+    public IAppKeyringGateway? Keyring { get; }
 
     /// <inheritdoc />
     public async Task<LayeredConfigSnapshot> ReadAsync(CancellationToken cancellationToken)
@@ -93,9 +119,40 @@ internal sealed class AppSettingsDocumentStore : ISettingsDocumentStore
             throw SettingsErrorTranslator.ToException(user.Error);
         }
 
-        LayeredConfigSnapshot snapshot = LayeredConfigResolver.Resolve(_schema, system.Content, user.Content, SystemPath, UserPath);
-        LogNewWarnings(snapshot, system.Revision, user.Revision);
+        SettingsFileReadResult systemPrivate = Absent;
+        SettingsFileReadResult userPrivate = Absent;
+        if (_hasPrivateFields)
+        {
+            // A private file the caller may not read is not an error: its keys come back masked.
+            systemPrivate = await ReadPrivateAsync(_systemPrivatePath, cancellationToken).ConfigureAwait(false);
+            userPrivate = await ReadPrivateAsync(_userPrivatePath, cancellationToken).ConfigureAwait(false);
+        }
+
+        LayeredConfigSnapshot snapshot = LayeredConfigResolver.Resolve(
+            _schema,
+            new LayeredConfigFiles(system.Content, user.Content, SystemPath, UserPath)
+            {
+                SystemPrivateContent = systemPrivate.Content,
+                UserPrivateContent = userPrivate.Content,
+                SystemPrivateDenied = systemPrivate.IsDenied,
+                UserPrivateDenied = userPrivate.IsDenied
+            });
+        LogNewWarnings(snapshot, new Dictionary<string, long?>(StringComparer.Ordinal)
+        {
+            [SystemPath] = system.Revision,
+            [UserPath] = user.Revision,
+            [_systemPrivatePath.Value] = systemPrivate.Revision,
+            [_userPrivatePath.Value] = userPrivate.Revision
+        });
         return snapshot;
+    }
+
+    private static readonly SettingsFileReadResult Absent = new(null, null, null);
+
+    private async Task<SettingsFileReadResult> ReadPrivateAsync(VirtualPath path, CancellationToken cancellationToken)
+    {
+        SettingsFileReadResult read = await SettingsTextFile.ReadAsync(_fileSystem, path, cancellationToken).ConfigureAwait(false);
+        return read.Error is null || read.IsDenied ? read : throw SettingsErrorTranslator.ToException(read.Error);
     }
 
     /// <inheritdoc />
@@ -107,6 +164,13 @@ internal sealed class AppSettingsDocumentStore : ISettingsDocumentStore
             SettingLayer.System => _systemPath,
             _ => throw new ArgumentOutOfRangeException(nameof(target), target, "Only the User and System layers can be written.")
         };
+
+        if (_hasPrivateFields)
+        {
+            VirtualPath privatePath = target == SettingLayer.User ? _userPrivatePath : _systemPrivatePath;
+            await WriteSplitAsync(edits, path, privatePath, cancellationToken).ConfigureAwait(false);
+            return;
+        }
 
         // Removing keys from a missing file is a no-op; setting one creates it.
         bool createIfMissing = edits.Any(static edit => edit.Value is not null);
@@ -143,7 +207,10 @@ internal sealed class AppSettingsDocumentStore : ISettingsDocumentStore
             return;
         }
 
-        _watcher = new SettingsFilesWatcher(_watch, [_systemPath, _userPath], onChanged);
+        _watcher = new SettingsFilesWatcher(
+            _watch,
+            _hasPrivateFields ? [_systemPath, _userPath, _systemPrivatePath, _userPrivatePath] : [_systemPath, _userPath],
+            onChanged);
         await _watcher.StartAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -157,7 +224,65 @@ internal sealed class AppSettingsDocumentStore : ISettingsDocumentStore
         }
     }
 
-    private void LogNewWarnings(LayeredConfigSnapshot snapshot, long? systemRevision, long? userRevision)
+    /// <summary>
+    /// Writes one layer whose document has sensitive keys (ADR 0100 section 1): non-public keys go to
+    /// <c>&lt;doc&gt;.private.config</c> (created <c>0600</c>), public keys to <c>&lt;doc&gt;.config</c>, and
+    /// a key found in the wrong file is moved. The private file is written first, so a moved
+    /// secret is never missing from both files at once.
+    /// </summary>
+    private async ValueTask WriteSplitAsync(
+        IReadOnlyList<SettingEdit> edits, VirtualPath publicPath, VirtualPath privatePath, CancellationToken cancellationToken)
+    {
+        List<(SettingFieldDeclaration Field, string? Value)> changes = [.. edits.Select(static edit => (edit.Field, edit.Value))];
+        SettingsFileReadResult publicFile = await SettingsTextFile.ReadAsync(_fileSystem, publicPath, cancellationToken).ConfigureAwait(false);
+        SettingsFileReadResult privateFile = await SettingsTextFile.ReadAsync(_fileSystem, privatePath, cancellationToken).ConfigureAwait(false);
+        if (publicFile.Error is not null)
+        {
+            throw SettingsErrorTranslator.ToException(publicFile.Error);
+        }
+
+        if (privateFile.Error is not null)
+        {
+            throw SettingsErrorTranslator.ToException(privateFile.Error);
+        }
+
+        (string? nextPublic, string? nextPrivate) = SettingsPrivateFiles.Apply(_schema, publicFile.Content, privateFile.Content, changes);
+        if (nextPrivate is not null)
+        {
+            // Re-applied to fresh content on a revision conflict, against the public text read above.
+            FileSystemError? error = await SettingsTextFile
+                .EditAsync(
+                    _fileSystem,
+                    privatePath,
+                    content => SettingsPrivateFiles.Apply(_schema, publicFile.Content, content, changes).Private ?? content ?? string.Empty,
+                    createIfMissing: true,
+                    SettingsPrivateFiles.PrivateFileMode,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (error is not null)
+            {
+                throw SettingsErrorTranslator.ToException(error);
+            }
+        }
+
+        if (nextPublic is not null)
+        {
+            FileSystemError? error = await SettingsTextFile
+                .EditAsync(
+                    _fileSystem,
+                    publicPath,
+                    content => SettingsPrivateFiles.Apply(_schema, content, privateFile.Content, changes).Public ?? content ?? string.Empty,
+                    createIfMissing: true,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (error is not null)
+            {
+                throw SettingsErrorTranslator.ToException(error);
+            }
+        }
+    }
+
+    private void LogNewWarnings(LayeredConfigSnapshot snapshot, IReadOnlyDictionary<string, long?> revisions)
     {
         if (_logging is null || snapshot.Warnings.Count == 0)
         {
@@ -168,7 +293,7 @@ internal sealed class AppSettingsDocumentStore : ISettingsDocumentStore
         // (every watch event, every write to the other layer) must not flood the log.
         foreach (LayeredConfigWarning warning in snapshot.Warnings)
         {
-            long? revision = warning.Path == SystemPath ? systemRevision : userRevision;
+            long? revision = revisions.GetValueOrDefault(warning.Path);
             if (_loggedRevisions.Add($"{warning.Path}@{revision}:{warning.LineNumber}:{warning.Message}"))
             {
                 _logging.Log(DiagnosticSeverity.Warning, warning.ToLogLine());
@@ -204,6 +329,12 @@ internal sealed class SystemSettingsDocumentStore(IAppSystemSettingsGateway gate
 
     /// <inheritdoc />
     public string UserPath => info.UserPath;
+
+    /// <inheritdoc />
+    public string DocumentId => info.DocumentId;
+
+    /// <inheritdoc />
+    public IAppKeyringGateway? Keyring => null;
 
     /// <inheritdoc />
     public async Task<LayeredConfigSnapshot> ReadAsync(CancellationToken cancellationToken) =>

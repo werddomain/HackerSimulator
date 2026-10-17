@@ -3,12 +3,14 @@ using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
+using HackerOs.Commands.Ausearch;
 using HackerOs.Commands.Cat;
 using HackerOs.Commands.Cd;
 using HackerOs.Commands.Echo;
 using HackerOs.Commands.Exit;
 using HackerOs.Commands.Ls;
 using HackerOs.Commands.Pwd;
+using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -187,13 +189,57 @@ public sealed class CoreCommandsTests
         Assert.Contains("notes.txt", stdout.ToString());
     }
 
+    [Fact]
+    public async Task AusearchCommand_filters_audit_records_by_path_and_origin_user()
+    {
+        // ADR 0100 section 3: ausearch reads auditd-style records from /var/log/audit.log.
+        DateTimeOffset at = new(2026, 10, 17, 8, 30, 0, TimeSpan.Zero);
+        string hosts = AuditLineFormat.Format(new AuditRecord(
+            at, 1, "write", "/etc/hosts", null, "root", "alice", 42, "nano", "org.hackeros.commands.nano", true, null));
+        string refused = AuditLineFormat.Format(new AuditRecord(
+            at, 2, "create", "/etc/hackeros/apps.config", null, "bob", "bob", 43, "settings", "org.hackeros.settings", false, "PermissionDenied"));
+        AusearchCommand command = new(CreateManifest("ausearch", "org.hackeros.commands.ausearch"));
+        void Seed(TestAppFileSystemGateway fs)
+        {
+            fs.AddDirectory("/var");
+            fs.AddDirectory("/var/log");
+            fs.AddFile("/var/log/audit.log", Encoding.UTF8.GetBytes(hosts + "\n" + refused + "\n"));
+        }
+
+        using StringWriter stdout = new();
+        using StringWriter stderr = new();
+        using StringReader stdin = new(string.Empty);
+        int found = await command.ExecuteAsync(
+            CreateContext(["-f", "/etc/hosts", "-ul", "alice"], stdout, stderr, stdin, "/", seed: Seed), CancellationToken.None);
+
+        Assert.Equal(0, found);
+        Assert.Contains(hosts, stdout.ToString());
+        Assert.DoesNotContain("apps.config", stdout.ToString());
+        Assert.Contains("time->Sat Oct 17 08:30:00 2026", stdout.ToString());
+
+        using StringWriter failedOut = new();
+        using StringWriter failedErr = new();
+        int failures = await command.ExecuteAsync(
+            CreateContext(["--success", "no"], failedOut, failedErr, stdin, "/", seed: Seed), CancellationToken.None);
+        Assert.Equal(0, failures);
+        Assert.Contains(refused, failedOut.ToString());
+
+        using StringWriter noneOut = new();
+        using StringWriter noneErr = new();
+        int none = await command.ExecuteAsync(
+            CreateContext(["-ua", "carol"], noneOut, noneErr, stdin, "/", seed: Seed), CancellationToken.None);
+        Assert.Equal(1, none);
+        Assert.Equal("<no matches>" + Environment.NewLine, noneErr.ToString());
+    }
+
     private static TerminalExecutionContext CreateContext(
         IReadOnlyList<string> arguments,
         TextWriter stdout,
         TextWriter stderr,
         TextReader stdin,
         string cwd,
-        IShellSession? shell = null)
+        IShellSession? shell = null,
+        Action<TestAppFileSystemGateway>? seed = null)
     {
         AppManifest manifest = CreateManifest("cmd", "org.hackeros.cmd.test");
         LocalUserId userId = LocalUserId.FromGuid(Guid.NewGuid());
@@ -202,6 +248,7 @@ public sealed class CoreCommandsTests
         fileSystem.AddDirectory("/home/user");
         fileSystem.AddFile("/home/user/notes.txt", Encoding.UTF8.GetBytes("Hello HackerOS"));
         fileSystem.AddDirectory("/home/user/.config");
+        seed?.Invoke(fileSystem);
 
         TestAppExecutionContext app = new(manifest, fileSystem);
 

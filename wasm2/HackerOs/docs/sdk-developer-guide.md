@@ -523,6 +523,7 @@ build (`HOSAPP0031`). Les tâches courantes :
 | Mettre à la corbeille | `HackTrash.MoveToTrashAsync` | celles du fichier |
 | Surveiller un dossier | `HackFileSystemWatcher` | celles du dossier |
 | Paramètres de l'app | `HackSettings.OpenAsync`, `GetAsync`, `SetAsync` | `filesystem.private.read` / `.write` |
+| Garder un mot de passe ou un jeton | `HackKeyring.SetAsync`, `GetAsync`, ou une clé `SecretReference` avec `HackSettingsDocument.SetSecretAsync` ([`sensitive-settings.md`](sensitive-settings.md)) | aucune pour ses propres entrées |
 | Journaliser | `AppContext.Logging.Log` → `/var/log/apps/<appId>.log` | aucune |
 | Notifier l'utilisateur | `AppContext.Notifications.Post` | `notifications.post` |
 | Utilisateur, dossiers spéciaux, variables, arguments | `HackUser`, `HackEnvironment` | aucune |

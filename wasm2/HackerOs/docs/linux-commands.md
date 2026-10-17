@@ -76,6 +76,12 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 | `whoami` | — | `root` sous `sudo`. |
 | `which` | `NOM…` | `/usr/bin/NOM` pour une commande installée, `/bin/sh` pour le shell ; code 1 sinon. |
 
+## Sécurité
+
+| Commande | Options | Notes |
+|---|---|---|
+| `ausearch` | `-f CHEMIN`, `-ua`/`-ui`/`-ul UTILISATEUR`, `-c COMM`, `--success yes\|no` (`-sv`), `-if FICHIER`, `-i` | Comme l'outil d'`auditd` : cherche dans `/var/log/audit.log` et ses archives (ADR 0100 §3, [`sensitive-settings.md`](sensitive-settings.md)). Le journal est `0600 root` : `sudo ausearch -f /etc/hosts`. `-f` accepte le chemin, un fichier dessous ou un nom de fichier ; `-ul` cherche l'humain d'origine (`auid`). Code 1 et `<no matches>` sans résultat. |
+
 ## Réseau
 
 | Commande | Options | Notes |
@@ -105,7 +111,8 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
   processus, `grep -r`, `ip`, `top -b`.
 - `Tests/HackerOs.Commands.Wave5.Tests` : `chmod`, `kill`, `sort`, `head`,
   `tail`, `mkdir` (`-p`, `-v`, dossier existant, fichier sur le chemin, `..`) avec les passerelles factices.
-- `Tests/HackerOs.Ecosystem.Tests` : 75 apps intégrées dont 63 commandes (`stress` ajoutée par `rebuild/5-worker-processes`).
+- `Tests/HackerOs.Ecosystem.Tests` : 81 apps intégrées dont 65 commandes (`stress` ajoutée par `rebuild/5-worker-processes`, `ausearch` par `v3/8-settings-security`).
+- `Tests/HackerOs.Commands.Tests` : filtres d'`ausearch`.
 
 ## Liste des tâches
 
@@ -119,5 +126,6 @@ alice@hackeros:~$ watch -n 1 'ps | wc -l'
 - [x] `systemctl`/`service`.
 - [x] `wget`, `ip`/`ifconfig`, `netstat`/`ss`.
 - [x] `test`/`[`, `true`, `false`, `read`.
+- [x] `ausearch` (`v3/8-settings-security`, ADR 0100).
 - [x] Tests et documentation.
 - [x] ADR 0069 (`rebuild/5-graceful-stop`) : `find`, `grep` (et `grep -r`), `du`, `zip`, `unzip`, `locate` appellent `HackProcess.CheckpointAsync` dans leurs boucles ; `kill` envoie `Terminated`.

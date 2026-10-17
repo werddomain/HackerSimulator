@@ -37,6 +37,16 @@ commentés (mode `0644`, propriétaire `root`). Comme ces fichiers listent toute
 les clés, l'origine affichée d'une valeur de l'OS est « système » et non
 « intégrée » tant que personne n'a rien changé.
 
+### Clés sensibles (ADR 0100)
+
+Un document qui déclare des clés non publiques (`SettingSensitivity` `Private`,
+`SecretReference` ou `Restricted`) range ces clés dans un fichier compagnon
+`<doc>.private.config` en mode `0600`, à côté de `<doc>.config`, dans chaque
+couche. Quand l'appelant ne peut pas lire le fichier privé, la clé est rendue
+« masquée » au lieu de faire échouer la lecture. Les secrets vont dans le
+trousseau de connexion. Les documents de l'OS n'acceptent que des clés
+publiques. Détails : [`sensitive-settings.md`](sensitive-settings.md).
+
 ## Architecture
 
 | Couche | Type | Rôle |
@@ -215,6 +225,8 @@ Dans `Tests/HackerOs.Platform.Core.Tests/Settings/` :
   isolement entre apps, notification de changement ;
 - `SettingsStoreToFilesMigrationTests` : fichiers par défaut, copie unique,
   copie par utilisateur, magasin illisible.
+- `SensitiveSettingsTests` : fichiers privés, masquage, clés mal placées,
+  `Restricted`, secrets dans le trousseau (ADR 0100).
 
 ## Liste des tâches
 

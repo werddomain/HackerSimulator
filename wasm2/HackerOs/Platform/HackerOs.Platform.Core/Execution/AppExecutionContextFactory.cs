@@ -50,6 +50,7 @@ public sealed class AppExecutionContextFactory
     private readonly Clipboard.SystemClipboard _clipboard;
     private readonly Network.Local.LocalNetworkServices? _localNetwork;
     private readonly WebData.IWebSiteDatabaseStore? _webDatabases;
+    private readonly Keyring.UserKeyringService? _keyring;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
     /// <param name="intentDispatcherProvider">
@@ -107,6 +108,10 @@ public sealed class AppExecutionContextFactory
     /// The browser databases of web sites behind <see cref="IAppExecutionContext.WebDatabase"/> and the
     /// storage diagnostics (ADR 0088); <see langword="null"/> leaves sites without a database.
     /// </param>
+    /// <param name="keyring">
+    /// The session user's keyring behind <see cref="IAppExecutionContext.Keyring"/> (ADR 0100 section 2);
+    /// <see langword="null"/> leaves every app with a locked keyring.
+    /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
         IFileSystemService fileSystem,
@@ -129,7 +134,8 @@ public sealed class AppExecutionContextFactory
         Clipboard.SystemClipboard? clipboard = null,
         SystemAdministrationGatewayServices? administration = null,
         Network.Local.LocalNetworkServices? localNetwork = null,
-        WebData.IWebSiteDatabaseStore? webDatabases = null)
+        WebData.IWebSiteDatabaseStore? webDatabases = null,
+        Keyring.UserKeyringService? keyring = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -153,6 +159,7 @@ public sealed class AppExecutionContextFactory
         _clipboard = clipboard ?? new Clipboard.SystemClipboard();
         _localNetwork = localNetwork;
         _webDatabases = webDatabases;
+        _keyring = keyring;
     }
 
     /// <summary>
@@ -297,7 +304,9 @@ public sealed class AppExecutionContextFactory
             // ADR 0069: the process manager's block carries the stop request and the kill to the context.
             (_processManager as Processes.InMemoryProcessManager)?.GetControlBlock(process.Pid),
             // ADR 0088: hackweb.<app id>, for web apps only.
-            new WebData.AppWebDatabaseGateway(_webDatabases, manifest));
+            new WebData.AppWebDatabaseGateway(_webDatabases, manifest),
+            // ADR 0100 section 2: the session user's keyring, confined to this app's entries.
+            _keyring is null ? null : new Keyring.AppKeyringGateway(_keyring, principal.UserId, manifest.Id, capabilities));
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);
