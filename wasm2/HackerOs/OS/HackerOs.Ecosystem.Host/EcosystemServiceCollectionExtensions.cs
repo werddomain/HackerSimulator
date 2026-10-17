@@ -818,6 +818,11 @@ public static class EcosystemServiceCollectionExtensions
                 provider.GetService<ITopicMessageBus>(),
                 provider.GetService<ILogger<HackerOs.Platform.Core.Appearance.UserThemeCatalogService>>()));
         services.AddScoped<WindowGeometryPersistence>();
+        // ADR 0116: remembers app window geometry from WindowRuntime's facts; read back by
+        // WindowLaunchCoordinator. Scoped like WindowRuntime.
+        services.AddScoped<WindowGeometryRecorder>(provider => new WindowGeometryRecorder(
+            provider.GetRequiredService<WindowRuntime>(),
+            provider.GetRequiredService<WindowGeometryPersistence>()));
         services.AddScoped<StartMenuPreferencesService>();
         // Depends on AppLifecycleOrchestrator and UiPlatformPreferenceService, both Scoped (see
         // above) — see this file's IJSRuntime scoping note.

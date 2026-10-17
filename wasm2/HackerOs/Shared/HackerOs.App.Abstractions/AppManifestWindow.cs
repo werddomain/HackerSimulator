@@ -85,4 +85,31 @@ public sealed record WindowOptions
     /// commands do nothing on it.
     /// </summary>
     public bool Resizable { get; init; }
+
+    /// <summary>
+    /// Gets whether the OS remembers this window's size, position and maximized state between two
+    /// openings (ADR 0116). Defaults to <see langword="true"/>. An app that must always open at its
+    /// default place (a calculator, a wizard) sets it to <see langword="false"/>; its window then
+    /// always opens at its cascade slot with its declared default size.
+    /// </summary>
+    /// <remarks>
+    /// The geometry is device-local state in <c>~/.local/state/hackeros/windows/&lt;appId&gt;.config</c>,
+    /// written by the window manager, never by the app. Added in SDK 1.1.
+    /// </remarks>
+    [JsonIgnore]
+    public bool RememberGeometry { get; init; } = true;
+
+    /// <summary>
+    /// JSON projection of <see cref="RememberGeometry"/>: <c>window.rememberGeometry</c> is written
+    /// only when it is <see langword="false"/>, so manifests of apps that keep the default stay
+    /// byte-identical to the ones generated before ADR 0116; an absent field reads as
+    /// <see langword="true"/>.
+    /// </summary>
+    [JsonInclude]
+    [JsonPropertyName("rememberGeometry")]
+    internal bool? RememberGeometryJson
+    {
+        get => RememberGeometry ? null : false;
+        init => RememberGeometry = value ?? true;
+    }
 }

@@ -191,7 +191,7 @@
             new AppLaunchRequest(manifest.Id, principal, []));
         if (result.IsSuccess)
         {
-            LaunchCoordinator.Present(manifest, result);
+            await LaunchCoordinator.PresentAsync(manifest, result);
         }
         _launchError = result.IsSuccess
             ? null
@@ -338,13 +338,20 @@
             // AppLifecycleOrchestrator.LaunchAsync -- not just this shell's own app launcher
             // (e.g. another app opening a file through IAppIntentGateway.OpenFileAsync). The
             // orchestrator only owns process state, not window presentation, so this shell
-            // presents any such process itself; Present() is a no-op if it was already
+            // presents any such process itself; PresentAsync() is a no-op if it was already
             // presented directly (e.g. by HandleAppSelected).
             if (Orchestrator.TryGetRunningInstance(e.Pid, out AppDescriptor? descriptor, out _)
                 && descriptor.Manifest.Kind == AppKind.Window
                 && ProcessManager.TryGetActive(e.Pid, out ProcessRecord process))
             {
-                LaunchCoordinator.Present(descriptor.Manifest, process);
+                // Reads the app's saved geometry first (ADR 0116), so present on the renderer's
+                // context and re-render once the window exists.
+                AppManifest manifest = descriptor.Manifest;
+                _ = InvokeAsync(async () =>
+                {
+                    await LaunchCoordinator.PresentAsync(manifest, process);
+                    StateHasChanged();
+                });
             }
         }
 
