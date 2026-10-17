@@ -4,6 +4,8 @@ using HackerOs.AppSdk;
 using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.IO;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Du;
 
@@ -54,7 +56,7 @@ public sealed class DuCommand(AppManifest manifest) : TerminalAppBase(manifest)
                         case 'b': bytes = true; break;
                         case 'k' or 'x' or 'L' or 'P': break;
                         default:
-                            await context.StandardError.WriteLineAsync($"du: invalid option -- '{flag}'");
+                            await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["InvalidOption", flag]);
                             return 1;
                     }
                 }
@@ -113,7 +115,7 @@ public sealed class DuCommand(AppManifest manifest) : TerminalAppBase(manifest)
                     HackFileInfo file = await HackFileInfo.GetAsync(path, cancellationToken);
                     if (!file.Exists)
                     {
-                        await context.StandardError.WriteLineAsync($"du: cannot access '{display}': No such file or directory");
+                        await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["CannotAccess", display, CommandText.Reason(context, Errno.NotFound)]);
                         Failed = true;
                         return 0;
                     }
@@ -163,7 +165,7 @@ public sealed class DuCommand(AppManifest manifest) : TerminalAppBase(manifest)
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
             {
-                await context.StandardError.WriteLineAsync($"du: cannot read directory '{display}': {ShellErrorText.Describe(exception)}");
+                await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["CannotReadDirectory", display, CommandText.Describe(context, exception)]);
                 Failed = true;
                 return 0;
             }

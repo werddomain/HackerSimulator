@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="BadUrl" xml:space="preserve">
+    <value>curl : (3) URL mal formée ou manquante</value>
+  </data>
+  <data name="BinaryWarning.Line1" xml:space="preserve">
+    <value>Attention : une sortie binaire peut dérégler votre terminal. Utilisez « --output - » pour</value>
+  </data>
+  <data name="BinaryWarning.Line2" xml:space="preserve">
+    <value>Attention : forcer curl à l'afficher dans le terminal, ou envisagez « --output</value>
+  </data>
+  <data name="BinaryWarning.Line3" xml:space="preserve">
+    <value>Attention : &lt;FICHIER&gt; » pour l'enregistrer dans un fichier.</value>
+  </data>
+  <data name="ConnectFailed" xml:space="preserve">
+    <value>Échec de la connexion à {0} port {1} : {2}</value>
+  </data>
+  <data name="HttpError" xml:space="preserve">
+    <value>curl : (22) L'URL demandée a renvoyé une erreur : {0}</value>
+  </data>
+  <data name="NoUrl" xml:space="preserve">
+    <value>curl : aucune URL indiquée !</value>
+  </data>
+  <data name="ReadDataFailed" xml:space="preserve">
+    <value>curl : (26) impossible d'ouvrir ou de lire les données locales : {0}</value>
+  </data>
+  <data name="ResolveFailed" xml:space="preserve">
+    <value>Impossible de résoudre l'hôte : {0}</value>
+  </data>
+  <data name="TooManyRedirects" xml:space="preserve">
+    <value>Nombre maximal de redirections (10) atteint</value>
+  </data>
+  <data name="TryHelp" xml:space="preserve">
+    <value>curl : essayez « curl --help » pour plus d'informations</value>
+  </data>
+  <data name="Verbose.Followed" xml:space="preserve">
+    <value>* {0} redirection(s) suivie(s) vers {1}</value>
+  </data>
+  <data name="Verbose.Trying" xml:space="preserve">
+    <value>*   Tentative de connexion à {0}:{1}...</value>
+  </data>
+  <data name="WriteFailed" xml:space="preserve">
+    <value>curl : (23) Échec de l'écriture vers la destination : {0} : {1}</value>
+  </data>
+</root>
