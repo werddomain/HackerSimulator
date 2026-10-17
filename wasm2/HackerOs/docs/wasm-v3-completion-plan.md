@@ -198,7 +198,7 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 - [ ] `v3/3-window-model`
 - [ ] `v3/4-intents`
 - [ ] `v3/5-services`
-- [ ] `v3/6-sdk-versioning`
+- [x] `v3/6-sdk-versioning` (ADR 0098 §1-7, [`sdk-packages.md`](sdk-packages.md))
 - [ ] `v3/7-storage-backup`
 - [ ] `v3/8-settings-security`
 - [ ] `v3/9-sync`

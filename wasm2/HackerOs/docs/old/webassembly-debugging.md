@@ -21,6 +21,9 @@ This document describes how WebAssembly debugging, Razor Class Library static we
 3. **Static Web Assets, MudBlazor & Scoped Bundles (`test/Components/App.razor`):**
    - **MudBlazor UI Library:** Registers `services.AddMudServices()` in DI and links MudBlazor CSS (`_content/MudBlazor/MudBlazor.min.css`) and JS (`_content/MudBlazor/MudBlazor.min.js`).
    - **Platform UI Scoped CSS Bundle:** Links `_content/HackerOs.Platform.Blazor/HackerOs.Platform.Blazor.bundle.scp.css` for desktop shell, window chrome, and taskbar styles.
+   - **Update (v3/6, ADR 0098 §2):** the design tokens now live in `OS/HackerOs.Ecosystem.Host/wwwroot/css/app.css`
+     and every host links `_content/HackerOs.Ecosystem.Host/css/app.css`; the paragraph below describes the
+     earlier layout.
    - **HackerOS Global CSS:** Links `href="css/app.css"` directly (not via `@Assets["app.css"]`), the static
      web asset route exposed by the `HackerOs.Ecosystem.csproj` ProjectReference for its own
      `wwwroot/css/app.css`. This is the single source of truth for the `--hos-*` design tokens; `test/test`

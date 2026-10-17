@@ -37,7 +37,7 @@ nul.
 | `HackExecutionContext` (`InstallContextSwitchHook`, interne) | `Shared/HackerOs.AppSdk` | remplace le frame ambiant par un `AsyncLocal<T>(valueChangedHandler)` ; visible seulement du projet de mesure (`InternalsVisibleTo`) |
 | `ContextSwitchHook`, `ContextSwitchDispatcher`, `ResourceAccountingFeatures` | `Platform/HackerOs.Platform.ResourceAccounting` (nouveau) | installation du crochet, diffusion aux mesures (changements de processus, et de mode aux observateurs qui les veulent), interrupteurs `[FeatureSwitchDefinition]` |
 | `MeasuredCpuTimeAccountant` | idem | mesure du CPU (ADR 0067), inscrite sur le diffuseur quand `plan.CpuActive` |
-| `ResourceAccountingServiceCollectionExtensions` | `OS/HackerOs.Ecosystem` | lecture de `HackerOs:ResourceAccounting`, composition, `#if HACKEROS_RESOURCE_ACCOUNTING` |
+| `ResourceAccountingServiceCollectionExtensions` | `OS/HackerOs.Ecosystem.Host` | lecture de `HackerOs:ResourceAccounting`, composition, `#if HACKEROS_RESOURCE_ACCOUNTING` |
 | `build/HackerOs.ResourceAccounting.targets` | `build/` | propriétés MSBuild, `RuntimeHostConfigurationOption`, référence conditionnelle |
 
 ### Le crochet
@@ -84,12 +84,15 @@ Les deux valent `true` par défaut. Les trois hôtes importent
 | une au moins à `true` | référence vers `HackerOs.Platform.ResourceAccounting`, constante `HACKEROS_RESOURCE_ACCOUNTING` ; chaque propriété devient l'option d'exécution `HackerOs.ResourceAccounting.{Cpu,Memory}.IsSupported` |
 | les deux à `false` | pas de référence : le code de mesure n'est **pas dans le binaire** ; la composition compile sa branche `#else` |
 
-La composition vit dans `HackerOs.Ecosystem`, que `test/test` et
-`HackerOs.Server` référencent. Pour retirer le code de **tout** le graphe,
+La composition vit dans `HackerOs.Ecosystem.Host` (qui importe aussi ces cibles),
+que l'Ecosystem, `test/test` et `HackerOs.Server` référencent. Le paquet
+`HackerOs.Ecosystem.Host` est produit avec les deux mesures compilées ; un hôte
+d'un autre dépôt les coupe à l'exécution (`appsettings.json` ou ses propres
+options `RuntimeHostConfigurationOption`). Pour retirer le code de **tout** le graphe,
 passer les propriétés en ligne de commande ou dans un `Directory.Build.props`.
 Posées seulement dans le `.csproj` de `test/test` ou du serveur, elles coupent
 l'option d'exécution de cet hôte (la mesure est ignorée au démarrage, avec la
-ligne syslog) mais la DLL arrive encore par `HackerOs.Ecosystem`.
+ligne syslog) mais la DLL arrive encore par `HackerOs.Ecosystem.Host`.
 
 ### Au démarrage
 
@@ -113,8 +116,11 @@ ligne syslog) mais la DLL arrive encore par `HackerOs.Ecosystem`.
 Chaque hôte appelle, avant `AddHackerOsEcosystem` :
 
 ```csharp
-builder.Services.AddHackerOsResourceAccounting(builder.Configuration);
+builder.Services.AddHackerOsResourceAccounting(builder.Configuration, BuildKnownLazyApps.Images);
 ```
+
+(`AddHackerOsBrowserHost` le fait pour un hôte WebAssembly, avec les images de son
+`HostAppCatalog` ; voir [`sdk-packages.md`](sdk-packages.md).)
 
 - La section est lue **une fois** ; la changer demande de recharger la page.
 - Une valeur absente prend son défaut ; une valeur illisible aussi, avec une

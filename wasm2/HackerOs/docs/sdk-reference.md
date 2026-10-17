@@ -25,6 +25,10 @@ Conventions de l'API :
 
 ## Bibliothèques
 
+Toutes sont publiées en paquets NuGet locaux du même nom, à la version de
+`build/Versions.props` ; un autre dépôt les consomme comme le décrit
+[`sdk-packages.md`](sdk-packages.md).
+
 | Projet | Espaces de noms | Pour |
 |---|---|---|
 | `Shared/HackerOs.App.Abstractions` | `HackerOs.App.Abstractions` | Définir une app (`AppDefinition`, capacités, manifeste). |
@@ -53,6 +57,7 @@ Conventions de l'API :
 | `AppSettingsSchemaManifest(SchemaVersion, Fields)`, `AppSettingFieldManifest(Key, ValueType, DefaultValue, Scope, Sensitivity, AllowedValues, Group)` | Schéma des paramètres ; `AppSettingValueType` : `String`, `Integer`, `Boolean`, `Enum`. |
 | `AppResourceProfileManifest` | Poids CPU, mémoire, disque et réseau simulés (`None` par défaut). |
 | `AppDefinitionMapper.ToManifest(definition)` | Définition → `AppManifest` (utile dans les tests). |
+| `HackerOsSdk` | `Version` (version du SDK chargé, par exemple `0.9.0-preview.1`), `SemanticVersion`, `IsCompatible(range)` (ADR 0098 §3). `AppDefinition.SdkCompatibility` déclare une plage ; par défaut, la version contre laquelle l'app est compilée est le minimum. |
 | `AppManifest` | Manifeste validé, lu par l'OS ; `AppContext.Manifest` à l'exécution. |
 | `AppCapabilities` | Catalogue des capacités (voir ci-dessous) ; `Describe`, `IsDangerous`, `GetRisk`, `IsKnown`, `RequiresWindowKind`, `All`. |
 | `VirtualPath` | Chemin absolu canonique (`Parse`, `Value`). |
