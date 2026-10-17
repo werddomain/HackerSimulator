@@ -44,6 +44,16 @@ public sealed partial class ShellInterpreter
         new("type", [], "type name...", "Describe how a name would be run (shell builtin)")
     ];
 
+    /// <summary>
+    /// The built-ins as <c>help</c> lists them, their descriptions in <paramref name="culture"/>
+    /// (ADR 0104): keys <c>Builtin.&lt;name&gt;</c> of <c>Resources/Strings.resx</c>, usages untouched.
+    /// </summary>
+    private static IEnumerable<ShellCommandInfo> LocalizeBuiltins(System.Globalization.CultureInfo culture)
+    {
+        Microsoft.Extensions.Localization.IStringLocalizer texts = Strings.For(culture);
+        return BuiltinCommands.Select(command => command with { Description = texts["Builtin." + command.Name] });
+    }
+
     private static bool IsSpecialBuiltin(string name) => SpecialBuiltins.Contains(name);
 
     /// <summary>Runs a special built-in.</summary>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Builtin.:" xml:space="preserve">
+    <value>Ne rien faire, avec succès (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.bg" xml:space="preserve">
+    <value>Reprendre une tâche en arrière-plan (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.break" xml:space="preserve">
+    <value>Quitter la n-ième boucle englobante (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.command" xml:space="preserve">
+    <value>Exécuter une commande sans les fonctions, ou la décrire (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.continue" xml:space="preserve">
+    <value>Passer à l'itération suivante de la n-ième boucle englobante (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.eval" xml:space="preserve">
+    <value>Exécuter les arguments comme une commande shell (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.exec" xml:space="preserve">
+    <value>Remplacer le shell par une commande (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.fg" xml:space="preserve">
+    <value>Ramener une tâche en avant-plan (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.local" xml:space="preserve">
+    <value>Déclarer des variables locales à une fonction (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.return" xml:space="preserve">
+    <value>Revenir d'une fonction ou d'un script sourcé (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.set" xml:space="preserve">
+    <value>Régler les options du shell et les paramètres positionnels (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.sh" xml:space="preserve">
+    <value>Exécuter un script shell ou une chaîne de commandes avec hsh</value>
+  </data>
+  <data name="Builtin.shift" xml:space="preserve">
+    <value>Retirer les n premiers paramètres positionnels (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.source" xml:space="preserve">
+    <value>Exécuter un fichier dans le shell courant (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.trap" xml:space="preserve">
+    <value>Exécuter une action à la sortie du shell (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.type" xml:space="preserve">
+    <value>Décrire comment un nom serait exécuté (commande interne du shell)</value>
+  </data>
+  <data name="Builtin.wait" xml:space="preserve">
+    <value>Attendre les tâches en arrière-plan (commande interne du shell)</value>
+  </data>
+  <data name="Shell.StartApp" xml:space="preserve">
+    <value>Démarrer {0}</value>
+  </data>
+</root>

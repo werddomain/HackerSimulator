@@ -47,7 +47,11 @@ internal sealed class ShellSessionAccess(
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<ShellCommandInfo> GetCommands() => interpreter.GetInstalledCommands();
+    public IReadOnlyList<ShellCommandInfo> GetCommands() =>
+        interpreter.GetInstalledCommands(HackerOs.AppSdk.Globalization.HackLocale.ResolveLanguage(session.GetVariable));
+
+    public IReadOnlyList<ShellCommandInfo> GetCommands(System.Globalization.CultureInfo culture) =>
+        interpreter.GetInstalledCommands(culture);
 
     /// <inheritdoc />
     public int Exit(int? exitStatus) => session.RequestExit(exitStatus ?? session.LastExitCode);

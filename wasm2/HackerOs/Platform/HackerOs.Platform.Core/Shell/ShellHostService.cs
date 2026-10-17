@@ -174,7 +174,8 @@ public sealed class ShellHostService
 
         public string? NavigateHistory(int delta) => _session.NavigateHistory(delta);
 
-        public IReadOnlyList<ShellCommandInfo> GetInstalledCommands() => _interpreter.GetInstalledCommands();
+        public IReadOnlyList<ShellCommandInfo> GetInstalledCommands() =>
+            _interpreter.GetInstalledCommands(HackerOs.AppSdk.Globalization.HackLocale.ResolveLanguage(_session.GetVariable));
 
         public bool NeedsMoreInput(string text) => ShellParser.Parse(text ?? string.Empty).IsIncomplete;
 

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Builtin.:" xml:space="preserve">
+    <value>Do nothing, successfully (shell builtin)</value>
+  </data>
+  <data name="Builtin.bg" xml:space="preserve">
+    <value>Resume a job in the background (shell builtin)</value>
+  </data>
+  <data name="Builtin.break" xml:space="preserve">
+    <value>Leave the n-th enclosing loop (shell builtin)</value>
+  </data>
+  <data name="Builtin.command" xml:space="preserve">
+    <value>Run a command ignoring functions, or describe it (shell builtin)</value>
+  </data>
+  <data name="Builtin.continue" xml:space="preserve">
+    <value>Start the next iteration of the n-th enclosing loop (shell builtin)</value>
+  </data>
+  <data name="Builtin.eval" xml:space="preserve">
+    <value>Run the arguments as a shell command (shell builtin)</value>
+  </data>
+  <data name="Builtin.exec" xml:space="preserve">
+    <value>Replace the shell with a command (shell builtin)</value>
+  </data>
+  <data name="Builtin.fg" xml:space="preserve">
+    <value>Bring a background job to the foreground (shell builtin)</value>
+  </data>
+  <data name="Builtin.local" xml:space="preserve">
+    <value>Declare function-local variables (shell builtin)</value>
+  </data>
+  <data name="Builtin.return" xml:space="preserve">
+    <value>Return from a function or sourced script (shell builtin)</value>
+  </data>
+  <data name="Builtin.set" xml:space="preserve">
+    <value>Set shell options and positional parameters (shell builtin)</value>
+  </data>
+  <data name="Builtin.sh" xml:space="preserve">
+    <value>Run a shell script or a command string with hsh</value>
+  </data>
+  <data name="Builtin.shift" xml:space="preserve">
+    <value>Drop the first n positional parameters (shell builtin)</value>
+  </data>
+  <data name="Builtin.source" xml:space="preserve">
+    <value>Run a file in the current shell (shell builtin)</value>
+  </data>
+  <data name="Builtin.trap" xml:space="preserve">
+    <value>Run an action when the shell exits (shell builtin)</value>
+  </data>
+  <data name="Builtin.type" xml:space="preserve">
+    <value>Describe how a name would be run (shell builtin)</value>
+  </data>
+  <data name="Builtin.wait" xml:space="preserve">
+    <value>Wait for background jobs (shell builtin)</value>
+  </data>
+  <data name="Shell.StartApp" xml:space="preserve">
+    <value>Start {0}</value>
+  </data>
+</root>

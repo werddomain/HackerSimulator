@@ -45,8 +45,19 @@ public interface IShellSession
     /// <exception cref="ArgumentException">The name is not a valid shell identifier.</exception>
     void UnsetVariable(string name);
 
-    /// <summary>Gets the installed commands (name, aliases, usage, description), ordered by name.</summary>
+    /// <summary>
+    /// Gets the installed commands (name, aliases, usage, description), ordered by name, with
+    /// descriptions and usages in the shell's language (its <c>LANG</c>, ADR 0104).
+    /// </summary>
     IReadOnlyList<ShellCommandInfo> GetCommands();
+
+    /// <summary>
+    /// Gets the installed commands with descriptions and usages in <paramref name="culture"/>,
+    /// e.g. the language of the <c>help</c> process asking (ADR 0104, section 4). Defaults to
+    /// <see cref="GetCommands()"/> so existing implementations keep compiling.
+    /// </summary>
+    /// <param name="culture">The language wanted: <c>en</c> or <c>fr</c>.</param>
+    IReadOnlyList<ShellCommandInfo> GetCommands(System.Globalization.CultureInfo culture) => GetCommands();
 
     /// <summary>
     /// Asks the shell to exit once the current command returns, like the <c>exit</c> built-in

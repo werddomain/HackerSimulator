@@ -51,6 +51,7 @@ public sealed partial class ShellInterpreter
 
     private readonly AppLifecycleOrchestrator _orchestrator;
     private readonly IAppEnablementRegistry _enablement;
+    private readonly AppCatalog _catalog;
     private readonly IKernelMemoryLedger? _kernelMemory;
 
     /// <summary>Creates an interpreter over the launch mechanism and the installed commands.</summary>
@@ -70,7 +71,8 @@ public sealed partial class ShellInterpreter
         _kernelMemory = kernelMemory;
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
         _enablement = enablement ?? throw new ArgumentNullException(nameof(enablement));
-        Resolver = new ShellCommandResolver(catalog ?? throw new ArgumentNullException(nameof(catalog)));
+        _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        Resolver = new ShellCommandResolver(catalog);
     }
 
     /// <summary>Gets the command lookup (installed or not), shared with <c>help</c> and completion.</summary>
@@ -81,26 +83,37 @@ public sealed partial class ShellInterpreter
     /// (<c>sh</c>) and its special built-ins. What <c>help</c> lists through
     /// <see cref="IShellSession.GetCommands"/> and what the terminal completes (ADR 0051, section 2).
     /// </summary>
-    public IReadOnlyList<ShellCommandInfo> GetInstalledCommands() =>
-        [.. Resolver.GetTerminalCommands()
+    /// <param name="culture">
+    /// Language of the descriptions and usages (ADR 0104 section 4): the catalog's translations of
+    /// each command's manifest and the built-ins' own texts; English when <see langword="null"/>.
+    /// </param>
+    public IReadOnlyList<ShellCommandInfo> GetInstalledCommands(System.Globalization.CultureInfo? culture = null)
+    {
+        culture ??= HackerOs.AppSdk.Globalization.HackLocale.DefaultLanguage;
+        return [.. Resolver.GetTerminalCommands()
             .Where(manifest => _enablement.IsEnabled(manifest.Id))
+            .Select(manifest => _catalog.Localize(manifest, culture))
             .Select(manifest => new ShellCommandInfo(
                 manifest.Terminal!.Name, manifest.Terminal.Aliases, manifest.Terminal.Usage, manifest.Description))
-            .Concat(BuiltinCommands)
+            .Concat(LocalizeBuiltins(culture))
             .OrderBy(command => command.Name, StringComparer.OrdinalIgnoreCase)];
+    }
 
     /// <summary>
     /// Gets the window apps the shell starts by short name (ADR 0064), as completion entries:
     /// <c>text-editor</c>, <c>browser</c>…, unless a command already has that name.
     /// </summary>
-    public IReadOnlyList<ShellCommandInfo> GetLaunchableApplications()
+    /// <param name="culture">Language of the descriptions; English when <see langword="null"/>.</param>
+    public IReadOnlyList<ShellCommandInfo> GetLaunchableApplications(System.Globalization.CultureInfo? culture = null)
     {
-        HashSet<string> commands = new(GetInstalledCommands().SelectMany(command => command.Aliases.Prepend(command.Name)), StringComparer.OrdinalIgnoreCase);
+        culture ??= HackerOs.AppSdk.Globalization.HackLocale.DefaultLanguage;
+        HashSet<string> commands = new(GetInstalledCommands(culture).SelectMany(command => command.Aliases.Prepend(command.Name)), StringComparer.OrdinalIgnoreCase);
         return [.. Resolver.GetApplications()
             .Where(manifest => _enablement.IsEnabled(manifest.Id))
-            .Select(manifest => (Manifest: manifest, Name: ShellCommandResolver.ShortName(manifest.Id)))
+            .Select(manifest => (Manifest: _catalog.Localize(manifest, culture), Name: ShellCommandResolver.ShortName(manifest.Id)))
             .Where(entry => !commands.Contains(entry.Name))
-            .Select(entry => new ShellCommandInfo(entry.Name, [], $"{entry.Name} [args...]", $"Start {entry.Manifest.Name}"))];
+            .Select(entry => new ShellCommandInfo(
+                entry.Name, [], $"{entry.Name} [args...]", Strings.For(culture)["Shell.StartApp", entry.Manifest.Name]))];
     }
 
     /// <summary>Runs one line (or several lines) typed in <paramref name="session"/>.</summary>
