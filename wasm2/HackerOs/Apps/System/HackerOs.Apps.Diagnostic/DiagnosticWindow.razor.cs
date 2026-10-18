@@ -6,6 +6,7 @@ using HackerOs.AppSdk.Administration;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Blazor.Interop;
 using HackerOs.AppSdk.Clipboard;
+using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.IO;
 using Microsoft.Extensions.Localization;
@@ -29,8 +30,8 @@ namespace HackerOs.Apps.Diagnostic;
 /// HackerOS;</item>
 /// <item><see cref="BrowserFileDownloader"/> of the SDK to download the JSON to the real browser
 /// (ADR 0060);</item>
-/// <item><see cref="HackFile"/> on <c>/proc/hackeros/workers</c> (capability
-/// <c>filesystem.system.read</c>) for the page's cross-origin isolation (ADR 0131, section 5).</item>
+/// <item><see cref="HackCrossOriginIsolation"/> (no capability) for the page's cross-origin
+/// isolation (ADR 0131, section 5; ADR 0146).</item>
 /// </list>
 /// </remarks>
 public partial class DiagnosticWindow : IAsyncDisposable
@@ -48,7 +49,7 @@ public partial class DiagnosticWindow : IAsyncDisposable
     private string? _selectedSiteName;
     private bool _confirmDelete;
     private IStringLocalizer<Strings>? _localizer;
-    private IsolationStatus? _isolation;
+    private HackCrossOriginIsolationStatus? _isolation;
 
     /// <summary>The inspector's texts in the language of its own process (ADR 0104).</summary>
     private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
@@ -125,35 +126,34 @@ public partial class DiagnosticWindow : IAsyncDisposable
     }
 
     /// <summary>
-    /// Reads the page's cross-origin isolation from <c>/proc/hackeros/workers</c> (ADR 0131, section 5);
-    /// without a worker pool the file does not exist and no badge is shown.
+    /// Reads the page's cross-origin isolation through the SDK (ADR 0131, section 5; ADR 0146), which
+    /// needs no capability; a context that does not provide it shows no badge.
     /// </summary>
     private async Task LoadIsolationAsync()
     {
         try
         {
-            _isolation = IsolationStatus.Parse(await HackFile.ReadAllTextAsync(IsolationStatus.ProcPath, AppContext.CancellationToken));
+            _isolation = await HackCrossOriginIsolation.GetStatusAsync(AppContext.CancellationToken);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NotSupportedException)
+        catch (NotSupportedException)
         {
             _isolation = null;
         }
     }
 
-    /// <summary>The reason in the inspector's language; an unknown one is shown as the file writes it.</summary>
-    private string IsolationReason(string reason) => reason switch
+    /// <summary>The reason in the inspector's language.</summary>
+    private string IsolationReason(HackCrossOriginIsolationReason reason) => reason switch
     {
-        "setting" => L["Isolation.Reason.Setting"],
-        "missing-headers" => L["Isolation.Reason.MissingHeaders"],
-        "insecure-context" => L["Isolation.Reason.InsecureContext"],
-        "browser" => L["Isolation.Reason.Browser"],
-        "not-browser" => L["Isolation.Reason.NotBrowser"],
-        _ => reason
+        HackCrossOriginIsolationReason.Setting => L["Isolation.Reason.Setting"],
+        HackCrossOriginIsolationReason.MissingHeaders => L["Isolation.Reason.MissingHeaders"],
+        HackCrossOriginIsolationReason.InsecureContext => L["Isolation.Reason.InsecureContext"],
+        HackCrossOriginIsolationReason.Browser => L["Isolation.Reason.Browser"],
+        HackCrossOriginIsolationReason.NotBrowser => L["Isolation.Reason.NotBrowser"],
+        _ => IsolationStatus.Format(reason)
     };
 
-    /// <summary>The tooltip: every line of the file's header, as <c>cat</c> prints it.</summary>
-    private static string IsolationDetails(IsolationStatus isolation) =>
-        string.Join('\n', isolation.Fields.Select(static field => $"{field.Key}: {field.Value}"));
+    /// <summary>The tooltip: every line of the status, as <c>cat /proc/hackeros/workers</c> prints it.</summary>
+    private static string IsolationDetails(HackCrossOriginIsolationStatus isolation) => IsolationStatus.Describe(isolation);
 
     private void SelectStore(string storeName)
     {

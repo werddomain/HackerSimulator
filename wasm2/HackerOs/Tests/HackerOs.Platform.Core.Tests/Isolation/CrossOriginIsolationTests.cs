@@ -131,4 +131,31 @@ public sealed class CrossOriginIsolationTests
 
         return directory?.FullName ?? throw new InvalidOperationException("HackerOs.sln not found above the test output.");
     }
+
+    [Theory]
+    [InlineData(CrossOriginIsolationReason.None, HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.None)]
+    [InlineData(CrossOriginIsolationReason.Setting, HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.Setting)]
+    [InlineData(CrossOriginIsolationReason.MissingHeaders, HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.MissingHeaders)]
+    [InlineData(CrossOriginIsolationReason.InsecureContext, HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.InsecureContext)]
+    [InlineData(CrossOriginIsolationReason.Browser, HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.Browser)]
+    [InlineData(CrossOriginIsolationReason.NotBrowser, HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.NotBrowser)]
+    public void The_sdk_status_keeps_every_reason(CrossOriginIsolationReason reason, HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason expected) =>
+        Assert.Equal(expected, AppCrossOriginIsolationGateway.ToSdk(CrossOriginIsolationStatus.NotBrowser with { Reason = reason }).Reason);
+
+    [Fact]
+    public async Task The_sdk_gateway_reads_the_status_recorded_at_boot()
+    {
+        CrossOriginIsolationState state = new();
+        AppCrossOriginIsolationGateway gateway = new(() => state.Status);
+        Assert.Equal(HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.NotBrowser, (await gateway.GetStatusAsync()).Reason);
+
+        state.Status = new CrossOriginIsolationStatus(
+            CrossOriginIsolationMode.Off, false, CrossOriginIsolationReason.Setting, null, false, false, false, TimeSpan.FromMicroseconds(100));
+        HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus status = await gateway.GetStatusAsync();
+
+        Assert.False(status.IsIsolated);
+        Assert.Equal(HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting.Off, status.Setting);
+        Assert.Equal(TimeSpan.FromMicroseconds(100), status.TimerResolution);
+        Assert.Equal(HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.NotBrowser, (await new AppCrossOriginIsolationGateway(() => null).GetStatusAsync()).Reason);
+    }
 }

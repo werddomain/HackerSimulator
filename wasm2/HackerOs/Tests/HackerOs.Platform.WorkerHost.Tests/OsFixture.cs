@@ -52,6 +52,9 @@ internal sealed class OsFixture : IAsyncDisposable
         AppCapabilities.AppsLaunch, AppCapabilities.ShellHost, AppCapabilities.ProcessList
     ];
 
+    /// <summary>Gets the page's isolation as the boot probe would record it (ADR 0146); not in a browser by default.</summary>
+    public HackerOs.Platform.Core.Isolation.CrossOriginIsolationState Isolation { get; } = new();
+
     private readonly LocalLoginName _alice = LocalLoginName.Parse("alice");
     private readonly CapabilityGrantRepository _grants;
     private readonly LocalSessionService _sessions;
@@ -145,7 +148,11 @@ internal sealed class OsFixture : IAsyncDisposable
             network: network,
             appCatalog: new AppCatalogGatewayServices(Catalog, enablement),
             shellHostProvider: () => ShellHost!,
-            metrics: new SystemMetricsServices(Drives: new AppDriveGateway(() => router, VirtualHardwareProfile.Default)),
+            metrics: new SystemMetricsServices(Drives: new AppDriveGateway(() => router, VirtualHardwareProfile.Default))
+            {
+                // ADR 0146: HackCrossOriginIsolation reads what a test puts in Isolation.
+                CrossOriginIsolation = new HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway(() => Isolation.Status)
+            },
             localNetwork: localNetwork)
         {
             // ADR 0128: HackBackground tasks as child processes, in a worker when the fixture has some.

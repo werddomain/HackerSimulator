@@ -67,6 +67,7 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
         Network = new RemoteNetworkGateway(channel);
         Catalog = new RemoteCatalogGateway(channel);
         Drives = new RemoteDriveGateway(channel);
+        CrossOriginIsolation = new RemoteCrossOriginIsolationGateway(channel);
         Clipboard = new RemoteClipboardGateway(channel);
         WebDatabase = new RemoteWebDatabaseGateway(channel, snapshot.Manifest.Id);
         Console = console;
@@ -188,6 +189,8 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
     public IAppCatalogGateway Catalog { get; }
 
     public IAppDriveGateway Drives { get; }
+
+    public IAppCrossOriginIsolationGateway CrossOriginIsolation { get; }
 
     public IAppClipboardGateway Clipboard { get; }
 

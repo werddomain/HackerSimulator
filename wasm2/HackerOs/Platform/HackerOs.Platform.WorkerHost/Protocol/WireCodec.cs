@@ -1,3 +1,4 @@
+using HackerOs.AppSdk.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
@@ -842,6 +843,32 @@ internal static class WireCodec
     public static IReadOnlyList<HackDriveSnapshot> ReadDrives(JsonElement element) =>
         [.. element.GetProperty("dr").EnumerateArray().Select(static drive => new HackDriveSnapshot(
             drive.GetString("n"), drive.GetString("f"), drive.GetString("l"), drive.GetInt64("t"), drive.GetInt64("a")))];
+
+    public static void WriteCrossOriginIsolation(Utf8JsonWriter writer, HackCrossOriginIsolationStatus status)
+    {
+        writer.WriteBoolean("i", status.IsIsolated);
+        writer.WriteNumber("r", (int)status.Reason);
+        writer.WriteNumber("s", (int)status.Setting);
+        if (status.EmbedderPolicy is not null)
+        {
+            writer.WriteString("e", status.EmbedderPolicy);
+        }
+
+        writer.WriteBoolean("sp", status.SharedPipes);
+        writer.WriteBoolean("sc", status.SynchronousWorkerCalls);
+        writer.WriteBoolean("mm", status.BrowserMemoryMeasurement);
+        writer.WriteNumber("tr", status.TimerResolution.Ticks);
+    }
+
+    public static HackCrossOriginIsolationStatus ReadCrossOriginIsolation(JsonElement element) => new(
+        element.GetProperty("i").GetBoolean(),
+        (HackCrossOriginIsolationReason)element.GetInt32("r"),
+        (HackCrossOriginIsolationSetting)element.GetInt32("s"),
+        element.GetOptionalString("e"),
+        element.GetProperty("sp").GetBoolean(),
+        element.GetProperty("sc").GetBoolean(),
+        element.GetProperty("mm").GetBoolean(),
+        TimeSpan.FromTicks(element.GetInt64("tr")));
 
     public static void WriteLaunchResult(Utf8JsonWriter writer, AppIntentLaunchResult result)
     {

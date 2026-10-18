@@ -1,3 +1,4 @@
+using HackerOs.AppSdk.Diagnostics;
 using System.Net;
 using System.Text.Json;
 using HackerOs.App.Abstractions;
@@ -684,6 +685,13 @@ internal sealed class RemoteDriveGateway(RemoteProcessChannel channel) : IAppDri
 {
     public async ValueTask<IReadOnlyList<HackDriveSnapshot>> GetDrivesAsync(CancellationToken cancellationToken = default) =>
         WireCodec.ReadDrives(await channel.CallAsync(RemoteOps.Drives, null, cancellationToken).ConfigureAwait(false));
+}
+
+/// <summary><see cref="IAppCrossOriginIsolationGateway"/> in a worker (ADR 0146): the OS answers with the page's status.</summary>
+internal sealed class RemoteCrossOriginIsolationGateway(RemoteProcessChannel channel) : IAppCrossOriginIsolationGateway
+{
+    public async ValueTask<HackCrossOriginIsolationStatus> GetStatusAsync(CancellationToken cancellationToken = default) =>
+        WireCodec.ReadCrossOriginIsolation(await channel.CallAsync(RemoteOps.CrossOriginIsolation, null, cancellationToken).ConfigureAwait(false));
 }
 
 /// <summary><see cref="IAppIntentGateway"/> in a worker (<c>launch</c>): the OS opens the app on the desktop.</summary>

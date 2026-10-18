@@ -178,6 +178,7 @@ Façades statiques existantes au début de la phase 4 :
 | `HackTrash` | corbeille | [`trash.md`](trash.md) |
 | `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient`, `HackUdpClient` | réseau, repli réel décidé par l'OS (`4-sdk-network`), sockets relayés (`v3/10`) | [`sdk-network.md`](sdk-network.md) |
 | `HackDriveInfo` | taille et espace libre des disques (`4-proc-metrics`) | [`system-metrics.md`](system-metrics.md) |
+| `HackCrossOriginIsolation` | page isolée ou non, et ce que ça active (ADR 0146, après la 1.2.0) | [`worker-processes.md`](worker-processes.md#isolation-cross-origin-adr-0131-adr-0143) |
 | `HackClipboard` | presse-papiers de session, texte et liste de fichiers (`4-file-explorer`) | [`file-explorer.md`](file-explorer.md) |
 | `HackTextContent` | texte ou binaire décidé sur le contenu, comme `file` (`4-file-explorer`) | [`text-editor.md`](text-editor.md) |
 
@@ -297,6 +298,18 @@ capacité, comme `df`. Passerelle `IAppDriveGateway Drives`, implémentée par
 `AppDriveGateway` dans Platform Core. Les valeurs sont lues une fois, à l'appel.
 Les mesures CPU, disque et réseau, elles, sont des fichiers de `/proc` : voir
 [`system-metrics.md`](system-metrics.md).
+
+### Isolation cross-origin (ADR 0146)
+
+`HackCrossOriginIsolation.GetStatusAsync()` (espace `Diagnostics`) rend
+l'isolation que l'OS a décidée au démarrage : `IsIsolated`, `Reason`
+(`None`, `Setting`, `MissingHeaders`, `InsecureContext`, `Browser`,
+`NotBrowser`), `Setting` (`Auto`, `On`, `Off`), `EmbedderPolicy`,
+`SharedPipes`, `SynchronousWorkerCalls`, `BrowserMemoryMeasurement`,
+`TimerResolution`. Aucune capacité, comme `uname`. Passerelle
+`IAppCrossOriginIsolationGateway CrossOriginIsolation`, implémentée par
+`AppCrossOriginIsolationGateway` dans Platform Core et par l'opération
+`coi.get` dans un worker. Ajout après la 1.2.0, pour la prochaine mineure.
 
 ### Processus et services (ADR 0056 §4 et §5)
 

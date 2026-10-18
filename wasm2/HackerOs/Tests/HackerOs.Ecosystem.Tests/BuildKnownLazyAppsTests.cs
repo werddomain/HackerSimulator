@@ -145,8 +145,8 @@ public sealed class BuildKnownLazyAppsTests
         // ADR 0049 "Conséquences": the base experience shows no approval window. Single, deliberate
         // exception (ADR 0056 section 11): Diagnostic stays uninstallable and its first launch asks an
         // administrator for system.storage.inspect, because the raw snapshot bypasses file rights.
-        // ADR 0143 section 8: the same approval also covers filesystem.system.read, to read the
-        // page's cross-origin isolation in /proc/hackeros/workers (no extra approval window).
+        // ADR 0146: its isolation badge reads HackCrossOriginIsolation, which needs no capability,
+        // so system.storage.inspect stays its only dangerous one.
         AppCatalog catalog = BuildKnownLazyApps.Catalog;
         const string diagnostic = "org.hackeros.diagnostic";
 
@@ -155,7 +155,7 @@ public sealed class BuildKnownLazyAppsTests
             manifest => Assert.DoesNotContain(manifest.Capabilities, AppCapabilities.IsDangerous));
         Assert.False(catalog.IsSystemApp(diagnostic));
         Assert.Equal(
-            [AppCapabilities.FileSystemSystemRead, AppCapabilities.SystemStorageInspect],
+            [AppCapabilities.SystemStorageInspect],
             catalog.Manifests[diagnostic].Capabilities.Where(AppCapabilities.IsDangerous).Order(StringComparer.Ordinal));
     }
 }

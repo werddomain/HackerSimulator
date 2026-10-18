@@ -286,6 +286,11 @@ Quand la page est isolée (`crossOriginIsolated`), les workers gagnent :
 Sans isolation, tout reste comme avant : messages seulement, membres
 synchrones refusés avec le même message, mémoire du battement de cœur.
 
+Une app lit l'état sans capacité par `HackCrossOriginIsolation.GetStatusAsync()`
+(SDK, espace `Diagnostics`, ADR 0146) : mêmes faits que les premières lignes de
+`/proc/hackeros/workers`. Dans un worker, c'est l'appel asynchrone `coi.get`.
+Diagnostic s'en sert pour son badge.
+
 Qui pose les en-têtes : le service worker de l'Ecosystem (selon
 `HackerOs:CrossOriginIsolation` de `appsettings.json`, repli `require-corp`
 avec un rechargement unique), l'intergiciel de `test/test` et de
@@ -446,6 +451,7 @@ seule réponse : son descripteur est rendu dès cette réponse (ADR 0139 §3).
 - [x] Appels synchrones `ListProcesses`/`Kill`, opération `proc.list`, `sample-cmd --processes` et `--kill`.
 - [x] Mémoire par worker mesurée par le navigateur (`IWebWorkerMemoryMeter`).
 - [x] Lignes d'isolation de `/proc/hackeros/workers`, badge de Diagnostic.
+- [x] Suite (ADR 0146, choix C de Benoit) : `HackCrossOriginIsolation` dans le SDK, sans capacité, opération `coi.get` ; Diagnostic ne déclare plus `filesystem.system.read` ; `sample-cmd --isolation`.
 - [x] Audit dans Chromium, `AuditPassed = true`.
 - [x] Tests : sonde et réglage, appels synchrones en bouclage, anneaux sous Node, `HostSmoke` et parcours `ecosystem-isolated`/`ecosystem-isolation-off`.
 
