@@ -1173,6 +1173,7 @@ public sealed class AppLifecycleOrchestrator
     /// <param name="environment">Variables applied over the inherited ones (a subshell's own environment, prefix assignments).</param>
     /// <param name="processStarted">Called with the new process (background jobs record it).</param>
     /// <returns>The process and its trusted context; the caller completes the process.</returns>
+    /// <exception cref="ProcessLimitExceededException">The user's <c>nproc</c> limit is reached (<c>EAGAIN</c>, ADR 0125).</exception>
     public (ProcessRecord Process, IAppExecutionContext Context) StartShellProcess(
         IAppExecutionContext parent,
         AuthenticatedPrincipal principal,
@@ -1200,7 +1201,11 @@ public sealed class AppLifecycleOrchestrator
             ResourceProfile.None,
             arguments,
             workingDirectory,
-            overrides ?? new Dictionary<string, string>(StringComparer.Ordinal) { ["PWD"] = workingDirectory.Value }));
+            overrides ?? new Dictionary<string, string>(StringComparer.Ordinal) { ["PWD"] = workingDirectory.Value })
+        {
+            // ADR 0125 section 5: an elevated root is not held by nproc.
+            ResourceLimitExempt = parent.IsRootElevated
+        });
         try
         {
             _processManager.MarkRunning(process.Pid);

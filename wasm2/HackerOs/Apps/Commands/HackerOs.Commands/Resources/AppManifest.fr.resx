@@ -270,6 +270,12 @@
   <data name="org.hackeros.commands.printf.Terminal.Usage" xml:space="preserve">
     <value>printf format [argument...]</value>
   </data>
+  <data name="org.hackeros.commands.prlimit.Description" xml:space="preserve">
+    <value>Obtient et définit les limites de ressources d’un processus</value>
+  </data>
+  <data name="org.hackeros.commands.prlimit.Terminal.Usage" xml:space="preserve">
+    <value>prlimit [--pid &lt;pid&gt;] [--cpu[=souple:stricte]] [--rss[=]] [--nofile[=]] [--nproc[=]] [--noheadings]</value>
+  </data>
   <data name="org.hackeros.commands.ps.Description" xml:space="preserve">
     <value>Affiche un instantané des processus en cours</value>
   </data>

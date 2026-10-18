@@ -342,6 +342,19 @@ internal sealed class RemoteProcessGateway(RemoteProcessChannel channel, Process
         }, cancellationToken).ConfigureAwait(false);
         return WireCodec.ReadProcess(value.GetProperty("pr"));
     }
+
+    public async Task<ResourceLimitChangeResult> SetResourceLimitAsync(
+        ProcessId pid, ResourceLimitKind kind, ResourceLimit limit, CancellationToken cancellationToken = default)
+    {
+        JsonElement value = await channel.CallAsync(RemoteOps.ProcessSetLimit, writer =>
+        {
+            writer.WriteNumber("pid", pid.Value);
+            writer.WriteNumber("k", (int)kind);
+            writer.WriteNumber("s", limit.Soft);
+            writer.WriteNumber("h", limit.Hard);
+        }, cancellationToken).ConfigureAwait(false);
+        return (ResourceLimitChangeResult)value.GetInt32("r");
+    }
 }
 
 /// <summary><see cref="IAppNetworkGateway"/> in a worker: the OS's network stack, with its real-network fallback.</summary>

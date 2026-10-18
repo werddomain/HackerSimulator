@@ -82,4 +82,9 @@ internal static class RemoteOps
     // Browser database of a web site (IAppWebDatabaseGateway, ADR 0088): the schema or the batch as JSON.
     public const string WebDbOpen = "wdb.open";
     public const string WebDbExecute = "wdb.exec";
+
+    // Resource limits (ADR 0125): a descriptor held by a write stream, and prlimit(2).
+    public const string FsDescriptorOpen = "fs.fdopen";
+    public const string FsDescriptorClose = "fs.fdclose";
+    public const string ProcessSetLimit = "proc.rlimit";
 }

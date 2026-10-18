@@ -16,7 +16,7 @@ public sealed partial class ShellInterpreter
     /// <summary>Names the shell runs itself (POSIX special built-ins and job control).</summary>
     private static readonly HashSet<string> SpecialBuiltins = new(StringComparer.Ordinal)
     {
-        ":", "break", "continue", "return", "shift", "set", "local", "eval", ".", "source", "wait", "fg", "bg", "exec", "trap", "command", "type"
+        ":", "break", "continue", "return", "shift", "set", "local", "eval", ".", "source", "wait", "fg", "bg", "exec", "trap", "command", "type", "ulimit"
     };
 
     /// <summary>Names of the shell binary itself: <c>sh script</c>, <c>bash -c "…"</c>.</summary>
@@ -48,7 +48,8 @@ public sealed partial class ShellInterpreter
         new("exec", [], "exec command [args...]", "Replace the shell with a command (shell builtin)"),
         new("trap", [], "trap [action] [EXIT|signal...]", "Run an action when the shell exits (shell builtin)"),
         new("command", [], "command [-v|-V] name [args...]", "Run a command ignoring functions, or describe it (shell builtin)"),
-        new("type", [], "type name...", "Describe how a name would be run (shell builtin)")
+        new("type", [], "type name...", "Describe how a name would be run (shell builtin)"),
+        new("ulimit", [], "ulimit [-SH] [-a | -f | -m | -n | -t | -u] [limit]", "Show or change the resource limits of the shell (shell builtin)")
     ];
 
     /// <summary>
@@ -167,6 +168,9 @@ public sealed partial class ShellInterpreter
 
             case "command":
                 return await RunCommandBuiltinAsync(exec, arguments).ConfigureAwait(false);
+
+            case "ulimit":
+                return await RunUlimitAsync(exec, arguments).ConfigureAwait(false);
 
             case "type":
                 int typeStatus = 0;

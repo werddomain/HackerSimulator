@@ -45,9 +45,11 @@ internal sealed class RemoteProcessSession
     private readonly Dictionary<int, CancellationTokenSource> _calls = [];
     private readonly Dictionary<int, FileSystemContentReadHandle> _reads = [];
     private readonly Dictionary<int, HackerOs.AppSdk.Net.IHackHttpListenerSocket> _listeners = [];
+    private readonly Dictionary<int, IDisposable> _descriptors = [];
     private readonly CancellationTokenSource _listening = new();
     private int _nextReadHandle;
     private int _nextListener;
+    private int _nextDescriptor;
     private bool _listenersClosed;
     private bool _stdoutClosed;
     private bool _stderrClosed;
@@ -281,8 +283,11 @@ internal sealed class RemoteProcessSession
         List<FileSystemContentReadHandle> reads;
         List<CancellationTokenSource> calls;
         List<HackerOs.AppSdk.Net.IHackHttpListenerSocket> listeners;
+        List<IDisposable> descriptors;
         lock (_gate)
         {
+            descriptors = [.. _descriptors.Values];
+            _descriptors.Clear();
             reads = [.. _reads.Values];
             _reads.Clear();
             calls = [.. _calls.Values];
@@ -302,6 +307,12 @@ internal sealed class RemoteProcessSession
         foreach (FileSystemContentReadHandle read in reads)
         {
             _ = read.DisposeAsync();
+        }
+
+        // exit(2) closes every descriptor the process still holds (ADR 0125).
+        foreach (IDisposable descriptor in descriptors)
+        {
+            descriptor.Dispose();
         }
 
         foreach (CancellationTokenSource call in calls)
@@ -756,9 +767,59 @@ internal sealed class RemoteProcessSession
                 string json = JsonSerializer.Serialize([.. results], HackerOs.AppSdk.WebData.HackWebDbJsonContext.Default.ListString);
                 return writer => writer.WriteString("r", json);
             }
+            case RemoteOps.FsDescriptorOpen:
+                return OpenDescriptor(await c.FileSystem.OpenDescriptorAsync(WireCodec.ReadPath(a, "p"), cancellationToken).ConfigureAwait(false));
+            case RemoteOps.FsDescriptorClose:
+            {
+                IDisposable? descriptor;
+                lock (_gate)
+                {
+                    _descriptors.Remove(a.GetInt32("fd"), out descriptor);
+                }
+
+                descriptor?.Dispose();
+                return static _ => { };
+            }
+            case RemoteOps.ProcessSetLimit:
+            {
+                ResourceLimitChangeResult changed = await c.Processes.SetResourceLimitAsync(
+                    ProcessId.FromInt64(a.GetInt64("pid")), (ResourceLimitKind)a.GetInt32("k"),
+                    new ResourceLimit(a.GetInt64("s"), a.GetInt64("h")), cancellationToken).ConfigureAwait(false);
+                return writer => writer.WriteNumber("r", (int)changed);
+            }
             default:
                 throw new NotSupportedException($"Unknown remote operation '{operation}'.");
         }
+    }
+
+    /// <summary>Keeps a descriptor the OS opened for the process until the worker closes it or the process ends.</summary>
+    private Action<Utf8JsonWriter> OpenDescriptor(FileSystemResult<IDisposable> result)
+    {
+        if (!result.Succeeded)
+        {
+            return writer => WireCodec.WriteResult(writer, FileSystemResult<int>.Failure(result.Error!), static (_, _) => { });
+        }
+
+        int id;
+        bool closed;
+        lock (_gate)
+        {
+            closed = _listenersClosed;
+            id = ++_nextDescriptor;
+            if (!closed)
+            {
+                _descriptors[id] = result.Value!;
+            }
+        }
+
+        if (closed)
+        {
+            // The process ended while the descriptor was being opened.
+            result.Value!.Dispose();
+            throw new HackProcessKilledException(Pid);
+        }
+
+        return writer => WireCodec.WriteResult(writer, FileSystemResult<int>.Success(id), static (w, value) => w.WriteNumber("fd", value));
     }
 
     private static Action<Utf8JsonWriter> Mutation(FileSystemMutationResult result) => writer => WireCodec.WriteMutation(writer, result);

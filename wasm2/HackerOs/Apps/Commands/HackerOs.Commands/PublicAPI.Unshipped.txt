@@ -1,1 +1,16 @@
 #nullable enable
+HackerOs.Commands.Prlimit.PrlimitApp
+HackerOs.Commands.Prlimit.PrlimitApp.PrlimitApp() -> void
+HackerOs.Commands.Prlimit.PrlimitCommand
+HackerOs.Commands.Prlimit.PrlimitCommand.PrlimitCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
+override HackerOs.Commands.Prlimit.PrlimitApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Commands.Prlimit.PrlimitApp.Description.get -> string!
+override HackerOs.Commands.Prlimit.PrlimitApp.EntryPoint.get -> System.Type!
+override HackerOs.Commands.Prlimit.PrlimitApp.Id.get -> string!
+override HackerOs.Commands.Prlimit.PrlimitApp.Kind.get -> HackerOs.App.Abstractions.AppKind
+override HackerOs.Commands.Prlimit.PrlimitApp.LaunchVisibility.get -> HackerOs.App.Abstractions.AppLaunchVisibility
+override HackerOs.Commands.Prlimit.PrlimitApp.Name.get -> string!
+override HackerOs.Commands.Prlimit.PrlimitApp.PublisherId.get -> string!
+override HackerOs.Commands.Prlimit.PrlimitApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
+override HackerOs.Commands.Prlimit.PrlimitApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
+override HackerOs.Commands.Prlimit.PrlimitCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>

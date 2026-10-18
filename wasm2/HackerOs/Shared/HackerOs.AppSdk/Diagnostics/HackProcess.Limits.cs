@@ -18,7 +18,8 @@ public sealed partial class HackProcess
     /// <exception cref="InvalidOperationException">The process has exited, or is not visible to this app.</exception>
     /// <example>
     /// <code>
-    /// HackResourceLimits limits = await HackProcess.Current.GetResourceLimitsAsync();
+    /// HackProcess self = await HackProcess.GetCurrentProcessAsync();
+    /// HackResourceLimits limits = await self.GetResourceLimitsAsync();
     /// int workers = (int)Math.Min(64, limits.NoFile.Soft - 3);
     /// </code>
     /// </example>

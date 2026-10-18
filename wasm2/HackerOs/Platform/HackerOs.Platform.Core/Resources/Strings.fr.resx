@@ -606,4 +606,28 @@ Annuler : décider au prochain lancement.</value>
   <data name="Syntax.UnterminatedSingleQuote" xml:space="preserve">
     <value>erreur de syntaxe : apostrophe non fermée</value>
   </data>
+  <data name="Builtin.ulimit" xml:space="preserve">
+    <value>Afficher ou modifier les limites de ressources du shell (commande interne du shell)</value>
+  </data>
+  <data name="Shell.UlimitInvalidOption" xml:space="preserve">
+    <value>ulimit : {0} : option non valable</value>
+  </data>
+  <data name="Shell.UlimitUsage" xml:space="preserve">
+    <value>utilisation : ulimit [-SH] [-a | -f | -m | -n | -t | -u] [limite]</value>
+  </data>
+  <data name="Shell.UlimitInvalidNumber" xml:space="preserve">
+    <value>ulimit : {0} : nombre non valable</value>
+  </data>
+  <data name="Shell.UlimitCannotModify" xml:space="preserve">
+    <value>ulimit : {0} : impossible de modifier la limite : {1}</value>
+  </data>
+  <data name="Shell.UlimitNoProcess" xml:space="preserve">
+    <value>ulimit : le shell n’a pas de processus</value>
+  </data>
+  <data name="Errno.OperationNotPermitted" xml:space="preserve">
+    <value>Opération non permise</value>
+  </data>
+  <data name="Errno.InvalidArgument" xml:space="preserve">
+    <value>Argument invalide</value>
+  </data>
 </root>

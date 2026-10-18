@@ -177,6 +177,8 @@ builder.Services.AddSingleton<ISyncClient, DirectSyncClient>();
 // appsettings.json and what the build compiled in. Both are off by default on this host: several
 // threads run app code at once under Interactive Server (ADR 0067, section 6).
 builder.Services.AddHackerOsResourceAccounting(builder.Configuration, BuildKnownLazyApps.Images);
+// ADR 0125: process limits (ulimit, limits.conf), on unless HackerOs:ResourceLimits:Enabled is false.
+builder.Services.AddHackerOsResourceLimits(builder.Configuration);
 
 int serviceCountBeforeEcosystem = builder.Services.Count;
 builder.Services.AddHackerOsEcosystem(
