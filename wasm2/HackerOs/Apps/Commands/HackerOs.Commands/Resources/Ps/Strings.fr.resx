@@ -15,4 +15,7 @@
   <data name="CannotReadProc" xml:space="preserve">
     <value>ps : impossible de lire /proc : {0}</value>
   </data>
+  <data name="UnknownField" xml:space="preserve">
+    <value>ps : champ de sortie inconnu « {0} »</value>
+  </data>
 </root>

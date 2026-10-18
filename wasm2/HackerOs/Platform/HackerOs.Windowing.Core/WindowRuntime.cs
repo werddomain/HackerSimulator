@@ -54,6 +54,7 @@ public sealed class WindowRuntime
             ForceWindowCloseCommand close => ForceClose(close.WindowId),
             ChangeViewportCommand viewport => ChangeViewport(viewport.WorkArea),
             SetWindowTitleCommand title => ChangeTitle(title.WindowId, title.Title),
+            SetWindowRespondingCommand responding => ChangeResponding(responding.WindowId, responding.IsResponding),
             null => throw new ArgumentNullException(nameof(command)),
             _ => throw new ArgumentOutOfRangeException(nameof(command), command, "Unknown window command."),
         };
@@ -285,6 +286,20 @@ public sealed class WindowRuntime
         return [new WindowTitleChangedEvent(id, current.Title, title)];
     }
 
+    private IReadOnlyList<WindowEvent> ChangeResponding(WindowId id, bool isResponding)
+    {
+        WindowRuntimeState current = Get(id);
+        if (current.IsResponding == isResponding)
+        {
+            return [];
+        }
+
+        // The flag is display state only (ADR 0127 §3): it never touches Title, so no
+        // WindowTitleChangedEvent is raised for the "(Not responding)" suffix.
+        _windows[id] = Copy(current) with { IsResponding = isResponding };
+        return [new WindowRespondingChangedEvent(id, isResponding)];
+    }
+
     private IReadOnlyList<WindowEvent> FocusTopVisible(WindowId excludedId)
     {
         WindowRuntimeState? next = _windows.Values
@@ -359,5 +374,8 @@ public sealed class WindowRuntime
             isFocused ?? state.IsFocused,
             state.Content,
             state.OnRequestClose,
-            state.SupportsBack);
+            state.SupportsBack)
+        {
+            IsResponding = state.IsResponding,
+        };
 }

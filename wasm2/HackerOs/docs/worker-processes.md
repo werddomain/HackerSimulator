@@ -206,6 +206,10 @@ WebAssembly ne rétrécit jamais (ADR 0142 §5, [`oom-killer.md`](oom-killer.md)
   moins de 750 ms **et** est arrivé au moins une période après le dernier
   processus placé sur lui (ADR 0072 §6) : une commande qui boucle dès son
   lancement n'attire pas la suivante derrière elle.
+- **File d'attente** (ADR 0127 §1, `WorkerRunQueue`) : au plafond, les
+  demandes attendent par `nice` croissant puis par ordre d'arrivée ; un
+  processus de valeur `nice` positive ne prend pas le worker prêt pendant qu'un autre worker démarre. La
+  priorité ne découpe pas le temps : rien n'est préempté.
 - **Placement** : le cœur libre le moins chargé ; les étapes d'un pipeline
   (`ExecutionPlacement.BeginGroup` dans `ShellInterpreter`) vont sur le même
   worker.

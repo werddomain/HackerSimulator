@@ -233,6 +233,19 @@ les récents du bureau mobile et le nom accessible du cadre (`aria-labelledby`).
 | Éditeur de thèmes | `*Nom — Éditeur de thèmes` (aussi dans sa barre d'outils). |
 | Explorateur de fichiers | `Documents — Explorateur de fichiers`, `/` à la racine, la corbeille quand elle est affichée. |
 
+## 5. Fenêtre qui ne répond pas (ADR 0127 §2-3)
+
+- `WindowRuntimeState.IsResponding` (vrai par défaut) est changé par
+  `SetWindowRespondingCommand` ; `WindowRuntime` publie
+  `WindowRespondingChangedEvent` seulement quand la valeur change.
+- `WindowChrome` ajoute « (Not responding) » / « (Ne répond pas) » au titre
+  affiché (le titre de l'app ne change pas) ; `WindowHost` grise le contenu
+  (`is-not-responding`, `aria-busy`) et dessine son paramètre `Overlay` par
+  dessus le contenu. `DesktopArea` et `SingleSurfaceArea` le remplissent avec
+  `WindowOverlay` (un `RenderFragment<WindowRuntimeState>`).
+- Le moniteur `WindowResponsivenessMonitor`, la boîte et le réglage
+  `window-manager.config` sont décrits dans [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md).
+
 ## Décisions de mise en œuvre
 
 - **Plein écran ajouté** (`toggle-fullscreen`, `Alt+F11`, entrée du menu) : le verrouillage du

@@ -145,4 +145,12 @@ public sealed record WindowRuntimeState
     /// does not track the app's live <c>IAppBackHandler.CanNavigateBack</c> state.
     /// </summary>
     public bool SupportsBack { get; }
+
+    /// <summary>
+    /// Gets whether the window's app answers its inputs (ADR 0127 §2). <see langword="false"/> while
+    /// the platform judges the window unresponsive: the chrome then adds a "(Not responding)" suffix
+    /// to the displayed title and greys the content, like a hung window on Windows or a
+    /// <c>_NET_WM_PING</c> timeout on X11. <see cref="Title"/> itself never carries the suffix.
+    /// </summary>
+    public bool IsResponding { get; init; } = true;
 }

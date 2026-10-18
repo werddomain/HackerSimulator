@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Failed" xml:space="preserve">
+    <value>renice : impossible de modifier la priorité de {0} (ID de processus) : {1}</value>
+  </data>
+  <data name="InvalidPid" xml:space="preserve">
+    <value>renice : ID de processus non valable « {0} »</value>
+  </data>
+  <data name="InvalidPriority" xml:space="preserve">
+    <value>renice : priorité non valable « {0} »</value>
+  </data>
+  <data name="NoSuchProcess" xml:space="preserve">
+    <value>renice : impossible de lire la priorité de {0} (ID de processus) : processus inexistant</value>
+  </data>
+  <data name="OnlyProcessIds" xml:space="preserve">
+    <value>renice : {0} : seuls les ID de processus sont pris en charge</value>
+  </data>
+  <data name="PermissionDenied" xml:space="preserve">
+    <value>Permission refusée</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>usage : renice [-n] N [-p] pid...</value>
+  </data>
+</root>

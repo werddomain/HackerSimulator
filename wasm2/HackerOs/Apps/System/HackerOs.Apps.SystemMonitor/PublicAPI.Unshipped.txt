@@ -1,1 +1,6 @@
 #nullable enable
+HackerOs.Apps.SystemMonitor.Processes.ProcessColumn.Priority = 8 -> HackerOs.Apps.SystemMonitor.Processes.ProcessColumn
+HackerOs.Apps.SystemMonitor.Processes.ProcessRow.Nice.get -> int
+HackerOs.Apps.SystemMonitor.Processes.ProcessRow.Nice.init -> void
+HackerOs.Apps.SystemMonitor.Processes.ProcessTable.ShowPriority.get -> bool
+HackerOs.Apps.SystemMonitor.Processes.ProcessTable.ShowPriority.set -> void

@@ -35,7 +35,7 @@ public sealed class PsApp : AppDefinition
         [AppCapabilities.ProcessList, AppCapabilities.FileSystemSystemRead];
 
     /// <inheritdoc />
-    public override TerminalCommand? Terminal => new("ps", "ps [-a] [-u]");
+    public override TerminalCommand? Terminal => new("ps", "ps [-a] [-u] [-l] [-o field,...]");
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

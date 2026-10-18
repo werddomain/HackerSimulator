@@ -567,6 +567,18 @@
   <data name="Sync.Unknown" xml:space="preserve">
     <value>unknown</value>
   </data>
+  <data name="Unresponsive.Message" xml:space="preserve">
+    <value>You can wait for it to respond or end the app.</value>
+  </data>
+  <data name="Unresponsive.Terminate" xml:space="preserve">
+    <value>End the app</value>
+  </data>
+  <data name="Unresponsive.Title" xml:space="preserve">
+    <value>“{0}” is not responding.</value>
+  </data>
+  <data name="Unresponsive.Wait" xml:space="preserve">
+    <value>Wait</value>
+  </data>
   <data name="WindowMenu.Close" xml:space="preserve">
     <value>Close</value>
   </data>

@@ -375,6 +375,60 @@ public sealed partial class ShellInterpreter
         return outcome.ExitCode;
     }
 
+    /// <summary>
+    /// <c>nice</c>'s side of the shell (ADR 0127): runs the command as a child of the caller (the
+    /// <c>nice</c> process) at the caller's niceness plus <paramref name="adjustment"/>, without
+    /// access to the shell. Only root may lower the niceness; otherwise, as GNU <c>nice</c> does,
+    /// the command still runs, at the caller's niceness, after a warning.
+    /// </summary>
+    internal async ValueTask<int> RunNicedAsync(
+        ShellSession session,
+        IReadOnlyList<string> arguments,
+        int adjustment,
+        TextReader input,
+        TextWriter output,
+        TextWriter error,
+        ShellExecutionOptions options,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(output);
+        ArgumentNullException.ThrowIfNull(error);
+        if (arguments.Count == 0 || string.IsNullOrEmpty(arguments[0]))
+        {
+            throw new ArgumentException("A command name is required.", nameof(arguments));
+        }
+
+        string name = arguments[0];
+        Microsoft.Extensions.Localization.IStringLocalizer texts = ShellText.For(session);
+        // Like `nice cd`: GNU nice can only exec a program, never a shell built-in.
+        ShellCommandResolution? resolution = IsSpecialBuiltin(name) ? null : Resolver.Resolve(name, [.. arguments.Skip(1)]);
+        if (resolution is null || !_enablement.IsEnabled(resolution.AppId))
+        {
+            await error.WriteLineAsync("nice: " + texts["Shell.CommandNotFound", name]).ConfigureAwait(false);
+            return CommandNotFoundExitCode;
+        }
+
+        IAppExecutionContext? caller = HackExecutionContext.CurrentOrNull;
+        int current = caller is null ? ProcessNice.Default : caller.Processes.GetNice(caller.ProcessId);
+        int nice = ProcessNice.Clamp(current + adjustment);
+        if (nice < current && caller?.IsRootElevated != true)
+        {
+            await error.WriteLineAsync("nice: " + texts["Nice.PermissionDenied"]).ConfigureAwait(false);
+            nice = current;
+        }
+
+        // A command that drives its shell (`nice watch …`, `nice nice …`) still gets it (ADR 0051 §3).
+        IShellSession? shell = session.ProvidesShellControl && DeclaresShellControl(resolution.Manifest)
+            ? new ShellSessionAccess(this, session, options, input)
+            : null;
+        ProcessId? parent = caller?.ProcessId ?? session.ProcessId;
+        StageOutcome outcome = await StartAsync(
+            "nice", session, resolution, parent, input, output, error, options, elevation: null, shell,
+            ChildEnvironment(session, []), processStarted: null, cancellationToken, nice).ConfigureAwait(false);
+        return outcome.ExitCode;
+    }
+
     /// <summary>Starts a resolved command through the orchestrator and maps its launch status to an exit code.</summary>
     private async Task<StageOutcome> StartAsync(
         string caller,
@@ -389,7 +443,8 @@ public sealed partial class ShellInterpreter
         IShellSession? shell,
         IReadOnlyDictionary<string, string>? environment,
         Action<ProcessRecord>? processStarted,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int? nice = null)
     {
         string name = resolution.CommandName;
         Microsoft.Extensions.Localization.IStringLocalizer texts = ShellText.For(session);
@@ -410,7 +465,10 @@ public sealed partial class ShellInterpreter
                 StandardError: error,
                 Shell: shell,
                 CommandName: name,
-                ProcessStarted: processStarted),
+                ProcessStarted: processStarted)
+            {
+                Nice = nice,
+            },
             // Only a command writing to the terminal itself may take the screen over (nano, top,
             // htop, watch): `top -n1 | head` or `htop > f` fall back to their text output.
             ReferenceEquals(output, options.StandardOutput) ? options.FullScreen : null,

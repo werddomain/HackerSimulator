@@ -1,0 +1,22 @@
+.unresponsive-browser-scenario {
+    display: block;
+    width: 960px;
+    height: 640px;
+    overflow: hidden;
+}
+
+.scenario-content {
+    margin: 0;
+    padding: 1rem;
+    color: #d4f8e8;
+}
+
+.scenario-controls {
+    position: fixed;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    z-index: 1000;
+    display: flex;
+    gap: 0.5rem;
+    color: #d4f8e8;
+}

@@ -27,6 +27,9 @@
   <data name="Chrome.Minimize" xml:space="preserve">
     <value>Minimize</value>
   </data>
+  <data name="Chrome.NotResponding" xml:space="preserve">
+    <value>(Not responding)</value>
+  </data>
   <data name="Chrome.Restore" xml:space="preserve">
     <value>Restore</value>
   </data>

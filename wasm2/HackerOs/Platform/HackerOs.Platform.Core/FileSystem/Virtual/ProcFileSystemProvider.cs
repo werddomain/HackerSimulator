@@ -493,7 +493,8 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     /// Renders <c>/proc/&lt;pid&gt;/stat</c> (ADR 0067, section 3) in the single-line layout of
     /// <c>proc(5)</c>: 52 space-separated fields, <c>comm</c> in parentheses. <c>utime</c> (14) and
     /// <c>stime</c> (15) are in <c>USER_HZ</c>; <c>starttime</c> (22) counts <c>USER_HZ</c> since boot;
-    /// <c>vsize</c> (23) is in bytes and <c>rss</c> (24) in 4 KiB pages. Fields with no meaning here
+    /// <c>vsize</c> (23) is in bytes and <c>rss</c> (24) in 4 KiB pages; <c>priority</c> (18) and
+    /// <c>nice</c> (19) follow the process's niceness (ADR 0127). Fields with no meaning here
     /// (signals, addresses, page faults of a machine without paging) are <c>0</c>, as the kernel
     /// prints them for a task it hides them from.
     /// </summary>
@@ -528,6 +529,8 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         long ppid = process.ParentPid?.Value ?? 0;
         long pid = process.Pid.Value;
         char state = StateText(process.State)[0];
+        int nice = NiceOf(process);
+        int priority = ProcessNice.ToPriority(nice);
 
         // Fields 1-52 of proc(5). Order matters: readers split on spaces after the closing parenthesis.
         return string.Create(
@@ -535,11 +538,24 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             $"{pid} ({ShortName(process.AppId)}) {state} {ppid} {pid} {pid} 0 -1 0 "  // 1-9: pid comm state ppid pgrp session tty_nr tpgid flags
             + $"0 0 0 0 "                                                          // 10-13: minflt cminflt majflt cmajflt
             + $"{utime} {stime} 0 0 "                                             // 14-17: utime stime cutime cstime
-            + $"20 0 1 0 "                                                         // 18-21: priority nice num_threads itrealvalue
+            + $"{priority} {nice} 1 0 "                                            // 18-21: priority nice num_threads itrealvalue
             + $"{startTime} {vsize} {rssPages} 18446744073709551615 "            // 22-25: starttime vsize rss rsslim
             + $"0 0 0 0 0 0 0 0 0 0 0 0 0 "                                        // 26-38: startcode .. exit_signal
             + $"0 0 0 0 0 0 "                                                      // 39-44: processor rt_priority policy delayacct_blkio_ticks guest_time cguest_time
             + $"0 0 0 0 0 0 0 0\n");                                               // 45-52: start_data .. exit_code
+    }
+
+    /// <summary>The niceness of a process (ADR 0127), or <c>0</c> when it ended between the listing and this read.</summary>
+    private int NiceOf(ProcessRecord process)
+    {
+        try
+        {
+            return _processManager().GetNice(process.Pid);
+        }
+        catch (KeyNotFoundException)
+        {
+            return ProcessNice.Default;
+        }
     }
 
     private static long ToUserHz(TimeSpan time) => (long)(time.TotalSeconds * UserHz);

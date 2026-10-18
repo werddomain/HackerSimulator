@@ -129,7 +129,7 @@ touche un octet tous les 4 Kio, et passe un point d'arrêt entre deux blocs
 - `ProcessExitReason.OutOfMemory`, `ProcessStartRequest.OomScoreAdjust`,
   `AppDefinition.OomScoreAdjust` et `AppManifest.OomScoreAdj` entrent dans
   `PublicAPI.Unshipped.txt` et seront publiés avec le SDK 1.2 (ADR 0132).
-- 72 commandes et 90 apps intégrées (`dmesg`).
+- Une commande intégrée de plus, `dmesg` : 74 commandes et 92 apps avec `nice` et `renice` d'`exec/4`.
 - Un worker remplacé coûte un démarrage de runtime ; cela n'arrive qu'après une
   mise à mort par l'OOM killer.
 

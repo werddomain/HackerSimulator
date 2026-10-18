@@ -98,6 +98,51 @@ public sealed class PsCommandTests
         Assert.Contains(owner.ToString(), output);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_LongFormat_ShowsPriorityAndNiceness()
+    {
+        ProcessRecord process = ProcessRecordFactory.Running(9, "org.hackeros.commands.sleep", CurrentSession, Now, Now);
+        ProcessTable processes = new(process);
+        processes.Nice[process.Pid] = 5;
+        TerminalExecutionContext context = CreateContext(processes, "-l");
+
+        int exitCode = await new PsCommand(AppDefinitionMapper.ToManifest(new PsApp())).ExecuteAsync(context, CancellationToken.None);
+
+        string[] lines = context.StandardOutput.ToString()!.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(0, exitCode);
+        string[] header = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] row = lines[1].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(["F", "S", "UID", "PID", "PPID", "C", "PRI", "NI", "TIME", "CMD"], header);
+        Assert.Equal("85", row[Array.IndexOf(header, "PRI")]); // 80 + nice, like procps
+        Assert.Equal("5", row[Array.IndexOf(header, "NI")]);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_OutputFormat_PrintsTheRequestedColumns()
+    {
+        ProcessRecord process = ProcessRecordFactory.Running(9, "org.hackeros.commands.sleep", CurrentSession, Now, Now);
+        ProcessTable processes = new(process);
+        processes.Nice[process.Pid] = -4;
+        TerminalExecutionContext context = CreateContext(processes, "-o", "pid,ni,comm");
+
+        await new PsCommand(AppDefinitionMapper.ToManifest(new PsApp())).ExecuteAsync(context, CancellationToken.None);
+
+        string[] lines = context.StandardOutput.ToString()!.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(["PID", "NI", "COMMAND"], lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        Assert.Equal(["9", "-4"], lines[1].Split(' ', StringSplitOptions.RemoveEmptyEntries)[..2]);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UnknownOutputField_Fails()
+    {
+        TerminalExecutionContext context = CreateContext(new ProcessTable(), "-o", "pid,bogus");
+
+        int exitCode = await new PsCommand(AppDefinitionMapper.ToManifest(new PsApp())).ExecuteAsync(context, CancellationToken.None);
+
+        Assert.NotEqual(0, exitCode);
+        Assert.Contains("bogus", context.StandardError.ToString());
+    }
+
     private static TerminalExecutionContext CreateContext(ProcessTable processes, params string[] arguments) =>
         CreateContext(processes, AppDefinitionMapper.ToManifest(new PsApp()).Capabilities, arguments);
 
@@ -148,6 +193,11 @@ public sealed class PsCommandTests
     /// <summary>Process table double: only the read side <c>/proc</c> uses is implemented.</summary>
     private sealed class ProcessTable(params ProcessRecord[] active) : IProcessManager
     {
+        /// <summary>Niceness per process (ADR 0127); absent means 0.</summary>
+        public Dictionary<ProcessId, int> Nice { get; } = [];
+
+        public int GetNice(ProcessId pid) => Nice.GetValueOrDefault(pid);
+
         public IReadOnlyList<ProcessRecord> GetActiveProcesses() => active;
 
         public IReadOnlyList<ProcessRecord> GetHistory() => [];

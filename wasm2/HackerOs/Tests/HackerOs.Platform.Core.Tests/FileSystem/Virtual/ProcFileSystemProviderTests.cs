@@ -183,6 +183,20 @@ public sealed class ProcFileSystemProviderTests
     }
 
     [Fact]
+    public async Task Stat_reports_the_priority_and_niceness_of_the_process()
+    {
+        VirtualFileSystemFixture fixture = new();
+        ProcessRecord process = Process(42, "org.hackeros.apps.code-editor", kind: AppKind.Window);
+        fixture.Processes.Active.Add(process);
+        fixture.Processes.Nice[process.Pid] = 5;
+
+        string[] fields = (await fixture.ReadTextAsync("/proc/42/stat", fixture.AppContext(42, Read))).TrimEnd('\n').Split(' ');
+
+        Assert.Equal("25", fields[17]); // priority: 20 + nice (ADR 0127)
+        Assert.Equal("5", fields[18]);  // nice
+    }
+
+    [Fact]
     public async Task Simulated_stat_rebuilds_utime_from_the_simulator_history()
     {
         VirtualFileSystemFixture fixture = new();

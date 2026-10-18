@@ -1,4 +1,18 @@
 #nullable enable
+HackerOs.Platform.Core.Execution.AppProcessGateway.GetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> int
+HackerOs.Platform.Core.Execution.AppProcessGateway.SetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, int nice) -> int
+HackerOs.Platform.Core.Lifecycle.AppLaunchRequest.Nice.get -> int?
+HackerOs.Platform.Core.Lifecycle.AppLaunchRequest.Nice.init -> void
+HackerOs.Platform.Core.Processes.InMemoryProcessManager.GetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> int
+HackerOs.Platform.Core.Processes.InMemoryProcessManager.SetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, int nice) -> int
+HackerOs.Platform.Core.Shell.WindowManagerSettingsDocuments
+const HackerOs.Platform.Core.Shell.WindowManagerSettingsDocuments.DialogKey = "dialog" -> string!
+const HackerOs.Platform.Core.Shell.WindowManagerSettingsDocuments.DocumentId = "window-manager" -> string!
+const HackerOs.Platform.Core.Shell.WindowManagerSettingsDocuments.UnresponsiveGroup = "unresponsive" -> string!
+static HackerOs.Platform.Core.Shell.WindowManagerSettingsDocuments.Document.get -> HackerOs.Platform.Core.Settings.OsSettingsDocument!
+static HackerOs.Platform.Core.Shell.WindowManagerSettingsDocuments.IsUnresponsiveDialogEnabled(HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot! snapshot) -> bool
+static HackerOs.Platform.Core.Shell.WindowManagerSettingsDocuments.Schema.get -> HackerOs.Simulation.Abstractions.Settings.SettingsSchema!
+const HackerOs.Platform.Core.Execution.BackgroundJobService.MaxPayloadBytes = 16777216 -> int
 HackerOs.Platform.Core.Execution.AppExecutionContextFactory.BackgroundJobs.get -> System.Func<HackerOs.Platform.Core.Execution.BackgroundJobService!>?
 HackerOs.Platform.Core.Execution.AppExecutionContextFactory.BackgroundJobs.init -> void
 HackerOs.Platform.Core.Execution.AppFileSystemGateway.Descriptors.get -> HackerOs.Simulation.Abstractions.Processes.IProcessFileDescriptorTable?
@@ -136,7 +150,6 @@ HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.Connecting = 1 -> H
 HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.Error = 5 -> HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
 HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.NotConfigured = 0 -> HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
 HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.Offline = 4 -> HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
-const HackerOs.Platform.Core.Execution.BackgroundJobService.MaxPayloadBytes = 16777216 -> int
 const HackerOs.Platform.Core.Lifecycle.AppLifecycleOrchestrator.ProcessLimitErrorCode = "lifecycle.process.eagain" -> string!
 const HackerOs.Platform.Core.Processes.InMemoryProcessFileDescriptorTable.StandardStreamCount = 3 -> int
 const HackerOs.Platform.Core.Processes.InMemoryProcessManager.CpuLimitExitCode = 152 -> int

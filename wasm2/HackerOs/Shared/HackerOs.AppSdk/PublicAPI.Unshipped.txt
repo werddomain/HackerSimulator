@@ -1,4 +1,8 @@
 #nullable enable
+HackerOs.AppSdk.Diagnostics.HackProcess.BasePriority.get -> int
+HackerOs.AppSdk.Diagnostics.HackProcess.Nice.get -> int
+HackerOs.AppSdk.IShellSession.RunNicedAsync(System.Collections.Generic.IReadOnlyList<string!>! arguments, int adjustment, System.IO.TextWriter! standardOutput, System.IO.TextWriter! standardError, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
+static HackerOs.AppSdk.Diagnostics.HackProcess.ParseStatNice(string! text) -> int
 HackerOs.AppSdk.Diagnostics.HackProcess.GetResourceLimitsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Diagnostics.HackResourceLimits!>!
 HackerOs.AppSdk.Diagnostics.HackProcess.SetResourceLimitAsync(HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind kind, long soft, long hard, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 HackerOs.AppSdk.Diagnostics.HackProcessKilledException.HackProcessKilledException(long processId, HackerOs.Simulation.Abstractions.Processes.ProcessExitReason reason) -> void
