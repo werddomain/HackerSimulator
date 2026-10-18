@@ -255,6 +255,12 @@
       }
     },
     "execution": { "enum": ["mainThread", "pool", "dedicated", "web"] },
+    "oomScoreAdj": {
+      "description": "oom_score_adj the app's processes start with (ADR 0126): -1000 (never killed by the OOM killer) to 1000 (killed first). Negative values are reserved to system apps. Omitted: the OS default.",
+      "type": "integer",
+      "minimum": -1000,
+      "maximum": 1000
+    },
     "web": {
       "description": "Web part of a web app (ADR 0073): the URLs the site answers on, published by the OS resolver (ADR 0074).",
       "type": "object",

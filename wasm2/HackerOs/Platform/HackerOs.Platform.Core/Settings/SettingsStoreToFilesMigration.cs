@@ -129,6 +129,12 @@ public sealed class SettingsStoreToFilesMigration : IUserProfileInitializer
             SecuritySettingsDocuments.Document.SystemPath,
             SecuritySettingsDocuments.DefaultContent,
             cancellationToken).ConfigureAwait(false);
+        // ADR 0126: the OOM killer's switch, off.
+        await WriteIfAbsentAsync(
+            system,
+            Processes.MemorySettingsDocuments.Document.SystemPath,
+            Processes.MemorySettingsDocuments.DefaultContent,
+            cancellationToken).ConfigureAwait(false);
         await WriteIfAbsentAsync(
             system,
             AppPermissionsDocument.MachineFile.Resolve(null),

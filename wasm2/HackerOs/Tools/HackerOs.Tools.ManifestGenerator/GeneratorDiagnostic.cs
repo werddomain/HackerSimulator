@@ -97,6 +97,13 @@ public static class GeneratorCodes
     /// </summary>
     public const string AssetMissing = "HOSAPP0023";
 
+    /// <summary>
+    /// Aggregation (ADR 0126, section 4): a non-system app declares a negative <c>oomScoreAdj</c>.
+    /// Only a system app (<c>IsSystemApp</c> on the host's <c>ProjectReference</c>) may shield itself
+    /// from the OOM killer, like <c>CAP_SYS_RESOURCE</c> on Linux.
+    /// </summary>
+    public const string NegativeOomScoreAdjust = "HOSAPP0024";
+
     /// <summary>The tool was called with invalid arguments.</summary>
     public const string InvalidArguments = "HOSAPP0090";
 

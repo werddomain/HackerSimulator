@@ -59,6 +59,13 @@ public sealed record ProcessStartRequest(
     /// <c>root</c> (<c>CAP_SYS_RESOURCE</c>) or a system process.
     /// </summary>
     public bool ResourceLimitExempt { get; init; }
+
+    /// <summary>
+    /// The <c>oom_score_adj</c> the process starts with (ADR 0126, section 4), from <c>-1000</c>
+    /// (never chosen by the OOM killer) to <c>1000</c>, like systemd's <c>OOMScoreAdjust=</c> applied
+    /// at <c>exec</c>. <see langword="null"/> inherits the parent's value, or <c>0</c> for a root process.
+    /// </summary>
+    public int? OomScoreAdjust { get; init; }
 }
 
 /// <summary>

@@ -66,6 +66,23 @@ public sealed class BuiltInApplicationsAggregatorTests : IDisposable
     }
 
     [Fact]
+    public void A_negative_oom_score_adj_is_refused_for_a_non_system_app_with_HOSAPP0024()
+    {
+        string manifest = WriteManifest(typeof(ShieldedApp), "shielded.json");
+
+        AggregationResult refused = BuiltInApplicationsAggregator.Aggregate([new(manifest, IsSystemApp: false)]);
+        GeneratorDiagnostic diagnostic = Assert.Single(refused.Diagnostics);
+        Assert.Equal("HOSAPP0024", diagnostic.Code);
+        Assert.Equal("org.hackeros.tests.shielded", diagnostic.Subject);
+        Assert.Contains("oomScoreAdj -300", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Null(refused.Json);
+
+        AggregationResult accepted = BuiltInApplicationsAggregator.Aggregate([new(manifest, IsSystemApp: true)]);
+        Assert.Empty(accepted.Diagnostics);
+        Assert.Contains("\"oomScoreAdj\":-300", accepted.Json, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Command_named_like_a_shell_builtin_fails_with_HOSAPP0022()
     {
         AggregationResult result = BuiltInApplicationsAggregator.Aggregate(

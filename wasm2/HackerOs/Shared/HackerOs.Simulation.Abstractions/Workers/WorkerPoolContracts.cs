@@ -63,7 +63,15 @@ public sealed record WorkerSnapshot(
     long RuntimeMemoryBytes,
     DateTimeOffset StartedAtUtc,
     TimeSpan? LastHeartbeatAgo,
-    TimeSpan BusyTime);
+    TimeSpan BusyTime)
+{
+    /// <summary>
+    /// Gets the managed heap of its .NET runtime at the last heartbeat (0 before the first), the part
+    /// of <see cref="RuntimeMemoryBytes"/> really in use: the browser guard of ADR 0126 compares it with
+    /// the runtime's memory ceiling, since a WebAssembly memory never shrinks once grown.
+    /// </summary>
+    public long RuntimeHeapBytes { get; init; }
+}
 
 /// <summary>
 /// Read-only view of the worker pool for <c>/proc</c> (ADR 0071, section 5) and <c>/proc/stat</c>

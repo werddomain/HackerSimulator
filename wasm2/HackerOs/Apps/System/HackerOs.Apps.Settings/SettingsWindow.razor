@@ -327,6 +327,11 @@
                 <UsersPanel />
             </MudTabPanel>
 
+            @* ADR 0126: the OOM killer of /etc/hackeros/memory.config. *@
+            <MudTabPanel Text="@L["Tab.Memory"]" Icon="@Icons.Material.Filled.Memory">
+                <MemoryPanel />
+            </MudTabPanel>
+
             @if (HackerOs.AppSdk.Administration.HackSystemBackup.IsSupportedFor(AppContext))
             {
                 <MudTabPanel Text="@L["Tab.Backup"]" Icon="@Icons.Material.Filled.Backup">

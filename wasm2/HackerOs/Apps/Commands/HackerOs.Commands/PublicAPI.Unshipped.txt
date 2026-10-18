@@ -14,3 +14,18 @@ override HackerOs.Commands.Prlimit.PrlimitApp.PublisherId.get -> string!
 override HackerOs.Commands.Prlimit.PrlimitApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 override HackerOs.Commands.Prlimit.PrlimitApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
 override HackerOs.Commands.Prlimit.PrlimitCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
+HackerOs.Commands.Dmesg.DmesgApp
+HackerOs.Commands.Dmesg.DmesgApp.DmesgApp() -> void
+HackerOs.Commands.Dmesg.DmesgCommand
+HackerOs.Commands.Dmesg.DmesgCommand.DmesgCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
+override HackerOs.Commands.Dmesg.DmesgApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Commands.Dmesg.DmesgApp.Description.get -> string!
+override HackerOs.Commands.Dmesg.DmesgApp.EntryPoint.get -> System.Type!
+override HackerOs.Commands.Dmesg.DmesgApp.Id.get -> string!
+override HackerOs.Commands.Dmesg.DmesgApp.Kind.get -> HackerOs.App.Abstractions.AppKind
+override HackerOs.Commands.Dmesg.DmesgApp.LaunchVisibility.get -> HackerOs.App.Abstractions.AppLaunchVisibility
+override HackerOs.Commands.Dmesg.DmesgApp.Name.get -> string!
+override HackerOs.Commands.Dmesg.DmesgApp.PublisherId.get -> string!
+override HackerOs.Commands.Dmesg.DmesgApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
+override HackerOs.Commands.Dmesg.DmesgApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
+override HackerOs.Commands.Dmesg.DmesgCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>

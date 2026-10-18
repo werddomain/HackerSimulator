@@ -63,7 +63,6 @@ HackerOs.Platform.Core.Processes.InMemoryProcessFileDescriptorTable.GetOpen(Hack
 HackerOs.Platform.Core.Processes.InMemoryProcessFileDescriptorTable.InMemoryProcessFileDescriptorTable(System.Func<HackerOs.Simulation.Abstractions.Processes.ProcessId, long>? noFileLimit = null) -> void
 HackerOs.Platform.Core.Processes.InMemoryProcessFileDescriptorTable.TryOpen(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, string! target, out int descriptor) -> bool
 HackerOs.Platform.Core.Processes.InMemoryProcessManager.FileDescriptors.get -> HackerOs.Simulation.Abstractions.Processes.IProcessFileDescriptorTable!
-HackerOs.Platform.Core.Processes.InMemoryProcessManager.InMemoryProcessManager(HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, HackerOs.Simulation.Abstractions.Sessions.ISessionService! session, HackerOs.Simulation.Abstractions.Events.IEventBus! eventBus, int maxHistory, HackerOs.Platform.Core.Processes.InMemoryProcessEnvironmentTable? environments, HackerOs.Platform.Core.Processes.InMemoryProcessResourceLimitTable? limits, HackerOs.Platform.Core.Processes.InMemoryProcessFileDescriptorTable? descriptors = null) -> void
 HackerOs.Platform.Core.Processes.InMemoryProcessManager.ResourceLimits.get -> HackerOs.Simulation.Abstractions.Processes.IProcessResourceLimitTable!
 HackerOs.Platform.Core.Processes.InMemoryProcessResourceLimitTable
 HackerOs.Platform.Core.Processes.InMemoryProcessResourceLimitTable.GetOrNone(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits!
@@ -154,3 +153,158 @@ static readonly HackerOs.Platform.Core.Processes.ResourceLimitEnforcer.DefaultIn
 static readonly HackerOs.Platform.Core.Processes.ResourceLimitEnforcer.SignalGracePeriod -> System.TimeSpan
 static readonly HackerOs.Platform.Core.Processes.ResourceLimitsConfiguration.LimitsDirectoryPath -> HackerOs.App.Abstractions.VirtualPath
 static readonly HackerOs.Platform.Core.Processes.ResourceLimitsConfiguration.LimitsFilePath -> HackerOs.App.Abstractions.VirtualPath
+const HackerOs.Platform.Core.Diagnostics.KernelLog.Capacity = 1024 -> int
+const HackerOs.Platform.Core.Diagnostics.KernelLog.Source = "kernel" -> string!
+const HackerOs.Platform.Core.Processes.BrowserRuntimeMemorySource.MainRuntimeId = "main" -> string!
+const HackerOs.Platform.Core.Processes.BrowserRuntimeMemorySource.WebAssemblyMemoryCeilingBytes = 2147483648 -> long
+const HackerOs.Platform.Core.Processes.InMemoryProcessOomScoreTable.Exempt = -1000 -> int
+const HackerOs.Platform.Core.Processes.InMemoryProcessOomScoreTable.Maximum = 1000 -> int
+const HackerOs.Platform.Core.Processes.MemorySettingsDocuments.DefaultMinFreePercent = 5 -> int
+const HackerOs.Platform.Core.Processes.MemorySettingsDocuments.DocumentId = "memory" -> string!
+const HackerOs.Platform.Core.Processes.MemorySettingsDocuments.EnabledKey = "enabled" -> string!
+const HackerOs.Platform.Core.Processes.MemorySettingsDocuments.MaximumMinFreePercent = 50 -> int
+const HackerOs.Platform.Core.Processes.MemorySettingsDocuments.MinFreePercentKey = "min-free-percent" -> string!
+const HackerOs.Platform.Core.Processes.MemorySettingsDocuments.OomKillerGroup = "oom-killer" -> string!
+const HackerOs.Platform.Core.Processes.NotificationQueueOomNotifier.SourceAppId = "org.hackeros.kernel" -> string!
+const HackerOs.Platform.Core.Processes.OomKiller.BrowserGuardRatio = 0.8 -> double
+const HackerOs.Platform.Core.Processes.OomKiller.SamplesBeforeKill = 2 -> int
+HackerOs.Platform.Core.Diagnostics.KernelLog
+HackerOs.Platform.Core.Diagnostics.KernelLog.FormatDevKmsg() -> string!
+HackerOs.Platform.Core.Diagnostics.KernelLog.KernelLog(HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, HackerOs.Platform.Core.Diagnostics.LogFileWriter? files = null) -> void
+HackerOs.Platform.Core.Diagnostics.KernelLog.ReadAll() -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Diagnostics.KernelLogEntry!>!
+HackerOs.Platform.Core.Diagnostics.KernelLog.SinceBoot.get -> System.TimeSpan
+HackerOs.Platform.Core.Diagnostics.KernelLog.Write(HackerOs.Platform.Core.Diagnostics.KernelLogLevel level, string! message) -> HackerOs.Platform.Core.Diagnostics.KernelLogEntry!
+HackerOs.Platform.Core.Diagnostics.KernelLog.Written -> System.Action<HackerOs.Platform.Core.Diagnostics.KernelLogEntry!>?
+HackerOs.Platform.Core.Diagnostics.KernelLogEntry
+HackerOs.Platform.Core.Diagnostics.KernelLogEntry.KernelLogEntry(long Sequence, System.TimeSpan SinceBoot, System.DateTimeOffset TimestampUtc, HackerOs.Platform.Core.Diagnostics.KernelLogLevel Level, string! Message) -> void
+HackerOs.Platform.Core.Diagnostics.KernelLogEntry.Level.get -> HackerOs.Platform.Core.Diagnostics.KernelLogLevel
+HackerOs.Platform.Core.Diagnostics.KernelLogEntry.Level.init -> void
+HackerOs.Platform.Core.Diagnostics.KernelLogEntry.Message.get -> string!
+HackerOs.Platform.Core.Diagnostics.KernelLogEntry.Message.init -> void
+HackerOs.Platform.Core.Diagnostics.KernelLogEntry.Sequence.get -> long
+HackerOs.Platform.Core.Diagnostics.KernelLogEntry.Sequence.init -> void
+HackerOs.Platform.Core.Diagnostics.KernelLogEntry.SinceBoot.get -> System.TimeSpan
+HackerOs.Platform.Core.Diagnostics.KernelLogEntry.SinceBoot.init -> void
+HackerOs.Platform.Core.Diagnostics.KernelLogEntry.TimestampUtc.get -> System.DateTimeOffset
+HackerOs.Platform.Core.Diagnostics.KernelLogEntry.TimestampUtc.init -> void
+HackerOs.Platform.Core.Diagnostics.KernelLogLevel
+HackerOs.Platform.Core.Diagnostics.KernelLogLevel.Alert = 1 -> HackerOs.Platform.Core.Diagnostics.KernelLogLevel
+HackerOs.Platform.Core.Diagnostics.KernelLogLevel.Critical = 2 -> HackerOs.Platform.Core.Diagnostics.KernelLogLevel
+HackerOs.Platform.Core.Diagnostics.KernelLogLevel.Debug = 7 -> HackerOs.Platform.Core.Diagnostics.KernelLogLevel
+HackerOs.Platform.Core.Diagnostics.KernelLogLevel.Emergency = 0 -> HackerOs.Platform.Core.Diagnostics.KernelLogLevel
+HackerOs.Platform.Core.Diagnostics.KernelLogLevel.Error = 3 -> HackerOs.Platform.Core.Diagnostics.KernelLogLevel
+HackerOs.Platform.Core.Diagnostics.KernelLogLevel.Info = 6 -> HackerOs.Platform.Core.Diagnostics.KernelLogLevel
+HackerOs.Platform.Core.Diagnostics.KernelLogLevel.Notice = 5 -> HackerOs.Platform.Core.Diagnostics.KernelLogLevel
+HackerOs.Platform.Core.Diagnostics.KernelLogLevel.Warning = 4 -> HackerOs.Platform.Core.Diagnostics.KernelLogLevel
+HackerOs.Platform.Core.FileSystem.Virtual.DevFileSystemProvider.DevFileSystemProvider(HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, System.Func<HackerOs.Platform.Core.Diagnostics.KernelLog?>? kernelLog, System.Func<System.Guid>? transactionIdFactory = null) -> void
+HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.OomKills.get -> System.Func<long>?
+HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.OomKills.init -> void
+HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.OomScores.get -> System.Func<HackerOs.Platform.Core.Processes.InMemoryProcessOomScoreTable?>?
+HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.OomScores.init -> void
+HackerOs.Platform.Core.Processes.BrowserRuntimeMemorySource
+HackerOs.Platform.Core.Processes.BrowserRuntimeMemorySource.BrowserRuntimeMemorySource(System.Func<HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus?>! workers, bool? includeMainThread = null, long? ceilingBytes = null) -> void
+HackerOs.Platform.Core.Processes.BrowserRuntimeMemorySource.Collect(string! runtimeId) -> void
+HackerOs.Platform.Core.Processes.BrowserRuntimeMemorySource.Read() -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Processes.RuntimeMemoryReading!>!
+HackerOs.Platform.Core.Processes.IOomNotifier
+HackerOs.Platform.Core.Processes.IOomNotifier.ProcessKilled(HackerOs.Simulation.Abstractions.Processes.ProcessRecord! process) -> void
+HackerOs.Platform.Core.Processes.IOomNotifier.RuntimeNearLimit(HackerOs.Platform.Core.Processes.RuntimeMemoryReading! runtime) -> void
+HackerOs.Platform.Core.Processes.IRuntimeMemorySource
+HackerOs.Platform.Core.Processes.IRuntimeMemorySource.Collect(string! runtimeId) -> void
+HackerOs.Platform.Core.Processes.IRuntimeMemorySource.Read() -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Processes.RuntimeMemoryReading!>!
+HackerOs.Platform.Core.Processes.InMemoryProcessManager.InMemoryProcessManager(HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, HackerOs.Simulation.Abstractions.Sessions.ISessionService! session, HackerOs.Simulation.Abstractions.Events.IEventBus! eventBus, int maxHistory, HackerOs.Platform.Core.Processes.InMemoryProcessEnvironmentTable? environments, HackerOs.Platform.Core.Processes.InMemoryProcessResourceLimitTable? limits, HackerOs.Platform.Core.Processes.InMemoryProcessFileDescriptorTable? descriptors = null, HackerOs.Platform.Core.Processes.InMemoryProcessOomScoreTable? oomScores = null) -> void
+HackerOs.Platform.Core.Processes.InMemoryProcessManager.OomScores.get -> HackerOs.Platform.Core.Processes.InMemoryProcessOomScoreTable!
+HackerOs.Platform.Core.Processes.InMemoryProcessOomScoreTable
+HackerOs.Platform.Core.Processes.InMemoryProcessOomScoreTable.GetOrDefault(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> int
+HackerOs.Platform.Core.Processes.InMemoryProcessOomScoreTable.InMemoryProcessOomScoreTable() -> void
+HackerOs.Platform.Core.Processes.InMemoryProcessOomScoreTable.TryGet(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, out int adjust) -> bool
+HackerOs.Platform.Core.Processes.InMemoryProcessOomScoreTable.TrySet(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, int value, bool privileged) -> HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult
+HackerOs.Platform.Core.Processes.MemorySettingsDocuments
+HackerOs.Platform.Core.Processes.NotificationQueueOomNotifier
+HackerOs.Platform.Core.Processes.NotificationQueueOomNotifier.NotificationQueueOomNotifier(HackerOs.Simulation.Abstractions.Notifications.INotificationQueue! notifications, HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, System.Func<HackerOs.Platform.Core.AppCatalog?>? catalog = null, System.Func<HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal?>? currentUser = null, System.Func<System.Globalization.CultureInfo!>? language = null) -> void
+HackerOs.Platform.Core.Processes.NotificationQueueOomNotifier.ProcessKilled(HackerOs.Simulation.Abstractions.Processes.ProcessRecord! process) -> void
+HackerOs.Platform.Core.Processes.NotificationQueueOomNotifier.RuntimeNearLimit(HackerOs.Platform.Core.Processes.RuntimeMemoryReading! runtime) -> void
+HackerOs.Platform.Core.Processes.OomKill
+HackerOs.Platform.Core.Processes.OomKill.Cause.get -> HackerOs.Platform.Core.Processes.OomKillCause
+HackerOs.Platform.Core.Processes.OomKill.Cause.init -> void
+HackerOs.Platform.Core.Processes.OomKill.OomKill(HackerOs.Simulation.Abstractions.Processes.ProcessId Pid, HackerOs.Platform.Core.Processes.OomKillCause Cause, long Score, string? RuntimeId) -> void
+HackerOs.Platform.Core.Processes.OomKill.Pid.get -> HackerOs.Simulation.Abstractions.Processes.ProcessId
+HackerOs.Platform.Core.Processes.OomKill.Pid.init -> void
+HackerOs.Platform.Core.Processes.OomKill.RuntimeId.get -> string?
+HackerOs.Platform.Core.Processes.OomKill.RuntimeId.init -> void
+HackerOs.Platform.Core.Processes.OomKill.Score.get -> long
+HackerOs.Platform.Core.Processes.OomKill.Score.init -> void
+HackerOs.Platform.Core.Processes.OomKillCause
+HackerOs.Platform.Core.Processes.OomKillCause.BrowserLimit = 1 -> HackerOs.Platform.Core.Processes.OomKillCause
+HackerOs.Platform.Core.Processes.OomKillCause.SystemMemory = 0 -> HackerOs.Platform.Core.Processes.OomKillCause
+HackerOs.Platform.Core.Processes.OomKiller
+HackerOs.Platform.Core.Processes.OomKiller.CheckNow() -> HackerOs.Platform.Core.Processes.OomKill?
+HackerOs.Platform.Core.Processes.OomKiller.Configure(HackerOs.Platform.Core.Processes.OomKillerSettings! settings) -> void
+HackerOs.Platform.Core.Processes.OomKiller.Dispose() -> void
+HackerOs.Platform.Core.Processes.OomKiller.Interval.get -> System.TimeSpan
+HackerOs.Platform.Core.Processes.OomKiller.IsActive.get -> bool
+HackerOs.Platform.Core.Processes.OomKiller.KillCount.get -> long
+HackerOs.Platform.Core.Processes.OomKiller.OomKiller(HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, System.Func<HackerOs.Simulation.Abstractions.Processes.IProcessManager!>! processManager, HackerOs.Platform.Core.Processes.SystemMemoryProbe! memory, System.Func<HackerOs.Platform.Core.Processes.InMemoryProcessOomScoreTable?>! oomScores, HackerOs.Platform.Core.Diagnostics.KernelLog! kernelLog, HackerOs.Platform.Core.Processes.IRuntimeMemorySource? runtimes = null, HackerOs.Platform.Core.Processes.IOomNotifier? notifier = null, System.TimeSpan? interval = null) -> void
+HackerOs.Platform.Core.Processes.OomKiller.Settings.get -> HackerOs.Platform.Core.Processes.OomKillerSettings!
+HackerOs.Platform.Core.Processes.OomKiller.Start() -> void
+HackerOs.Platform.Core.Processes.OomKillerSettings
+HackerOs.Platform.Core.Processes.OomKillerSettings.Enabled.get -> bool
+HackerOs.Platform.Core.Processes.OomKillerSettings.Enabled.init -> void
+HackerOs.Platform.Core.Processes.OomKillerSettings.MinFreePercent.get -> int
+HackerOs.Platform.Core.Processes.OomKillerSettings.MinFreePercent.init -> void
+HackerOs.Platform.Core.Processes.OomKillerSettings.OomKillerSettings(bool Enabled, int MinFreePercent) -> void
+HackerOs.Platform.Core.Processes.ProcessMemoryReading
+HackerOs.Platform.Core.Processes.ProcessMemoryReading.Layers.get -> HackerOs.Simulation.Abstractions.Processes.ProcessMemoryUsage?
+HackerOs.Platform.Core.Processes.ProcessMemoryReading.Layers.init -> void
+HackerOs.Platform.Core.Processes.ProcessMemoryReading.ProcessMemoryReading() -> void
+HackerOs.Platform.Core.Processes.ProcessMemoryReading.ProcessMemoryReading(long ResidentBytes, HackerOs.Simulation.Abstractions.Processes.ProcessMemoryUsage? Layers) -> void
+HackerOs.Platform.Core.Processes.ProcessMemoryReading.ResidentBytes.get -> long
+HackerOs.Platform.Core.Processes.ProcessMemoryReading.ResidentBytes.init -> void
+HackerOs.Platform.Core.Processes.RuntimeMemoryReading
+HackerOs.Platform.Core.Processes.RuntimeMemoryReading.CeilingBytes.get -> long
+HackerOs.Platform.Core.Processes.RuntimeMemoryReading.CeilingBytes.init -> void
+HackerOs.Platform.Core.Processes.RuntimeMemoryReading.Id.get -> string!
+HackerOs.Platform.Core.Processes.RuntimeMemoryReading.Id.init -> void
+HackerOs.Platform.Core.Processes.RuntimeMemoryReading.Name.get -> string!
+HackerOs.Platform.Core.Processes.RuntimeMemoryReading.Name.init -> void
+HackerOs.Platform.Core.Processes.RuntimeMemoryReading.ProcessIds.get -> System.Collections.Generic.IReadOnlyCollection<long>?
+HackerOs.Platform.Core.Processes.RuntimeMemoryReading.ProcessIds.init -> void
+HackerOs.Platform.Core.Processes.RuntimeMemoryReading.Ratio.get -> double
+HackerOs.Platform.Core.Processes.RuntimeMemoryReading.RuntimeMemoryReading(string! Id, string! Name, long UsedBytes, long CeilingBytes, System.Collections.Generic.IReadOnlyCollection<long>? ProcessIds) -> void
+HackerOs.Platform.Core.Processes.RuntimeMemoryReading.UsedBytes.get -> long
+HackerOs.Platform.Core.Processes.RuntimeMemoryReading.UsedBytes.init -> void
+HackerOs.Platform.Core.Processes.SystemMemoryProbe
+HackerOs.Platform.Core.Processes.SystemMemoryProbe.ActiveProcesses() -> System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Processes.ProcessRecord!>!
+HackerOs.Platform.Core.Processes.SystemMemoryProbe.IsMeasuring.get -> bool
+HackerOs.Platform.Core.Processes.SystemMemoryProbe.OomScore(long residentBytes, int adjust) -> long
+HackerOs.Platform.Core.Processes.SystemMemoryProbe.ReadProcess(HackerOs.Simulation.Abstractions.Processes.ProcessRecord! process, System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Processes.ProcessRecord!>? active = null) -> HackerOs.Platform.Core.Processes.ProcessMemoryReading
+HackerOs.Platform.Core.Processes.SystemMemoryProbe.ReadSystem(System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Processes.ProcessRecord!>? active = null) -> HackerOs.Platform.Core.Processes.SystemMemorySnapshot
+HackerOs.Platform.Core.Processes.SystemMemoryProbe.SystemMemoryProbe(System.Func<HackerOs.Simulation.Abstractions.Processes.IProcessManager!>! processManager, HackerOs.Simulation.Abstractions.Processes.IResourceSimulator! resources, HackerOs.Simulation.Abstractions.Processes.VirtualHardwareProfile! hardware, HackerOs.Simulation.Abstractions.Processes.IMemoryAccountant? accountant) -> void
+HackerOs.Platform.Core.Processes.SystemMemoryProbe.TotalBytes.get -> long
+HackerOs.Platform.Core.Processes.SystemMemorySnapshot
+HackerOs.Platform.Core.Processes.SystemMemorySnapshot.AvailableBytes.get -> long
+HackerOs.Platform.Core.Processes.SystemMemorySnapshot.IsMeasured.get -> bool
+HackerOs.Platform.Core.Processes.SystemMemorySnapshot.Measured.get -> HackerOs.Simulation.Abstractions.Processes.SystemMemoryUsage?
+HackerOs.Platform.Core.Processes.SystemMemorySnapshot.Measured.init -> void
+HackerOs.Platform.Core.Processes.SystemMemorySnapshot.SystemMemorySnapshot() -> void
+HackerOs.Platform.Core.Processes.SystemMemorySnapshot.SystemMemorySnapshot(long TotalBytes, long UsedBytes, HackerOs.Simulation.Abstractions.Processes.SystemMemoryUsage? Measured) -> void
+HackerOs.Platform.Core.Processes.SystemMemorySnapshot.TotalBytes.get -> long
+HackerOs.Platform.Core.Processes.SystemMemorySnapshot.TotalBytes.init -> void
+HackerOs.Platform.Core.Processes.SystemMemorySnapshot.UsedBytes.get -> long
+HackerOs.Platform.Core.Processes.SystemMemorySnapshot.UsedBytes.init -> void
+override HackerOs.Platform.Core.FileSystem.Virtual.ProcFileSystemProvider.WriteAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemWriteRequest! request, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemContentSource! content, HackerOs.Simulation.Abstractions.FileSystem.FileSystemAuthorizationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemMutationResult!>
+static HackerOs.Platform.Core.Diagnostics.KernelLog.FormatStamp(System.TimeSpan sinceBoot) -> string!
+static HackerOs.Platform.Core.Processes.MemorySettingsDocuments.DefaultContent.get -> string!
+static HackerOs.Platform.Core.Processes.MemorySettingsDocuments.Document.get -> HackerOs.Platform.Core.Settings.OsSettingsDocument!
+static HackerOs.Platform.Core.Processes.MemorySettingsDocuments.EnabledQualifiedKey.get -> string!
+static HackerOs.Platform.Core.Processes.MemorySettingsDocuments.MinFreePercentQualifiedKey.get -> string!
+static HackerOs.Platform.Core.Processes.MemorySettingsDocuments.ReadAsync(HackerOs.Platform.Core.Settings.IOsSettingsService! settings, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<(HackerOs.Platform.Core.Processes.OomKillerSettings! Settings, string? Warning)>
+static HackerOs.Platform.Core.Processes.MemorySettingsDocuments.Schema.get -> HackerOs.Simulation.Abstractions.Settings.SettingsSchema!
+static HackerOs.Platform.Core.Processes.MemorySettingsDocuments.ToSettings(HackerOs.Simulation.Abstractions.Settings.LayeredConfigSnapshot! snapshot, out string? warning) -> HackerOs.Platform.Core.Processes.OomKillerSettings!
+static HackerOs.Platform.Core.Processes.OomKillerSettings.Default.get -> HackerOs.Platform.Core.Processes.OomKillerSettings!
+static readonly HackerOs.Platform.Core.Diagnostics.LogFileTarget.KernLog -> HackerOs.Platform.Core.Diagnostics.LogFileTarget!
+static readonly HackerOs.Platform.Core.Processes.OomKiller.DefaultInterval -> System.TimeSpan
+HackerOs.Platform.Core.Processes.OomKiller.AttachAsync(HackerOs.Platform.Core.Settings.IOsSettingsService! settings, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.Processes.BrowserRuntimeMemorySource.ReleaseProcess(long pid) -> void
+HackerOs.Platform.Core.Processes.IRuntimeMemorySource.ReleaseProcess(long pid) -> void
+HackerOs.Platform.Core.Processes.IWorkerMemoryReclaimer
+HackerOs.Platform.Core.Processes.IWorkerMemoryReclaimer.RecycleAfterOomKill(long pid) -> bool

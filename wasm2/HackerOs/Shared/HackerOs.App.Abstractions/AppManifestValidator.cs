@@ -325,6 +325,11 @@ public static partial class AppManifestValidator
         }
 
         ValidateExecution(manifest, errors);
+        if (manifest.OomScoreAdj is < -1000 or > 1000)
+        {
+            AddError(errors, "manifest.oomScoreAdj.range", "oomScoreAdj", "oomScoreAdj must be between -1000 and 1000 (ADR 0126).");
+        }
+
         ValidateWindow(manifest, errors);
         ValidateWeb(manifest, errors);
         ValidateComponents(manifest, errors);

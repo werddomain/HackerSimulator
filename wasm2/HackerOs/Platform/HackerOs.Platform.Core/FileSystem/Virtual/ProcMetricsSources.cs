@@ -65,6 +65,16 @@ public sealed record ProcMetricsSources(
     /// any process of its app.
     /// </summary>
     public Func<HackerOs.Platform.Core.Execution.BackgroundJobService?>? BackgroundJobs { get; init; }
+
+    /// <summary>
+    /// Lazily resolves the <c>oom_score_adj</c> table (ADR 0126) behind <c>/proc/&lt;pid&gt;/oom_score</c>
+    /// and <c>oom_score_adj</c>; missing, the in-memory process manager's own table is used, else every
+    /// process reads <c>0</c>.
+    /// </summary>
+    public Func<HackerOs.Platform.Core.Processes.InMemoryProcessOomScoreTable?>? OomScores { get; init; }
+
+    /// <summary>Gets the number of OOM kills since boot (ADR 0126), the <c>oom_kill</c> line of <c>/proc/vmstat</c>; missing, <c>0</c>.</summary>
+    public Func<long>? OomKills { get; init; }
 }
 
 /// <summary>One line of <c>/proc/mounts</c>: what is mounted where, with which type and options.</summary>

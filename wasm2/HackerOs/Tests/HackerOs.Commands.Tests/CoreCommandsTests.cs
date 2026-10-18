@@ -6,6 +6,7 @@ using HackerOs.AppSdk;
 using HackerOs.Commands.Ausearch;
 using HackerOs.Commands.Cat;
 using HackerOs.Commands.Cd;
+using HackerOs.Commands.Dmesg;
 using HackerOs.Commands.Echo;
 using HackerOs.Commands.Exit;
 using HackerOs.Commands.Ls;
@@ -132,6 +133,48 @@ public sealed class CoreCommandsTests
 
         Assert.Equal(1, exitCode);
         Assert.Equal("cd: no shell session" + Environment.NewLine, stderr.ToString());
+    }
+
+    [Fact]
+    public async Task DmesgCommand_prints_the_kernel_ring_buffer_with_linux_stamps_levels_and_filters()
+    {
+        DmesgCommand command = new(CreateManifest("dmesg", "org.hackeros.cmd.dmesg"));
+        const string kmsg =
+            "6,0,1200000,-;oom-killer: enabled, min-free-percent=5\n"
+            + "6,1,12500000,-;oom-kill:constraint=CONSTRAINT_NONE,task=stress,pid=42,uid=1000\n"
+            + "3,2,12500100,-;Out of memory: Killed process 42 (stress) total-vm:901120kB\n"
+            + "not a record\n";
+        void Seed(TestAppFileSystemGateway files)
+        {
+            files.AddDirectory("/dev");
+            files.AddFile("/dev/kmsg", Encoding.UTF8.GetBytes(kmsg));
+        }
+
+        async Task<(int Code, string Out, string Err)> RunAsync(params string[] arguments)
+        {
+            using StringWriter stdout = new();
+            using StringWriter stderr = new();
+            using StringReader stdin = new(string.Empty);
+            TerminalExecutionContext context = CreateContext(arguments, stdout, stderr, stdin, "/", seed: Seed);
+            using IDisposable scope = HackExecutionContext.Enter(context.App);
+            int code = await command.ExecuteAsync(context, CancellationToken.None);
+            return (code, stdout.ToString(), stderr.ToString());
+        }
+
+        (int code, string all, _) = await RunAsync();
+        Assert.Equal(0, code);
+        Assert.Equal(
+            "[    1.200000] oom-killer: enabled, min-free-percent=5\n"
+            + "[   12.500000] oom-kill:constraint=CONSTRAINT_NONE,task=stress,pid=42,uid=1000\n"
+            + "[   12.500100] Out of memory: Killed process 42 (stress) total-vm:901120kB\n",
+            all);
+
+        (_, string errors, _) = await RunAsync("-x", "-l", "err");
+        Assert.Equal("kern  :err   : [   12.500100] Out of memory: Killed process 42 (stress) total-vm:901120kB\n", errors);
+
+        (int refused, _, string message) = await RunAsync("-l", "loud");
+        Assert.Equal(1, refused);
+        Assert.Contains("unknown level 'loud'", message, StringComparison.Ordinal);
     }
 
     [Fact]

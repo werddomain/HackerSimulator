@@ -78,6 +78,15 @@ public abstract class AppDefinition
     /// <summary>Gets whether a second launch focuses the running instance (window apps only).</summary>
     public virtual bool SingleInstancePerUser => false;
 
+    /// <summary>
+    /// Gets the <c>oom_score_adj</c> the app's processes start with (ADR 0126, section 4), from
+    /// <c>-1000</c> to <c>1000</c>, or <see langword="null"/> for the OS default (<c>0</c>, <c>-500</c>
+    /// for a system service). A higher value makes the app the OOM killer's first choice. A negative
+    /// value shields it and is reserved to system apps: the build of a host that references a
+    /// non-system app declaring one fails with <c>HOSAPP0024</c>. Added in App SDK 1.2.
+    /// </summary>
+    public virtual int? OomScoreAdjust => null;
+
     /// <summary>Gets whether a service app starts on its own (at login, or at boot with <see cref="ServiceStartup"/>).</summary>
     public virtual bool AutoStart => false;
 

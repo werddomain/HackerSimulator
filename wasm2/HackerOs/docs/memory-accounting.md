@@ -20,8 +20,11 @@ code des apps** :
 | Allocations | `GC.GetAllocatedBytesForCurrentThread()` lu à chaque changement de contexte | exacte | `HackAllocBytes` |
 | Résidente | tas réel réparti après chaque GC au prorata des allocations récentes, avec décroissance exponentielle | estimation | `RssAnon` |
 
-`VmRSS = RssAnon + RssFile + VmData`. **Mesure seulement** : aucune limite,
-aucun OOM killer ; dépasser `MemTotal` ne fait que saturer les graphiques.
+`VmRSS = RssAnon + RssFile + VmData`. La mesure ne limite rien par elle-même :
+la limite `rss` par processus vient de l'ADR 0125
+([`process-limits.md`](process-limits.md)) et l'OOM killer, **désactivé par
+défaut**, de l'ADR 0126 (qui remplace l'ADR 0068 §3) et de l'ADR 0142
+([`oom-killer.md`](oom-killer.md)) ; il n'agit que si la mémoire est mesurée.
 
 Mesure coupée (au build par `HackerOsMemoryAccounting=false`, ou par
 `HackerOs:ResourceAccounting:Memory:Enabled=false`) : comportement exact

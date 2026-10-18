@@ -82,7 +82,9 @@ public static class AppDefinitionMapper
                     [.. urls.Select(WebAppUrls.Normalize)],
                     // ADR 0084: omitted without a Blazor root, so MVC-only sites keep their bytes.
                     blazorRoot is null ? null : new WebBlazorManifest(AssemblyFileName(blazorRoot), TypeName(blazorRoot)))
-                : null
+                : null,
+            // ADR 0126: omitted when undeclared, so manifests of apps using the default keep their bytes.
+            OomScoreAdj = definition.OomScoreAdjust
         };
     }
 

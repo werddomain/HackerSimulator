@@ -15,6 +15,10 @@
 #   ecosystem-build-off     published with -p:HackerOsCpuAccounting=false -p:HackerOsMemoryAccounting=false
 #   ecosystem-settings-off  default publish, wwwroot/appsettings.json switching both measurements off
 #   ecosystem-limits-off    default publish, wwwroot/appsettings.json switching the process limits off (ADR 0125)
+#   ecosystem-oom           default publish, wwwroot/appsettings.json lowering the simulated MemTotal to
+#                           OOM_MEMORY_MIB (512 by default)
+#                           (HackerOs:Hardware:MemoryMiB); the smoke test turns the OOM killer on with sudo,
+#                           runs stress --vm and expects the kill in dmesg (ADR 0126)
 #   test-host               test/test (Blazor Web App, InteractiveWebAssembly)
 #   server                  Server/HackerOs.Server (serves the Ecosystem's OS in WebAssembly and its API, ADR 0130;
 #                           the OS must connect to it by itself, ADR 0134)
@@ -45,7 +49,7 @@ while [[ $# -gt 0 ]]; do
         --skip-build) SKIP_BUILD=1 ;;
         --keep-artifacts) KEEP=1 ;;
         --only) ONLY="${2:-}"; shift ;;
-        -h|--help) sed -n '2,28p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,33p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "unknown option: $1 (see --help)" >&2; exit 2 ;;
     esac
     shift
@@ -122,9 +126,10 @@ wait_ready() {
 # run_smoke NAME URL [CPU_SOURCE MEM_SOURCE] — runs the Playwright suite against a running host.
 # A run whose name ends in "-limits-off" expects the ADR 0125 limits off.
 run_smoke() {
-    local name="$1" url="$2" cpu="${3:-}" mem="${4:-}" logfile="$LOGS/$1.smoke.log" limits=on
+    local name="$1" url="$2" cpu="${3:-}" mem="${4:-}" logfile="$LOGS/$1.smoke.log" limits=on oom=off
     [[ "$name" == *-limits-off ]] && limits=off
-    HACKEROS_SMOKE_URL="$url" HACKEROS_SMOKE_HOST="$name" HACKEROS_SMOKE_EXPECT_LIMITS="$limits" \
+    [[ "$name" == *-oom ]] && oom=on
+    HACKEROS_SMOKE_URL="$url" HACKEROS_SMOKE_HOST="$name" HACKEROS_SMOKE_EXPECT_LIMITS="$limits" HACKEROS_SMOKE_EXPECT_OOM="$oom" \
     HACKEROS_SMOKE_EXPECT_CPU_SOURCE="$cpu" HACKEROS_SMOKE_EXPECT_MEM_SOURCE="$mem" \
     HACKEROS_SMOKE_ARTIFACTS="$OUT/screenshots" \
         dotnet test "$SMOKE_PROJECT" --no-build -c Debug --logger "console;verbosity=detailed" >"$logfile" 2>&1
@@ -220,7 +225,7 @@ if [[ $SKIP_BUILD -eq 0 ]]; then
     done
 fi
 
-if wanted ecosystem || wanted ecosystem-settings-off || wanted ecosystem-limits-off; then
+if wanted ecosystem || wanted ecosystem-settings-off || wanted ecosystem-limits-off || wanted ecosystem-oom; then
     build_step "publish ecosystem" "$LOGS/publish-ecosystem.log" \
         dotnet publish OS/HackerOs.Ecosystem -c Release -o "$OUT/publish/ecosystem" || true
 fi
@@ -297,6 +302,28 @@ with open(path, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
 PY
             serve_published ecosystem-limits-off "$off" "$DEFAULT_SOURCE" "$DEFAULT_SOURCE"
+        fi
+    fi
+
+    # ADR 0126: a machine with little memory, so the OOM killer has something to do.
+    if wanted ecosystem-oom; then
+        settings="$OUT/publish/ecosystem/wwwroot/appsettings.json"
+        if [[ ! -f "$settings" ]] || ! grep -q '"ResourceAccounting"' "$settings"; then
+            record ecosystem-oom SKIP "no HackerOs:ResourceAccounting in appsettings.json (memory is not measured)"
+        else
+            oom="$OUT/publish/ecosystem-oom"
+            rm -rf "$oom" && cp -r "$OUT/publish/ecosystem" "$oom"
+            rm -f "$oom/wwwroot/appsettings.json.br" "$oom/wwwroot/appsettings.json.gz"
+            python3 - "$oom/wwwroot/appsettings.json" "${OOM_MEMORY_MIB:-512}" <<'PY'
+import json, sys
+path, mebibytes = sys.argv[1], int(sys.argv[2])
+with open(path, encoding="utf-8-sig") as f:
+    data = json.load(f)
+data.setdefault("HackerOs", {}).setdefault("Hardware", {})["MemoryMiB"] = mebibytes
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+PY
+            serve_published ecosystem-oom "$oom" "$DEFAULT_SOURCE" "$DEFAULT_SOURCE"
         fi
     fi
 

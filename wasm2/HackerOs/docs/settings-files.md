@@ -20,6 +20,7 @@ migration, en lecture seule.
 | Réglages de l'OS (apparence, interface, menu Démarrer) | `/etc/hackeros/<document>.config` | `~/.config/hackeros/<document>.config` |
 | Politique (`policy.config`) | `/etc/hackeros/policy.config` | aucune (document `SystemOnly`) |
 | Politique des capacités dangereuses (`security.config`, ADR 0049) | `/etc/hackeros/security.config` | aucune (document `SystemOnly`) |
+| OOM killer (`[oom-killer]` : `enabled=false`, `min-free-percent=5`, ADR 0126, voir [`oom-killer.md`](oom-killer.md)) | `/etc/hackeros/memory.config` | aucune (couche système seulement) |
 | Décisions sur les capacités dangereuses (ADR 0049) | `/etc/hackeros/app-permissions.config` (`allow`/`deny`) | `~/.config/hackeros/app-permissions.config` (`deny` seulement) |
 | Accessibilité (`highContrast`, `textScale`, `reducedMotion`, ADR 0105, voir [`accessibility.md`](accessibility.md)) | `/etc/hackeros/accessibility.config` (aussi lu par l'écran de connexion) | `~/.config/hackeros/accessibility.config` |
 | Associations de fichiers | `/etc/hackeros/file-associations.json` | `~/.config/hackeros/file-associations.json` (même schéma, lu avant le fichier de la machine, ADR 0121, [`user-file-associations.md`](user-file-associations.md)) |

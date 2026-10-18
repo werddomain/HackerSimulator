@@ -184,6 +184,9 @@ public static class EcosystemServiceCollectionExtensions
         // Optional measured CPU and memory (ADR 0066): AddHackerOsResourceAccounting, called by the
         // host before this method, may already have registered them. Otherwise both measurements are
         // off and every per-process figure stays simulated, exactly as before phase 5.
+        // The simulated machine (ADR 0057): HackerOs:Hardware, registered by the host's
+        // AddHackerOsHardware; a host that does not gets the default profile.
+        services.TryAddSingleton(VirtualHardwareProfile.Default);
         services.TryAddSingleton(ResourceAccountingPlan.Disabled);
         services.TryAddSingleton<ICpuTimeAccountant>(NullCpuTimeAccountant.Instance);
         services.TryAddSingleton<IMemoryAccountant>(NullMemoryAccountant.Instance);
@@ -196,7 +199,7 @@ public static class EcosystemServiceCollectionExtensions
             AppCatalog catalog = provider.GetRequiredService<AppCatalog>();
             // System time: system services, and processes the catalog does not know (OS-owned).
             return new CpuTimeAccounting(
-                VirtualHardwareProfile.Default,
+                provider.GetRequiredService<VirtualHardwareProfile>(),
                 process => !catalog.Manifests.ContainsKey(process.AppId)
                     || (process.Kind == AppKind.Service && catalog.IsSystemApp(process.AppId)),
                 CpuAccountant(provider),
@@ -222,7 +225,7 @@ public static class EcosystemServiceCollectionExtensions
                 new FileSystemMount(ProcFileSystemProvider.DefaultMountPath, new ProcFileSystemProvider(
                     () => provider.GetRequiredService<IProcessManager>(),
                     provider.GetRequiredService<IResourceSimulator>(),
-                    VirtualHardwareProfile.Default,
+                    provider.GetRequiredService<VirtualHardwareProfile>(),
                     provider.GetRequiredService<ISimulationClock>(),
                     process => provider.GetRequiredService<ISessionService>().CurrentPrincipal is { } principal
                         && principal.UserId == process.UserId
@@ -246,10 +249,15 @@ public static class EcosystemServiceCollectionExtensions
                         ResourceLimits = () => provider.GetRequiredService<IProcessResourceLimitTable>(),
                         FileDescriptors = () => provider.GetRequiredService<IProcessFileDescriptorTable>(),
                         // ADR 0128: Job and Host of a background task's /proc/<pid>/status.
-                        BackgroundJobs = () => provider.GetService<BackgroundJobService>()
+                        BackgroundJobs = () => provider.GetService<BackgroundJobService>(),
+                        // ADR 0126: /proc/<pid>/oom_score(_adj) and oom_kill of /proc/vmstat.
+                        OomScores = () => provider.GetService<InMemoryProcessOomScoreTable>(),
+                        OomKills = () => provider.GetService<OomKiller>()?.KillCount ?? 0
                     })),
+                // ADR 0126: /dev/kmsg is the kernel ring buffer that dmesg reads.
                 new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
-                    provider.GetRequiredService<ISimulationClock>()))
+                    provider.GetRequiredService<ISimulationClock>(),
+                    () => provider.GetService<KernelLog>()))
             ]));
         // Depends on IFileSystemMountRouter, which is Scoped (see above) — see this file's
         // IJSRuntime scoping note.
@@ -518,6 +526,31 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<IProcessResourceLimitTable>(),
             CpuAccountant(provider),
             MemoryAccountant(provider)));
+        // The OOM killer (ADR 0126): oom_score_adj per process, the kernel ring buffer behind
+        // /dev/kmsg and kern.log, and the killer itself, configured from /etc/hackeros/memory.config
+        // and started by EcosystemBootCoordinator once settings exist. Off by default; on, it acts
+        // only where memory is measured, plus the guard against the browser's real memory limit.
+        services.AddScoped<InMemoryProcessOomScoreTable>();
+        services.AddScoped<KernelLog>(provider => new KernelLog(
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetService<LogFileWriter>()));
+        services.AddScoped<OomKiller>(provider => new OomKiller(
+            provider.GetRequiredService<ISimulationClock>(),
+            () => provider.GetRequiredService<IProcessManager>(),
+            new SystemMemoryProbe(
+                () => provider.GetRequiredService<IProcessManager>(),
+                provider.GetRequiredService<IResourceSimulator>(),
+                provider.GetRequiredService<VirtualHardwareProfile>(),
+                MemoryAccountant(provider)),
+            () => provider.GetService<InMemoryProcessOomScoreTable>(),
+            provider.GetRequiredService<KernelLog>(),
+            new BrowserRuntimeMemorySource(() => provider.GetService<IWorkerPoolStatus>()),
+            new NotificationQueueOomNotifier(
+                provider.GetRequiredService<INotificationQueue>(),
+                provider.GetRequiredService<ISimulationClock>(),
+                () => provider.GetService<AppCatalog>(),
+                () => provider.GetRequiredService<ISessionService>().CurrentPrincipal,
+                () => provider.GetRequiredService<HackerOs.Platform.Core.Globalization.SessionLocaleService>().Culture)));
         services.AddScoped<IProcessManager>(provider =>
         {
             InMemoryProcessManager manager = new(
@@ -527,7 +560,8 @@ public static class EcosystemServiceCollectionExtensions
                 200,
                 provider.GetRequiredService<InMemoryProcessEnvironmentTable>(),
                 provider.GetRequiredService<InMemoryProcessResourceLimitTable>(),
-                provider.GetRequiredService<InMemoryProcessFileDescriptorTable>());
+                provider.GetRequiredService<InMemoryProcessFileDescriptorTable>(),
+                provider.GetRequiredService<InMemoryProcessOomScoreTable>());
             // The limit checks start with the process table, like the kernel's timer tick.
             provider.GetRequiredService<ResourceLimitEnforcer>().Start();
             return manager;
@@ -563,7 +597,7 @@ public static class EcosystemServiceCollectionExtensions
         services.AddSingleton<IResourceSimulator>(provider => new DeterministicResourceSimulator(
             provider.GetRequiredService<ISimulationClock>(),
             provider.GetRequiredService<ISimulationRandom>(),
-            VirtualHardwareProfile.Default));
+            provider.GetRequiredService<VirtualHardwareProfile>()));
         // The scheduler tick: samples every process once per simulated second (ADR 0057), started
         // by the boot sequence next to the clock driver.
         services.AddScoped<ResourceSamplingService>(provider => new ResourceSamplingService(
@@ -659,7 +693,7 @@ public static class EcosystemServiceCollectionExtensions
                 provider.GetRequiredService<IProcessIoAccounting>(),
                 new AppDriveGateway(
                     () => provider.GetRequiredService<IFileSystemMountRouter>(),
-                    VirtualHardwareProfile.Default,
+                    provider.GetRequiredService<VirtualHardwareProfile>(),
                     provider.GetRequiredService<IStorageUsageProvider>()),
                 // ADR 0068: write-stream buffers and sockets in flight, charged to each app's process.
                 provider.GetRequiredService<IKernelMemoryLedger>()),

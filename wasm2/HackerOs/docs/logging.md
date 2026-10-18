@@ -11,6 +11,7 @@ Error Log Viewer les lisent avec les droits de fichier ordinaires.
 | Fichier | Contenu | Mode |
 |---|---|---|
 | `/var/log/syslog` | `ILogger<T>` de la plateforme, démarrage (`kernel`), pannes de l'hôte (`ecosystem-host`), lignes perdues (`logging`) | `system:system 0644` |
+| `/var/log/kern.log` | Journal du noyau (`KernelLog`) : OOM killer, garde de la mémoire du navigateur ; aussi copié dans `syslog` et lu par `dmesg` depuis `/dev/kmsg` (ADR 0126 §3, [`oom-killer.md`](oom-killer.md)) | `system:system 0644` |
 | `/var/log/auth.log` | `IAuditLog` (`session.login`, `session.elevate`, `capability.*` de l'ADR 0049…) | `system:system 0600` |
 | `/var/log/audit.log` | Audit des créations, écritures, renommages, copies, suppressions et `chmod` sous `/etc`, `/bin` et `/var` (sauf `/var/log`), au format d'`auditd` (ADR 0100 §3, [`sensitive-settings.md`](sensitive-settings.md)) ; `ausearch` le filtre | `system:system 0600` |
 | `/var/log/apps/<appId>.log` | `IAppExecutionContext.Logging` de l'app | `system:system 0644` |

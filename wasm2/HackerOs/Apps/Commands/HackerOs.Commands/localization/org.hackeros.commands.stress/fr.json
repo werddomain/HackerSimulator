@@ -1,5 +1,5 @@
 {
   "name": "stress",
-  "description": "Impose une charge CPU au système",
-  "terminalUsage": "stress [-c N] [-t SECONDES] [--yield]"
+  "description": "Impose une charge CPU ou mémoire au système",
+  "terminalUsage": "stress [-c N] [-m N] [--vm-bytes B] [--vm-keep] [-t SECONDES] [--yield]"
 }

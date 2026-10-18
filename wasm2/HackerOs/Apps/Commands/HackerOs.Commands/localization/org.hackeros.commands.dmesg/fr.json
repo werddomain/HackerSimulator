@@ -1,0 +1,5 @@
+{
+  "name": "dmesg",
+  "description": "Affiche le tampon circulaire du noyau",
+  "terminalUsage": "dmesg [-T] [-x] [-l NIVEAU[,NIVEAU...]]"
+}

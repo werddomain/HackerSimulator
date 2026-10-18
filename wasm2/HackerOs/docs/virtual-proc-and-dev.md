@@ -55,9 +55,12 @@ Contrats touchés :
 | `/proc/<pid>/stat` | fichier `0444` | une ligne au format `proc(5)`, 52 champs ; `utime` et `stime` (14 et 15) en `USER_HZ`, mesurés quand la mesure CPU est active, sinon `utime` reconstruit depuis le simulateur (phase 5, ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)) |
 | `/proc/<pid>/limits` | fichier `0444` | tableau de `proc(5)` (`Max cpu time`, `Max resident set`, `Max open files`, `Max processes` et les autres lignes de Linux en `unlimited`), puis `# enforcement: strict (worker)`, `best-effort (main thread)` ou `off (HackerOs:ResourceLimits:Enabled=false)` et, sans mesure, `# cpu, rss: inactive (not measured)` (ADR 0125 et 0139, [`process-limits.md`](process-limits.md)) |
 | `/proc/<pid>/fd/` | dossier `0500` | un lien par descripteur ouvert : `0`, `1`, `2` vers `/dev/tty` (terminal) ou `/dev/null`, puis le fichier lu ou écrit (`exec/2`) |
+| `/proc/<pid>/oom_score` | fichier `0444` | `VmRSS × 1000 / MemTotal + oom_score_adj`, borné à `[0, 2000]` (ADR 0126, [`oom-killer.md`](oom-killer.md)) |
+| `/proc/<pid>/oom_score_adj` | fichier `0644` | `-1000` à `1000` ; le propriétaire monte la valeur, descendre sous le plancher demande `sudo` (ADR 0142 §2) |
 | `/proc/<pid>/io` | fichier `0400` | `rchar`, `wchar`, `syscr`, `syscw`, `read_bytes`, `write_bytes`, `cancelled_write_bytes` (phase 4, ADR 0057) |
 | `/proc/self` | lien `0777` | `/proc/<pid de l'appelant>`, absent sans processus |
 | `/proc/meminfo` | fichier `0444` | `MemTotal`, `MemFree`, `MemAvailable` en kB ; avec la mémoire mesurée (ADR 0068), aussi `AnonPages`, `Mapped`, `Slab` |
+| `/proc/vmstat` | fichier `0444` | `nr_free_pages`, puis `nr_anon_pages`, `nr_mapped`, `nr_slab_unreclaimable` avec la mémoire mesurée, puis `oom_kill` (`exec/3`, ADR 0142 §7) |
 | `/proc/cpuinfo` | fichier `0444` | un bloc par cœur (`ceil(CpuCapacity)`) |
 | `/proc/uptime` | fichier `0444` | `<secondes depuis le démarrage> <secondes d'inactivité>` |
 | `/proc/loadavg` | fichier `0444` | `<1 min> <5 min> <15 min> <actifs>/<total> <dernier pid>` |
@@ -195,6 +198,7 @@ Un PID invisible répond `NotFound`.
 | `/dev/null` | fin de flux immédiate | absorbée |
 | `/dev/zero` | flux infini de `0x00` | absorbée |
 | `/dev/random`, `/dev/urandom` | flux infini de `RandomNumberGenerator` | absorbée |
+| `/dev/kmsg` (`0644`, seulement si l'hôte fournit le journal du noyau) | lignes du noyau de la session, `prio,seq,usec,-;message` ; lu par `dmesg` | root seulement : ligne ajoutée au journal (`exec/3`, ADR 0142 §7) |
 
 Les flux infinis rendent au plus 4 Kio par lecture et respectent l'annulation :
 un lecteur borne lui-même sa lecture. En lecture asynchrone, ils cèdent la main

@@ -22,7 +22,7 @@ namespace HackerOs.Platform.WorkerHost.Host;
 /// <para><b>Escalation step 4.</b> A worker that does not confirm a kill is terminated: its other
 /// processes end as killed, each with a syslog line, and the ready worker takes its core.</para>
 /// </remarks>
-public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
+public sealed class WorkerPool : IWorkerPoolStatus, HackerOs.Platform.Core.Processes.IWorkerMemoryReclaimer, IAsyncDisposable
 {
     private readonly IWebWorkerRuntime _runtime;
     private readonly ISimulationClock _clock;
@@ -101,7 +101,10 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
         {
             return [.. _workers.OrderBy(static worker => worker.Id).Select(static worker => new WorkerSnapshot(
                 worker.Id, worker.Role, worker.State, worker.Core, worker.ProcessIds,
-                worker.RuntimeMemoryBytes, worker.StartedAtUtc, worker.HeartbeatAge, worker.BusyTime + worker.StalledTime))];
+                worker.RuntimeMemoryBytes, worker.StartedAtUtc, worker.HeartbeatAge, worker.BusyTime + worker.StalledTime)
+            {
+                RuntimeHeapBytes = worker.RuntimeHeapBytes
+            })];
         }
     }
 
@@ -374,9 +377,29 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
 
     internal void OnWorkerReady(WorkerConnection worker) => Signal();
 
+    /// <inheritdoc />
+    public bool RecycleAfterOomKill(long pid)
+    {
+        if (FindHost(pid) is not { } worker)
+        {
+            return false;
+        }
+
+        worker.RecycleWhenIdle = true;
+        Log($"worker {worker.Id}: hosts OOM victim pid {pid}, replaced once idle to give its memory back", pid);
+        return true;
+    }
+
     /// <summary>A process placed on <paramref name="worker"/> ended.</summary>
     internal void OnProcessEnded(WorkerConnection worker)
     {
+        if (worker.RecycleWhenIdle && worker.Role is WorkerRole.Pool or WorkerRole.Overflow && worker.ProcessCount == 0 && !worker.IsTerminated)
+        {
+            // ADR 0142: the OOM victim is gone; a new worker gives its memory back to the browser.
+            Retire(worker, $"killed: worker {worker.Id} recycled after an OOM kill", triggerPid: null);
+            return;
+        }
+
         if (worker.Role is WorkerRole.Dedicated or WorkerRole.Web && worker.ProcessCount == 0)
         {
             // ADR 0070, section 3: a dedicated process that ends frees its worker; the web worker

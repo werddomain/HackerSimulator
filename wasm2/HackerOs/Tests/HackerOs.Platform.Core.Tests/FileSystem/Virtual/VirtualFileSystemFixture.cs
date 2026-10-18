@@ -41,7 +41,8 @@ internal sealed class VirtualFileSystemFixture
             Clock,
             environments: () => Environments,
             metrics: new ProcMetricsSources(Cpu, ProcessIo, Disk, Network, () => Router!, cpuAccountant, memoryAccountant));
-        Dev = new DevFileSystemProvider(Clock);
+        KernelLog = new HackerOs.Platform.Core.Diagnostics.KernelLog(Clock);
+        Dev = new DevFileSystemProvider(Clock, () => KernelLog);
         Router = new FileSystemMountRouter(Root,
         [
             new FileSystemMount(ProcFileSystemProvider.DefaultMountPath, Proc),
@@ -79,6 +80,9 @@ internal sealed class VirtualFileSystemFixture
     internal ProcFileSystemProvider Proc { get; }
 
     internal DevFileSystemProvider Dev { get; }
+
+    /// <summary>The kernel ring buffer behind <c>/dev/kmsg</c> (ADR 0126).</summary>
+    internal HackerOs.Platform.Core.Diagnostics.KernelLog KernelLog { get; }
 
     internal FileSystemMountRouter Router { get; }
 

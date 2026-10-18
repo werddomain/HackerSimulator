@@ -78,6 +78,7 @@ public static class BuiltInApplicationsAggregator
         if (diagnostics.Count == 0)
         {
             diagnostics.AddRange(FindDuplicateCommands(applications.Select(item => item.Manifest)));
+            diagnostics.AddRange(FindNegativeOomScoreAdjust(applications));
         }
 
         return diagnostics.Count > 0
@@ -117,6 +118,25 @@ public static class BuiltInApplicationsAggregator
         }
 
         return diagnostics;
+    }
+
+    /// <summary>
+    /// ADR 0126, section 4, at build: a negative <c>oomScoreAdj</c> shields an app from the OOM killer,
+    /// a right reserved to system apps. One <c>HOSAPP0024</c> per non-system app declaring one, in
+    /// app id order.
+    /// </summary>
+    /// <param name="applications">The host's apps with their system flag.</param>
+    /// <returns>The diagnostics, empty when no non-system app declares a negative value.</returns>
+    public static IReadOnlyList<GeneratorDiagnostic> FindNegativeOomScoreAdjust(IEnumerable<BuiltInApplication> applications)
+    {
+        ArgumentNullException.ThrowIfNull(applications);
+        return [.. applications
+            .Where(static item => !item.IsSystemApp && item.Manifest.OomScoreAdj < 0)
+            .OrderBy(static item => item.Manifest.Id, StringComparer.Ordinal)
+            .Select(static item => new GeneratorDiagnostic(
+                GeneratorCodes.NegativeOomScoreAdjust,
+                item.Manifest.Id,
+                $"oomScoreAdj {item.Manifest.OomScoreAdj} is negative: only a system app (IsSystemApp=\"true\" on the host's ProjectReference) may lower its OOM score."))];
     }
 
     /// <summary>

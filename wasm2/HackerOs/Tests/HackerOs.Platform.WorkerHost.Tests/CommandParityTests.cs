@@ -28,6 +28,7 @@ public sealed class CommandParityTests
         new("localectl", ["localectl", "localectl list-locales", "localectl set-locale LANG=xx_YY.UTF-8", "localectl set-locale LANG=fr_FR.UTF-8", "localectl bogus"]),
         new("hackbackup", ["hackbackup", "hackbackup create", "hackbackup restore --bogus"]),
         new("diff", ["diff notes.txt notes.txt", "diff -u notes.txt numbers.txt"]),
+        new("dmesg", ["dmesg -l emerg", "dmesg -l nosuch", "dmesg --bogus"]),
         new("dirname", ["dirname /a/b/c /d"]),
         new("du", ["du -s docs", "du -a -h docs"]),
         new("echo", ["echo hello world", "echo -n no newline"]),
@@ -64,7 +65,7 @@ public sealed class CommandParityTests
         new("seq", ["seq 5", "seq -s , 2 2 10", "seq -w 8 11"]),
         new("sleep", ["sleep 2 && echo awake"], UsesClock: true),
         new("sort", ["sort words.txt", "sort -r -u words.txt", "sort -n numbers.txt", "sort -t, -k2 table.csv"]),
-        new("stress", ["stress -c 1 -t 0", "stress --yield -t 0", "stress --bogus"]),
+        new("stress", ["stress -c 1 -t 0", "stress --yield -t 0", "stress --vm 1 --vm-bytes 1M --vm-keep -t 0", "stress --vm 1 --vm-bytes 12Q", "stress --bogus"]),
         new("sudo", ["sudo echo hi"]),
         new("systemctl", ["systemctl list-units", "systemctl status org.test.ticker", "systemctl is-active org.test.ticker"]),
         new("tail", ["tail -n 2 notes.txt", "tail -c 6 notes.txt", "seq 20 | tail -n 3"]),
@@ -111,7 +112,7 @@ public sealed class CommandParityTests
             .Where(name => !covered.Contains(name))];
 
         Assert.Empty(missing);
-        Assert.Equal(71, OsFixture.BuiltInCommands.Count);
+        Assert.Equal(72, OsFixture.BuiltInCommands.Count);
     }
 
     [Fact]

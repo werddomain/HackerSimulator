@@ -237,8 +237,8 @@ et les conséquences de chaque choix ; réponses du 2026-10-18 (ADR 0134).
 ### Limites et OOM killer
 - [x] Contrat de limites, `limits.conf`, héritage, `ulimit`, `prlimit`, `/proc/<pid>/limits` (`exec/2-process-limits`, ADR 0139).
 - [x] `SIGXCPU`, limite mémoire, `EMFILE`/`EAGAIN` (`exec/2-process-limits`, ADR 0139).
-- [ ] `oom_score`, `oom_score_adj`, choix et mise à mort, journal du noyau, `dmesg`.
-- [ ] Garde du vrai navigateur.
+- [x] `oom_score`, `oom_score_adj`, choix et mise à mort, journal du noyau, `dmesg` (`exec/3-oom-killer`, ADR 0142).
+- [x] Garde du vrai navigateur (`exec/3-oom-killer`, ADR 0142).
 
 ### Fenêtres
 - [ ] « (Not responding) » et « Attendre / Forcer à quitter », `nice`/`renice`.

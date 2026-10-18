@@ -489,7 +489,9 @@ public sealed class AppLifecycleOrchestrator
             {
                 ResourceLimits = sessionLimits,
                 // ADR 0125 section 5: an elevated root is not held by nproc (CAP_SYS_RESOURCE).
-                ResourceLimitExempt = isRootElevated
+                ResourceLimitExempt = isRootElevated,
+                // ADR 0126 section 4: the manifest's oom_score_adj; null inherits the parent's.
+                OomScoreAdjust = OomScoreAdjustOf(descriptor.Manifest)
             });
         }
         catch (ProcessLimitExceededException exception)
@@ -1653,6 +1655,27 @@ public sealed class AppLifecycleOrchestrator
         IRemoteService? RemoteService = null);
 
     /// <summary>Maps a manifest's declared resource weights to the simulator's process profile.</summary>
+    /// <summary>
+    /// The <c>oom_score_adj</c> a new process of <paramref name="manifest"/> starts with (ADR 0126,
+    /// section 4): the declared value, a negative one only for a system app (the generator refuses it
+    /// for any other, so here it is only a manifest the build did not check, ignored and read as
+    /// <c>0</c>); undeclared, <c>-500</c> for a system service and <see langword="null"/> otherwise, so
+    /// the process inherits its parent's value like a <c>fork</c> (<c>0</c> without a parent).
+    /// </summary>
+    private int? OomScoreAdjustOf(AppManifest manifest)
+    {
+        bool system = _catalog.IsSystemApp(manifest.Id);
+        if (manifest.OomScoreAdj is { } declared)
+        {
+            return system ? declared : Math.Max(declared, 0);
+        }
+
+        return system && manifest.Kind == AppKind.Service ? SystemServiceOomScoreAdjust : null;
+    }
+
+    /// <summary>The <c>oom_score_adj</c> of a system service that declares none (ADR 0126, section 4).</summary>
+    internal const int SystemServiceOomScoreAdjust = -500;
+
     private static ResourceProfile ToResourceProfile(AppResourceProfileManifest resources) => new(
         resources.BaselineCpuWeight,
         resources.BurstCpuWeight,
