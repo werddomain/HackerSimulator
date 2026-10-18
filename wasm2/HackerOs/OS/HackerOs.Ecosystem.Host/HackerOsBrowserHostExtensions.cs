@@ -95,7 +95,12 @@ public static partial class HackerOsBrowserHostExtensions
             IReadOnlyList<string> preload = options.WorkerPreloadAssemblies
                 ?? (apps.LazyAssemblyNames.Contains("HackerOs.Commands.dll", StringComparer.Ordinal) ? ["HackerOs.Commands.dll"] : []);
             builder.Services.AddSingleton<IWebWorkerRuntime, BrowserWebWorkerRuntime>();
-            builder.Services.AddHackerOsWorkerProcesses(workerOptions => workerOptions with { PreloadAssemblies = [.. preload] });
+            // ADR 0124, section 4: a worker loads any app assembly known to this build on demand.
+            builder.Services.AddHackerOsWorkerProcesses(workerOptions => workerOptions with
+            {
+                PreloadAssemblies = [.. preload],
+                KnownAssemblies = [.. apps.LazyAssemblyNames]
+            });
         }
 
         return builder;

@@ -88,7 +88,7 @@ un pourcentage d'un cœur (`CpuUsage × 100`), sans le signe `%`, pour rester
 facile à analyser. `CpuSource` et `MemSource` (ADR 0066) disent d'où viennent
 `Cpu` et `VmRSS` : `measured` quand la mesure de la phase 5 répond pour ce
 processus, `simulated` sinon (mesure coupée, pas encore implémentée, ou
-processus du contenu de jeu) ; voir
+processus simulé sans code) ; voir
 [`resource-accounting.md`](resource-accounting.md).
 
 Quand la mémoire d'un processus est mesurée (ADR 0068,

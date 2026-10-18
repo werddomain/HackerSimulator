@@ -57,7 +57,9 @@ internal sealed class OsFixture : IAsyncDisposable
     private int _entryId = 1;
     private int _transactionId = 1000;
 
-    private OsFixture(bool workers, WorkerPoolOptions? poolOptions, int hardwareConcurrency, TimeSpan? workerStartupDelay)
+    private OsFixture(
+        bool workers, WorkerPoolOptions? poolOptions, int hardwareConcurrency, TimeSpan? workerStartupDelay,
+        Func<HackerOs.Platform.WorkerHost.Worker.IWorkerAssemblyLoader>? loaderFactory)
     {
         FixedTimeProvider timeProvider = new(Now);
         InMemoryFileSystemRepository repository = new(
@@ -78,6 +80,7 @@ internal sealed class OsFixture : IAsyncDisposable
         ]);
         _grants = new CapabilityGrantRepository(() => Now);
         InMemoryTopicMessageBus topicBus = new(_grants);
+        TopicBus = topicBus;
         FileSystemService fileSystem = new(
             router, new FileSystemPathResolver(router), new FileSystemAuthorizer(), topicBus,
             () => new Guid(_transactionId++, 0, 0, new byte[8]));
@@ -98,7 +101,10 @@ internal sealed class OsFixture : IAsyncDisposable
 
         // ADR 0077/0080: hackwebd, a system app of the host as in the Ecosystem build.
         AppManifest hackwebd = AppDefinitionMapper.ToManifest(new HackerOs.Apps.WebServer.HackWebdApp());
-        AppManifest[] commands = [.. BuiltInCommands.Select(AppDefinitionMapper.ToManifest), .. TestCommands.Manifests, hackwebd];
+        // ADR 0124: two sample projects of their own assemblies, a command and a service, run in workers.
+        AppManifest sampleCommand = AppDefinitionMapper.ToManifest(new HackerOs.Samples.TerminalApp.TerminalSampleApp());
+        AppManifest sampleService = AppDefinitionMapper.ToManifest(new HackerOs.Samples.ServiceApp.ServiceSampleApp());
+        AppManifest[] commands = [.. BuiltInCommands.Select(AppDefinitionMapper.ToManifest), .. TestCommands.Manifests, hackwebd, sampleCommand, sampleService];
         AppManifest host = HostManifest();
         Catalog = AppCatalog.Build([host, .. commands], [hackwebd.Id]).Catalog!;
         AppDiscoveryResult discovery = AppEntryPointDiscovery.Discover(
@@ -107,7 +113,9 @@ internal sealed class OsFixture : IAsyncDisposable
             {
                 ["HackerOs.Commands.dll"] = typeof(HackerOs.Commands.Cd.CdCommand).Assembly,
                 [TestCommands.AssemblyFile] = typeof(OsFixture).Assembly,
-                ["HackerOs.Apps.WebServer.dll"] = typeof(HackerOs.Apps.WebServer.HackWebdApp).Assembly
+                ["HackerOs.Apps.WebServer.dll"] = typeof(HackerOs.Apps.WebServer.HackWebdApp).Assembly,
+                ["HackerOs.Samples.TerminalApp.dll"] = typeof(HackerOs.Samples.TerminalApp.TerminalSampleApp).Assembly,
+                ["HackerOs.Samples.ServiceApp.dll"] = typeof(HackerOs.Samples.ServiceApp.ServiceSampleApp).Assembly
             });
         Assert.True(discovery.IsSuccess, string.Join("; ", discovery.Errors.Select(error => error.ToString())));
         Dictionary<string, AppDescriptor> descriptors = new(discovery.Descriptors!, StringComparer.Ordinal)
@@ -140,7 +148,7 @@ internal sealed class OsFixture : IAsyncDisposable
 
         if (workers)
         {
-            Runtime = new LoopbackWebWorkerRuntime(hardwareConcurrency, workerStartupDelay);
+            Runtime = new LoopbackWebWorkerRuntime(hardwareConcurrency, workerStartupDelay, loaderFactory);
             Pool = new WorkerPool(
                 Runtime,
                 poolOptions ?? FastOptions,
@@ -194,6 +202,9 @@ internal sealed class OsFixture : IAsyncDisposable
 
     public InMemoryEventBus EventBus { get; }
 
+    /// <summary>Gets the app lane of the OS's events (ADR 0038), which workers reach by message (ADR 0124).</summary>
+    public InMemoryTopicMessageBus TopicBus { get; }
+
     public IFileSystemService FileSystem { get; }
 
     public LogFileWriter Log { get; }
@@ -237,9 +248,10 @@ internal sealed class OsFixture : IAsyncDisposable
         bool workers,
         WorkerPoolOptions? poolOptions = null,
         int hardwareConcurrency = 4,
-        TimeSpan? workerStartupDelay = null)
+        TimeSpan? workerStartupDelay = null,
+        Func<HackerOs.Platform.WorkerHost.Worker.IWorkerAssemblyLoader>? loaderFactory = null)
     {
-        OsFixture fixture = new(workers, poolOptions, hardwareConcurrency, workerStartupDelay);
+        OsFixture fixture = new(workers, poolOptions, hardwareConcurrency, workerStartupDelay, loaderFactory);
         fixture.Principal = await fixture._sessions.LoginAsync(fixture._alice, "hunter2");
         foreach (string capability in HostCapabilities)
         {

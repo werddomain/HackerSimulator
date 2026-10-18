@@ -3,3 +3,6 @@ HackerOs.AppSdk.Diagnostics.HackProcess.BasePriority.get -> int
 HackerOs.AppSdk.Diagnostics.HackProcess.Nice.get -> int
 HackerOs.AppSdk.IShellSession.RunNicedAsync(System.Collections.Generic.IReadOnlyList<string!>! arguments, int adjustment, System.IO.TextWriter! standardOutput, System.IO.TextWriter! standardError, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
 static HackerOs.AppSdk.Diagnostics.HackProcess.ParseStatNice(string! text) -> int
+HackerOs.AppSdk.HackWireContextAttribute
+HackerOs.AppSdk.HackWireContextAttribute.ContextType.get -> System.Type!
+HackerOs.AppSdk.HackWireContextAttribute.HackWireContextAttribute(System.Type! contextType) -> void

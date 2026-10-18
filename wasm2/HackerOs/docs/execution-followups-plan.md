@@ -12,9 +12,11 @@ terminées. La branche d'intégration `exec/base` est créée depuis `v3.1/base`
 et le chantier des ADR (`exec/0-adr`, mené sur la branche `exec/1-adr`) a
 écrit les ADR [0124](adr/0124-remote-event-and-watch-gateways.md) à
 [0132](adr/0132-exec-series-sdk-1-2-and-merge-rules.md) (section 7) ; l'ADR
-0133 est réservé à la décision de l'essai de rendu en worker. Quatre questions
-nées de l'écriture des ADR sont posées à Benoit (section 6.1) ; les ADR
-appliquent la réponse recommandée en attendant.
+0133 est réservé à la décision de l'essai de rendu en worker. Benoit a répondu le
+2026-10-18 aux quatre questions nées de l'écriture des ADR (section 6.1) :
+l'ADR [0134](adr/0134-automatic-server-connection-and-status-icon.md) les
+consigne, et l'ADR [0135](adr/0135-no-game-in-this-repository.md) retire le
+jeu de la documentation.
 
 Il reprend les points que [`execution-isolation-plan.md`](execution-isolation-plan.md)
 (phase 5, ADR 0066 à 0072) a laissés hors périmètre (sa section 7), ainsi que
@@ -91,9 +93,7 @@ Ceux de la phase 5 restent, sauf le premier, que ce plan remplace en partie.
    `build/verify-hosts.sh` passe avant toute fusion, avec les options du
    chantier activées et coupées. L'Ecosystem fonctionne toujours sans serveur
    et hors ligne (AGENTS.md, section I).
-7. **Aucune dépendance au jeu.** Le contenu de jeu vivra dans un autre dépôt qui
-   utilisera cet écosystème (décision de Benoit du 2026-10-17) ; ce plan ne
-   prévoit rien pour lui.
+7. **Aucun jeu sur ce repository** ([ADR 0135](adr/0135-no-game-in-this-repository.md)) : ce plan ne prévoit rien de tel.
 
 ## 4. Registre des décisions
 
@@ -134,7 +134,7 @@ phases précédentes.
 | `exec/5-background-jobs` | Décision 7, étape 1 : `HackBackground.RunAsync` (méthode statique ou classe de tâche, entrée et résultat sérialisables, progression, annulation), analyseur qui refuse une lambda qui capture, processus enfant de l'app avec son identité et ses droits, repli sur le fil principal quand il n'y a pas de worker (tests, hôte sans workers), exemple dans `Apps/Samples`, migration des traitements longs des apps de base, guide et référence du SDK. | `1` |
 | `exec/6-remote-renderer-poc` | Décision 7, étape 2 : preuve de faisabilité d'un `Renderer` Blazor dans un worker, lots de rendu sérialisés vers le fil principal, événements du DOM renvoyés au worker ; mesure du coût. Résultat : un ADR « on y va » ou « on s'arrête ». Rien n'est livré aux apps si la preuve échoue. | `5` |
 | `exec/7-window-workers` | Seulement si `6` réussit : `AppExecutionHost.Dedicated` permis pour une fenêtre sans interop JavaScript propre, gestion du clavier, du focus et des dialogues, tests sur la Calculatrice. | `6` |
-| `exec/8-server-wasm` | Décision 8 : `HackerOs.Server` sert l'OS en WebAssembly (rendu `InteractiveWebAssembly` ou fichiers publiés de l'Ecosystem, selon l'ADR), retrait du mode Interactive Server et de l'injection directe, l'OS appelle l'API du serveur par HTTP comme l'Ecosystem, `build/verify-hosts.sh` et `HackerOs.HostSmoke.Tests` adaptés (workers et `/proc/hackeros` présents sur cet hôte), docs d'hébergement à jour. | `0` |
+| `exec/8-server-wasm` | Décision 8 : `HackerOs.Server` sert l'OS en WebAssembly (rendu `InteractiveWebAssembly` ou fichiers publiés de l'Ecosystem, selon l'ADR), retrait du mode Interactive Server et de l'injection directe, l'OS appelle l'API du serveur par HTTP comme l'Ecosystem, connexion automatique au serveur qui a servi l'OS et icône d'état dans la zone de notification (ADR 0134), `build/verify-hosts.sh` et `HackerOs.HostSmoke.Tests` adaptés (workers et `/proc/hackeros` présents sur cet hôte), docs d'hébergement à jour. | `0` |
 | `exec/9-cross-origin-isolation` | Décisions 9 et 10 : audit de compatibilité (iframes des sites ASP.Hack et du navigateur, fenêtres détachées, repli sur le réseau réel, workers de Monaco, téléchargements, PWA), en-têtes dans les trois hôtes et le service worker, repli, puis tubes partagés, appels synchrones, mémoire réelle par worker et minuteries. | `3`, `5` |
 | `exec/10-final` | Publication du SDK 1.2 (ADR 0132), app de compatibilité 1.1 ; vérification de bout en bout, documents à jour (`system-metrics.md`, `task-manager.md`, `worker-processes.md`, `app-sdk.md`, `sdk-reference.md`, `linux-commands.md`, `virtual-proc-and-dev.md`, `building-and-testing.md`), index, cette liste. | tous |
 
@@ -192,21 +192,18 @@ contexte et conséquences de chaque choix ; ses réponses (05:55 à 06:19 UTC) :
 ### 6.1 Questions nées de l'écriture des ADR (2026-10-18)
 
 Posées à Benoit dans le fil « ADR des suites de l'étape 5 », avec le contexte
-et les conséquences de chaque choix. Les ADR appliquent la réponse
-recommandée (⭐) en attendant ; une autre réponse donne un ADR court qui
-remplace le paragraphe visé.
+et les conséquences de chaque choix ; réponses du 2026-10-18 (ADR 0134).
 
-| # | Question | Choix | ADR |
-|---|---|---|---|
-| E1 | Comment le serveur sert l'OS | Fichiers publiés de l'Ecosystem tels quels ⭐ \| Blazor Web App en `InteractiveWebAssembly` comme `test/test` | 0130 §2 |
-| E2 | L'OS servi par le serveur se connecte-t-il à lui | Adresse préremplie, l'utilisateur choisit de se connecter ⭐ \| Rien de spécial, saisie manuelle | 0130 §4 |
-| E3 | Limites par défaut | Valeurs Linux pour `nofile` et `nproc`, CPU et mémoire illimités ⭐ \| Tout illimité | 0125 §6 |
-| E4 | Publication du SDK 1.2 | Une fois, à la fin (`exec/10`) ⭐ \| Une mineure par chantier qui ajoute une API | 0132 §2 |
+| # | Question | Choix (⭐ recommandé) | Réponse de Benoit | ADR |
+|---|---|---|---|---|
+| E1 | Comment le serveur sert l'OS | Fichiers publiés de l'Ecosystem tels quels ⭐ \| Blazor Web App en `InteractiveWebAssembly` comme `test/test` | **A** | 0130 §2 |
+| E2 | L'OS servi par le serveur se connecte-t-il à lui | Adresse préremplie, l'utilisateur choisit de se connecter ⭐ \| Rien de spécial, saisie manuelle | **A**, précisée : connexion automatique sans demande, icône d'état dans la zone de notification | 0134 (remplace 0130 §4) |
+| E3 | Limites par défaut | Valeurs Linux pour `nofile` et `nproc`, CPU et mémoire illimités ⭐ \| Tout illimité | **A** | 0125 §6 |
+| E4 | Publication du SDK 1.2 | Une fois, à la fin (`exec/10`) ⭐ \| Une mineure par chantier qui ajoute une API | **A** ; et **Aucun jeu sur ce repository** dans les docs et la mémoire | 0132 §2, 0135 |
 
 ## 7. ADR de la série
 
-Écrits par `exec/0-adr` le 2026-10-18 (numéros 0124 à 0133 réservés à ce
-chantier) :
+Écrits par `exec/0-adr` le 2026-10-18 (numéros 0124 à 0135 ; 0133 reste réservé) :
 
 | ADR | Contenu | Complète ou remplace |
 |---|---|---|
@@ -219,6 +216,8 @@ chantier) :
 | [0130](adr/0130-server-serves-webassembly-os-and-api.md) `HackerOs.Server` servi en WebAssembly | décision 8 | remplace l'ADR 0027 et l'ADR 0036 ; rend sans objet l'ADR 0066 §3 (défaut Server), 0067 §6, 0070 §6, 0072 §7 |
 | [0131](adr/0131-cross-origin-isolation.md) Isolation cross-origin | décisions 9 et 10 | complète l'ADR 0072 §2 (tubes) et l'ADR 0068 (mémoire réelle par worker) |
 | [0132](adr/0132-exec-series-sdk-1-2-and-merge-rules.md) Ajouts du SDK 1.2, branches et barre de fusion | sections 5 et 8 | applique les ADR 0114 et 0117 |
+| [0134](adr/0134-automatic-server-connection-and-status-icon.md) Connexion automatique au serveur et icône d'état | réponses E1 à E4 | remplace l'ADR 0130 §4 |
+| [0135](adr/0135-no-game-in-this-repository.md) Aucun jeu sur ce repository | réponse E4 | remplace l'ADR 0092 |
 
 ## 8. Liste des tâches
 
@@ -228,12 +227,12 @@ chantier) :
 - [x] Attendre la fin de la migration wasm v3 (terminée le 2026-10-17, puis série v3.1).
 - [x] Créer `exec/base` depuis `v3.1/base` (2026-10-18).
 - [x] `exec/0-adr` : écrire et faire accepter les ADR de la section 7 (0124 à 0132, 2026-10-18).
-- [ ] Réponses de Benoit aux questions E1 à E4 (section 6.1).
+- [x] Réponses de Benoit aux questions E1 à E4 (section 6.1, ADR 0134 et 0135).
 
 ### Passerelles distantes
-- [ ] `HackEvents` et `Watch` en worker, tests de parité.
-- [ ] Service d'exemple et `hackwebd` en worker.
-- [ ] Pool ouvert à toute assembly de commande ou de service.
+- [x] `HackEvents` et `Watch` en worker, tests de parité (`exec/1-remote-gateways`, ADR 0138).
+- [x] Service d'exemple et `hackwebd` en worker (`exec/1-remote-gateways`, ADR 0138).
+- [x] Pool ouvert à toute assembly de commande ou de service (`exec/1-remote-gateways`, ADR 0138).
 
 ### Limites et OOM killer
 - [ ] Contrat de limites, `limits.conf`, héritage, `ulimit`, `prlimit`, `/proc/<pid>/limits`.
@@ -263,7 +262,6 @@ chantier) :
 
 - Tout ce que planifie la migration wasm v3 (trimming, localisation, gabarits
   `dotnet new`, sauvegarde et restauration, etc.).
-- Le contenu de jeu, qui vivra dans un autre dépôt.
 - Plusieurs utilisateurs simultanés sur l'API de `HackerOs.Server`, au-delà de
   ce qu'elle fait déjà.
 - Déplacer le shell (`hsh`) et ses scripts dans un worker (ADR 0072 §1 reste

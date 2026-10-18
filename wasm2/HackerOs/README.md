@@ -1,8 +1,8 @@
 # HackerOS
 
 Simulation d'un système d'exploitation de type Linux dans le navigateur, en C#
-et Blazor WebAssembly, pour servir d'environnement où développer des jeux et
-des applications. C'est le portage du simulateur JavaScript de `src/`, gardé en
+et Blazor WebAssembly, pour servir d'environnement où développer des applications.
+**Aucun jeu sur ce repository** (ADR 0135). C'est le portage du simulateur JavaScript de `src/`, gardé en
 lecture seule comme référence de comportement et qui n'est pas une dépendance
 de cette solution.
 

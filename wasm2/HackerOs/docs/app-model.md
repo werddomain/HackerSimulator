@@ -129,8 +129,9 @@ public sealed class CdApp : AppDefinition { … }
   `MainThread`, **avec la raison en commentaire** au-dessus de l'attribut. Dans
   `HackerOs.Commands` : les built-ins du shell (`cd`, `exit`, `export`,
   `unset`, `jobs`, `read`, `help`, `which`, `kill`, `sudo`, `watch`) et les
-  commandes plein écran (`nano`, `top`, `htop`) ; le service d'exemple
-  (événements typés). Les 49 autres commandes vont dans le pool.
+  commandes plein écran (`nano`, `top`, `htop`). Le service d'exemple et
+  `hackwebd` sont en worker dédié depuis l'ADR 0124. Les autres commandes vont
+  dans le pool (liste à jour dans [`worker-processes.md`](worker-processes.md)).
 - Le validateur refuse `pool` et `dedicated` pour une app web
   (`manifest.execution.web`) et `web` pour toute autre app
   (`manifest.execution.web-only`). Une app web déclare ses URL par

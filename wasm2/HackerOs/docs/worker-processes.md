@@ -40,9 +40,10 @@ avec la raison en commentaire dans leur définition (`cd`, `exit`, `export`,
 `unset`, `jobs`, `read`, `help`, `which`, `kill` pilotent le shell ; `sudo`
 demande un mot de passe à l'agent d'authentification ; `passwd` lit le terminal sans écho ; `hackbackup` ouvre
 le sélecteur de fichiers du navigateur, qui exige le geste de l'utilisateur ; `nano`, `top`, `htop`,
-`watch` utilisent l'écran alternatif du terminal). Le service d'exemple reste
-en `mainThread` : il publie des événements typés, non disponibles dans un
-worker (ADR 0072 §3).
+`watch` utilisent l'écran alternatif du terminal) ; ces raisons ont été
+relues par `exec/1-remote-gateways` et tiennent toujours (ADR 0138 §9). Le
+service d'exemple et `hackwebd` tournent en worker dédié depuis que `HackEvents`
+et `Watch` traversent la frontière (ADR 0124).
 
 `HackerOs.Server` n'a pas de Web Worker .NET : `AppExecutionHost` y est ignoré
 et le démarrage écrit dans `/var/log/syslog` « workers: no Web Worker on this
@@ -116,6 +117,32 @@ Messages JSON avec un champ `t` :
 | `stopdone`, `sstopped` | Fin du traitement d'un `stop` / `sstop`. |
 | `log` | Ligne de diagnostic du worker. |
 | `hres` | Réponse à un `hreq` (`web/3`). |
+
+### Événements et surveillance de fichiers (ADR 0124, ADR 0138)
+
+Le bus reste dans l'OS. `RemoteEventGateway` et `RemoteWatchGateway`
+(`Worker/RemoteEvents.cs`) envoient les opérations ci-dessous ;
+`RemoteProcessSession` crée chaque abonnement **au nom du pid** et
+`RemoteEventRouter` pousse ce qu'il reçoit par des messages `ev`.
+
+| Opération | Forme | Rôle |
+|---|---|---|
+| `ev.sub` | `call` | S'abonner à un sujet (`t`) ou à un type d'événement noyau (`e`), avec la capacité d'un canal borné. |
+| `ev.unsub` | `note` | `Dispose` de l'abonnement. La fin, le `kill` ou la mort du worker désabonnent côté OS sans attendre. |
+| `ev.pub` | `note` | Publier sur un sujet (nom du type et JSON). Résultat provisoire `Delivered` dans le worker, refus au journal de l'app (ADR 0138 §3). |
+| `ev.chan` | `note` | `RegisterSharedChannel` (portée `VirtualPath` seulement). |
+| `ev.ack` | `note` | Rendre le crédit : 256 messages en vol par abonnement. |
+| `watch.open` | `call` | `WatchAsync` : l'OS ouvre la surveillance avec les droits du pid. |
+| `ev` (OS → worker) | message | Une livraison : abonnement, JSON, sujet, app éditrice, date. Livrée dans le contexte ambiant du processus. |
+
+Ce qui traverse : les types d'événements de l'OS qui ont un codec dans
+`WirePayloadCodec` (liste dans l'ADR 0138 §6) et les types d'une app déclarés
+par `[assembly: HackWireContext(typeof(MyJsonContext))]`. Un autre type lève
+une `NotSupportedException` dans le worker, avec le nom de l'attribut à
+ajouter ; sur le fil principal, rien ne change. Côté OS, les bus indexent ces
+abonnements par nom de type (`IWireTopicMessageBus`, `IWireEventBus`) : une
+publication d'un worker n'est matérialisée en objet qu'une fois par type pour
+les abonnés du fil principal.
 
 Chaque `call` est servi sur le fil principal par `RemoteProcessSession` **sous
 le contexte d'exécution du processus** (`HackExecutionContext.Enter` puis
@@ -203,7 +230,14 @@ if (OperatingSystem.IsBrowser())
 `WorkerPoolOptions` : `HeartbeatPeriod` (250 ms), `UnresponsiveThreshold`
 (5 s), `BusyThreshold` (750 ms), `KillAcknowledgeTimeout` (1 s),
 `OverflowIdleTimeout` (30 s), `IdleWait` (2 s), `VirtualCores` (du profil
-matériel), `PreloadAssemblies`, `MeterCpu`.
+matériel), `PreloadAssemblies`, `KnownAssemblies`, `MeterCpu`.
+
+`KnownAssemblies` (ADR 0124 §4) : les assemblies d'apps connues au build
+(l'Ecosystem y met `LazyAssemblyNames` du catalogue). Un worker charge à la
+demande n'importe laquelle d'entre elles et la garde pour les demandes
+suivantes ; une autre, absente de son runtime, est refusée : le processus écrit
+l'erreur sur sa sortie d'erreur et sort avec le code 127. Une liste vide
+n'impose rien.
 
 Commande de démonstration : `stress [-c N] [-t SECONDES] [--yield]` fait
 tourner N boucles de calcul sans rendre la main (`--yield` : avec points
@@ -235,7 +269,12 @@ d'arrêt).
   - `EscalationTests` : `kill -9` d'une boucle (voisins tués, syslog, cœur
     remplacé), « Not responding » pendant le blocage, `SIGTERM` puis
     escalade, étape 3 sans terminer le worker, Ctrl+C, erreur dans un worker ;
-  - `DedicatedServiceTests` : service dans un worker dédié, `systemctl stop`.
+  - `DedicatedServiceTests` : service dans un worker dédié, `systemctl stop` ;
+  - `RemoteEventsTests` (ADR 0124) : parité fil principal / worker des sujets,
+    canaux, événements noyau, `Watch` et refus ; charge non déclarée ;
+    désabonnement au `kill` ; service d'exemple en worker dédié ;
+    `sample-cmd` (projet d'exemple tiers) chargé à la demande ; refus d'une
+    assembly inconnue.
 - `Tests/HackerOs.App.Abstractions.Tests` : `Execution` dans le mappeur, le
   validateur, le sérialiseur et le schéma.
 - `Tests/HackerOs.HostSmoke.Tests` (`build/verify-hosts.sh`) : dans les hôtes
@@ -253,9 +292,20 @@ d'arrêt).
 - [x] Worker toujours prêt après le boot, débordement, retour à la taille, plafond et syslog (ADR 0071).
 - [x] Battement de cœur, mesures CPU et mémoire, « Not responding », étape 4 de l'escalade.
 - [x] `/proc/hackeros/workers` et section « Workers » du gestionnaire de tâches.
-- [x] Commandes : hôte déclaré ou défaut ; service d'exemple en `MainThread` (raison en commentaire).
+- [x] Commandes : hôte déclaré ou défaut ; service d'exemple en `MainThread` (raison en commentaire) — en worker dédié depuis `exec/1-remote-gateways`.
 - [x] Serveur : ligne d'information ; `test/test` comme l'Ecosystem.
 - [x] Tests de parité des 63 commandes, tests du pool et de l'escalade.
 - [x] `v3/4-intents` : les intents de l'ADR 0096 (`int.edit`, `int.reveal`, `int.uri`, `int.settings`, `int.send`) et la remise d'un intent à un processus en cours (message `intent`, `IntentReceived`) traversent la frontière du worker ; parité de `xdg-open`.
 - [x] Vérification des trois hôtes (`build/verify-hosts.sh`).
 - [x] Documentation et ADR 0072.
+
+## Liste des tâches du chantier `exec/1-remote-gateways` (ADR 0124, ADR 0138)
+
+- [x] Bus « wire » côté OS (`IWireTopicMessageBus`, `IWireEventBus`), mêmes règles d'autorisation.
+- [x] Opérations `ev.*`, `watch.open` et message `ev` ; crédit de 256 messages.
+- [x] Codecs intégrés et `HackWireContextAttribute` (SDK 1.2, `PublicAPI.Unshipped.txt`).
+- [x] Désabonnement à la fin, au `kill` et à la mort du worker.
+- [x] Service d'exemple et `hackwebd` en worker dédié ; revue des 16 commandes en `mainThread`.
+- [x] `KnownAssemblies`, refus avec le code 127 ; `sample-cmd` dans l'Ecosystem et le test des hôtes.
+- [x] Tests de parité (`RemoteEventsTests`, `WireTopicMessageBusTests`).
+- [x] Documentation, ADR 0138, index.

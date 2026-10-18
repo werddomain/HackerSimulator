@@ -326,7 +326,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     private string RenderStatus(ProcessRecord process)
     {
-        // ADR 0066: a measured value wins; otherwise (measurement off, not built, or a game-content
+        // ADR 0066: a measured value wins; otherwise (measurement off, not built, or a simulated
         // process that runs no code) the simulator's sample applies, exactly as before phase 5.
         ProcessResourceSample? sample = _resources.GetHistory(process.Pid).LastOrDefault();
         ResourceMeasurementSource cpuSource = ResourceMeasurementSource.Simulated;
@@ -725,7 +725,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     /// <summary>
     /// When memory is measured (ADR 0068, section 2), replaces the simulated total with the measured
     /// one (shared images counted once, the OS's own heap included) plus the simulated memory of the
-    /// processes that stay simulated (game content that runs no code).
+    /// processes that stay simulated (those that run no code).
     /// </summary>
     /// <param name="usedBytes">The simulated total, replaced when memory is measured.</param>
     /// <returns>The measured totals, or <see langword="null"/> when memory is simulated.</returns>

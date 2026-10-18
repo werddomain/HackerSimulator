@@ -121,7 +121,7 @@ plus bas).
 | Sur un même appareil, le curseur de synchronisation est commun à tous les utilisateurs. | `v3/9` | Documenté dans [`synchronization.md`](synchronization.md). |
 | Le SDK n'a pas d'API pour changer le titre d'une fenêtre ; Hack Paint affiche le nom du fichier dans l'app. | `v3/11` | Corrigé par `v3.1/3-window-title` (ADR 0117, 0123) : `SetWindowTitleAsync`, publié dans le SDK 1.1.0 par `v3.1/4-sdk-1-1`. Fermée. |
 | Les menus internes de Monaco (Code Editor) restent en anglais. | `v3/12` | Question ouverte (défaut : anglais). |
-| Une app compilée contre `0.9.0-preview` est refusée par l'OS 1.0. | `v3/15` | Voulu (autre version majeure) ; le dépôt du jeu reconstruit ses apps contre 1.0.0. |
+| Une app compilée contre `0.9.0-preview` est refusée par l'OS 1.0. | `v3/15` | Voulu (autre version majeure) ; une app d'un autre dépôt se reconstruit contre 1.0.0. |
 | Installation d'apps au runtime. | plan, question 1 | Reportée à un plan à part. |
 
 ### Questions posées à Benoit sans réponse

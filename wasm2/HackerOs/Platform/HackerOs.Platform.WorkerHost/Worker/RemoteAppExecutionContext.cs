@@ -20,9 +20,10 @@ namespace HackerOs.Platform.WorkerHost.Worker;
 /// </summary>
 /// <remarks>
 /// The administration gateways (system settings, permissions, server connection, power, storage
-/// diagnostics, app management), the interactive shell host, typed events and directory watches are
-/// not offered: they keep the SDK's "unsupported" default, and an app that needs them declares
-/// <see cref="AppExecutionHost.MainThread"/>.
+/// diagnostics, app management) and the interactive shell host are not offered: they keep the SDK's
+/// "unsupported" default, and an app that needs them declares <see cref="AppExecutionHost.MainThread"/>.
+/// Typed events, topic messages and directory watches are offered since ADR 0124: their payloads cross
+/// as JSON.
 /// </remarks>
 internal sealed class RemoteAppExecutionContext : IAppExecutionContext
 {
@@ -69,7 +70,17 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
         WebDatabase = new RemoteWebDatabaseGateway(channel, snapshot.Manifest.Id);
         Console = console;
         Intent = snapshot.Intent;
+        // ADR 0124: events and directory watches go through the OS's bus, by message.
+        EventTable = new RemoteEventTable(channel);
+        EventTable.Bind(
+            () => HackExecutionContext.Enter(this),
+            message => Logging.Log(HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Error, message));
+        Events = new RemoteEventGateway(channel, EventTable);
+        Watch = new RemoteWatchGateway(channel, EventTable);
     }
+
+    /// <summary>Gets the process's subscriptions, fed by the OS's <c>ev</c> messages (ADR 0124).</summary>
+    public RemoteEventTable EventTable { get; }
 
     /// <inheritdoc />
     public AppIntentDelivery? Intent { get; }
@@ -141,7 +152,7 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
 
     public IAppFileSystemGateway FileSystem { get; }
 
-    public IAppEventGateway Events { get; } = new RemoteEventGateway();
+    public IAppEventGateway Events { get; }
 
     public IAppNotificationGateway Notifications { get; }
 
@@ -153,7 +164,7 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
 
     public IAppIntentGateway Intents { get; }
 
-    public IAppFileSystemWatchGateway Watch { get; } = new RemoteWatchGateway();
+    public IAppFileSystemWatchGateway Watch { get; }
 
     public IAppServiceControlGateway Services { get; }
 
