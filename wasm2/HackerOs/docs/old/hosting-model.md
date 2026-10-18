@@ -1,5 +1,10 @@
 # Hosting Model
 
+> **Décision du 2026-10-18 :** l'[ADR 0130](../adr/0130-server-serves-webassembly-os-and-api.md)
+> remplace les ADR 0027 et 0036. `HackerOs.Server` servira l'OS en WebAssembly
+> et ne gardera que son API ; ce document décrit l'état d'avant le chantier
+> `exec/8-server-wasm`, qui le mettra à jour.
+
 ## Purpose
 
 HackerOS is one set of Razor components, apps, and Platform/Infrastructure
