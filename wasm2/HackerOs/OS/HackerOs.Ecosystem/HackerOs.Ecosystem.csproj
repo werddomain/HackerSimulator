@@ -56,6 +56,8 @@
     <ProjectReference Include="..\..\Apps\Samples\HackerOs.Samples.BlazorSite\HackerOs.Samples.BlazorSite.csproj" />
     <!-- web/11: the Intranet sample (http://intranet.hack/), MVC pages, REST API and a Blazor board in one site. -->
     <ProjectReference Include="..\..\Apps\Samples\HackerOs.Samples.Intranet\HackerOs.Samples.Intranet.csproj" />
+    <!-- ADR 0124: the sample command (sample-cmd), an assembly of its own that a worker loads on demand. -->
+    <ProjectReference Include="..\..\Apps\Samples\HackerOs.Samples.TerminalApp\HackerOs.Samples.TerminalApp.csproj" />
     <!--
       ADR 0051: every built-in terminal command is in one project (one assembly, lazy-loaded as a
       whole). cd/pwd/clear/help are now part of it; the terminal still intercepts those names until

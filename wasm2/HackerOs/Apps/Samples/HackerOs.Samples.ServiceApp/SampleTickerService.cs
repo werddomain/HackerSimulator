@@ -30,6 +30,15 @@ public class SampleTickerService : ServiceAppBase
     {
     }
 
+    /// <summary>
+    /// Initializes the service the way the OS creates an app's entry point, with its manifest only
+    /// (ADR 0055), in-process or in its worker; it ticks every simulated second.
+    /// </summary>
+    public SampleTickerService(AppManifest manifest)
+        : this(manifest, TimeSpan.FromSeconds(1))
+    {
+    }
+
     public SampleTickerService(AppManifest manifest, TimeSpan tickInterval)
         : base(manifest)
     {

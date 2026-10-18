@@ -1,3 +1,4 @@
+using HackerOs.Platform.Core.Events;
 using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.Gateways;
 
@@ -58,6 +59,29 @@ public sealed class AppEventGateway : IAppEventGateway
     /// <inheritdoc />
     public void RegisterSharedChannel(TopicName root, SharedChannelPolicy policy) =>
         _topicBus.RegisterSharedChannel(root, policy, _identity);
+
+    /// <summary>
+    /// Subscribes, on behalf of this process running in a Web Worker, to <paramref name="topic"/> for
+    /// payloads of the wire type <paramref name="payloadWireName"/> (ADR 0124, section 1), with this
+    /// instance's identity and therefore its rights.
+    /// </summary>
+    /// <exception cref="NotSupportedException">The OS's topic bus does not serve workers.</exception>
+    internal IDisposable SubscribeWire(TopicName topic, string payloadWireName, Action<WireTopicDelivery> handler) =>
+        WireTopics.SubscribeWire(topic, _identity, payloadWireName, handler);
+
+    /// <summary>Publishes a payload this process serialized in its worker (ADR 0124, section 1).</summary>
+    /// <exception cref="NotSupportedException">The OS's topic bus does not serve workers.</exception>
+    internal TopicPublishResult PublishWire(TopicName topic, string payloadWireName, string json, Func<Type, object> materialize) =>
+        WireTopics.PublishWire(topic, payloadWireName, json, materialize, _identity);
+
+    /// <summary>Subscribes, on behalf of this process running in a Web Worker, to a kernel event type by wire name.</summary>
+    /// <exception cref="NotSupportedException">The OS's event bus does not serve workers.</exception>
+    internal IDisposable SubscribeEventWire(string eventWireName, Action<Type, object> handler) =>
+        (_eventBus as IWireEventBus ?? throw new NotSupportedException("This OS's event bus does not serve processes in workers."))
+            .SubscribeWire(eventWireName, handler);
+
+    private IWireTopicMessageBus WireTopics =>
+        _topicBus as IWireTopicMessageBus ?? throw new NotSupportedException("This OS's topic bus does not serve processes in workers.");
 
     /// <summary>Binds the app context subscription handlers run under; called once by the factory.</summary>
     internal void BindAmbientContext(HackerOs.AppSdk.IAppExecutionContext context) => _ambient.Bind(context);

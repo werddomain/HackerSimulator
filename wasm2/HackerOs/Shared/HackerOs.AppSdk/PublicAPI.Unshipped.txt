@@ -15,11 +15,14 @@ HackerOs.AppSdk.Diagnostics.HackResourceLimits.IsCpuMeasured.get -> bool
 HackerOs.AppSdk.Diagnostics.HackResourceLimits.IsCpuMeasured.init -> void
 HackerOs.AppSdk.Diagnostics.HackResourceLimits.IsMemoryMeasured.get -> bool
 HackerOs.AppSdk.Diagnostics.HackResourceLimits.IsMemoryMeasured.init -> void
-HackerOs.AppSdk.Diagnostics.HackResourceLimits.NoFile.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
-HackerOs.AppSdk.Diagnostics.HackResourceLimits.NoFile.init -> void
 HackerOs.AppSdk.Diagnostics.HackResourceLimits.NProc.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
 HackerOs.AppSdk.Diagnostics.HackResourceLimits.NProc.init -> void
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.NoFile.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.NoFile.init -> void
 HackerOs.AppSdk.Diagnostics.HackResourceLimits.Rss.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
 HackerOs.AppSdk.Diagnostics.HackResourceLimits.Rss.init -> void
 HackerOs.AppSdk.Diagnostics.HackResourceLimits.this[HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind kind].get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
+HackerOs.AppSdk.HackWireContextAttribute
+HackerOs.AppSdk.HackWireContextAttribute.ContextType.get -> System.Type!
+HackerOs.AppSdk.HackWireContextAttribute.HackWireContextAttribute(System.Type! contextType) -> void
 static HackerOs.AppSdk.Diagnostics.HackResourceLimits.Parse(string! text) -> HackerOs.AppSdk.Diagnostics.HackResourceLimits!
