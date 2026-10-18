@@ -149,7 +149,7 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
         Log("pipeline ran.");
 
         // ADR 0124, section 4: a command of a sample project, in an assembly of its own that no worker
-        // preloads; a pool worker fetches it on demand (in-process on the server host).
+        // preloads; a pool worker fetches it on demand (the server host serves the same OS, ADR 0130).
         await RunCommandAsync(page, screen, "clear; sample-cmd loaded-on-demand");
         await WaitForTerminalTextAsync(rows, text => Regex.IsMatch(text, @"^loaded-on-demand\s*$", RegexOptions.Multiline), "the sample command's output");
         Log("sample-cmd ran from its own assembly.");
