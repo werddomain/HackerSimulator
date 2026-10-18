@@ -203,6 +203,22 @@ public interface IAppEventGateway
     TopicPublishResult Publish<TPayload>(TopicName topic, TPayload payload) where TPayload : notnull;
 
     /// <summary>
+    /// Asynchronous form of <see cref="Publish{TPayload}(TopicName, TPayload)"/>, with the same rules
+    /// and the OS's real result everywhere (ADR 0145). A process running in a Web Worker (ADR 0070)
+    /// cannot wait synchronously for the OS, so its <see cref="Publish{TPayload}(TopicName, TPayload)"/>
+    /// returns a provisional <see cref="TopicPublishOutcome.Delivered"/> and logs a refusal (ADR 0138,
+    /// section 3); this member waits for the OS's answer instead. Defaults to
+    /// <see cref="Publish{TPayload}(TopicName, TPayload)"/> so existing implementations keep compiling.
+    /// </summary>
+    /// <returns>The outcome decided by the OS and the faults of its subscribers.</returns>
+    Task<TopicPublishResult> PublishAsync<TPayload>(TopicName topic, TPayload payload, CancellationToken cancellationToken = default)
+        where TPayload : notnull
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(Publish(topic, payload));
+    }
+
+    /// <summary>
     /// Idempotently registers <paramref name="root"/> as a shared channel owned by this app instance.
     /// </summary>
     void RegisterSharedChannel(TopicName root, SharedChannelPolicy policy);

@@ -87,6 +87,9 @@ internal static class RemoteOps
     public const string EventSubscribe = "ev.sub";
     public const string EventUnsubscribe = "ev.unsub";
     public const string EventPublish = "ev.pub";
+
+    /// <summary><c>PublishAsync</c> (ADR 0145): the same publication as a call, answered with the OS's outcome and faults.</summary>
+    public const string EventPublishWithResult = "ev.pubr";
     public const string EventSharedChannel = "ev.chan";
     public const string EventAcknowledge = "ev.ack";
     public const string WatchOpen = "watch.open";

@@ -252,6 +252,33 @@ internal sealed class RemoteEventGateway(RemoteProcessChannel channel, RemoteEve
         return new TopicPublishResult(TopicPublishOutcome.Delivered, []);
     }
 
+    /// <summary>
+    /// The publication as a call (ADR 0145): the OS publishes on behalf of this process and answers
+    /// with its real outcome and the faults of its subscribers, rebuilt here as exceptions.
+    /// </summary>
+    public async Task<TopicPublishResult> PublishAsync<TPayload>(TopicName topic, TPayload payload, CancellationToken cancellationToken = default)
+        where TPayload : notnull
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+        string json = WirePayloadCodec.Serialize(typeof(TPayload), payload);
+        JsonElement value = await channel.CallAsync(RemoteOps.EventPublishWithResult, writer =>
+        {
+            writer.WriteString("top", topic.Value);
+            writer.WriteString("w", WirePayloadNames.Of(typeof(TPayload)));
+            writer.WriteString("j", json);
+        }, cancellationToken).ConfigureAwait(false);
+        List<EventDispatchFault> faults = [];
+        if (value.TryGetProperty("f", out JsonElement reported))
+        {
+            foreach (JsonElement fault in reported.EnumerateArray())
+            {
+                faults.Add(new EventDispatchFault(typeof(TPayload), RemoteErrors.Read(fault.GetProperty("e"))));
+            }
+        }
+
+        return new TopicPublishResult((TopicPublishOutcome)value.GetProperty("o").GetInt32(), faults);
+    }
+
     public void RegisterSharedChannel(TopicName root, SharedChannelPolicy policy)
     {
         ArgumentNullException.ThrowIfNull(policy);

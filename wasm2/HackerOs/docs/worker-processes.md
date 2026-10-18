@@ -148,6 +148,7 @@ Le bus reste dans l'OS. `RemoteEventGateway` et `RemoteWatchGateway`
 | `ev.sub` | `call` | S'abonner à un sujet (`t`) ou à un type d'événement noyau (`e`), avec la capacité d'un canal borné. |
 | `ev.unsub` | `note` | `Dispose` de l'abonnement. La fin, le `kill` ou la mort du worker désabonnent côté OS sans attendre. |
 | `ev.pub` | `note` | Publier sur un sujet (nom du type et JSON). Résultat provisoire `Delivered` dans le worker, refus au journal de l'app (ADR 0138 §3). |
+| `ev.pubr` | `call` | `PublishAsync` (ADR 0145) : la même publication, avec en réponse le résultat de l'OS (`o`) et les fautes des abonnés (`f`) ; rien au journal. |
 | `ev.chan` | `note` | `RegisterSharedChannel` (portée `VirtualPath` seulement). |
 | `ev.ack` | `note` | Rendre le crédit : 256 messages en vol par abonnement. |
 | `watch.open` | `call` | `WatchAsync` : l'OS ouvre la surveillance avec les droits du pid. |

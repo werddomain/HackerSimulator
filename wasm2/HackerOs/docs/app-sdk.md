@@ -399,8 +399,18 @@ Sans déclaration, l'abonnement ou la publication lève dans le worker une
 `NotSupportedException` qui nomme le type et l'attribut ; sur le fil principal,
 rien ne change. Dans un worker, `Publish` renvoie un résultat provisoire
 (`Delivered`) : un refus de l'OS (sujet d'une autre app, canal verrouillé) est
-écrit dans le journal de l'app, et un abonnement par canal refusé se termine
-avec l'exception. Les livraisons y sont toujours asynchrones.
+écrit dans le journal de l'app. `PublishAsync` (ADR 0145, après le SDK 1.2.0)
+renvoie le vrai résultat de l'OS, fautes des abonnés comprises, sur le fil
+principal comme dans un worker : c'est la forme à préférer dans le code qui
+peut tourner en worker.
+
+```csharp
+TopicPublishResult result = await context.Events.PublishAsync(topic, new MyTickEvent(1), cancellationToken);
+if (result.Outcome != TopicPublishOutcome.Delivered) { /* refusé par l'OS */ }
+```
+
+Un abonnement par canal refusé se termine avec l'exception. Les livraisons
+sont toujours asynchrones dans un worker.
 
 ### Graphiques (ADR 0058 §2)
 

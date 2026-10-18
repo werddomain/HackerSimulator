@@ -150,6 +150,24 @@ public sealed class RemoteEventsTests
             because: "the OS wrote the refusal to the app's log");
     }
 
+    [Theory]
+    [MemberData(nameof(BothModes))]
+    public async Task PublishAsync_returns_the_outcome_and_the_subscriber_faults_decided_by_the_OS(bool workers)
+    {
+        // ADR 0145: the same answer on the main thread and in a worker, refusals included.
+        await using OsFixture os = await StartAsync(workers);
+        using IDisposable faulty = os.TopicBus.Subscribe<PingPayload>(
+            RemoteEventCommands.PublishAsyncFaultyTopic,
+            new PublisherIdentity("org.test.listener", "listener", "1"),
+            static _ => throw new InvalidOperationException("boom"));
+
+        ShellRun run = await os.RunAsync("ev-pubasync").WaitAsync(TimeSpan.FromSeconds(20));
+
+        Assert.True(run.ExitCode == 0, run.Stderr);
+        Assert.Equal("own Delivered 0\nforeign TopicNotOwnedByCaller 0\nfaulty Delivered 1 boom\n", run.Stdout);
+        Assert.DoesNotContain("refused a publication", await os.ReadAppLogAsync("org.test.ev-pubasync"), StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Killing_a_service_in_its_worker_drops_its_subscriptions_from_the_bus_at_once()
     {
@@ -256,6 +274,9 @@ internal static class RemoteEventCommands
     /// <summary>The topic the <c>ev-listener</c> service listens on (its own namespace).</summary>
     public static TopicName ListenerTopic { get; } = TopicNames.ForApp("org.test.ev-listener").Segment("in").Build();
 
+    /// <summary>A topic of <c>ev-pubasync</c> whose main-thread subscriber throws.</summary>
+    public static TopicName PublishAsyncFaultyTopic { get; } = TopicNames.ForApp("org.test.ev-pubasync").Segment("faulty").Build();
+
     public static IReadOnlyList<AppManifest> Manifests { get; } =
     [
         TestCommands.Command<TopicCommand>("ev-topic"),
@@ -269,6 +290,7 @@ internal static class RemoteEventCommands
         TestCommands.Command<UndeclaredCommand>("ev-undeclared"),
         TestCommands.Command<ShoutCommand>("ev-shout"),
         TestCommands.Command<ForeignCommand>("ev-foreign"),
+        TestCommands.Command<PublishAsyncCommand>("ev-pubasync"),
         TestCommands.Service<ListenerService>("org.test.ev-listener")
     ];
 
@@ -437,6 +459,22 @@ internal static class RemoteEventCommands
         {
             context.App.Events.Publish(ShoutTopic, new PingPayload(8, "not mine"));
             await context.StandardOutput.WriteLineAsync("published");
+            return 0;
+        }
+    }
+
+    /// <summary><c>ev-pubasync</c>: <c>PublishAsync</c> on its own topic, another app's topic and a topic with a faulty subscriber.</summary>
+    public sealed class PublishAsyncCommand(AppManifest manifest) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            TopicPublishResult own = await context.App.Events.PublishAsync(OwnTopic(Manifest, "quiet"), new PingPayload(1, "own"), cancellationToken);
+            await context.StandardOutput.WriteLineAsync($"own {own.Outcome} {own.SubscriberFaults.Count}");
+            TopicPublishResult foreign = await context.App.Events.PublishAsync(ShoutTopic, new PingPayload(2, "foreign"), cancellationToken);
+            await context.StandardOutput.WriteLineAsync($"foreign {foreign.Outcome} {foreign.SubscriberFaults.Count}");
+            TopicPublishResult faulty = await context.App.Events.PublishAsync(PublishAsyncFaultyTopic, new PingPayload(3, "faulty"), cancellationToken);
+            await context.StandardOutput.WriteLineAsync(
+                $"faulty {faulty.Outcome} {faulty.SubscriberFaults.Count} {string.Join(",", faulty.SubscriberFaults.Select(f => f.Exception.Message))}");
             return 0;
         }
     }
