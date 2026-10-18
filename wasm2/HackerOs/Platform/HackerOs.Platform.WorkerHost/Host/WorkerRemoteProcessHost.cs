@@ -138,6 +138,49 @@ public sealed class WorkerRemoteProcessHost : IRemoteProcessHost
         }
     }
 
+    /// <summary>
+    /// Starts a window app in a worker of its own (trial of ADR 0129, verdict in ADR 0133): the
+    /// worker renders <see cref="RemoteProcessLaunch.Descriptor"/>'s window component with
+    /// <paramref name="runnerType"/> and sends its DOM changes back as <c>ui</c> messages, delivered to
+    /// <paramref name="receiver"/> on the page's thread. The window's chrome stays on the page.
+    /// </summary>
+    /// <param name="launch">The window app's process (its context is the OS's own, as for a command).</param>
+    /// <param name="runnerType">An <see cref="Worker.IWorkerWindowRunner"/> with a public parameterless constructor, loaded in the worker.</param>
+    /// <param name="receiver">Receives each <c>ui</c> output; the element is valid during the call only.</param>
+    /// <param name="cancellationToken">Cancels the wait for a worker.</param>
+    /// <returns>The running window process.</returns>
+    public async Task<RemoteWindowProcess> StartWindowAsync(
+        RemoteProcessLaunch launch,
+        Type runnerType,
+        Action<System.Text.Json.JsonElement> receiver,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(launch);
+        ArgumentNullException.ThrowIfNull(runnerType);
+        ArgumentNullException.ThrowIfNull(receiver);
+        WorkerConnection worker = await _pool.AcquireDedicatedAsync(cancellationToken).ConfigureAwait(false);
+        RemoteProcessSession session = new(worker, launch, TextReader.Null, TextWriter.Null, TextWriter.Null, inputAttached: false)
+        {
+            UiReceiver = receiver
+        };
+        worker.Add(session);
+        session.Attach();
+        IAppExecutionContext context = launch.Context;
+        IAppEnvironmentGateway environment = context.Environment;
+        Type entryType = launch.Descriptor.EntryPointType;
+        worker.Post(WorkerMessage.Create(WorkerMessageType.Start, writer =>
+        {
+            writer.WriteNumber("p", session.Pid);
+            writer.WriteNumber("k", HackerOs.Platform.WorkerHost.Worker.WorkerProcessHost.WindowKind);
+            writer.WriteString("asm", entryType.Assembly.GetName().Name + ".dll");
+            writer.WriteString("ty", entryType.FullName);
+            writer.WriteString("ra", runnerType.Assembly.GetName().Name + ".dll");
+            writer.WriteString("rt", runnerType.FullName);
+            WriteStart(writer, session, context, environment.GetCommandLineArgs(), environment.CurrentDirectory, environment.GetVariables());
+        }));
+        return new RemoteWindowProcess(_pool, worker, session);
+    }
+
     /// <summary>The identity, environment and clock every <c>start</c> message carries.</summary>
     private void WriteStart(
         System.Text.Json.Utf8JsonWriter writer,

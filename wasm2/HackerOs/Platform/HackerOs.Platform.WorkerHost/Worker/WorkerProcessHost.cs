@@ -125,6 +125,9 @@ public sealed class WorkerProcessHost
                     Find(root)?.Context.BackgroundJobs.Deliver(
                         root.GetInt32("j"), new HackBackgroundProgress(root.GetDouble("f"), root.GetOptionalString("m")));
                     break;
+                case WorkerMessageType.UiInput:
+                    Find(root)?.Window?.Deliver(root.GetProperty("d").Clone());
+                    break;
                 case WorkerMessageType.HttpRequest:
                     Find(root)?.Channel.Listeners.Deliver(root.GetInt32("sk"), WireCodec.ReadListenerExchange(root.GetProperty("ex")));
                     break;
@@ -286,6 +289,13 @@ public sealed class WorkerProcessHost
             return;
         }
 
+        if (root.GetInt32("k") == WindowKind)
+        {
+            // ADR 0129 trial: a window app rendered here, its DOM on the page (ADR 0133).
+            _ = RunWindowAsync(process, root.GetString("asm"), root.GetString("ty"), root.GetString("ra"), root.GetString("rt"));
+            return;
+        }
+
         StartInfo start = new(
             root.GetInt32("k") == 1 ? AppKind.Service : AppKind.Terminal,
             root.GetString("asm"),
@@ -326,6 +336,48 @@ public sealed class WorkerProcessHost
 
     /// <summary><c>k</c> of a <c>start</c> message for a background task (ADR 0128): 0 command, 1 service, 2 task.</summary>
     internal const int JobKind = 2;
+
+    /// <summary><c>k</c> of a <c>start</c> message for a window rendered in the worker (ADR 0129 trial, ADR 0133).</summary>
+    internal const int WindowKind = 3;
+
+    /// <summary>
+    /// Runs a window app (ADR 0129 trial): loads the app's assembly and the runner the OS named, then
+    /// lets the runner render the window component until it returns. A window that faults ends like a
+    /// faulted command; the OS closes the window.
+    /// </summary>
+    private async Task RunWindowAsync(WorkerProcess process, string assembly, string typeName, string runnerAssembly, string runnerType)
+    {
+        RemoteProcessExit exit;
+        try
+        {
+            EnsureKnownAssembly(assembly);
+            Type entryType = await _loader.LoadEntryTypeAsync(assembly, typeName).ConfigureAwait(true);
+            // The runner is platform code the OS names (part of the page's boot set), not an app: it is
+            // not checked against the apps known to the build, and loads by name.
+            Type runner = await _loader.LoadEntryTypeAsync(runnerAssembly, runnerType).ConfigureAwait(true);
+            exit = await process.RunWindowAsync(CreateRunner(runner), entryType).ConfigureAwait(true);
+        }
+        catch (TypeLoadException exception)
+        {
+            process.Output.StandardError.WriteLine($"{assembly}: {exception.Message}");
+            exit = RemoteProcessExit.Exited(LaunchFailedExitCode);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            exit = new RemoteProcessExit(RemoteProcessExitStatus.Faulted, FaultMessage: exception.Message);
+        }
+
+        End(process, exit);
+    }
+
+    /// <summary>Creates the window runner the OS named (a type of the page's own rendering library).</summary>
+    [UnconditionalSuppressMessage(
+        "Trimming", "IL2067",
+        Justification = "The runner type is HackerOs.Platform.RemoteRendering's WorkerWindowRunner, part of the host's " +
+            "boot set; its parameterless constructor is rooted there with DynamicDependency (ADR 0133).")]
+    private static IWorkerWindowRunner CreateRunner(Type runnerType) =>
+        Activator.CreateInstance(runnerType) as IWorkerWindowRunner
+        ?? throw new InvalidOperationException($"'{runnerType.FullName}' is not an {nameof(IWorkerWindowRunner)}.");
 
     /// <summary>
     /// Runs a background task (ADR 0128, section 3): loads the app's assembly, finds the task, reads its
@@ -589,6 +641,36 @@ internal sealed class WorkerProcess
         catch (HackBackgroundJobException fault)
         {
             return new RemoteProcessExit(RemoteProcessExitStatus.Faulted, 1, fault.Message) { JobFault = fault };
+        }
+    }
+
+    /// <summary>Gets the window rendered by this process (ADR 0129 trial), or <see langword="null"/>.</summary>
+    public WorkerWindowRun? Window { get; private set; }
+
+    /// <summary>
+    /// Runs a window (ADR 0129 trial) on the process's scheduler, in its ambient context, until its
+    /// runner returns: the OS closed it, a stop request was honored, or rendering failed.
+    /// </summary>
+    [UnconditionalSuppressMessage(
+        "Trimming", "IL2067",
+        Justification = "The entry-point type was resolved and validated by the OS's discovery against the host's " +
+            "explicit app allowlist; a trimmed host keeps that assembly whole (ADR 0113: generated root descriptor).")]
+    public async Task<RemoteProcessExit> RunWindowAsync(IWorkerWindowRunner runner, Type entryType)
+    {
+        Window = new WorkerWindowRun(Pid, Context, entryType, _host.Post);
+        try
+        {
+            using IDisposable ambient = HackExecutionContext.Enter(Context);
+            int code = await Control.RunAsync(() => runner.RunAsync(Window, _token.Token)).ConfigureAwait(true);
+            return RemoteProcessExit.Exited(code);
+        }
+        catch (HackProcessKilledException)
+        {
+            return new RemoteProcessExit(RemoteProcessExitStatus.Killed);
+        }
+        catch (OperationCanceledException)
+        {
+            return new RemoteProcessExit(RemoteProcessExitStatus.Cancelled);
         }
     }
 

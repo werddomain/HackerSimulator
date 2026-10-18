@@ -48,3 +48,5 @@ HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.DisposeAsync() -> System.Th
 HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.OnOpenSettings.get -> Microsoft.AspNetCore.Components.EventCallback
 HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.OnOpenSettings.set -> void
 HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.ServerStatusIndicator() -> void
+HackerOs.Platform.Blazor.Windows.IRemoteWindowRendering
+HackerOs.Platform.Blazor.Windows.IRemoteWindowRendering.GetHostComponent(HackerOs.Platform.Core.Discovery.AppDescriptor! descriptor) -> System.Type?
