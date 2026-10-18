@@ -123,7 +123,7 @@ public sealed class GrepCommand : TerminalAppBase
                 var res = await context.App.FileSystem.ReadAsync(req, cancellationToken);
                 if (!res.Succeeded || res.Value is null)
                 {
-                    context.StandardError.WriteLine(CommandText.FileError(context, "grep", file, CommandText.Reason(context, Errno.NotFound)));
+                    context.StandardError.WriteLine(CommandText.FileError(context, "grep", file, CommandText.Reason(context, CommandIO.ReadErrno(res.Error))));
                     continue;
                 }
 

@@ -31,8 +31,9 @@ public sealed class PrlimitApp : AppDefinition
     public override AppLaunchVisibility LaunchVisibility => AppLaunchVisibility.Hidden;
 
     /// <inheritdoc />
-    // process.manage: changing another process's limits is managing it (ADR 0125, section 4).
-    public override IReadOnlyList<string> Capabilities => [AppCapabilities.ProcessManage];
+    // process.list and filesystem.system.read: reading /proc/<pid>/limits, as ps does; process.manage: changing another process's limits is
+    // managing it (ADR 0125, section 4).
+    public override IReadOnlyList<string> Capabilities => [AppCapabilities.ProcessList, AppCapabilities.ProcessManage, AppCapabilities.FileSystemSystemRead];
 
     /// <inheritdoc />
     public override TerminalCommand? Terminal => new("prlimit", "prlimit [--pid <pid>] [--cpu[=soft:hard]] [--rss[=]] [--nofile[=]] [--nproc[=]] [--noheadings]");

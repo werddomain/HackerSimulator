@@ -281,7 +281,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     }
 
     private IReadOnlyList<ProcessFileDescriptor> DescriptorsOf(ProcessRecord process) =>
-        _metrics.FileDescriptors?.Invoke()?.GetOpen(process.Pid) ?? [];
+        (_metrics.FileDescriptors?.Invoke() ?? (_processManager() as Processes.InMemoryProcessManager)?.FileDescriptors)?.GetOpen(process.Pid) ?? [];
 
     private SymbolicLinkMetadata? SelfLink(VirtualPath path, FileSystemAuthorizationContext context)
     {
@@ -360,7 +360,8 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     /// </summary>
     private string RenderLimits(ProcessRecord process)
     {
-        IProcessResourceLimitTable? table = _metrics.ResourceLimits?.Invoke();
+        // The host's table, else the one the in-memory process manager keeps (headless compositions).
+        IProcessResourceLimitTable? table = _metrics.ResourceLimits?.Invoke() ?? (_processManager() as Processes.InMemoryProcessManager)?.ResourceLimits;
         ProcessResourceLimits limits = table is not null && table.TryGet(process.Pid, out ProcessResourceLimits found)
             ? found
             : ProcessResourceLimits.None;

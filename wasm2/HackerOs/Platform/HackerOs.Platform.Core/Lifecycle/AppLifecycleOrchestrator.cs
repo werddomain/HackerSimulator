@@ -1118,8 +1118,14 @@ public sealed class AppLifecycleOrchestrator
     /// The exit code of a command that ended on its stop request: 152 (128 + <c>SIGXCPU</c>) when the
     /// request was its CPU limit (ADR 0125, section 2), otherwise 130, as before.
     /// </summary>
+    /// <remarks>
+    /// A process killed while it was being cancelled (<c>SIGKILL</c> of a hard CPU limit cancels its token
+    /// too) reports 137: the kill wins, as the kernel reports the signal that ended it.
+    /// </remarks>
     private static int StoppedExitCode(IAppExecutionContext context) =>
-        context.StopRequest?.Reason == ProcessExitReason.CpuLimitExceeded ? InMemoryProcessManager.CpuLimitExitCode : 130;
+        ControlOf(context)?.IsKilled == true ? 137
+        : context.StopRequest?.Reason == ProcessExitReason.CpuLimitExceeded ? InMemoryProcessManager.CpuLimitExitCode
+        : 130;
 
     private static ProcessControlBlock? ControlOf(IAppExecutionContext context) =>
         context is AppExecutionContext trusted ? trusted.Control : null;

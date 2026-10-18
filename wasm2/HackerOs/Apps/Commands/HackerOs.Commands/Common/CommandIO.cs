@@ -110,14 +110,7 @@ internal static class CommandIO
 
         if (!result.Succeeded || result.Value is null)
         {
-            Errno reason = result.Error?.Code switch
-            {
-                FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied => Errno.PermissionDenied,
-                FileSystemErrorCode.NotFile => Errno.IsDirectory,
-                FileSystemErrorCode.TooManyOpenFiles => Errno.TooManyOpenFiles,
-                _ => Errno.NotFound
-            };
-            await context.StandardError.WriteLineAsync(CommandText.FileError(context, command, file, CommandText.Reason(context, reason)));
+            await context.StandardError.WriteLineAsync(CommandText.FileError(context, command, file, CommandText.Reason(context, ReadErrno(result.Error))));
             return null;
         }
 
@@ -192,6 +185,18 @@ internal static class CommandIO
 
         return (options, operands);
     }
+
+    /// <summary>
+    /// The <c>errno</c> a failed <c>open(2)</c> for reading reports: <c>EACCES</c>, <c>EISDIR</c>,
+    /// <c>EMFILE</c> at the <c>nofile</c> limit (ADR 0125), otherwise <c>ENOENT</c>.
+    /// </summary>
+    internal static Errno ReadErrno(FileSystemError? error) => error?.Code switch
+    {
+        FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied => Errno.PermissionDenied,
+        FileSystemErrorCode.NotFile => Errno.IsDirectory,
+        FileSystemErrorCode.TooManyOpenFiles => Errno.TooManyOpenFiles,
+        _ => Errno.NotFound
+    };
 }
 
 /// <summary>A mutable box, so an async iterator can report a failure to its caller.</summary>
