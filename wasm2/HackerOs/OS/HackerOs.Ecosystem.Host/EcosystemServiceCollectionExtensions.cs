@@ -242,8 +242,11 @@ public static class EcosystemServiceCollectionExtensions
                         // ADR 0074, section 2: /proc/net/tcp lists the listening ports.
                         () => provider.GetService<ListeningPortTable>())
                     {
+                        // ADR 0125: /proc/<pid>/limits and /proc/<pid>/fd.
+                        ResourceLimits = () => provider.GetRequiredService<IProcessResourceLimitTable>(),
+                        FileDescriptors = () => provider.GetRequiredService<IProcessFileDescriptorTable>(),
                         // ADR 0128: Job and Host of a background task's /proc/<pid>/status.
-                        BackgroundJobs = () => provider.GetService<BackgroundJobService>(),
+                        BackgroundJobs = () => provider.GetService<BackgroundJobService>()
                     })),
                 new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
                     provider.GetRequiredService<ISimulationClock>()))
@@ -492,12 +495,63 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<InMemoryProcessEnvironmentTable>();
         services.AddScoped<IProcessEnvironmentTable>(provider =>
             provider.GetRequiredService<InMemoryProcessEnvironmentTable>());
+        // Per-process resource limits and open descriptors (ADR 0125), filled and emptied by the
+        // process manager like the environment table; HackerOs:ResourceLimits:Enabled=false turns
+        // every limit off.
+        services.TryAddSingleton(ResourceLimitsSettings.Default);
+        services.AddScoped<InMemoryProcessResourceLimitTable>(provider =>
+            new InMemoryProcessResourceLimitTable(provider.GetRequiredService<ResourceLimitsSettings>().Enabled));
+        services.AddScoped<IProcessResourceLimitTable>(provider =>
+            provider.GetRequiredService<InMemoryProcessResourceLimitTable>());
+        services.AddScoped<InMemoryProcessFileDescriptorTable>(provider =>
+        {
+            InMemoryProcessResourceLimitTable limits = provider.GetRequiredService<InMemoryProcessResourceLimitTable>();
+            return new InMemoryProcessFileDescriptorTable(pid => limits.GetOrNone(pid).NoFile.Soft);
+        });
+        services.AddScoped<IProcessFileDescriptorTable>(provider =>
+            provider.GetRequiredService<InMemoryProcessFileDescriptorTable>());
+        // RLIMIT_CPU and RLIMIT_RSS against the measured CPU time and memory (ADR 0125, section 2);
+        // inactive while both measurements are off (ADR 0066).
+        services.AddScoped<ResourceLimitEnforcer>(provider => new ResourceLimitEnforcer(
+            provider.GetRequiredService<ISimulationClock>(),
+            () => provider.GetRequiredService<IProcessManager>(),
+            provider.GetRequiredService<IProcessResourceLimitTable>(),
+            CpuAccountant(provider),
+            MemoryAccountant(provider)));
         services.AddScoped<IProcessManager>(provider =>
-            new InMemoryProcessManager(
+        {
+            InMemoryProcessManager manager = new(
                 provider.GetRequiredService<ISimulationClock>(),
                 provider.GetRequiredService<ISessionService>(),
                 provider.GetRequiredService<IEventBus>(),
-                environments: provider.GetRequiredService<InMemoryProcessEnvironmentTable>()));
+                200,
+                provider.GetRequiredService<InMemoryProcessEnvironmentTable>(),
+                provider.GetRequiredService<InMemoryProcessResourceLimitTable>(),
+                provider.GetRequiredService<InMemoryProcessFileDescriptorTable>());
+            // The limit checks start with the process table, like the kernel's timer tick.
+            provider.GetRequiredService<ResourceLimitEnforcer>().Start();
+            return manager;
+        });
+        // pam_limits (ADR 0125, section 3): /etc/security/limits.conf at the session's first launch.
+        services.AddScoped<LoginResourceLimitsProvider>(provider => new LoginResourceLimitsProvider(
+            provider.GetRequiredService<IFileSystemService>(),
+            provider.GetRequiredService<ISimulationClock>(),
+            provider.GetRequiredService<IProcessResourceLimitTable>(),
+            async (principal, cancellationToken) =>
+            {
+                ILocalGroupRepository groups = provider.GetRequiredService<ILocalGroupRepository>();
+                List<string> names = [];
+                foreach (LocalGroupId groupId in principal.GroupIds)
+                {
+                    if (await groups.FindByIdAsync(groupId, cancellationToken).ConfigureAwait(false) is { } group)
+                    {
+                        names.Add(group.Name.Value);
+                    }
+                }
+
+                return names;
+            },
+            provider.GetRequiredService<IAuditLog>()));
         // Login environment (/etc/environment) and machine name (/etc/hostname), ADR 0050.
         services.AddScoped<LoginEnvironmentProvider>(provider => new LoginEnvironmentProvider(
             provider.GetRequiredService<IFileSystemService>(),
@@ -698,7 +752,11 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetService<IRemoteProcessHost>(),
             provider.GetRequiredService<ISimulationClock>(),
             // ADR 0097: a service that fails is written to /var/log/syslog.
-            provider.GetService<ILogger<AppLifecycleOrchestrator>>()));
+            provider.GetService<ILogger<AppLifecycleOrchestrator>>())
+        {
+            // ADR 0125, section 3: a session's root process gets the limits of limits.conf.
+            LoginResourceLimits = provider.GetRequiredService<LoginResourceLimitsProvider>()
+        });
         // Uninstall/reinstall through /etc/hackeros/apps.config + ~/.config/hackeros/apps.config
         // (ADR 0048). Started by EcosystemBootCoordinator once storage is ready; feeds the
         // AppEnablementRegistry every launch path consults.

@@ -303,6 +303,9 @@
   <data name="Errno.IsDirectory" xml:space="preserve">
     <value>Is a directory</value>
   </data>
+  <data name="Errno.TooManyOpenFiles" xml:space="preserve">
+    <value>Too many open files</value>
+  </data>
   <data name="Errno.NoSpace" xml:space="preserve">
     <value>No space left on device</value>
   </data>
@@ -440,6 +443,12 @@ Cancel: decide at the next launch.</value>
   </data>
   <data name="Shell.JobAlreadyInBackground" xml:space="preserve">
     <value>bg: job {0} already in background</value>
+  </data>
+  <data name="Shell.CpuLimitExceeded" xml:space="preserve">
+    <value>CPU time limit exceeded</value>
+  </data>
+  <data name="Shell.ForkFailed" xml:space="preserve">
+    <value>fork: Resource temporarily unavailable</value>
   </data>
   <data name="Shell.Killed" xml:space="preserve">
     <value>Killed</value>
@@ -596,5 +605,29 @@ Cancel: decide at the next launch.</value>
   </data>
   <data name="Syntax.UnterminatedSingleQuote" xml:space="preserve">
     <value>syntax error: unterminated single quote</value>
+  </data>
+  <data name="Builtin.ulimit" xml:space="preserve">
+    <value>Show or change the resource limits of the shell (shell builtin)</value>
+  </data>
+  <data name="Shell.UlimitInvalidOption" xml:space="preserve">
+    <value>ulimit: {0}: invalid option</value>
+  </data>
+  <data name="Shell.UlimitUsage" xml:space="preserve">
+    <value>usage: ulimit [-SH] [-a | -f | -m | -n | -t | -u] [limit]</value>
+  </data>
+  <data name="Shell.UlimitInvalidNumber" xml:space="preserve">
+    <value>ulimit: {0}: invalid number</value>
+  </data>
+  <data name="Shell.UlimitCannotModify" xml:space="preserve">
+    <value>ulimit: {0}: cannot modify limit: {1}</value>
+  </data>
+  <data name="Shell.UlimitNoProcess" xml:space="preserve">
+    <value>ulimit: the shell has no process</value>
+  </data>
+  <data name="Errno.OperationNotPermitted" xml:space="preserve">
+    <value>Operation not permitted</value>
+  </data>
+  <data name="Errno.InvalidArgument" xml:space="preserve">
+    <value>Invalid argument</value>
   </data>
 </root>

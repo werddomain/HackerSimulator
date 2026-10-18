@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Description.cpu" xml:space="preserve">
+    <value>temps processeur</value>
+  </data>
+  <data name="Description.nofile" xml:space="preserve">
+    <value>nombre maximal de fichiers ouverts</value>
+  </data>
+  <data name="Description.nproc" xml:space="preserve">
+    <value>nombre maximal de processus</value>
+  </data>
+  <data name="Description.rss" xml:space="preserve">
+    <value>taille maximale de la mémoire résidente</value>
+  </data>
+  <data name="GetFailed" xml:space="preserve">
+    <value>prlimit : impossible d’obtenir la limite de ressource {0} : {1}</value>
+  </data>
+  <data name="InvalidArgument" xml:space="preserve">
+    <value>Argument invalide</value>
+  </data>
+  <data name="InvalidLimit" xml:space="preserve">
+    <value>prlimit : impossible d’analyser la limite {0}</value>
+  </data>
+  <data name="InvalidPid" xml:space="preserve">
+    <value>prlimit : argument PID non valable : « {0} »</value>
+  </data>
+  <data name="NoSuchProcess" xml:space="preserve">
+    <value>Aucun processus de ce type</value>
+  </data>
+  <data name="OperationNotPermitted" xml:space="preserve">
+    <value>Opération non permise</value>
+  </data>
+  <data name="SetFailed" xml:space="preserve">
+    <value>prlimit : impossible de définir la limite de ressource {0} : {1}</value>
+  </data>
+  <data name="UnknownOption" xml:space="preserve">
+    <value>prlimit : option non reconnue « {0} »</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>Utilisation : prlimit [--pid &lt;pid&gt;] [--cpu[=souple:stricte]] [--rss[=…]] [--nofile[=…]] [--nproc[=…]] [--noheadings]</value>
+  </data>
+</root>

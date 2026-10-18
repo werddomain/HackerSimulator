@@ -27,6 +27,9 @@
   <data name="Errno.IsDirectory" xml:space="preserve">
     <value>Est un dossier</value>
   </data>
+  <data name="Errno.TooManyOpenFiles" xml:space="preserve">
+    <value>Trop de fichiers ouverts</value>
+  </data>
   <data name="Errno.NoSpace" xml:space="preserve">
     <value>Aucun espace disponible sur le périphérique</value>
   </data>

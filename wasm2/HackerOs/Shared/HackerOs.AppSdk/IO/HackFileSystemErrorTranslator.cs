@@ -66,6 +66,9 @@ internal static class HackFileSystemErrorTranslator
                 $"No space left on device while writing '{path}'.", error.Code, path),
             FileSystemErrorCode.FileTooLarge => new HackIOException(
                 $"The file '{path}' is too large (16 MiB at most).", error.Code, path),
+            // ADR 0125: EMFILE, the process holds as many descriptors as its nofile limit allows.
+            FileSystemErrorCode.TooManyOpenFiles => new HackIOException(
+                $"{path}: Too many open files", error.Code, path),
 
             // SymbolicLinkLoop, SymbolicLinkLimitExceeded, InvalidContent, ProviderUnavailable,
             // ProviderFailure, CrossMountOperation (normally absorbed by the facade) and any code added later.

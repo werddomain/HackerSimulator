@@ -244,6 +244,7 @@ public sealed partial class InMemoryProcessManagerTests
                 new InMemoryTopicMessageBus(new CapabilityGrantRepository(() => _now)),
                 () => new Guid(_transactionId++, 0, 0, new byte[8]));
             FileSystemSeeder seeder = new(fileSystem, timeProvider);
+            FileSystem = fileSystem;
 
             InMemoryLocalUserRepository users = new(() => _now);
             InMemoryLocalGroupRepository groups = new();
@@ -259,6 +260,7 @@ public sealed partial class InMemoryProcessManagerTests
                 users, seeder, EventBus, auditLog,
                 InstallationId.FromGuid(Guid.NewGuid()), DeviceId.FromGuid(Guid.NewGuid()), () => _now);
             AuthenticatedPrincipal principal = Session.LoginAsync(alice.LoginName, "hunter2").GetAwaiter().GetResult();
+            Principal = principal;
             _userId = principal.UserId;
             _sessionId = principal.SessionId;
 
@@ -267,8 +269,10 @@ public sealed partial class InMemoryProcessManagerTests
         }
 
         internal InMemoryEventBus EventBus { get; }
+        internal FileSystemService FileSystem { get; }
         internal LocalSessionService Session { get; }
         internal ManualSimulationClock Clock { get; }
+        internal AuthenticatedPrincipal Principal { get; }
         internal InMemoryProcessManager Manager { get; }
 
         internal ProcessStartRequest RequestFor(string appId, ProcessId? parentPid = null) => new(

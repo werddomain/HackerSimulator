@@ -1,7 +1,14 @@
 #nullable enable
-const HackerOs.Platform.Core.Execution.BackgroundJobService.MaxPayloadBytes = 16777216 -> int
 HackerOs.Platform.Core.Execution.AppExecutionContextFactory.BackgroundJobs.get -> System.Func<HackerOs.Platform.Core.Execution.BackgroundJobService!>?
 HackerOs.Platform.Core.Execution.AppExecutionContextFactory.BackgroundJobs.init -> void
+HackerOs.Platform.Core.Execution.AppFileSystemGateway.Descriptors.get -> HackerOs.Simulation.Abstractions.Processes.IProcessFileDescriptorTable?
+HackerOs.Platform.Core.Execution.AppFileSystemGateway.Descriptors.init -> void
+HackerOs.Platform.Core.Execution.AppFileSystemGateway.OpenDescriptorAsync(HackerOs.App.Abstractions.VirtualPath path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemResult<System.IDisposable!>!>
+HackerOs.Platform.Core.Execution.AppProcessGateway.IsRootElevated.get -> bool
+HackerOs.Platform.Core.Execution.AppProcessGateway.IsRootElevated.init -> void
+HackerOs.Platform.Core.Execution.AppProcessGateway.ResourceLimits.get -> HackerOs.Simulation.Abstractions.Processes.IProcessResourceLimitTable?
+HackerOs.Platform.Core.Execution.AppProcessGateway.ResourceLimits.init -> void
+HackerOs.Platform.Core.Execution.AppProcessGateway.SetResourceLimitAsync(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind kind, HackerOs.Simulation.Abstractions.Processes.ResourceLimit limit, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult>!
 HackerOs.Platform.Core.Execution.BackgroundJobHost
 HackerOs.Platform.Core.Execution.BackgroundJobHost.MainThread = 0 -> HackerOs.Platform.Core.Execution.BackgroundJobHost
 HackerOs.Platform.Core.Execution.BackgroundJobHost.Worker = 1 -> HackerOs.Platform.Core.Execution.BackgroundJobHost
@@ -44,7 +51,55 @@ HackerOs.Platform.Core.Execution.RemoteProcessExit.JobResult.get -> string?
 HackerOs.Platform.Core.Execution.RemoteProcessExit.JobResult.init -> void
 HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.BackgroundJobs.get -> System.Func<HackerOs.Platform.Core.Execution.BackgroundJobService?>?
 HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.BackgroundJobs.init -> void
-static HackerOs.Platform.Core.Execution.BackgroundJobService.ProcessNameOf(HackerOs.App.Abstractions.AppManifest! manifest, string! task) -> string!
+HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.FileDescriptors.get -> System.Func<HackerOs.Simulation.Abstractions.Processes.IProcessFileDescriptorTable?>?
+HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.FileDescriptors.init -> void
+HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.ResourceLimits.get -> System.Func<HackerOs.Simulation.Abstractions.Processes.IProcessResourceLimitTable?>?
+HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.ResourceLimits.init -> void
+HackerOs.Platform.Core.Lifecycle.AppLifecycleOrchestrator.LoginResourceLimits.get -> HackerOs.Platform.Core.Processes.LoginResourceLimitsProvider?
+HackerOs.Platform.Core.Lifecycle.AppLifecycleOrchestrator.LoginResourceLimits.init -> void
+HackerOs.Platform.Core.Processes.InMemoryProcessFileDescriptorTable
+HackerOs.Platform.Core.Processes.InMemoryProcessFileDescriptorTable.Close(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, int descriptor) -> void
+HackerOs.Platform.Core.Processes.InMemoryProcessFileDescriptorTable.GetOpen(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Processes.ProcessFileDescriptor>!
+HackerOs.Platform.Core.Processes.InMemoryProcessFileDescriptorTable.InMemoryProcessFileDescriptorTable(System.Func<HackerOs.Simulation.Abstractions.Processes.ProcessId, long>? noFileLimit = null) -> void
+HackerOs.Platform.Core.Processes.InMemoryProcessFileDescriptorTable.TryOpen(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, string! target, out int descriptor) -> bool
+HackerOs.Platform.Core.Processes.InMemoryProcessManager.FileDescriptors.get -> HackerOs.Simulation.Abstractions.Processes.IProcessFileDescriptorTable!
+HackerOs.Platform.Core.Processes.InMemoryProcessManager.InMemoryProcessManager(HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, HackerOs.Simulation.Abstractions.Sessions.ISessionService! session, HackerOs.Simulation.Abstractions.Events.IEventBus! eventBus, int maxHistory, HackerOs.Platform.Core.Processes.InMemoryProcessEnvironmentTable? environments, HackerOs.Platform.Core.Processes.InMemoryProcessResourceLimitTable? limits, HackerOs.Platform.Core.Processes.InMemoryProcessFileDescriptorTable? descriptors = null) -> void
+HackerOs.Platform.Core.Processes.InMemoryProcessManager.ResourceLimits.get -> HackerOs.Simulation.Abstractions.Processes.IProcessResourceLimitTable!
+HackerOs.Platform.Core.Processes.InMemoryProcessResourceLimitTable
+HackerOs.Platform.Core.Processes.InMemoryProcessResourceLimitTable.GetOrNone(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits!
+HackerOs.Platform.Core.Processes.InMemoryProcessResourceLimitTable.InMemoryProcessResourceLimitTable(bool enabled = true, HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits? kernelDefaults = null) -> void
+HackerOs.Platform.Core.Processes.InMemoryProcessResourceLimitTable.IsEnabled.get -> bool
+HackerOs.Platform.Core.Processes.InMemoryProcessResourceLimitTable.KernelDefaults.get -> HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits!
+HackerOs.Platform.Core.Processes.InMemoryProcessResourceLimitTable.TryGet(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, out HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits! limits) -> bool
+HackerOs.Platform.Core.Processes.InMemoryProcessResourceLimitTable.TrySet(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind kind, HackerOs.Simulation.Abstractions.Processes.ResourceLimit limit, bool privileged) -> HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult
+HackerOs.Platform.Core.Processes.LoginResourceLimitsProvider
+HackerOs.Platform.Core.Processes.LoginResourceLimitsProvider.GetAsync(HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal! principal, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits!>
+HackerOs.Platform.Core.Processes.LoginResourceLimitsProvider.LoginResourceLimitsProvider(HackerOs.Simulation.Abstractions.FileSystem.IFileSystemService! fileSystem, HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, HackerOs.Simulation.Abstractions.Processes.IProcessResourceLimitTable? table = null, System.Func<HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string!>!>>? groupNames = null, HackerOs.Simulation.Abstractions.Diagnostics.IAuditLog? auditLog = null) -> void
+HackerOs.Platform.Core.Processes.ResourceLimitAction
+HackerOs.Platform.Core.Processes.ResourceLimitAction.CpuKill = 2 -> HackerOs.Platform.Core.Processes.ResourceLimitAction
+HackerOs.Platform.Core.Processes.ResourceLimitAction.CpuSignal = 1 -> HackerOs.Platform.Core.Processes.ResourceLimitAction
+HackerOs.Platform.Core.Processes.ResourceLimitAction.MemoryKill = 3 -> HackerOs.Platform.Core.Processes.ResourceLimitAction
+HackerOs.Platform.Core.Processes.ResourceLimitAction.None = 0 -> HackerOs.Platform.Core.Processes.ResourceLimitAction
+HackerOs.Platform.Core.Processes.ResourceLimitEnforcer
+HackerOs.Platform.Core.Processes.ResourceLimitEnforcer.CheckNow() -> System.Collections.Generic.IReadOnlyList<(HackerOs.Simulation.Abstractions.Processes.ProcessId Pid, HackerOs.Platform.Core.Processes.ResourceLimitAction Action)>!
+HackerOs.Platform.Core.Processes.ResourceLimitEnforcer.Dispose() -> void
+HackerOs.Platform.Core.Processes.ResourceLimitEnforcer.Interval.get -> System.TimeSpan
+HackerOs.Platform.Core.Processes.ResourceLimitEnforcer.IsEffective.get -> bool
+HackerOs.Platform.Core.Processes.ResourceLimitEnforcer.ResourceLimitEnforcer(HackerOs.Simulation.Abstractions.Time.ISimulationClock! clock, System.Func<HackerOs.Simulation.Abstractions.Processes.IProcessManager!>! processManager, HackerOs.Simulation.Abstractions.Processes.IProcessResourceLimitTable! limits, HackerOs.Simulation.Abstractions.Processes.ICpuTimeAccountant! cpu, HackerOs.Simulation.Abstractions.Processes.IMemoryAccountant! memory, System.TimeSpan? interval = null) -> void
+HackerOs.Platform.Core.Processes.ResourceLimitEnforcer.Start() -> void
+HackerOs.Platform.Core.Processes.ResourceLimitRule
+HackerOs.Platform.Core.Processes.ResourceLimitRule.Domain.get -> string!
+HackerOs.Platform.Core.Processes.ResourceLimitRule.Domain.init -> void
+HackerOs.Platform.Core.Processes.ResourceLimitRule.Hard.get -> bool
+HackerOs.Platform.Core.Processes.ResourceLimitRule.Hard.init -> void
+HackerOs.Platform.Core.Processes.ResourceLimitRule.Kind.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind
+HackerOs.Platform.Core.Processes.ResourceLimitRule.Kind.init -> void
+HackerOs.Platform.Core.Processes.ResourceLimitRule.ResourceLimitRule(string! Domain, bool Soft, bool Hard, HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind Kind, long Value) -> void
+HackerOs.Platform.Core.Processes.ResourceLimitRule.Soft.get -> bool
+HackerOs.Platform.Core.Processes.ResourceLimitRule.Soft.init -> void
+HackerOs.Platform.Core.Processes.ResourceLimitRule.Value.get -> long
+HackerOs.Platform.Core.Processes.ResourceLimitRule.Value.init -> void
+HackerOs.Platform.Core.Processes.ResourceLimitsConfiguration
 HackerOs.Platform.Core.ServerConnection.HttpHostInfoClient
 HackerOs.Platform.Core.ServerConnection.HttpHostInfoClient.FindServingServerAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
 HackerOs.Platform.Core.ServerConnection.HttpHostInfoClient.GetHostInfoAsync(System.Uri! serverBaseUrl, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Server.Contracts.Hosting.HostInfoResponse!>!
@@ -82,7 +137,20 @@ HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.Connecting = 1 -> H
 HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.Error = 5 -> HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
 HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.NotConfigured = 0 -> HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
 HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.Offline = 4 -> HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
+const HackerOs.Platform.Core.Execution.BackgroundJobService.MaxPayloadBytes = 16777216 -> int
+const HackerOs.Platform.Core.Lifecycle.AppLifecycleOrchestrator.ProcessLimitErrorCode = "lifecycle.process.eagain" -> string!
+const HackerOs.Platform.Core.Processes.InMemoryProcessFileDescriptorTable.StandardStreamCount = 3 -> int
+const HackerOs.Platform.Core.Processes.InMemoryProcessManager.CpuLimitExitCode = 152 -> int
+const HackerOs.Platform.Core.Processes.ResourceLimitsConfiguration.DefaultLimitsFileContent = "# /etc/security/limits.conf\n#\n# Limits applied to each login session (ADR 0125), read like pam_limits when the session\n# starts. Changes take effect at the next login. Drop-in files: /etc/security/limits.d/*.conf.\n#\n# Format: <domain> <type> <item> <value>\n#   <domain>  a login name, @group, or * for everybody\n#   <type>    soft (the value that applies), hard (its ceiling), or - for both\n#   <item>    cpu    - max CPU time (MIN)\n#             rss    - max resident set size (KB)\n#             nofile - max number of open file descriptors\n#             nproc  - max number of processes\n#   <value>   a number, or unlimited\n#\n# Without any rule, a session gets the kernel's values (ulimit -a):\n#   cpu unlimited, rss unlimited, nofile 1024 (hard 524288), nproc 4096.\n#\n#<domain>      <type>  <item>         <value>\n#\n#*               soft    nofile          4096\n#@students       hard    nproc           200\n#alice           -       cpu             60\n\n# End of file\n" -> string!
 const HackerOs.Platform.Core.ServerConnection.ServerPresenceService.SupportedApiMajorVersion = "1" -> string!
+static HackerOs.Platform.Core.Execution.BackgroundJobService.ProcessNameOf(HackerOs.App.Abstractions.AppManifest! manifest, string! task) -> string!
+static HackerOs.Platform.Core.Processes.ResourceLimitsConfiguration.Apply(System.Collections.Generic.IEnumerable<HackerOs.Platform.Core.Processes.ResourceLimitRule!>! rules, string! loginName, System.Collections.Generic.IReadOnlyCollection<string!>! groupNames, HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits! defaults, System.Collections.Generic.ICollection<string!>? warnings = null) -> HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits!
+static HackerOs.Platform.Core.Processes.ResourceLimitsConfiguration.Item(HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind kind) -> string!
+static HackerOs.Platform.Core.Processes.ResourceLimitsConfiguration.Parse(string? content, string! fileName, System.Collections.Generic.ICollection<string!>? warnings = null) -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Processes.ResourceLimitRule!>!
 static HackerOs.Platform.Core.ServerConnection.ServerPresence.NotConfigured.get -> HackerOs.Platform.Core.ServerConnection.ServerPresence!
 static HackerOs.Platform.Core.ServerConnection.ServerPresenceService.ConfigFile.get -> HackerOs.Platform.Core.Settings.OsSettingsFile!
 static HackerOs.Platform.Core.ServerConnection.ServerPresenceService.ParseAutoConnect(string? content) -> bool
+static readonly HackerOs.Platform.Core.Processes.ResourceLimitEnforcer.DefaultInterval -> System.TimeSpan
+static readonly HackerOs.Platform.Core.Processes.ResourceLimitEnforcer.SignalGracePeriod -> System.TimeSpan
+static readonly HackerOs.Platform.Core.Processes.ResourceLimitsConfiguration.LimitsDirectoryPath -> HackerOs.App.Abstractions.VirtualPath
+static readonly HackerOs.Platform.Core.Processes.ResourceLimitsConfiguration.LimitsFilePath -> HackerOs.App.Abstractions.VirtualPath

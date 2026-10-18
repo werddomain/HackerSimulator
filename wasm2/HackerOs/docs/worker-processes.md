@@ -271,6 +271,21 @@ Commande de démonstration : `stress [-c N] [-t SECONDES] [--yield]` fait
 tourner N boucles de calcul sans rendre la main (`--yield` : avec points
 d'arrêt).
 
+### Limites de processus (ADR 0125, ADR 0139)
+
+Les limites restent dans l'OS ([`process-limits.md`](process-limits.md)).
+
+| Opération | Forme | Rôle |
+|---|---|---|
+| `fs.fdopen` | `call` | Prendre un descripteur pour un flux d'écriture (`OpenDescriptorAsync`) ; refus `EMFILE` à la limite. |
+| `fs.fdclose` | `note` | Rendre ce descripteur ; la fin du processus rend les autres. |
+| `proc.rlimit` | `call` | `SetResourceLimitAsync` (`setrlimit`/`prlimit`) au nom du pid. |
+
+L'application est stricte en worker : le contrôleur envoie `SIGXCPU` par un
+`stop`, puis `SIGKILL` termine le worker (étape 4 de l'ADR 0069) si le
+processus ne rend pas la main. Une lecture de 16 Mio au plus arrive en une
+seule réponse : son descripteur est rendu dès cette réponse (ADR 0139 §3).
+
 ## Décisions clés
 
 - Le shell, ses scripts et ses tubes restent sur le fil principal ; seules les
@@ -337,6 +352,12 @@ d'arrêt).
 - [x] `KnownAssemblies`, refus avec le code 127 ; `sample-cmd` dans l'Ecosystem et le test des hôtes.
 - [x] Tests de parité (`RemoteEventsTests`, `WireTopicMessageBusTests`).
 - [x] Documentation, ADR 0138, index.
+
+## Liste des tâches du chantier `exec/2-process-limits` (ADR 0125, ADR 0139)
+
+- [x] Opérations `fs.fdopen`, `fs.fdclose` et `proc.rlimit`.
+- [x] Descripteurs du processus rendus à sa fin dans `RemoteProcessSession`.
+- [x] `ProcessLimitsTests` sur le fil principal et en worker.
 
 ## Liste des tâches du chantier `exec/5-background-jobs` (ADR 0128, ADR 0140)
 

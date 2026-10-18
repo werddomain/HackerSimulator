@@ -47,6 +47,7 @@ internal static class ShellText
         HackIOException { ErrorCode: FileSystemErrorCode.NotDirectory } => texts["Errno.NotDirectory"],
         HackIOException { ErrorCode: FileSystemErrorCode.NoSpace } => texts["Errno.NoSpace"],
         HackIOException { ErrorCode: FileSystemErrorCode.FileTooLarge } => texts["Errno.FileTooLarge"],
+        HackIOException { ErrorCode: FileSystemErrorCode.TooManyOpenFiles } => texts["Errno.TooManyOpenFiles"],
         ArgumentException => texts["Errno.InvalidPath"],
         _ => exception.Message
     };
