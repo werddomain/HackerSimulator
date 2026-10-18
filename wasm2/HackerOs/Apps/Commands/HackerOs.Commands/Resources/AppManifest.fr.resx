@@ -108,6 +108,12 @@
   <data name="org.hackeros.commands.dirname.Terminal.Usage" xml:space="preserve">
     <value>dirname nom...</value>
   </data>
+  <data name="org.hackeros.commands.dmesg.Description" xml:space="preserve">
+    <value>Affiche le tampon circulaire du noyau</value>
+  </data>
+  <data name="org.hackeros.commands.dmesg.Terminal.Usage" xml:space="preserve">
+    <value>dmesg [-T] [-x] [-l NIVEAU[,NIVEAU...]]</value>
+  </data>
   <data name="org.hackeros.commands.du.Description" xml:space="preserve">
     <value>Estime l'espace occupé par les fichiers</value>
   </data>
@@ -325,10 +331,10 @@
     <value>sort [-rnhVfbuc] [-k N[,M]] [-t sép] [-o fichier] [fichier...]</value>
   </data>
   <data name="org.hackeros.commands.stress.Description" xml:space="preserve">
-    <value>Impose une charge CPU au système</value>
+    <value>Impose une charge CPU ou mémoire au système</value>
   </data>
   <data name="org.hackeros.commands.stress.Terminal.Usage" xml:space="preserve">
-    <value>stress [-c N] [-t SECONDES] [--yield]</value>
+    <value>stress [-c N] [-m N] [--vm-bytes B] [--vm-keep] [-t SECONDES] [--yield]</value>
   </data>
   <data name="org.hackeros.commands.sudo.Description" xml:space="preserve">
     <value>Exécute une commande en tant que superutilisateur</value>

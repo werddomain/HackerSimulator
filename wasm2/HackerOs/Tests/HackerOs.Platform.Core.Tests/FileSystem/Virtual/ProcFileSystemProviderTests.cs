@@ -35,6 +35,21 @@ public sealed class ProcFileSystemProviderTests
     }
 
     [Fact]
+    public async Task Oom_files_and_vmstat_read_the_oom_score_and_the_kill_counter()
+    {
+        VirtualFileSystemFixture fixture = await CreateSeededAsync();
+        fixture.Processes.Active.Add(Process(42, "org.hackeros.apps.terminal"));
+        FileSystemAuthorizationContext context = fixture.AppContext(42, Read);
+
+        // ADR 0126: no table wired, every process reads 0; the score is VmRSS per mille of MemTotal.
+        Assert.Equal("0\n", await fixture.ReadTextAsync("/proc/42/oom_score_adj", context));
+        Assert.Matches(@"^\d+\n$", await fixture.ReadTextAsync("/proc/42/oom_score", context));
+        string vmstat = await fixture.ReadTextAsync("/proc/vmstat", context);
+        Assert.Contains("nr_free_pages ", vmstat, StringComparison.Ordinal);
+        Assert.EndsWith("oom_kill 0\n", vmstat, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Proc_listing_holds_visible_pids_and_system_files()
     {
         VirtualFileSystemFixture fixture = await CreateSeededAsync();
@@ -44,7 +59,7 @@ public sealed class ProcFileSystemProviderTests
             new FileSystemEnumerateRequest(VirtualPath.Parse("/proc")), fixture.AppContext(42, Read));
 
         Assert.Equal(
-            ["42", "cpuinfo", "diskstats", "loadavg", "meminfo", "mounts", "net", "self", "stat", "uptime"],
+            ["42", "cpuinfo", "diskstats", "loadavg", "meminfo", "mounts", "net", "self", "stat", "uptime", "vmstat"],
             listing.Value!.Entries.Select(static entry => entry.Name.Value));
         Assert.Equal(fixture.Clock.CurrentTick + 1, listing.Value.Revision);
     }

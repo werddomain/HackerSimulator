@@ -91,6 +91,7 @@ public static partial class HackerOsBrowserHostExtensions
         builder.Services.AddHackerOsResourceAccounting(builder.Configuration, apps.Images);
         // ADR 0125: process limits (ulimit, limits.conf), on unless HackerOs:ResourceLimits:Enabled is false.
         builder.Services.AddHackerOsResourceLimits(builder.Configuration);
+        builder.Services.AddHackerOsHardware(builder.Configuration);
         builder.Services.AddHackerOsEcosystem(
             apps.Catalog,
             provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>().Descriptors,

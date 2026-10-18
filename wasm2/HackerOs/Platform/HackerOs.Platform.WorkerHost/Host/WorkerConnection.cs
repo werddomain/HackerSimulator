@@ -64,8 +64,17 @@ internal sealed class WorkerConnection
         }
     }
 
-    /// <summary>Gets the managed heap of the worker's runtime at its last heartbeat.</summary>
+    /// <summary>Gets the whole memory of the worker's runtime at its last heartbeat (its WebAssembly memory, else its managed heap).</summary>
     public long RuntimeMemoryBytes { get; private set; }
+
+    /// <summary>Gets the managed heap of the worker's runtime at the last heartbeat (ADR 0126, section 5).</summary>
+    public long RuntimeHeapBytes { get; private set; }
+
+    /// <summary>
+    /// Gets or sets whether the worker is replaced once it hosts no process (ADR 0142): it hosted an
+    /// OOM victim, and its WebAssembly memory, grown by the victim, never shrinks.
+    /// </summary>
+    public bool RecycleWhenIdle { get; set; }
 
     /// <summary>Gets the CPU time the worker's thread spent running processes, from its heartbeats.</summary>
     public TimeSpan BusyTime { get; private set; }
@@ -356,6 +365,7 @@ internal sealed class WorkerConnection
         Interlocked.Exchange(ref _lastHeartbeat, Stopwatch.GetTimestamp());
         // The runtime's whole memory when the platform reports it, else its managed heap.
         long heap = root.GetInt64("heap");
+        RuntimeHeapBytes = heap;
         RuntimeMemoryBytes = root.GetOptional("rss") is { } rss && rss.GetInt64() > heap ? rss.GetInt64() : heap;
         if (root.GetOptional("busy") is { } busy)
         {

@@ -480,10 +480,11 @@ public sealed partial class ShellInterpreter
             case AppLaunchStatus.Launched or AppLaunchStatus.FocusedExisting:
                 if (launch.ExitCode == KilledExitCode
                     && launch.Process?.ExitReason is ProcessExitReason.Killed or ProcessExitReason.Timeout
-                        or ProcessExitReason.CpuLimitExceeded or ProcessExitReason.MemoryLimitExceeded)
+                        or ProcessExitReason.CpuLimitExceeded or ProcessExitReason.MemoryLimitExceeded
+                        or ProcessExitReason.OutOfMemory)
                 {
                     // Like bash for a job ended by SIGKILL (kill -9, its worker was terminated, ADR 0070,
-                    // or a hard CPU or memory limit, ADR 0125).
+                    // a hard CPU or memory limit, ADR 0125, or the OOM killer, ADR 0126).
                     await error.WriteLineAsync(texts["Shell.Killed"]).ConfigureAwait(false);
                 }
                 else if (launch.ExitCode == CpuLimitExitCode && launch.Process?.ExitReason == ProcessExitReason.CpuLimitExceeded)

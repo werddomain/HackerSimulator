@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using HackerOs.App.Abstractions;
+using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Time;
 
@@ -16,8 +17,12 @@ namespace HackerOs.Platform.Core.FileSystem.Virtual;
 /// <item><c>/dev/random</c> and <c>/dev/urandom</c> are endless streams from
 /// <see cref="RandomNumberGenerator"/>, never from <c>ISimulationRandom</c>, which ADR 0012 keeps for
 /// deterministic simulation only.</item>
+/// <item><c>/dev/kmsg</c> (when the host gives a <see cref="KernelLog"/>, ADR 0126) reads as the
+/// kernel's ring buffer, one record per line, which <c>dmesg</c> formats; a line written to it is
+/// added to the buffer as a <c>KERN_NOTICE</c> message, as <c>echo text &gt; /dev/kmsg</c> does. It is
+/// <c>0644</c> and owned by the system, like Linux's.</item>
 /// </list>
-/// Every device accepts and discards writes without changing revision or raising a change event.
+/// Every other device accepts and discards writes without changing revision or raising a change event.
 /// Endless streams hand out at most 4 KiB per read and honor cancellation, so a reader must bound
 /// its own read (like <c>head -c 16 /dev/urandom</c>) instead of reading to the end.
 /// </remarks>
@@ -28,16 +33,33 @@ public sealed class DevFileSystemProvider : VirtualFileSystemProvider
 
     private const ushort DirectoryMode = 0b111_101_101; // 0755
     private const ushort DeviceMode = 0b110_110_110; // 0666
+    private const ushort KernelMessagesMode = 0b110_100_100; // 0644
+    private const string KernelMessagesDevice = "kmsg";
 
-    private static readonly string[] DeviceNames = ["null", "random", "urandom", "zero"];
+    private static readonly string[] BaseDeviceNames = ["null", "random", "urandom", "zero"];
+
+    private readonly Func<KernelLog?>? _kernelLog;
 
     /// <summary>Initializes the <c>/dev</c> provider.</summary>
     /// <param name="clock">Simulation clock supplying revisions and the boot timestamp.</param>
     /// <param name="transactionIdFactory">Optional deterministic transaction ID source for tests.</param>
     public DevFileSystemProvider(ISimulationClock clock, Func<Guid>? transactionIdFactory = null)
-        : base(DefaultMountPath, clock, transactionIdFactory)
+        : this(clock, kernelLog: null, transactionIdFactory)
     {
     }
+
+    /// <summary>Initializes the <c>/dev</c> provider with the kernel's ring buffer behind <c>/dev/kmsg</c>.</summary>
+    /// <param name="clock">Simulation clock supplying revisions and the boot timestamp.</param>
+    /// <param name="kernelLog">Lazily resolves the ring buffer (ADR 0126); <c>/dev/kmsg</c> is absent while it returns <see langword="null"/>.</param>
+    /// <param name="transactionIdFactory">Optional deterministic transaction ID source for tests.</param>
+    public DevFileSystemProvider(ISimulationClock clock, Func<KernelLog?>? kernelLog, Func<Guid>? transactionIdFactory = null)
+        : base(DefaultMountPath, clock, transactionIdFactory)
+    {
+        _kernelLog = kernelLog;
+    }
+
+    private IReadOnlyList<string> DeviceNames =>
+        _kernelLog?.Invoke() is null ? BaseDeviceNames : [KernelMessagesDevice, .. BaseDeviceNames];
 
     /// <inheritdoc />
     public override string ProviderId => "devfs";
@@ -59,6 +81,7 @@ public sealed class DevFileSystemProvider : VirtualFileSystemProvider
         Stream content = device switch
         {
             "null" => Stream.Null,
+            KernelMessagesDevice => new MemoryStream(System.Text.Encoding.UTF8.GetBytes(_kernelLog!()!.FormatDevKmsg()), writable: false),
             "zero" => new EndlessDeviceStream(static buffer => buffer.Clear()),
             _ => new EndlessDeviceStream(static buffer => RandomNumberGenerator.Fill(buffer))
         };
@@ -130,7 +153,20 @@ public sealed class DevFileSystemProvider : VirtualFileSystemProvider
         try
         {
             await using Stream stream = await content.OpenReadAsync(cancellationToken).ConfigureAwait(false);
-            await stream.CopyToAsync(Stream.Null, cancellationToken).ConfigureAwait(false);
+            if (DeviceName(request.Path) == KernelMessagesDevice && _kernelLog?.Invoke() is { } kernelLog)
+            {
+                // printk from user space: each written line becomes one message of the ring buffer.
+                using StreamReader reader = new(stream, System.Text.Encoding.UTF8);
+                string text = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+                foreach (string line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    kernelLog.Write(KernelLogLevel.Notice, line);
+                }
+            }
+            else
+            {
+                await stream.CopyToAsync(Stream.Null, cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -153,7 +189,7 @@ public sealed class DevFileSystemProvider : VirtualFileSystemProvider
             StableId(path),
             SystemPrincipal,
             SystemPrincipal,
-            FileSystemPermissions.FromMode(DeviceMode),
+            FileSystemPermissions.FromMode(DeviceName(path) == KernelMessagesDevice ? KernelMessagesMode : DeviceMode),
             Timestamps(BootTimeUtc, BootTimeUtc),
             CurrentRevision);
 

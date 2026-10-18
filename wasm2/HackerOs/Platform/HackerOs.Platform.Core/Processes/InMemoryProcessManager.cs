@@ -24,6 +24,7 @@ public sealed class InMemoryProcessManager : IProcessManager
     private readonly InMemoryProcessEnvironmentTable _environments;
     private readonly InMemoryProcessResourceLimitTable _limits;
     private readonly InMemoryProcessFileDescriptorTable _descriptors;
+    private readonly InMemoryProcessOomScoreTable _oomScores;
 
     private readonly Lock _gate = new();
     private long _nextPid = 1;
@@ -64,6 +65,10 @@ public sealed class InMemoryProcessManager : IProcessManager
     /// Table receiving each process's open descriptors (ADR 0125, <c>RLIMIT_NOFILE</c>); a private one
     /// bound to <paramref name="limits"/> is created when omitted. Reachable through <see cref="FileDescriptors"/>.
     /// </param>
+    /// <param name="oomScores">
+    /// Table receiving each process's <c>oom_score_adj</c> (ADR 0126, section 4); a private one is
+    /// created when omitted. Reachable through <see cref="OomScores"/>.
+    /// </param>
     public InMemoryProcessManager(
         ISimulationClock clock,
         ISessionService session,
@@ -71,7 +76,8 @@ public sealed class InMemoryProcessManager : IProcessManager
         int maxHistory,
         InMemoryProcessEnvironmentTable? environments,
         InMemoryProcessResourceLimitTable? limits,
-        InMemoryProcessFileDescriptorTable? descriptors = null)
+        InMemoryProcessFileDescriptorTable? descriptors = null,
+        InMemoryProcessOomScoreTable? oomScores = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(maxHistory, 1);
 
@@ -82,6 +88,7 @@ public sealed class InMemoryProcessManager : IProcessManager
         _environments = environments ?? new InMemoryProcessEnvironmentTable();
         _limits = limits ?? new InMemoryProcessResourceLimitTable();
         _descriptors = descriptors ?? new InMemoryProcessFileDescriptorTable(pid => _limits.GetOrNone(pid).NoFile.Soft);
+        _oomScores = oomScores ?? new InMemoryProcessOomScoreTable();
     }
 
     /// <summary>
@@ -102,6 +109,12 @@ public sealed class InMemoryProcessManager : IProcessManager
     /// </summary>
     public IProcessFileDescriptorTable FileDescriptors => _descriptors;
 
+    /// <summary>
+    /// Gets the <c>oom_score_adj</c> of the active processes (ADR 0126, section 4): inherited or set
+    /// at <see cref="Start"/>, dropped when a process ends.
+    /// </summary>
+    public InMemoryProcessOomScoreTable OomScores => _oomScores;
+
     /// <inheritdoc />
     public ProcessRecord Start(ProcessStartRequest request)
     {
@@ -121,6 +134,8 @@ public sealed class InMemoryProcessManager : IProcessManager
             // ADR 0125 section 3: the limits are inherited like the environment, at fork.
             _limits.Create(request, pid);
             _descriptors.Create(pid, request.Kind == AppKind.Terminal ? "/dev/tty" : "/dev/null");
+            // ADR 0126 section 4: oom_score_adj is inherited at fork, or set at exec for a service.
+            _oomScores.Create(request, pid);
             // ADR 0097 section 4: a boot service lives until shutdown, not until logout.
             CancellationTokenSource tokenSource = request.SystemScope
                 ? CancellationTokenSource.CreateLinkedTokenSource(_systemRoot.Token)
@@ -446,6 +461,7 @@ public sealed class InMemoryProcessManager : IProcessManager
         _environments.Remove(old.Pid);
         _limits.Remove(old.Pid);
         _descriptors.Remove(old.Pid);
+        _oomScores.Remove(old.Pid);
         entry.TokenSource.Cancel();
         entry.TokenSource.Dispose();
         AddHistory(updated);
@@ -472,11 +488,13 @@ public sealed class InMemoryProcessManager : IProcessManager
     /// keep the OS reachable for the process's own cleanup, as before.
     /// </summary>
     /// <remarks>
-    /// ADR 0125: the OS's own <c>SIGKILL</c> at a hard CPU limit or a memory limit is one too.
+    /// ADR 0125: the OS's own <c>SIGKILL</c> at a hard CPU limit or a memory limit is one too, and so
+    /// is the OOM killer's (ADR 0126).
     /// </remarks>
     private static bool IsSignalKill(ProcessExitReason reason) =>
         reason is ProcessExitReason.Killed or ProcessExitReason.Timeout
-            or ProcessExitReason.CpuLimitExceeded or ProcessExitReason.MemoryLimitExceeded;
+            or ProcessExitReason.CpuLimitExceeded or ProcessExitReason.MemoryLimitExceeded
+            or ProcessExitReason.OutOfMemory;
 
     /// <summary>
     /// The <c>RLIMIT_NPROC</c> check of <c>fork(2)</c> (ADR 0125, section 1): the caller's soft

@@ -345,6 +345,18 @@
   <data name="LoginStep.StartingSession" xml:space="preserve">
     <value>Démarrage de la session</value>
   </data>
+  <data name="Oom.BrowserLimit.Message" xml:space="preserve">
+    <value>La page approche de la limite de mémoire du navigateur ({0} : {1:0} Mio sur {2:0} Mio).</value>
+  </data>
+  <data name="Oom.BrowserLimit.Title" xml:space="preserve">
+    <value>Limite de mémoire du navigateur proche</value>
+  </data>
+  <data name="Oom.Killed.Message" xml:space="preserve">
+    <value>« {0} » a été fermée : mémoire insuffisante.</value>
+  </data>
+  <data name="Oom.Killed.Title" xml:space="preserve">
+    <value>Application fermée</value>
+  </data>
   <data name="Nice.PermissionDenied" xml:space="preserve">
     <value>impossible de modifier la priorité : Permission refusée</value>
   </data>

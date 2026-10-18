@@ -42,6 +42,8 @@ public sealed class EcosystemBootCoordinator
     private readonly ServiceStartupCoordinator? _serviceStartup;
     private readonly StorageSpaceMonitor? _spaceMonitor;
     private readonly SystemBackupService? _backup;
+    private readonly OomKiller? _oomKiller;
+    private readonly IOsSettingsService? _settings;
 
     /// <summary>Initializes the coordinator with every boot-critical persistent boundary.</summary>
     /// <param name="fileSystemBootstrapper">Mounts the IndexedDB-backed filesystem, the first step of the boot.</param>
@@ -88,6 +90,11 @@ public sealed class EcosystemBootCoordinator
     /// Backup service whose restore record, kept across the restart, is written to
     /// <c>/var/log/auth.log</c> at boot (ADR 0099, section 1). Optional for headless tests.
     /// </param>
+    /// <param name="oomKiller">
+    /// The OOM killer of ADR 0126, configured from <c>/etc/hackeros/memory.config</c> once the
+    /// settings files exist, then started. Optional for headless tests.
+    /// </param>
+    /// <param name="settings">The settings service <paramref name="oomKiller"/> reads and watches.</param>
     public EcosystemBootCoordinator(
         IndexedDbFileSystemBootstrapper fileSystemBootstrapper,
         SettingsStoreToFilesMigration settingsMigration,
@@ -108,7 +115,9 @@ public sealed class EcosystemBootCoordinator
         IWorkerPoolStatus? workers = null,
         ServiceStartupCoordinator? serviceStartup = null,
         StorageSpaceMonitor? spaceMonitor = null,
-        SystemBackupService? backup = null)
+        SystemBackupService? backup = null,
+        OomKiller? oomKiller = null,
+        IOsSettingsService? settings = null)
     {
         _fileSystemBootstrapper = fileSystemBootstrapper
             ?? throw new ArgumentNullException(nameof(fileSystemBootstrapper));
@@ -131,6 +140,8 @@ public sealed class EcosystemBootCoordinator
         _serviceStartup = serviceStartup;
         _spaceMonitor = spaceMonitor;
         _backup = backup;
+        _oomKiller = oomKiller;
+        _settings = settings;
     }
 
     /// <summary>
@@ -202,6 +213,9 @@ public sealed class EcosystemBootCoordinator
 
         IReadOnlyList<PersistedAppCatalogEntry> catalog = await catalogTask.ConfigureAwait(false);
         IReadOnlyList<LocalUser> users = await usersTask.ConfigureAwait(false);
+
+        // ADR 0126: memory.config exists now; the OOM killer reads it, watches it, and samples.
+        await StartOomKillerAsync(cancellationToken).ConfigureAwait(false);
 
         // Uninstalls are files since ADR 0048: install /etc/hackeros/apps.config (copying the retired
         // IsEnabled flags once), then enforce it before any login so an uninstalled app is blocked
@@ -283,6 +297,32 @@ public sealed class EcosystemBootCoordinator
                 ? "workers: commands and services run in Web Workers"
                 : $"workers: {_workers.PoolSize} pool worker(s), one per virtual core, plus one ready worker once the system is started; ceiling {_workers.Capacity} (navigator.hardwareConcurrency)";
         _logWriter.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "workers", notice);
+    }
+
+    /// <summary>
+    /// Configures the OOM killer from <c>memory.config</c> and starts its samples (ADR 0126). Never
+    /// blocks the boot: an unreadable file leaves it off, with the reason in <c>syslog</c>.
+    /// </summary>
+    private async ValueTask StartOomKillerAsync(CancellationToken cancellationToken)
+    {
+        if (_oomKiller is null)
+        {
+            return;
+        }
+
+        if (_settings is not null)
+        {
+            try
+            {
+                await _oomKiller.AttachAsync(_settings, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logWriter?.Write(LogFileTarget.Syslog, DiagnosticSeverity.Warning, "kernel", $"oom-killer: memory.config unreadable, staying off: {exception.Message}");
+            }
+        }
+
+        _oomKiller.Start();
     }
 
     /// <summary>

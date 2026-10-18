@@ -79,9 +79,9 @@ public partial class SettingsWindow : IAsyncDisposable
     /// <summary>
     /// Index of the "Application" tab, the last one (ADR 0096 §4): after Appearance, Accessibility, Language, File
     /// Associations, Capability Grants, Permissions, Installed Apps, Server Connection,
-    /// Synchronization, Backup (only when the host supports it) and About System.
+    /// Synchronization, Users, Memory, Backup (only when the host supports it) and About System.
     /// </summary>
-    private int AppPageTabIndex => HackerOs.AppSdk.Administration.HackSystemBackup.IsSupportedFor(AppContext) ? 11 : 10;
+    private int AppPageTabIndex => HackerOs.AppSdk.Administration.HackSystemBackup.IsSupportedFor(AppContext) ? 12 : 11;
 
     private IStringLocalizer<Strings>? _localizer;
 

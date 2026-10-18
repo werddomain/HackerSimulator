@@ -67,7 +67,8 @@ public static class AppManifestJsonSerializer
             "supportsBack",
             "window",
             "execution",
-            "web"
+            "web",
+            "oomScoreAdj"
         });
 
         return JsonSerializer.Deserialize(document.RootElement.GetRawText(), AppManifestJsonSerializerContext.Default.AppManifest)

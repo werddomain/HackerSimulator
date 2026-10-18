@@ -27,6 +27,12 @@ public sealed record LogFileTarget
     /// </summary>
     public static readonly LogFileTarget AuditLog = new(VirtualPath.Parse("/var/log/audit.log"), 0b110_000_000);
 
+    /// <summary>
+    /// Kernel log: every line of the kernel's ring buffer (<c>kern.*</c>, ADR 0126), such as the OOM
+    /// killer's. Mode <c>0644</c>; <c>dmesg</c> reads the ring buffer itself through <c>/dev/kmsg</c>.
+    /// </summary>
+    public static readonly LogFileTarget KernLog = new(VirtualPath.Parse("/var/log/kern.log"), 0b110_100_100);
+
     private LogFileTarget(VirtualPath path, ushort mode)
     {
         Path = path;

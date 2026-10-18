@@ -32,6 +32,7 @@ builder.Services.AddSingleton(provider => new BuildKnownLazyAppDescriptorRegistr
 builder.Services.AddHackerOsResourceAccounting(builder.Configuration, BuildKnownLazyApps.Images);
 // ADR 0125: process limits (ulimit, limits.conf), on unless HackerOs:ResourceLimits:Enabled is false.
 builder.Services.AddHackerOsResourceLimits(builder.Configuration);
+builder.Services.AddHackerOsHardware(builder.Configuration);
 builder.Services.AddHackerOsEcosystem(
     BuildKnownLazyApps.Catalog,
     provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>().Descriptors,

@@ -26,13 +26,13 @@ public sealed class StressApp : AppDefinition
     public override string PublisherId => "pub.hackeros";
 
     /// <inheritdoc />
-    public override string Description => "Impose a CPU load on the system";
+    public override string Description => "Impose a CPU or memory load on the system";
 
     /// <inheritdoc />
     public override AppLaunchVisibility LaunchVisibility => AppLaunchVisibility.Hidden;
 
     /// <inheritdoc />
-    public override TerminalCommand? Terminal => new("stress", "stress [-c N] [-t SECONDS] [--yield]");
+    public override TerminalCommand? Terminal => new("stress", "stress [-c N] [-m N] [--vm-bytes B] [--vm-keep] [-t SECONDS] [--yield]");
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

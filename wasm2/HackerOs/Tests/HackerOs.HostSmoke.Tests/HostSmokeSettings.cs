@@ -16,13 +16,18 @@ namespace HackerOs.HostSmoke.Tests;
 /// Whether the host applies the process limits of ADR 0125 (<c>HackerOs:ResourceLimits:Enabled</c>);
 /// <see langword="false"/> for the run that switches them off.
 /// </param>
+/// <param name="ExpectsOomKill">
+/// Whether the run turns the OOM killer on and expects <c>stress --vm</c> to be killed (ADR 0126):
+/// the <c>ecosystem-oom</c> run, whose simulated <c>MemTotal</c> is small.
+/// </param>
 public sealed record HostSmokeSettings(
     string Url,
     string HostName,
     string? ExpectedCpuSource,
     string? ExpectedMemSource,
     string? ArtifactsDirectory,
-    bool LimitsEnabled = true)
+    bool LimitsEnabled = true,
+    bool ExpectsOomKill = false)
 {
     /// <summary>Base address of the host under test. Required.</summary>
     public const string UrlVariable = "HACKEROS_SMOKE_URL";
@@ -41,6 +46,9 @@ public sealed record HostSmokeSettings(
 
     /// <summary><c>off</c> when the host switches the process limits off (ADR 0125).</summary>
     public const string LimitsVariable = "HACKEROS_SMOKE_EXPECT_LIMITS";
+
+    /// <summary><c>on</c> when the run checks the OOM killer (ADR 0126).</summary>
+    public const string OomVariable = "HACKEROS_SMOKE_EXPECT_OOM";
 
     /// <summary>Reads the settings, or returns <see langword="null"/> when no URL is set.</summary>
     /// <summary>
@@ -69,7 +77,8 @@ public sealed record HostSmokeSettings(
             Read(CpuSourceVariable),
             Read(MemSourceVariable),
             Read(ArtifactsVariable),
-            !string.Equals(Read(LimitsVariable), "off", StringComparison.Ordinal));
+            !string.Equals(Read(LimitsVariable), "off", StringComparison.Ordinal),
+            string.Equals(Read(OomVariable), "on", StringComparison.Ordinal));
     }
 
     private static string? Read(string name)

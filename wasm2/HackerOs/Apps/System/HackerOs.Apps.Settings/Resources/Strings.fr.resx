@@ -993,4 +993,58 @@
   <data name="FileAssociations.Error.WriteFailed" xml:space="preserve">
     <value>~/.config/hackeros/file-associations.json n'a pas pu être écrit.</value>
   </data>
+  <data name="Tab.Memory" xml:space="preserve">
+    <value>Mémoire</value>
+  </data>
+  <data name="Memory.State.Title" xml:space="preserve">
+    <value>Mémoire maintenant</value>
+  </data>
+  <data name="Memory.State.Description" xml:space="preserve">
+    <value>Ce que disent {0} et {1}, les fichiers que lisent free et vmstat.</value>
+  </data>
+  <data name="Memory.State.Source" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="Memory.State.Measured" xml:space="preserve">
+    <value>mesurée</value>
+  </data>
+  <data name="Memory.State.Simulated" xml:space="preserve">
+    <value>simulée</value>
+  </data>
+  <data name="Memory.State.NotMeasured" xml:space="preserve">
+    <value>La mémoire est simulée sur cet hôte : l'OOM killer reste inactif même s'il est activé. Il ne tue jamais sur des chiffres simulés.</value>
+  </data>
+  <data name="Memory.OomKiller.Title" xml:space="preserve">
+    <value>OOM killer</value>
+  </data>
+  <data name="Memory.OomKiller.Description" xml:space="preserve">
+    <value>Quand la mémoire libre reste trop basse, le système ferme le processus au plus haut {0} et écrit pourquoi dans le journal du noyau ({1}). Il protège aussi la page de la vraie limite de mémoire du navigateur.</value>
+  </data>
+  <data name="Memory.OomKiller.On" xml:space="preserve">
+    <value>Activé</value>
+  </data>
+  <data name="Memory.OomKiller.Off" xml:space="preserve">
+    <value>Désactivé (par défaut)</value>
+  </data>
+  <data name="Memory.Threshold.Title" xml:space="preserve">
+    <value>Mémoire libre à garder</value>
+  </data>
+  <data name="Memory.Threshold.Description" xml:space="preserve">
+    <value>L'OOM killer agit quand MemAvailable reste sous cette part de MemTotal pendant deux secondes.</value>
+  </data>
+  <data name="Memory.AdminNote" xml:space="preserve">
+    <value>Enregistré dans {0}, un fichier système : un administrateur approuve le changement.</value>
+  </data>
+  <data name="Memory.Saved" xml:space="preserve">
+    <value>Enregistré. Le système applique le changement tout de suite.</value>
+  </data>
+  <data name="Memory.Error.AdminRequired" xml:space="preserve">
+    <value>Un administrateur doit approuver ce changement.</value>
+  </data>
+  <data name="Memory.Error.CannotRead" xml:space="preserve">
+    <value>Impossible de lire {0} : {1}</value>
+  </data>
+  <data name="Memory.Error.CannotSave" xml:space="preserve">
+    <value>Impossible d'enregistrer {0} : {1}</value>
+  </data>
 </root>

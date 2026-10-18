@@ -26,6 +26,9 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
     private const float BootTimeoutMs = 120_000;
     private const float StepTimeoutMs = 30_000;
 
+    /// <summary>stress allocates several hundred MiB in 1 MiB blocks before the OOM killer's two samples.</summary>
+    private const float OomTimeoutMs = 120_000;
+
     /// <summary>Boots the host to the desktop, runs the terminal and the task manager, closes everything.</summary>
     [HostSmokeFact]
     public async Task Host_boots_to_the_desktop_and_runs_the_terminal_and_task_manager()
@@ -84,6 +87,12 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
 
             await CheckLimitsAsync(page, screen, rows, settings);
             AssertNoErrors(errors, "limits");
+
+            if (settings.ExpectsOomKill)
+            {
+                await CheckOomKillerAsync(page, screen, rows);
+                AssertNoErrors(errors, "OOM killer");
+            }
 
             await OpenAppAsync(page, "System Monitor");
             ILocator filter = page.GetByLabel("Filter processes");
@@ -247,6 +256,57 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
     }
 
     /// <summary>
+    /// ADR 0126: on a machine with a small simulated <c>MemTotal</c>, an administrator turns the OOM
+    /// killer on (<c>sudo tee /etc/hackeros/memory.config</c>), <c>stress --vm</c> allocates more than
+    /// the free memory, and the kernel kills it: the shell prints <c>Killed</c> (exit 137),
+    /// <c>dmesg</c> shows the <c>Out of memory</c> line and <c>/proc/vmstat</c> counts the kill.
+    /// </summary>
+    private async Task CheckOomKillerAsync(IPage page, ILocator screen, ILocator rows)
+    {
+        await RunCommandAsync(page, screen,
+            "clear; printf 'schemaVersion=1\\n[oom-killer]\\nenabled=true\\nmin-free-percent=5\\n' | sudo tee /etc/hackeros/memory.config");
+        ILocator dialog = page.Locator(".credential-prompt-dialog");
+        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await dialog.Locator("input[type=text]").FillAsync(LoginName);
+        await dialog.Locator("input[type=password]").FillAsync(Password);
+        await dialog.GetByRole(AriaRole.Button, new() { Name = "Authorize" }).ClickAsync();
+        await WaitForTerminalTextAsync(rows, text => OutputFinished(text, "min-free-percent=5"), "memory.config written by sudo tee");
+
+        await RunCommandAsync(page, screen, "clear; dmesg | grep oom-killer");
+        await WaitForTerminalTextAsync(rows, text => OutputFinished(text, "oom-killer: enabled, min-free-percent=5"), "the kernel line of the enabled OOM killer");
+        Log("OOM killer enabled through sudo tee; dmesg says so.");
+
+        await RunCommandAsync(page, screen, "clear; grep -E 'MemTotal|MemAvailable' /proc/meminfo");
+        string meminfo = await WaitForTerminalTextAsync(rows, text => OutputFinished(text, "MemAvailable:"), "/proc/meminfo");
+        long total = MemInfoKilobytes(meminfo, "MemTotal");
+        long available = MemInfoKilobytes(meminfo, "MemAvailable");
+        // Enough to bring MemAvailable well under 5 % of MemTotal.
+        long mebibytes = Math.Max(16, (available - (total * 5 / 100)) / 1024 + 64);
+        Log($"MemTotal {total} kB, MemAvailable {available} kB: stress --vm 1 --vm-bytes {mebibytes}M.");
+
+        await RunCommandAsync(page, screen, $"clear; stress --vm 1 --vm-bytes {mebibytes}M --vm-keep -t 120; echo \"exit=$?\"");
+        string ended = await WaitForTerminalTextAsync(rows, ExitStatusShown, "the OOM kill of stress", OomTimeoutMs);
+        Assert.Contains("exit=137", ended, StringComparison.Ordinal);
+        Assert.Contains("Killed", ended, StringComparison.Ordinal);
+        Log("stress --vm: killed by the OOM killer, exit 137.");
+
+        await RunCommandAsync(page, screen, "clear; dmesg | grep 'Out of memory'");
+        string kernel = await WaitForTerminalTextAsync(rows, text => OutputFinished(text, "Out of memory: Killed process"), "the Out of memory line of dmesg");
+        Assert.Contains("(stress)", kernel, StringComparison.Ordinal);
+
+        await RunCommandAsync(page, screen, "clear; grep oom_kill /proc/vmstat");
+        await WaitForTerminalTextAsync(rows, text => OutputFinished(text, "oom_kill 1"), "oom_kill 1 in /proc/vmstat");
+        Log("dmesg: Out of memory: Killed process (stress); /proc/vmstat: oom_kill 1.");
+    }
+
+    private static long MemInfoKilobytes(string meminfo, string key)
+    {
+        Match match = Regex.Match(meminfo, key + @":\s+(\d+) kB");
+        Assert.True(match.Success, $"{key} not found in /proc/meminfo:\n{meminfo}");
+        return long.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
     /// Completes onboarding (first visit) or the sign-in form, then waits for the desktop. A host
     /// that keeps its session across a reload may go straight to the desktop; that is accepted.
     /// </summary>
@@ -314,11 +374,11 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
     }
 
     /// <summary>Polls the terminal's rendered rows until <paramref name="done"/> holds.</summary>
-    private async Task<string> WaitForTerminalTextAsync(ILocator rows, Func<string, bool> done, string what)
+    private async Task<string> WaitForTerminalTextAsync(ILocator rows, Func<string, bool> done, string what, float timeoutMs = StepTimeoutMs)
     {
         Stopwatch elapsed = Stopwatch.StartNew();
         string text = string.Empty;
-        while (elapsed.ElapsedMilliseconds < StepTimeoutMs)
+        while (elapsed.ElapsedMilliseconds < timeoutMs)
         {
             text = (await rows.InnerTextAsync()).Replace(' ', ' ');
             if (done(text))

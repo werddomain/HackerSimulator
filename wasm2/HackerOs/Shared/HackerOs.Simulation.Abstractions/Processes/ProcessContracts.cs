@@ -121,7 +121,14 @@ public enum ProcessExitReason
     /// The process went over its resident memory limit (<c>RLIMIT_RSS</c>, ADR 0125) and the OS
     /// killed it (<c>SIGKILL</c>, exit code 137).
     /// </summary>
-    MemoryLimitExceeded
+    MemoryLimitExceeded,
+
+    /// <summary>
+    /// The OOM killer chose the process because the system ran out of memory, or because its
+    /// runtime neared the browser's real memory limit (ADR 0126), and killed it (<c>SIGKILL</c>, exit
+    /// code 137).
+    /// </summary>
+    OutOfMemory
 }
 
 /// <summary>Reports the self-assessed health of a long-running <see cref="AppKind.Service"/> process.</summary>

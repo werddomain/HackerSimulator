@@ -1,1 +1,4 @@
 #nullable enable
+HackerOs.Apps.Settings.MemoryPanel
+HackerOs.Apps.Settings.MemoryPanel.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Apps.Settings.MemoryPanel.MemoryPanel() -> void

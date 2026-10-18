@@ -19,7 +19,9 @@ public static class OsSettingsDocumentRegistry
         [SecuritySettingsDocuments.Document.DocumentId] = SecuritySettingsDocuments.Document,
         [PolicySettingsDocuments.Document.DocumentId] = PolicySettingsDocuments.Document,
         [Clipboard.ClipboardSettingsDocuments.Document.DocumentId] = Clipboard.ClipboardSettingsDocuments.Document,
-        [WindowKeyBindingsSettingsDocuments.Document.DocumentId] = WindowKeyBindingsSettingsDocuments.Document
+        [WindowKeyBindingsSettingsDocuments.Document.DocumentId] = WindowKeyBindingsSettingsDocuments.Document,
+        // ADR 0126: Settings > Memory switches the OOM killer through HackSettings.OpenSystemAsync.
+        [Processes.MemorySettingsDocuments.Document.DocumentId] = Processes.MemorySettingsDocuments.Document
     };
 
     /// <summary>Gets every listed document id.</summary>

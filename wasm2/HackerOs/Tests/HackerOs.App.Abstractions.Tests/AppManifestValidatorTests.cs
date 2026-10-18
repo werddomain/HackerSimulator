@@ -55,6 +55,31 @@ public sealed class AppManifestValidatorTests
         Assert.Contains(AppManifestValidator.Validate(invalid).Errors, error => error.Code == "manifest.serviceStartup.invalid");
     }
 
+    [Theory]
+    [InlineData(-1000, true)]
+    [InlineData(500, true)]
+    [InlineData(-1001, false)]
+    [InlineData(1001, false)]
+    public void Validate_bounds_oomScoreAdj_to_the_linux_range(int value, bool valid)
+    {
+        AppManifest manifest = CreateValidManifest() with { OomScoreAdj = value };
+
+        ManifestValidationResult result = AppManifestValidator.Validate(manifest);
+
+        Assert.Equal(valid, !result.Errors.Any(static error => error.Code == "manifest.oomScoreAdj.range"));
+    }
+
+    [Fact]
+    public void OomScoreAdj_is_omitted_when_undeclared_and_round_trips_when_declared()
+    {
+        AppManifest plain = CreateValidManifest();
+        Assert.DoesNotContain("oomScoreAdj", AppManifestJsonSerializer.SerializeCanonical(plain), StringComparison.Ordinal);
+
+        string json = AppManifestJsonSerializer.SerializeCanonical(plain with { OomScoreAdj = -500 });
+        Assert.Contains("\"oomScoreAdj\":-500", json, StringComparison.Ordinal);
+        Assert.Equal(-500, AppManifestJsonSerializer.DeserializeStrict(json).OomScoreAdj);
+    }
+
     [Fact]
     public void Validate_accepts_supportsBack_for_window_apps()
     {

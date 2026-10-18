@@ -993,4 +993,58 @@
   <data name="FileAssociations.Error.WriteFailed" xml:space="preserve">
     <value>~/.config/hackeros/file-associations.json could not be written.</value>
   </data>
+  <data name="Tab.Memory" xml:space="preserve">
+    <value>Memory</value>
+  </data>
+  <data name="Memory.State.Title" xml:space="preserve">
+    <value>Memory now</value>
+  </data>
+  <data name="Memory.State.Description" xml:space="preserve">
+    <value>What {0} and {1} report, the files free and vmstat read.</value>
+  </data>
+  <data name="Memory.State.Source" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="Memory.State.Measured" xml:space="preserve">
+    <value>measured</value>
+  </data>
+  <data name="Memory.State.Simulated" xml:space="preserve">
+    <value>simulated</value>
+  </data>
+  <data name="Memory.State.NotMeasured" xml:space="preserve">
+    <value>Memory is simulated on this host: the OOM killer stays idle even when it is on. It never kills on simulated figures.</value>
+  </data>
+  <data name="Memory.OomKiller.Title" xml:space="preserve">
+    <value>OOM killer</value>
+  </data>
+  <data name="Memory.OomKiller.Description" xml:space="preserve">
+    <value>When free memory stays too low, the system closes the process with the highest {0} and writes why in the kernel log ({1}). It also protects the page from the browser's real memory limit.</value>
+  </data>
+  <data name="Memory.OomKiller.On" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="Memory.OomKiller.Off" xml:space="preserve">
+    <value>Off (default)</value>
+  </data>
+  <data name="Memory.Threshold.Title" xml:space="preserve">
+    <value>Free memory to keep</value>
+  </data>
+  <data name="Memory.Threshold.Description" xml:space="preserve">
+    <value>The OOM killer acts when MemAvailable stays under this share of MemTotal for two seconds.</value>
+  </data>
+  <data name="Memory.AdminNote" xml:space="preserve">
+    <value>Saved in {0}, a system file: an administrator approves the change.</value>
+  </data>
+  <data name="Memory.Saved" xml:space="preserve">
+    <value>Saved. The system applies the change at once.</value>
+  </data>
+  <data name="Memory.Error.AdminRequired" xml:space="preserve">
+    <value>An administrator must approve this change.</value>
+  </data>
+  <data name="Memory.Error.CannotRead" xml:space="preserve">
+    <value>Cannot read {0}: {1}</value>
+  </data>
+  <data name="Memory.Error.CannotSave" xml:space="preserve">
+    <value>Cannot save {0}: {1}</value>
+  </data>
 </root>

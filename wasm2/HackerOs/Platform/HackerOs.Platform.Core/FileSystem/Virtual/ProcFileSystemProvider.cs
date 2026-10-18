@@ -48,9 +48,17 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     private const string WorkersFile = "workers";
 
-    private static readonly string[] SystemFiles = ["cpuinfo", "diskstats", "loadavg", "meminfo", "mounts", "stat", "uptime"];
+    private static readonly string[] SystemFiles = ["cpuinfo", "diskstats", "loadavg", "meminfo", "mounts", "stat", "uptime", "vmstat"];
     private static readonly string[] NetFiles = ["dev", "tcp"];
-    private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", FdDirectory, "io", "limits", "stat", "status"];
+    private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", FdDirectory, "io", "limits", OomScoreFile, OomScoreAdjustFile, "stat", "status"];
+
+    /// <summary><c>/proc/&lt;pid&gt;/oom_score</c> (ADR 0126, section 4): the OOM killer's badness, read-only.</summary>
+    private const string OomScoreFile = "oom_score";
+
+    /// <summary><c>/proc/&lt;pid&gt;/oom_score_adj</c> (ADR 0126, section 4): readable by all, writable by the owner.</summary>
+    private const string OomScoreAdjustFile = "oom_score_adj";
+
+    private const ushort OwnerWritableFileMode = 0b110_100_100; // 0644
 
     /// <summary>The open descriptors of a process (ADR 0125): one link per descriptor, owner-only like Linux.</summary>
     private const string FdDirectory = "fd";
@@ -69,6 +77,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     private readonly Func<ProcessRecord, string?>? _userNameResolver;
     private readonly Func<IProcessEnvironmentTable?>? _environments;
     private readonly ProcMetricsSources _metrics;
+    private readonly Processes.SystemMemoryProbe _memory;
 
     /// <summary>Initializes the <c>/proc</c> provider.</summary>
     /// <param name="processManager">
@@ -110,6 +119,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         _userNameResolver = userNameResolver;
         _environments = environments;
         _metrics = metrics ?? new ProcMetricsSources();
+        _memory = new Processes.SystemMemoryProbe(processManager, resources, hardware, _metrics.MemoryAccountant);
     }
 
     /// <inheritdoc />
@@ -251,7 +261,8 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         DateTimeOffset started = StartTime(process);
         return entry switch
         {
-            "status" or "cmdline" or "stat" or "limits" => File(path, owner, owner, PublicFileMode, started),
+            "status" or "cmdline" or "stat" or "limits" or OomScoreFile => File(path, owner, owner, PublicFileMode, started),
+            OomScoreAdjustFile => File(path, owner, owner, OwnerWritableFileMode, started),
             FdDirectory => Directory(path, owner, owner, OwnerDirectoryMode, started),
             // io is private like environ (ADR 0057 section 3): the owner, or System authority.
             "environ" or "io" => File(path, owner, owner, PrivateFileMode, started),
@@ -350,6 +361,8 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             : string.Empty,
         "io" => RenderProcessIo(process),
         "limits" => RenderLimits(process),
+        OomScoreFile => string.Create(CultureInfo.InvariantCulture, $"{OomScoreOf(process)}\n"),
+        OomScoreAdjustFile => string.Create(CultureInfo.InvariantCulture, $"{OomScores()?.GetOrDefault(process.Pid) ?? 0}\n"),
         "stat" => RenderProcessStat(process),
         _ => throw new InvalidOperationException($"'{entry}' is not a readable /proc/<pid> file.")
     };
@@ -549,10 +562,15 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     /// <summary>The measured layers of one process (ADR 0068), or <see langword="null"/> when its memory is simulated.</summary>
     private ProcessMemoryUsage? MeasureMemory(ProcessRecord process) =>
-        _metrics.MemoryAccountant is { IsMeasuring: true } accountant
-        && accountant.TryGetProcessMemory(process, [.. ActiveProcesses()], out ProcessMemoryUsage usage)
-            ? usage
-            : null;
+        _memory.IsMeasuring ? _memory.ReadProcess(process).Layers : null;
+
+    /// <summary>The <c>oom_score_adj</c> table: the host's, else the in-memory process manager's.</summary>
+    private Processes.InMemoryProcessOomScoreTable? OomScores() =>
+        _metrics.OomScores?.Invoke() ?? (_processManager() as Processes.InMemoryProcessManager)?.OomScores;
+
+    /// <summary><c>VmRSS × 1000 / MemTotal + oom_score_adj</c>, bounded to <c>[0, 2000]</c> (ADR 0126, section 2).</summary>
+    private long OomScoreOf(ProcessRecord process) =>
+        _memory.OomScore(_memory.ReadProcess(process).ResidentBytes, OomScores()?.GetOrDefault(process.Pid) ?? 0);
 
     /// <summary>
     /// Appends the layer fields of a measured process after <c>VmRSS</c>, in Linux's order (ADR 0068):
@@ -586,6 +604,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         "stat" => RenderStat(),
         "diskstats" => RenderDiskStats(),
         "mounts" => RenderMounts(),
+        "vmstat" => RenderVmStat(),
         _ => throw new InvalidOperationException($"'{name}' is not a /proc system file.")
     };
 
@@ -795,18 +814,17 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     private string RenderMemInfo()
     {
-        long totalKb = (long)(_hardware.MemoryCapacityBytes / 1024d);
-        double usedBytes = _resources.GetSystemHistory().LastOrDefault()?.TotalMemoryUsageBytes ?? 0;
-        SystemMemoryUsage? measured = MeasureSystemMemory(ref usedBytes);
-        long freeKb = Math.Max(0, totalKb - (long)Math.Round(usedBytes / 1024d, MidpointRounding.AwayFromZero));
+        Processes.SystemMemorySnapshot memory = _memory.ReadSystem();
+        long totalKb = (long)(memory.TotalBytes / 1024d);
+        long freeKb = Math.Max(0, totalKb - ToKilobytes(memory.UsedBytes));
 
         // There is no page cache to reclaim in the simulation, so available memory equals free memory.
-        // Exceeding MemTotal only saturates the graphs: there is no OOM killer (ADR 0068, section 3).
+        // Going under it is what the OOM killer watches when it is enabled (ADR 0126).
         StringBuilder builder = new();
         AppendMemInfoLine(builder, "MemTotal", totalKb);
         AppendMemInfoLine(builder, "MemFree", freeKb);
         AppendMemInfoLine(builder, "MemAvailable", freeKb);
-        if (measured is { } system)
+        if (memory.Measured is { } system)
         {
             AppendMemInfoLine(builder, "AnonPages", ToKilobytes(system.AnonymousBytes));
             AppendMemInfoLine(builder, "Mapped", ToKilobytes(system.MappedBytes));
@@ -814,41 +832,85 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         }
 
         return builder.ToString();
+    }
 
-        static long ToKilobytes(long bytes) => (long)Math.Round(bytes / 1024d, MidpointRounding.AwayFromZero);
+    private static long ToKilobytes(long bytes) => (long)Math.Round(bytes / 1024d, MidpointRounding.AwayFromZero);
+
+    /// <summary>
+    /// Renders <c>/proc/vmstat</c> (ADR 0126, section 3): <c>name value</c> lines in pages of 4 KiB, as
+    /// Linux does, from the same figures as <c>meminfo</c>, then the <c>oom_kill</c> counter (kills
+    /// since boot). The measured lines appear only when memory is measured.
+    /// </summary>
+    private string RenderVmStat()
+    {
+        Processes.SystemMemorySnapshot memory = _memory.ReadSystem();
+        StringBuilder builder = new();
+        Append("nr_free_pages", memory.AvailableBytes / PageSize);
+        if (memory.Measured is { } system)
+        {
+            Append("nr_anon_pages", system.AnonymousBytes / PageSize);
+            Append("nr_mapped", system.MappedBytes / PageSize);
+            Append("nr_slab_unreclaimable", system.KernelBytes / PageSize);
+        }
+
+        Append("oom_kill", _metrics.OomKills?.Invoke() ?? 0);
+        return builder.ToString();
+
+        void Append(string name, long value) =>
+            builder.Append(CultureInfo.InvariantCulture, $"{name} {value}\n");
     }
 
     /// <summary>
-    /// When memory is measured (ADR 0068, section 2), replaces the simulated total with the measured
-    /// one (shared images counted once, the OS's own heap included) plus the simulated memory of the
-    /// processes that stay simulated (those that run no code).
+    /// Writes <c>/proc/&lt;pid&gt;/oom_score_adj</c> (ADR 0126, section 4), the only writable file of
+    /// <c>/proc</c>: a decimal from <c>-1000</c> to <c>1000</c>. The owner (mode <c>0644</c>, checked by
+    /// the filesystem before this call) may raise it; going below the process's floor needs an elevated
+    /// <c>root</c> or the system, like <c>CAP_SYS_RESOURCE</c>. Every other path refuses writes.
     /// </summary>
-    /// <param name="usedBytes">The simulated total, replaced when memory is measured.</param>
-    /// <returns>The measured totals, or <see langword="null"/> when memory is simulated.</returns>
-    private SystemMemoryUsage? MeasureSystemMemory(ref double usedBytes)
+    public override async ValueTask<FileSystemMutationResult> WriteAsync(
+        FileSystemWriteRequest request,
+        IFileSystemContentSource content,
+        FileSystemAuthorizationContext context,
+        CancellationToken cancellationToken = default)
     {
-        if (_metrics.MemoryAccountant is not { IsMeasuring: true } accountant)
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(content);
+        ArgumentNullException.ThrowIfNull(context);
+        string[] segments = RelativeSegments(request.Path);
+        if (segments is not [string pidText, OomScoreAdjustFile]
+            || ParsePid(pidText) is not { } pid
+            || FindVisible(pid, context) is not { } process
+            || OomScores() is not { } table)
         {
-            return null;
+            return Rejected(FileSystemOperation.Write, FileSystemErrorCode.PermissionDenied, request.Path);
         }
 
-        ProcessRecord[] active = [.. ActiveProcesses()];
-        if (!accountant.TryGetSystemMemory(active, out SystemMemoryUsage system))
+        string text;
+        try
         {
-            return null;
+            await using Stream stream = await content.OpenReadAsync(cancellationToken).ConfigureAwait(false);
+            using StreamReader reader = new(stream, Encoding.UTF8);
+            text = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return Rejected(FileSystemOperation.Write, FileSystemErrorCode.Cancelled, request.Path);
         }
 
-        double simulated = 0;
-        foreach (ProcessRecord process in active)
+        if (!int.TryParse(text.Trim(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out int value))
         {
-            if (!accountant.TryGetProcessMemory(process, active, out _))
-            {
-                simulated += _resources.GetHistory(process.Pid).LastOrDefault()?.MemoryUsageBytes ?? 0;
-            }
+            return Rejected(FileSystemOperation.Write, FileSystemErrorCode.InvalidContent, request.Path);
         }
 
-        usedBytes = system.UsedBytes + simulated;
-        return system;
+        bool privileged = context.OperationContext.IsRootElevated
+            || context.OperationContext.EffectiveAuthority == AppAuthority.System;
+        return table.TrySet(process.Pid, value, privileged) switch
+        {
+            ResourceLimitChangeResult.Applied => Committed(new FileSystemEntrySnapshot(
+                request.Path, ProcessEntry(request.Path, process, OomScoreAdjustFile, context)!)),
+            ResourceLimitChangeResult.InvalidArgument => Rejected(FileSystemOperation.Write, FileSystemErrorCode.InvalidContent, request.Path),
+            ResourceLimitChangeResult.NoSuchProcess => Rejected(FileSystemOperation.Write, FileSystemErrorCode.NotFound, request.Path),
+            _ => Rejected(FileSystemOperation.Write, FileSystemErrorCode.PermissionDenied, request.Path)
+        };
     }
 
     private string RenderCpuInfo()

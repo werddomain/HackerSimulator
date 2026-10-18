@@ -55,6 +55,14 @@ public sealed class BuiltinNameApp : ValidCommandApp
     public override TerminalCommand? Terminal => new("eval", "eval");
 }
 
+/// <summary>An app shielding itself from the OOM killer (ADR 0126 §4): allowed only as a system app.</summary>
+public sealed class ShieldedApp : ValidCommandApp
+{
+    public override string Id => "org.hackeros.tests.shielded";
+    public override TerminalCommand? Terminal => new("shielded", "shielded");
+    public override int? OomScoreAdjust => -300;
+}
+
 /// <summary>An app declaring a wwwroot asset (ADR 0098 §5).</summary>
 public sealed class AssetApp : ValidCommandApp
 {

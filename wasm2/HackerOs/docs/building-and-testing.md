@@ -92,7 +92,7 @@ Une commande compile, lance et parcourt les trois hôtes
 ([`execution-isolation-plan.md`](execution-isolation-plan.md), section 5.2) :
 
 ```bash
-build/verify-hosts.sh                 # tout : build, publications, six parcours
+build/verify-hosts.sh                 # tout : build, publications, sept parcours
 build/verify-hosts.sh --skip-build    # réutilise les sorties déjà compilées
 build/verify-hosts.sh --only server,test-host
 ```
@@ -157,6 +157,7 @@ RESULT: PASS
 | `ecosystem-build-off` | PWA publiée avec `-p:HackerOsCpuAccounting=false -p:HackerOsMemoryAccounting=false` | coupées au build ; aucun `HackerOs.Platform.ResourceAccounting*` ne doit être publié | `simulated` |
 | `ecosystem-settings-off` | même publication que `ecosystem`, `wwwroot/appsettings.json` réécrit avec `Enabled: false` pour `Cpu` et `Memory` | coupées au démarrage | `simulated` |
 | `ecosystem-limits-off` | même publication que `ecosystem`, `wwwroot/appsettings.json` réécrit avec `HackerOs:ResourceLimits:Enabled: false` (ADR 0125) | build et réglage par défaut | `measured` |
+| `ecosystem-oom` | même publication que `ecosystem`, `wwwroot/appsettings.json` réécrit avec `HackerOs:Hardware:MemoryMiB` = `${OOM_MEMORY_MIB:-512}` (ADR 0142 §11) | build et réglage par défaut | `measured` |
 | `test-host` | `test/test` | réglage de l'hôte (activées) | `measured` |
 | `server` | `HackerOs.Server` (sert l'OS de l'Ecosystem en WebAssembly, ADR 0130) | `appsettings.json` de l'Ecosystem (activées) | `measured` |
 
@@ -171,6 +172,12 @@ Chaque parcours vérifie aussi les limites de processus (`exec/2`,
 sortir avec 152 et « CPU time limit exceeded » là où le CPU est mesuré, et
 normalement ailleurs. Dans `ecosystem-limits-off`, `ulimit -n 100` doit
 répondre « cannot modify limit ».
+
+Le parcours `ecosystem-oom` (`exec/3`, [`oom-killer.md`](oom-killer.md))
+active l'OOM killer par `sudo tee /etc/hackeros/memory.config`, lance
+`stress --vm 1 --vm-bytes` calculé depuis `/proc/meminfo`, attend la sortie
+137 et « Killed », puis vérifie la ligne `Out of memory: Killed process` de
+`dmesg` et `oom_kill 1` dans `/proc/vmstat`.
 
 Journaux, publications et captures d'écran des échecs :
 `artifacts/verify-hosts/` (ignoré par git). Sans `HACKEROS_SMOKE_URL`, que

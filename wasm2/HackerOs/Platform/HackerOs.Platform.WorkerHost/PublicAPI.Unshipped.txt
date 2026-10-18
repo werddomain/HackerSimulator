@@ -3,6 +3,7 @@ HackerOs.Platform.WorkerHost.Host.WorkerPoolOptions.KnownAssemblies.get -> Syste
 HackerOs.Platform.WorkerHost.Host.WorkerPoolOptions.KnownAssemblies.init -> void
 HackerOs.Platform.WorkerHost.Host.WorkerRemoteProcessHost.CanRunBackgroundJobs.get -> bool
 HackerOs.Platform.WorkerHost.Host.WorkerRemoteProcessHost.RunBackgroundJobAsync(HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch! launch, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<HackerOs.Platform.Core.Execution.RemoteProcessExit!>!
+HackerOs.Platform.WorkerHost.Host.WorkerPool.RecycleAfterOomKill(long pid) -> bool
 HackerOs.Platform.WorkerHost.Host.RemoteWindowProcess
 HackerOs.Platform.WorkerHost.Host.RemoteWindowProcess.CloseAsync(System.Action<System.Text.Json.Utf8JsonWriter!>! close) -> System.Threading.Tasks.Task!
 HackerOs.Platform.WorkerHost.Host.RemoteWindowProcess.Exit.get -> System.Threading.Tasks.Task<HackerOs.Platform.Core.Execution.RemoteProcessExit!>!

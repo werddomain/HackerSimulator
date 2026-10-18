@@ -190,6 +190,10 @@ avec le type et la pile d'origine ; `killed` porte la raison `rs`.
 | `ready` | Toujours un, une fois le système démarré ; remplacé aussitôt qu'il est pris. |
 | `dedicated` | Prend le worker prêt pour un processus `dedicated` ; libéré à sa fin. |
 | `overflow` | Le worker prêt pris par une commande quand aucun cœur n'est libre ; retiré après 30 s vide. |
+
+Un worker `pool` ou `overflow` qui a hébergé une victime de l'OOM killer est
+retiré dès qu'il n'héberge plus aucun processus, puis remplacé : sa mémoire
+WebAssembly ne rétrécit jamais (ADR 0142 §5, [`oom-killer.md`](oom-killer.md)).
 | `web` | Un seul pour tous les sites (`AppKind.Web`, ADR 0073 §1) : le premier site prend le worker prêt, les suivants le partagent ; terminé quand son dernier site s'arrête. Requêtes HTTP par `hreq`/`hres` ([`listening-ports-and-dns.md`](listening-ports-and-dns.md)). |
 
 - **Capacité** : `max(2, navigator.hardwareConcurrency)` workers en tout. Au
