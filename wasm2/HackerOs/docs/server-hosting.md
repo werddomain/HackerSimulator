@@ -48,7 +48,11 @@ Chantier `exec/8-server-wasm` (série `exec`), ADR
 dotnet run --project Server/HackerOs.Server   # http://localhost:5000 par défaut
 ```
 
-Le navigateur ouvre l'adresse du serveur et reçoit l'OS. En production,
+Le navigateur ouvre l'adresse du serveur et reçoit l'OS. Un intergiciel posé
+juste après `builder.Build()` ajoute `Cross-Origin-Opener-Policy` et
+`Cross-Origin-Embedder-Policy: credentialless` à toutes les réponses, selon
+`HackerOs:CrossOriginIsolation` de l'`appsettings.json` du serveur (`auto` par
+défaut ; `off` n'ajoute rien) : la page est isolée (ADR 0131, 0143). En production,
 `dotnet publish Server/HackerOs.Server` copie les fichiers de l'Ecosystem dans
 son `wwwroot`. Toute adresse de page (`/`, un lien profond) reçoit
 `index.html` ; `/api/...`, `/health`, `/openapi`, `/scalar` et les fichiers ne

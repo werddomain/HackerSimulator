@@ -28,7 +28,9 @@ namespace HackerOs.Apps.Diagnostic;
 /// clipboard mirrors its text to the real machine's clipboard (ADR 0065), so it can be pasted outside
 /// HackerOS;</item>
 /// <item><see cref="BrowserFileDownloader"/> of the SDK to download the JSON to the real browser
-/// (ADR 0060).</item>
+/// (ADR 0060);</item>
+/// <item><see cref="HackFile"/> on <c>/proc/hackeros/workers</c> (capability
+/// <c>filesystem.system.read</c>) for the page's cross-origin isolation (ADR 0131, section 5).</item>
 /// </list>
 /// </remarks>
 public partial class DiagnosticWindow : IAsyncDisposable
@@ -46,6 +48,7 @@ public partial class DiagnosticWindow : IAsyncDisposable
     private string? _selectedSiteName;
     private bool _confirmDelete;
     private IStringLocalizer<Strings>? _localizer;
+    private IsolationStatus? _isolation;
 
     /// <summary>The inspector's texts in the language of its own process (ADR 0104).</summary>
     private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
@@ -101,6 +104,7 @@ public partial class DiagnosticWindow : IAsyncDisposable
         }
 
         await LoadSitesAsync();
+        await LoadIsolationAsync();
         _isLoading = false;
         StateHasChanged();
     }
@@ -119,6 +123,37 @@ public partial class DiagnosticWindow : IAsyncDisposable
             _sitesError = L["Error.SitesUnavailable", exception.Message];
         }
     }
+
+    /// <summary>
+    /// Reads the page's cross-origin isolation from <c>/proc/hackeros/workers</c> (ADR 0131, section 5);
+    /// without a worker pool the file does not exist and no badge is shown.
+    /// </summary>
+    private async Task LoadIsolationAsync()
+    {
+        try
+        {
+            _isolation = IsolationStatus.Parse(await HackFile.ReadAllTextAsync(IsolationStatus.ProcPath, AppContext.CancellationToken));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            _isolation = null;
+        }
+    }
+
+    /// <summary>The reason in the inspector's language; an unknown one is shown as the file writes it.</summary>
+    private string IsolationReason(string reason) => reason switch
+    {
+        "setting" => L["Isolation.Reason.Setting"],
+        "missing-headers" => L["Isolation.Reason.MissingHeaders"],
+        "insecure-context" => L["Isolation.Reason.InsecureContext"],
+        "browser" => L["Isolation.Reason.Browser"],
+        "not-browser" => L["Isolation.Reason.NotBrowser"],
+        _ => reason
+    };
+
+    /// <summary>The tooltip: every line of the file's header, as <c>cat</c> prints it.</summary>
+    private static string IsolationDetails(IsolationStatus isolation) =>
+        string.Join('\n', isolation.Fields.Select(static field => $"{field.Key}: {field.Value}"));
 
     private void SelectStore(string storeName)
     {

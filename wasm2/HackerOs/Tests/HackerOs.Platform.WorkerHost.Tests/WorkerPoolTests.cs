@@ -139,9 +139,13 @@ public sealed class WorkerPoolTests
         ShellRun run = await os.RunAsync("cat /proc/hackeros/workers").WaitAsync(TimeSpan.FromSeconds(10));
 
         string[] lines = run.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        Assert.Equal("capacity 4", lines[0]);
-        Assert.Equal("pool_size 1", lines[1]);
-        Assert.StartsWith("worker role", lines[2], StringComparison.Ordinal);
+        // ADR 0131, section 5: the file starts with the cross-origin isolation of the page (none here).
+        Assert.Equal("cross-origin-isolated: no", lines[0]);
+        Assert.Equal("isolation-reason: not-browser", lines[1]);
+        int capacity = Array.IndexOf(lines, "capacity 4");
+        Assert.True(capacity > 0, run.Stdout);
+        Assert.Equal("pool_size 1", lines[capacity + 1]);
+        Assert.StartsWith("worker role", lines[capacity + 2], StringComparison.Ordinal);
         long catPid = os.Manager.GetHistory().Last(p => p.AppId == "org.hackeros.cmd.cat").Pid.Value;
         Assert.Contains(lines, line => line.Contains(" pool ", StringComparison.Ordinal) && line.Contains("running", StringComparison.Ordinal) && line.EndsWith($" {catPid}", StringComparison.Ordinal));
         Assert.Contains(lines, line => line.Contains(" ready ", StringComparison.Ordinal) && line.Contains("idle", StringComparison.Ordinal));

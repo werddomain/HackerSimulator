@@ -117,7 +117,7 @@ public class SampleTerminalApp : TerminalAppBase
             return 0;
         }
         catch (Exception exception) when (exception is NotSupportedException or UnauthorizedAccessException or KeyNotFoundException
-            or HackerOs.App.Abstractions.AppGatewayAccessDeniedException)
+            or HackerOs.Simulation.Abstractions.Gateways.AppGatewayAccessDeniedException)
         {
             await context.StandardError.WriteLineAsync($"sample-cmd: {exception.Message}".AsMemory(), cancellationToken);
             return 1;

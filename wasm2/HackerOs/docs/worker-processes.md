@@ -4,7 +4,10 @@ Mise en œuvre des [ADR 0070](adr/0070-worker-hosted-processes.md) et
 [0071](adr/0071-always-ready-worker.md), avec les ajustements de
 l'[ADR 0072](adr/0072-worker-processes-implementation-adjustments.md) ;
 chantier `rebuild/5-worker-processes` de la phase 5
-([`execution-isolation-plan.md`](execution-isolation-plan.md)).
+([`execution-isolation-plan.md`](execution-isolation-plan.md)). L'isolation
+cross-origin (tubes partagés, appels synchrones, mémoire mesurée) suit les
+[ADR 0131](adr/0131-cross-origin-isolation.md) et
+[0143](adr/0143-cross-origin-isolation-implementation-adjustments.md).
 
 ## Rôle
 
@@ -116,7 +119,7 @@ Messages JSON avec un champ `t` :
 |---|---|
 | `hello` | Runtime et assemblies chargés. |
 | `hb` | Battement (250 ms) : temps CPU par processus, mémoire du runtime, temps occupé. |
-| `call` | Appel de passerelle qui attend une réponse. |
+| `call` | Appel de passerelle qui attend une réponse ; `"s": true` pour un appel synchrone, dont la réponse revient par la case partagée du worker (ADR 0143 §5). |
 | `note` | Appel sans réponse (journal, environnement), gardé dans l'ordre. |
 | `cancel` | Annuler un `call` en cours. |
 | `out` | Sortie standard ou d'erreur d'un processus. |
@@ -234,9 +237,18 @@ WebAssembly ne rétrécit jamais (ADR 0142 §5, [`oom-killer.md`](oom-killer.md)
 
 ### `/proc/hackeros/workers`
 
-Présent seulement quand l'hôte a des workers :
+Présent seulement quand l'hôte a des workers. Les premières lignes disent si
+la page est isolée (ADR 0131 §5, ADR 0143 §8), puis vient le pool :
 
 ```
+cross-origin-isolated: yes
+isolation-reason: -
+isolation-setting: auto
+embedder-policy: credentialless
+shared-pipes: yes
+sync-calls: yes
+memory-measure: browser
+timer-resolution-us: 5
 capacity 4
 pool_size 1
 worker role       state          core memory_kb heartbeat_ms busy_ms pids
@@ -246,7 +258,55 @@ worker role       state          core memory_kb heartbeat_ms busy_ms pids
 
 Rôles : `pool`, `overflow`, `dedicated`, `ready`, `web`. États : `starting`, `idle`,
 `running`, `not-responding`, `terminated`. Les PID (séparés par des virgules)
-sont filtrés par la visibilité de `/proc` du lecteur.
+sont filtrés par la visibilité de `/proc` du lecteur. Raisons d'une page non
+isolée : `setting`, `missing-headers`, `insecure-context`, `browser`,
+`not-browser` (hors navigateur, tests).
+
+### Isolation cross-origin (ADR 0131, ADR 0143)
+
+Quand la page est isolée (`crossOriginIsolated`), les workers gagnent :
+
+- **des tubes partagés** : deux anneaux de 1 Mio par worker
+  (`wwwroot/sharedRing.js`), un par sens, portent tous les messages texte du
+  protocole ; le lecteur vide l'anneau avant tout message reçu par
+  `postMessage`, un message trop gros part par `postMessage`, personne ne
+  bloque ;
+- **des appels synchrones** : `ListProcesses` (opération `proc.list`) et `Kill`
+  d'un autre processus attendent la réponse de l'OS par `Atomics.wait` dans le
+  worker (10 s au plus, réponse de 1 Mio au plus, `"s": true` dans le `call`) ;
+  le fil principal n'attend jamais ;
+- **la mémoire mesurée par le navigateur** : `IWebWorkerMemoryMeter`, toutes
+  les 20 s (`WorkerPoolOptions.MemoryMeasurePeriod`), attribuée par
+  `?hackeros-worker=N` dans l'URL du worker, valable trois périodes ;
+- **des minuteries de 5 µs** (`performance.now()`), sans code à brancher.
+
+Sans isolation, tout reste comme avant : messages seulement, membres
+synchrones refusés avec le même message, mémoire du battement de cœur.
+
+Qui pose les en-têtes : le service worker de l'Ecosystem (selon
+`HackerOs:CrossOriginIsolation` de `appsettings.json`, repli `require-corp`
+avec un rechargement unique), l'intergiciel de `test/test` et de
+`HackerOs.Server`. L'Ecosystem servi sur `localhost` ou `127.0.0.1` n'a pas de
+service worker, donc pas d'isolation (ADR 0143 §3) : on essaie sur
+`127.0.0.2`.
+
+#### Audit avant d'activer par défaut (ADR 0131 §3)
+
+Chromium 140 sans écran, publication Release de l'Ecosystem servie sur
+`127.0.0.2` (service worker actif) et `test/test` (intergiciel), le
+2026-10-18. Résultat : **rien ne casse, `AuditPassed = true`**.
+
+| Surface | Vérification | Résultat |
+|---|---|---|
+| Rendu HTML du navigateur simulé et sites ASP.Hack | suite UI E2E sous isolation : `BrowserHtmlRenderingTests`, `BrowserBlazorSiteTests`, `BrowserIntranetTests`, `BrowserHomePageTests`, `BrowserSiteDataTests` ; les iframes `srcdoc` héritent de la COEP de la page | passe |
+| Fenêtres détachées (`window.open`) | `BrowserDetachedWindowTests` sous isolation : la fenêtre est de même origine, COOP `same-origin` garde le lien | passe |
+| Repli sur le réseau réel, images externes | image et `fetch` `no-cors` d'une autre origine sans CORP : chargées avec `credentialless` | passe (bloquées seulement en `require-corp`, ADR 0143 question 3) |
+| Monaco (CodeEditor), xterm.js (Terminal) | nouveau fichier, saisie dans Monaco ; commandes dans le terminal | passe, aucune erreur de console |
+| Téléchargements (`download.js`), `.hosbak` | lien `blob:` avec `download` : le téléchargement part ; `FileExplorerDownloadTests` sous isolation | passe |
+| Installation de la PWA, mise à jour du service worker | premier chargement sur `127.0.0.2` : installation, rechargement unique (`controllerchange`), page isolée ; `HostSmoke` `ecosystem-isolated` | passe |
+
+Avec l'isolation, `seq 30000 | wc -l` donne `30000` par les anneaux,
+`sleep 1 & ps` marche, et `sample-cmd --processes` répond.
 
 ## Usage
 
@@ -373,6 +433,18 @@ seule réponse : son descripteur est rendu dès cette réponse (ADR 0139 §3).
 - [x] Note `bg.progress`, appel `bg.run` et messages `bgp` pour une tâche lancée depuis un worker.
 - [x] Erreurs `bgfault` et raison `rs` de `killed`.
 - [x] Tests de parité fil principal / worker (`BackgroundJobTests`).
+
+## Liste des tâches du chantier `exec/9-cross-origin-isolation` (ADR 0131, ADR 0143)
+
+- [x] Réglage `HackerOs:CrossOriginIsolation`, constante d'audit et copie dans le service worker.
+- [x] En-têtes : service worker de l'Ecosystem (repli `require-corp`), intergiciel de `test/test` et `HackerOs.Server`.
+- [x] Sonde de la page (`crossOriginIsolation.js`), raisons, ligne de `syslog`.
+- [x] Anneaux partagés (`sharedRing.js`) dans `workerHost.js` et `workerBootstrap.js`.
+- [x] Appels synchrones `ListProcesses`/`Kill`, opération `proc.list`, `sample-cmd --processes` et `--kill`.
+- [x] Mémoire par worker mesurée par le navigateur (`IWebWorkerMemoryMeter`).
+- [x] Lignes d'isolation de `/proc/hackeros/workers`, badge de Diagnostic.
+- [x] Audit dans Chromium, `AuditPassed = true`.
+- [x] Tests : sonde et réglage, appels synchrones en bouclage, anneaux sous Node, `HostSmoke` et parcours `ecosystem-isolated`/`ecosystem-isolation-off`.
 
 ## Mesures de l'essai de fenêtre en worker (`exec/6`, ADR 0129 et 0133)
 

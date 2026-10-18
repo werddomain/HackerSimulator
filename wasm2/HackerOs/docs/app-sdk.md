@@ -376,6 +376,9 @@ sur le fil principal. Ce qui n'est pas disponible dans un worker (hôte de
 shell, administration, page HTTP du navigateur simulé, `StartChild`, formes
 synchrones de `Kill` et `ListProcesses`, `WithSelectedHandle`) lève
 `NotSupportedException` : une app qui en a besoin déclare `MainThread`.
+Exception : quand la page est isolée (`crossOriginIsolated`, ADR 0131 et 0143),
+les formes synchrones de `Kill` et `ListProcesses` marchent aussi dans un
+worker, qui attend la réponse de l'OS comme un appel système bloquant.
 Détails : [`worker-processes.md`](worker-processes.md).
 
 **Événements et surveillance de fichiers dans un worker (ADR 0124, ADR

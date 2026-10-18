@@ -20,6 +20,11 @@ namespace HackerOs.HostSmoke.Tests;
 /// Whether the run turns the OOM killer on and expects <c>stress --vm</c> to be killed (ADR 0126):
 /// the <c>ecosystem-oom</c> run, whose simulated <c>MemTotal</c> is small.
 /// </param>
+/// <param name="ExpectedIsolation">
+/// When set, whether the page must be cross-origin isolated (ADR 0131): <see langword="true"/> for a
+/// host that sends COOP/COEP (its service worker or its server), <see langword="false"/> for a run
+/// with <c>HackerOs:CrossOriginIsolation</c> off; <see langword="null"/> checks nothing.
+/// </param>
 public sealed record HostSmokeSettings(
     string Url,
     string HostName,
@@ -27,7 +32,8 @@ public sealed record HostSmokeSettings(
     string? ExpectedMemSource,
     string? ArtifactsDirectory,
     bool LimitsEnabled = true,
-    bool ExpectsOomKill = false)
+    bool ExpectsOomKill = false,
+    bool? ExpectedIsolation = null)
 {
     /// <summary>Base address of the host under test. Required.</summary>
     public const string UrlVariable = "HACKEROS_SMOKE_URL";
@@ -49,6 +55,9 @@ public sealed record HostSmokeSettings(
 
     /// <summary><c>on</c> when the run checks the OOM killer (ADR 0126).</summary>
     public const string OomVariable = "HACKEROS_SMOKE_EXPECT_OOM";
+
+    /// <summary><c>yes</c> or <c>no</c>: the page's expected <c>crossOriginIsolated</c> (ADR 0131).</summary>
+    public const string IsolationVariable = "HACKEROS_SMOKE_EXPECT_ISOLATION";
 
     /// <summary>Reads the settings, or returns <see langword="null"/> when no URL is set.</summary>
     /// <summary>
@@ -78,7 +87,13 @@ public sealed record HostSmokeSettings(
             Read(MemSourceVariable),
             Read(ArtifactsVariable),
             !string.Equals(Read(LimitsVariable), "off", StringComparison.Ordinal),
-            string.Equals(Read(OomVariable), "on", StringComparison.Ordinal));
+            string.Equals(Read(OomVariable), "on", StringComparison.Ordinal),
+            Read(IsolationVariable) switch
+            {
+                "yes" => true,
+                "no" => false,
+                _ => null
+            });
     }
 
     private static string? Read(string name)

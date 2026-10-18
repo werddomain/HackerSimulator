@@ -252,9 +252,9 @@ et les conséquences de chaque choix ; réponses du 2026-10-18 (ADR 0134).
 - [ ] OS servi en WebAssembly, API seulement côté serveur, retrait d'Interactive Server, vérification des hôtes adaptée.
 
 ### Isolation cross-origin
-- [ ] Audit de compatibilité.
-- [ ] En-têtes dans les hôtes et le service worker, repli.
-- [ ] Tubes partagés, appels synchrones, mémoire réelle par worker, minuteries.
+- [x] Audit de compatibilité (`exec/9-cross-origin-isolation`, ADR 0143 : passé, `auto = on`).
+- [x] En-têtes dans les hôtes et le service worker, repli (`exec/9-cross-origin-isolation`, ADR 0143).
+- [x] Tubes partagés, appels synchrones, mémoire réelle par worker, minuteries (`exec/9-cross-origin-isolation`, ADR 0143).
 
 ### Fin
 - [ ] Publication du SDK 1.2 et app de compatibilité 1.1 (ADR 0132).

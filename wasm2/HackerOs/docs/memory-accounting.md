@@ -129,6 +129,10 @@ Un processus dans un Web Worker (ADR 0070) reçoit en plus, en `RssAnon`, sa par
 de la mémoire du runtime de son worker (répartie entre les processus du
 worker) et ses allocations mesurées dans le worker ; `/proc/meminfo` compte
 le runtime de chaque worker. Voir [`worker-processes.md`](worker-processes.md).
+Quand la page est isolée (ADR 0131, 0143 §6), la mémoire du runtime d'un worker
+vient de `performance.measureUserAgentSpecificMemory()` (toutes les 20 s,
+valable trois périodes) au lieu du battement de cœur ; `MemSource` reste
+`measured`, et `/proc/hackeros/workers` dit `memory-measure: browser`.
 
 ## Constantes
 

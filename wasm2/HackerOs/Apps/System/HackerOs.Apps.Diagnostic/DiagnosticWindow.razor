@@ -15,6 +15,13 @@
                 <span class="diag-badge">@L["Header.Database", _snapshot.DatabaseName, _snapshot.DatabaseVersion]</span>
                 <span class="diag-badge diag-badge-info">@L["Header.ResolvedPaths", _snapshot.ResolvedPaths.Count]</span>
             }
+            @if (_isolation is { } isolation)
+            {
+                <span class="diag-badge @(isolation.IsIsolated ? "diag-badge-isolated" : "diag-badge-muted")"
+                      title="@IsolationDetails(isolation)" data-isolation="@(isolation.IsIsolated ? "yes" : "no")">
+                    @(isolation.IsIsolated ? L["Isolation.Yes"] : L["Isolation.No", IsolationReason(isolation.Reason)])
+                </span>
+            }
         </div>
         <div class="diag-actions">
             <button class="diag-btn" @onclick="RefreshAsync" disabled="@_isLoading">
