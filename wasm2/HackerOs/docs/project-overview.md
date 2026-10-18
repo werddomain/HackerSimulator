@@ -226,7 +226,9 @@ Documents : [`hack-file-api.md`](hack-file-api.md),
   puis `v3/base` (fin de la migration wasm v3, partie de `web/base`), `v3.1/base`
   et `exec/base` (suites de la phase 5, partie de `v3.1/base`). Chaque
   chantier part de la branche de sa série (`v3/<n>-<sujet>`…) et y revient ;
-  seul le propriétaire du dépôt fusionne vers `main`.
+  seul le propriétaire du dépôt fusionne vers `main`. Le 2026-10-18, à la
+  demande de Benoit, `exec/base` (qui contient toutes les autres séries) a été
+  fusionnée dans `main` : `main` porte désormais tout le travail.
 - État : la migration wasm v3 est terminée, le SDK a été gelé en 1.0.0
   (ADR 0114), publié en 1.1.0 par la série v3.1 (ADR 0117 §5) puis en 1.2.0
   à la fin de la série `exec` (ADR 0132 §2,

@@ -317,5 +317,9 @@ cartes des fils « Exec 1 » (publication depuis un worker), « Exec 4 »
 (`sudo nice`), « Exec 5 » (délai de grâce, PID de la tâche), « Exec 6 »
 (arrêt de l'essai de rendu en worker, `exec/7` n'a pas lieu) et « Exec 9 »
 (quatre cartes sur l'isolation). La fusion d'`exec/base` vers `main` est la
-décision de Benoit.
+décision de Benoit : il l'a demandée le 2026-10-18 (« on peut tout ramener sur
+main »), et elle a été faite le même jour après une nouvelle passe de la barre
+locale ; `exec/base` contenait déjà `web/base`, `v3/base` et `v3.1/base`, et
+`rebuild/base` y a été fusionnée sans changer de fichier (sa PR #133 était
+déjà portée par la PR #148).
 
