@@ -12,12 +12,17 @@ namespace HackerOs.HostSmoke.Tests;
 /// </param>
 /// <param name="ExpectedMemSource">Same as <paramref name="ExpectedCpuSource"/> for <c>MemSource:</c>.</param>
 /// <param name="ArtifactsDirectory">Where a failing run leaves its screenshot, or <see langword="null"/>.</param>
+/// <param name="LimitsEnabled">
+/// Whether the host applies the process limits of ADR 0125 (<c>HackerOs:ResourceLimits:Enabled</c>);
+/// <see langword="false"/> for the run that switches them off.
+/// </param>
 public sealed record HostSmokeSettings(
     string Url,
     string HostName,
     string? ExpectedCpuSource,
     string? ExpectedMemSource,
-    string? ArtifactsDirectory)
+    string? ArtifactsDirectory,
+    bool LimitsEnabled = true)
 {
     /// <summary>Base address of the host under test. Required.</summary>
     public const string UrlVariable = "HACKEROS_SMOKE_URL";
@@ -33,6 +38,9 @@ public sealed record HostSmokeSettings(
 
     /// <summary>Directory for failure screenshots.</summary>
     public const string ArtifactsVariable = "HACKEROS_SMOKE_ARTIFACTS";
+
+    /// <summary><c>off</c> when the host switches the process limits off (ADR 0125).</summary>
+    public const string LimitsVariable = "HACKEROS_SMOKE_EXPECT_LIMITS";
 
     /// <summary>Reads the settings, or returns <see langword="null"/> when no URL is set.</summary>
     /// <summary>
@@ -54,7 +62,8 @@ public sealed record HostSmokeSettings(
             Read(HostVariable) ?? "host",
             Read(CpuSourceVariable),
             Read(MemSourceVariable),
-            Read(ArtifactsVariable));
+            Read(ArtifactsVariable),
+            !string.Equals(Read(LimitsVariable), "off", StringComparison.Ordinal));
     }
 
     private static string? Read(string name)

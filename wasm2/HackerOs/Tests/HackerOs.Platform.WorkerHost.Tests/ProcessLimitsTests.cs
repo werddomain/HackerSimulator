@@ -147,6 +147,21 @@ public sealed class ProcessLimitsTests
 
     [Theory]
     [MemberData(nameof(Hosts))]
+    public async Task A_limit_set_in_a_child_shell_stays_in_it(bool workers)
+    {
+        // The path of build/verify-hosts.sh: the terminal's own shell keeps its limits.
+        await using OsFixture os = await StartAsync(workers);
+        using ResourceLimitEnforcer enforcer = Enforcer(os);
+
+        ShellRun run = await RunCheckingAsync(os, enforcer, "sh -c 'ulimit -S -t 1; stress --yield'; echo \"exit=$?\"");
+
+        Assert.Equal("exit=152\n", run.Stdout[run.Stdout.IndexOf("exit=", StringComparison.Ordinal)..]);
+        Assert.Contains("CPU time limit exceeded", run.Stderr, StringComparison.Ordinal);
+        Assert.Equal("unlimited\n", (await os.RunAsync("ulimit -t")).Stdout);
+    }
+
+    [Theory]
+    [MemberData(nameof(Hosts))]
     public async Task The_hard_cpu_limit_kills_the_command(bool workers)
     {
         await using OsFixture os = await StartAsync(workers);

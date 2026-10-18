@@ -80,6 +80,9 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
             await CheckWorkersAsync(page, screen, rows, settings);
             AssertNoErrors(errors, "workers");
 
+            await CheckLimitsAsync(page, screen, rows, settings);
+            AssertNoErrors(errors, "limits");
+
             await OpenAppAsync(page, "System Monitor");
             ILocator filter = page.GetByLabel("Filter processes");
             await filter.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -153,6 +156,49 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
             rows, text => text.Contains("Terminated", StringComparison.Ordinal) || text.Contains("Killed", StringComparison.Ordinal),
             "the job ended after kill");
         Log("kill (SIGTERM) ended the stuck command after the grace period.");
+    }
+
+    /// <summary>
+    /// ADR 0125: <c>/proc/self/limits</c> says how limits are enforced on this host, and the CPU
+    /// limit ends a command with <c>SIGXCPU</c> (exit 152) where CPU time is measured, strictly in a
+    /// Web Worker. Where it is not measured the limit is inactive and the command ends normally; with
+    /// limits switched off, <c>ulimit</c> cannot change anything.
+    /// </summary>
+    private async Task CheckLimitsAsync(IPage page, ILocator screen, ILocator rows, HostSmokeSettings settings)
+    {
+        await RunCommandAsync(page, screen, "clear; cat /proc/self/limits");
+        string limits = await WaitForTerminalTextAsync(
+            rows, text => OutputFinished(text, "# enforcement:"), "/proc/self/limits and the next prompt");
+        string expected = !settings.LimitsEnabled ? "# enforcement: off"
+            : settings.ExpectsWorkers ? "# enforcement: strict (worker)"
+            : "# enforcement: best-effort (main thread)";
+        Assert.Contains(expected, limits, StringComparison.Ordinal);
+        Log($"/proc/self/limits: {expected[2..]}.");
+
+        if (!settings.LimitsEnabled)
+        {
+            await RunCommandAsync(page, screen, "clear; ulimit -n 100");
+            await WaitForTerminalTextAsync(rows, text => text.Contains("cannot modify limit", StringComparison.Ordinal), "ulimit refused");
+            Log("limits off: ulimit cannot change anything.");
+            return;
+        }
+
+        // The child shell gets the limit, stress inherits it; the terminal's own shell keeps its own.
+        bool cpuMeasured = string.Equals(settings.ExpectedCpuSource, "measured", StringComparison.Ordinal);
+        await RunCommandAsync(page, screen, $"clear; sh -c 'ulimit -S -t 1; stress --yield -t {(cpuMeasured ? 30 : 2)}'; echo \"exit=$?\"");
+        if (cpuMeasured)
+        {
+            string ended = await WaitForTerminalTextAsync(rows, text => text.Contains("exit=", StringComparison.Ordinal), "the end of the CPU-limited stress");
+            Assert.Contains("CPU time limit exceeded", ended, StringComparison.Ordinal);
+            Assert.Contains("exit=152", ended, StringComparison.Ordinal);
+            Log("ulimit -S -t 1; stress --yield: SIGXCPU, exit 152.");
+        }
+        else
+        {
+            string ended = await WaitForTerminalTextAsync(rows, text => text.Contains("exit=", StringComparison.Ordinal), "the end of stress");
+            Assert.Contains("exit=0", ended, StringComparison.Ordinal);
+            Log("CPU not measured: the CPU limit is inactive, stress ran to its end.");
+        }
     }
 
     private async Task SignInAsync(IPage page, bool firstVisit)

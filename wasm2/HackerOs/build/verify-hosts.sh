@@ -14,6 +14,7 @@
 #   ecosystem               published PWA, default build and settings (measurements on)
 #   ecosystem-build-off     published with -p:HackerOsCpuAccounting=false -p:HackerOsMemoryAccounting=false
 #   ecosystem-settings-off  default publish, wwwroot/appsettings.json switching both measurements off
+#   ecosystem-limits-off    default publish, wwwroot/appsettings.json switching the process limits off (ADR 0125)
 #   test-host               test/test (Blazor Web App, InteractiveWebAssembly)
 #   server                  Server/HackerOs.Server (InteractiveServer, ADR 0027)
 #
@@ -118,9 +119,11 @@ wait_ready() {
 }
 
 # run_smoke NAME URL [CPU_SOURCE MEM_SOURCE] — runs the Playwright suite against a running host.
+# A run whose name ends in "-limits-off" expects the ADR 0125 limits off.
 run_smoke() {
-    local name="$1" url="$2" cpu="${3:-}" mem="${4:-}" logfile="$LOGS/$1.smoke.log"
-    HACKEROS_SMOKE_URL="$url" HACKEROS_SMOKE_HOST="$name" \
+    local name="$1" url="$2" cpu="${3:-}" mem="${4:-}" logfile="$LOGS/$1.smoke.log" limits=on
+    [[ "$name" == *-limits-off ]] && limits=off
+    HACKEROS_SMOKE_URL="$url" HACKEROS_SMOKE_HOST="$name" HACKEROS_SMOKE_EXPECT_LIMITS="$limits" \
     HACKEROS_SMOKE_EXPECT_CPU_SOURCE="$cpu" HACKEROS_SMOKE_EXPECT_MEM_SOURCE="$mem" \
     HACKEROS_SMOKE_ARTIFACTS="$OUT/screenshots" \
         dotnet test "$SMOKE_PROJECT" --no-build -c Debug --logger "console;verbosity=detailed" >"$logfile" 2>&1
@@ -218,7 +221,7 @@ if [[ $SKIP_BUILD -eq 0 ]]; then
     done
 fi
 
-if wanted ecosystem || wanted ecosystem-settings-off; then
+if wanted ecosystem || wanted ecosystem-settings-off || wanted ecosystem-limits-off; then
     build_step "publish ecosystem" "$LOGS/publish-ecosystem.log" \
         dotnet publish OS/HackerOs.Ecosystem -c Release -o "$OUT/publish/ecosystem" || true
 fi
@@ -274,6 +277,27 @@ with open(path, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
 PY
             serve_published ecosystem-settings-off "$off" simulated simulated
+        fi
+    fi
+
+    if wanted ecosystem-limits-off; then
+        settings="$OUT/publish/ecosystem/wwwroot/appsettings.json"
+        if [[ ! -f "$settings" ]] || ! grep -q '"ResourceLimits"' "$settings"; then
+            record ecosystem-limits-off SKIP "no HackerOs:ResourceLimits in appsettings.json (ADR 0125 not in this tree)"
+        else
+            off="$OUT/publish/ecosystem-limits-off"
+            rm -rf "$off" && cp -r "$OUT/publish/ecosystem" "$off"
+            rm -f "$off/wwwroot/appsettings.json.br" "$off/wwwroot/appsettings.json.gz"
+            python3 - "$off/wwwroot/appsettings.json" <<'PY'
+import json, sys
+path = sys.argv[1]
+with open(path, encoding="utf-8-sig") as f:
+    data = json.load(f)
+data.setdefault("HackerOs", {}).setdefault("ResourceLimits", {})["Enabled"] = False
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+PY
+            serve_published ecosystem-limits-off "$off" "$DEFAULT_SOURCE" "$DEFAULT_SOURCE"
         fi
     fi
 
