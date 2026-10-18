@@ -53,6 +53,8 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
             await SignInAsync(page, firstVisit: false);
             AssertNoErrors(errors, "sign-in after reload");
             await AssertScopedStylesAppliedAsync(page, ".taskbar-container", "taskbar (HackerOs.Taskbar.Blazor)");
+            await CheckServerConnectionAsync(page, settings);
+            AssertNoErrors(errors, "server connection");
 
             await OpenAppAsync(page, "Terminal");
             // Read the rendered rows, but click the screen: xterm.js stacks it over the rows.
@@ -101,16 +103,44 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
     }
 
     /// <summary>
-    /// Completes onboarding (first visit) or the sign-in form, then waits for the desktop. A host
-    /// that keeps its session across a reload (the server host's circuit can) may go straight to
-    /// the desktop; that is accepted.
+    /// ADR 0134: the OS served by <c>HackerOs.Server</c> connects to it without any question, and
+    /// the notification-area icon says so ("Connected, not identified"); identifying from the icon's
+    /// panel (a new account) turns it to "Connected". A host that is not a HackerOS server shows no
+    /// server icon at all.
     /// </summary>
+    private async Task CheckServerConnectionAsync(IPage page, HostSmokeSettings settings)
+    {
+        ILocator icon = page.Locator(".server-status-trigger");
+        if (!settings.ExpectsServerConnection)
+        {
+            // The discovery answers at once on a static host; give it a moment, then nothing may show.
+            await Task.Delay(2_000);
+            Assert.Equal(0, await icon.CountAsync());
+            Log("no server icon on this host.");
+            return;
+        }
+
+        await page.Locator(".server-status-trigger.is-anonymous").WaitForAsync(
+            new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Log($"server icon: {await icon.GetAttributeAsync("aria-label")}");
+
+        await icon.ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Identify" }).ClickAsync();
+        await page.GetByLabel("Account name").FillAsync($"{LoginName}-{Guid.NewGuid():N}"[..24]);
+        await page.Locator("#server-status-password").FillAsync(Password);
+        await page.GetByRole(AriaRole.Button, new() { Name = "Create an account" }).ClickAsync();
+        await page.Locator(".server-status-trigger.is-connected").WaitForAsync(
+            new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Log($"identified from the icon: {await icon.GetAttributeAsync("aria-label")}");
+        await icon.ClickAsync(); // close the panel
+    }
+
     /// <summary>
-    /// ADR 0070/0071 (plan section 5.2): on a WebAssembly host, commands run in Web Workers — a
-    /// pipeline works, <c>/proc/hackeros/workers</c> lists the pool, and a command stuck in a loop
+    /// ADR 0070/0071 (plan section 5.2): on every host, commands run in Web Workers — a pipeline
+    /// works, <c>/proc/hackeros/workers</c> lists the pool, and a command stuck in a loop
     /// (<c>stress</c>) leaves the desktop responsive, shows "not-responding" and dies on
-    /// <c>kill -9</c> and on <c>kill</c> (escalation after the grace period). On the server host,
-    /// which has no Web Worker (section 6), the file does not exist and commands still run.
+    /// <c>kill -9</c> and on <c>kill</c> (escalation after the grace period). A host without
+    /// workers (none since ADR 0130) has no such file and commands still run.
     /// </summary>
     private async Task CheckWorkersAsync(IPage page, ILocator screen, ILocator rows, HostSmokeSettings settings)
     {
@@ -155,6 +185,10 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
         Log("kill (SIGTERM) ended the stuck command after the grace period.");
     }
 
+    /// <summary>
+    /// Completes onboarding (first visit) or the sign-in form, then waits for the desktop. A host
+    /// that keeps its session across a reload may go straight to the desktop; that is accepted.
+    /// </summary>
     private async Task SignInAsync(IPage page, bool firstVisit)
     {
         ILocator onboarding = page.GetByRole(AriaRole.Heading, new() { Name = "Create administrator" });

@@ -21,7 +21,7 @@ public interface IAppAssetSource
 }
 
 /// <summary>
-/// The source of a host that serves no app asset (the server host, tests): every read finds no
+/// The source of a host that serves no app asset (tests, a host without static assets): every read finds no
 /// file. <see cref="AppAssetStore"/> then reports the asset missing, never damaged.
 /// </summary>
 public sealed class NoAppAssetSource : IAppAssetSource

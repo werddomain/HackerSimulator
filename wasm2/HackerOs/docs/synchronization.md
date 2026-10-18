@@ -34,6 +34,7 @@ appareils :
 | Dialogue de conflit de l'OS | `Platform/HackerOs.Platform.Blazor/Sync/SyncConflictOverlay.razor` (dans `DesktopShell` et `MobileShell`) |
 | Onglet Synchronisation | `Apps/System/HackerOs.Apps.Settings/SettingsWindow.razor` |
 | SDK | `Shared/HackerOs.AppSdk/Administration/HackServerConnection.cs`, `ServerConnectionContracts.cs` |
+| Connexion automatique au serveur qui sert l'OS, icône d'état ([`server-hosting.md`](server-hosting.md)) | `ServerConnection/ServerPresenceService.cs`, `HostInfoClient.cs`, `Platform/HackerOs.Platform.Blazor/Shell/ServerStatusIndicator.razor` |
 | Purge des pierres tombales (serveur) | `Server/HackerOs.Server/Services/SyncService.cs` (`PurgeExpiredTombstonesAsync`), `SyncTombstonePurgeService.cs` |
 
 ### État suivi par enregistrement

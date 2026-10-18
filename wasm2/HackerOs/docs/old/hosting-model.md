@@ -1,9 +1,10 @@
 # Hosting Model
 
-> **Décision du 2026-10-18 :** l'[ADR 0130](../adr/0130-server-serves-webassembly-os-and-api.md)
-> remplace les ADR 0027 et 0036. `HackerOs.Server` servira l'OS en WebAssembly
-> et ne gardera que son API ; ce document décrit l'état d'avant le chantier
-> `exec/8-server-wasm`, qui le mettra à jour.
+> **Fait le 2026-10-18 (`exec/8-server-wasm`) :** l'[ADR 0130](../adr/0130-server-serves-webassembly-os-and-api.md)
+> remplace les ADR 0027 et 0036. `HackerOs.Server` sert l'OS de l'Ecosystem en
+> WebAssembly et ne garde que son API ; l'OS s'y connecte tout seul (ADR 0134).
+> État actuel : [`../server-hosting.md`](../server-hosting.md). Ce document
+> décrit l'état d'avant.
 
 ## Purpose
 

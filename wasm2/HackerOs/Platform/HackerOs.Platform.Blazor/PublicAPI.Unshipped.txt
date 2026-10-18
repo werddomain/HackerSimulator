@@ -1,1 +1,6 @@
 #nullable enable
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.OnOpenSettings.get -> Microsoft.AspNetCore.Components.EventCallback
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.OnOpenSettings.set -> void
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.ServerStatusIndicator() -> void
