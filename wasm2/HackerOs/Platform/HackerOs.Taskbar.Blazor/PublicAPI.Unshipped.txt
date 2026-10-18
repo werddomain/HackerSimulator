@@ -1,1 +1,3 @@
 #nullable enable
+HackerOs.Taskbar.Blazor.Taskbar.NotificationAreaContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
+HackerOs.Taskbar.Blazor.Taskbar.NotificationAreaContent.set -> void

@@ -29,8 +29,8 @@ namespace HackerOs.Platform.Core.Diagnostics;
 /// time per attached filesystem.
 /// </para>
 /// <para>
-/// <b>Re-attaching.</b> The writer is a host singleton, but under <c>InteractiveServer</c>
-/// (<c>HackerOs.Server</c>, ADR 0027) each circuit mounts its own scoped filesystem and attaches it
+/// <b>Re-attaching.</b> The writer is a host singleton, but under <c>InteractiveServer</c> (a third-party host;
+/// <c>HackerOs.Server</c> did it until ADR 0130) each circuit mounts its own scoped filesystem and attaches it
 /// at boot. A reload can disconnect the previous circuit in the middle of a flush, leaving a JS
 /// interop call that never returns. Attaching a different filesystem therefore abandons the
 /// previous one: its flush token is cancelled and later flushes use a fresh gate, so the new

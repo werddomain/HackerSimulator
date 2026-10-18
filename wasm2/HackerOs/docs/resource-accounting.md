@@ -111,7 +111,7 @@ ligne syslog) mais la DLL arrive encore par `HackerOs.Ecosystem.Host`.
 |---|---|---|
 | `OS/HackerOs.Ecosystem` | `wwwroot/appsettings.json` (lu par `WebAssemblyHostBuilder`, servi aussi à l'îlot WASM de `test/test`) | les deux activées |
 | `test/test` | `appsettings.json` (composition côté serveur, pré-rendu) | les deux activées |
-| `Server/HackerOs.Server` | `appsettings.json` | les deux **coupées** (rendu Interactive Server multithread, ADR 0067 §6) |
+| `Server/HackerOs.Server` | aucun : il sert l'OS de l'Ecosystem et son `wwwroot/appsettings.json` (ADR 0130) | comme l'Ecosystem (activées) |
 
 Chaque hôte appelle, avant `AddHackerOsEcosystem` :
 

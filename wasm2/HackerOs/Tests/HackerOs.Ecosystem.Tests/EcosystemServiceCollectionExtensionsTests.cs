@@ -38,7 +38,7 @@ public sealed class EcosystemServiceCollectionExtensionsTests
         services.AddSingleton<IJSRuntime, NonInvokedJsRuntime>();
         services.AddHackerOsEcosystem();
         // The settings services take an ILogger<T> (ADR 0044 warnings). Strip the WASM-only
-        // diagnostic ILoggerProvider exactly as the server host does (Server/HackerOs.Server/Program.cs):
+        // diagnostic ILoggerProvider (the former server-rendered host did the same, ADR 0027):
         // its singleton-over-scoped edge is accepted in WASM but rejected by scope validation.
         services.RemoveAll<Microsoft.Extensions.Logging.ILoggerProvider>();
 

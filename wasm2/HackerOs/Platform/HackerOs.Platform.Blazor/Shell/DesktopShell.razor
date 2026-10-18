@@ -28,6 +28,7 @@
 @inject FileDialogWindowAdapter FileDialogAdapter
 @inject TestDemoFixtureSeeder TestDemoSeeder
 @inject IStringLocalizer<Strings> L
+@inject HackerOs.Platform.Core.AppCatalog Catalog
 @inject HackerOs.Platform.Core.Globalization.SessionLocaleService SessionLocale
 
 <div class="desktop-shell" @onkeydown="HandleShellKeyDown">
@@ -85,6 +86,7 @@
                                       StatusSource="_taskbarStatus"
                                       ClockPanelSource="_clockPanel"
                                       ClockPanelContent="@ClockPanelFragment"
+                                      NotificationAreaContent="@NotificationAreaFragment"
                                       SessionCommands="_taskbarSessionCommands" />
 
     @if (TestDemoEnabled)
@@ -126,6 +128,22 @@
         builder.AddAttribute(1, nameof(ClockPanel.OnClose), EventCallback.Factory.Create(this, CloseClockPanel));
         builder.CloseComponent();
     };
+
+    // ADR 0134 §2: the server connection icon; "Server settings" opens the Settings app.
+    private RenderFragment NotificationAreaFragment => builder =>
+    {
+        builder.OpenComponent<ServerStatusIndicator>(0);
+        builder.AddAttribute(1, nameof(ServerStatusIndicator.OnOpenSettings), EventCallback.Factory.Create(this, OpenServerSettingsAsync));
+        builder.CloseComponent();
+    };
+
+    private Task OpenServerSettingsAsync() =>
+        Catalog.Manifests.TryGetValue(SettingsAppId, out AppManifest? settings)
+            ? HandleAppSelected(settings)
+            : Task.CompletedTask;
+
+    /// <summary>The Settings app, opened from the server icon's panel.</summary>
+    private const string SettingsAppId = "org.hackeros.settings";
 
     [Parameter]
     public EventCallback OnLoggedOut { get; set; }

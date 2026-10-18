@@ -107,6 +107,17 @@ public sealed class ServerConnectionService(
         return _cachedAccessToken;
     }
 
+    /// <summary>
+    /// The client-side PBKDF2 salt of a server account (ADR 0137 §4). It must be the same at account
+    /// creation and at every later login, from any device, or the hash the server stored can never
+    /// match again: a random salt per call (the earlier behavior) let only the creating device's
+    /// first login succeed. The server re-hashes what it receives with its own random salt, so a salt
+    /// derived from the account name is enough here.
+    /// </summary>
+    /// <param name="username">The server account name, exactly as typed.</param>
+    internal static byte[] DeriveAccountSalt(string username) =>
+        SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("hackeros-server-account:" + username))[..SaltLengthBytes];
+
     private async Task<ServerConnectionState> ConnectAsync(
         Uri serverBaseUrl, string username, string password, bool createNewAccount, CancellationToken cancellationToken)
     {
@@ -114,7 +125,7 @@ public sealed class ServerConnectionService(
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
 
         string deviceFingerprint = Guid.NewGuid().ToString("N");
-        byte[] salt = RandomNumberGenerator.GetBytes(SaltLengthBytes);
+        byte[] salt = DeriveAccountSalt(username);
         byte[] hash;
         if (asyncPasswordHasher is not null)
         {
