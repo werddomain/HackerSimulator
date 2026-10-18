@@ -125,6 +125,7 @@ HackerOs.Infrastructure.Browser.Interop.WebCryptoPasswordHasher.DeriveKeyAsync(s
 HackerOs.Infrastructure.Browser.Interop.WebCryptoPasswordHasher.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Infrastructure.Browser.Interop.WebCryptoPasswordHasher.EncryptAesGcmAsync(byte[]! key, byte[]! nonce, byte[]! plaintext, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<byte[]!>
 HackerOs.Infrastructure.Browser.Interop.WebCryptoPasswordHasher.WebCryptoPasswordHasher(Microsoft.JSInterop.IJSRuntime! runtime) -> void
+HackerOs.Infrastructure.Browser.Isolation.BrowserCrossOriginIsolation
 HackerOs.Infrastructure.Browser.Policy.IndexedDbCapabilityGrantRepository
 HackerOs.Infrastructure.Browser.Policy.IndexedDbCapabilityGrantRepository.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Infrastructure.Browser.Policy.IndexedDbCapabilityGrantRepository.EvaluateAsync(string! appId, string! userId, string! capability, HackerOs.App.Abstractions.AppAuthority actingAuthority, HackerOs.App.Abstractions.AppAuthority requiredAuthority, HackerOs.App.Abstractions.Policy.CapabilityResourceCandidate? resourceCandidate = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.App.Abstractions.Policy.CapabilityPolicyEvaluation>
@@ -235,6 +236,7 @@ HackerOs.Infrastructure.Browser.Workers.BrowserWebWorkerRuntime.EntryType.get ->
 HackerOs.Infrastructure.Browser.Workers.BrowserWebWorkerRuntime.EntryType.init -> void
 HackerOs.Infrastructure.Browser.Workers.BrowserWebWorkerRuntime.HardwareConcurrency.get -> int
 HackerOs.Infrastructure.Browser.Workers.BrowserWebWorkerRuntime.InitializeAsync() -> System.Threading.Tasks.Task!
+HackerOs.Infrastructure.Browser.Workers.BrowserWebWorkerRuntime.MeasureWorkersAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<int, long>?>!
 HackerOs.Infrastructure.Browser.Workers.BrowserWebWorkerRuntime.StartAsync(HackerOs.Simulation.Abstractions.Workers.WebWorkerStartOptions! options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.Workers.IWebWorker!>!
 HackerOs.Infrastructure.Browser.Workers.BrowserWebWorkerRuntime.WhenIdleAsync(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 const HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService.ArchiveExtension = ".hosbak" -> string!
@@ -264,6 +266,7 @@ const HackerOs.Infrastructure.Browser.Storage.BrowserStorageManager.LowSpaceRati
 static HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService.Inspect(string! backupJson) -> HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupSummary!
 static HackerOs.Infrastructure.Browser.Backup.IndexedDbBackupService.ReadArchive(byte[]! archive) -> string!
 static HackerOs.Infrastructure.Browser.Globalization.BrowserSatelliteAssemblies.LoadAsync(System.Collections.Generic.IEnumerable<string!>! cultures) -> System.Threading.Tasks.Task<bool>!
+static HackerOs.Infrastructure.Browser.Isolation.BrowserCrossOriginIsolation.ProbeAsync(bool wanted) -> System.Threading.Tasks.Task<string?>!
 static HackerOs.Infrastructure.Browser.Recovery.BrowserStorageRecoveryClassifier.AwaitDestructiveConfirmation(HackerOs.Simulation.Abstractions.Recovery.StorageRecoveryActions action, string! affectedData, System.Guid correlationId) -> HackerOs.Simulation.Abstractions.Recovery.StorageRecoveryPresentation!
 static HackerOs.Infrastructure.Browser.Recovery.BrowserStorageRecoveryClassifier.Classify(System.Exception! exception, HackerOs.Simulation.Abstractions.Recovery.StorageRecoveryContext context, System.Guid correlationId) -> HackerOs.Simulation.Abstractions.Recovery.StorageRecoveryPresentation!
 static HackerOs.Infrastructure.Browser.Schema.FileContentStoragePolicy.Default.get -> HackerOs.Infrastructure.Browser.Schema.FileContentStoragePolicy!

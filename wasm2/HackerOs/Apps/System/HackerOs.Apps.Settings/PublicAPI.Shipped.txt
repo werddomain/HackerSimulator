@@ -19,6 +19,9 @@ HackerOs.Apps.Settings.InstalledAppsPanel.OnlyAppId.get -> string?
 HackerOs.Apps.Settings.InstalledAppsPanel.OnlyAppId.set -> void
 HackerOs.Apps.Settings.LanguagePanel
 HackerOs.Apps.Settings.LanguagePanel.LanguagePanel() -> void
+HackerOs.Apps.Settings.MemoryPanel
+HackerOs.Apps.Settings.MemoryPanel.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Apps.Settings.MemoryPanel.MemoryPanel() -> void
 HackerOs.Apps.Settings.ServerRelayPolicyPanel
 HackerOs.Apps.Settings.ServerRelayPolicyPanel.ServerRelayPolicyPanel() -> void
 HackerOs.Apps.Settings.SettingsApp

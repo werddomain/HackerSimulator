@@ -1,15 +1,1 @@
 #nullable enable
-HackerOs.Windowing.Abstractions.SetWindowRespondingCommand
-HackerOs.Windowing.Abstractions.SetWindowRespondingCommand.IsResponding.get -> bool
-HackerOs.Windowing.Abstractions.SetWindowRespondingCommand.IsResponding.init -> void
-HackerOs.Windowing.Abstractions.SetWindowRespondingCommand.SetWindowRespondingCommand(HackerOs.Windowing.Abstractions.WindowId WindowId, bool IsResponding) -> void
-HackerOs.Windowing.Abstractions.SetWindowRespondingCommand.WindowId.get -> HackerOs.Windowing.Abstractions.WindowId
-HackerOs.Windowing.Abstractions.SetWindowRespondingCommand.WindowId.init -> void
-HackerOs.Windowing.Abstractions.WindowRespondingChangedEvent
-HackerOs.Windowing.Abstractions.WindowRespondingChangedEvent.IsResponding.get -> bool
-HackerOs.Windowing.Abstractions.WindowRespondingChangedEvent.IsResponding.init -> void
-HackerOs.Windowing.Abstractions.WindowRespondingChangedEvent.WindowId.get -> HackerOs.Windowing.Abstractions.WindowId
-HackerOs.Windowing.Abstractions.WindowRespondingChangedEvent.WindowId.init -> void
-HackerOs.Windowing.Abstractions.WindowRespondingChangedEvent.WindowRespondingChangedEvent(HackerOs.Windowing.Abstractions.WindowId WindowId, bool IsResponding) -> void
-HackerOs.Windowing.Abstractions.WindowRuntimeState.IsResponding.get -> bool
-HackerOs.Windowing.Abstractions.WindowRuntimeState.IsResponding.init -> void

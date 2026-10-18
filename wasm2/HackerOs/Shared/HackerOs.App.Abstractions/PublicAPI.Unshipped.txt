@@ -1,4 +1,1 @@
 #nullable enable
-HackerOs.App.Abstractions.AppManifest.OomScoreAdj.get -> int?
-HackerOs.App.Abstractions.AppManifest.OomScoreAdj.init -> void
-virtual HackerOs.App.Abstractions.AppDefinition.OomScoreAdjust.get -> int?

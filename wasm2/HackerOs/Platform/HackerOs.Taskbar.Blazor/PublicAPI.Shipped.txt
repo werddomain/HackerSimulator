@@ -31,6 +31,8 @@ HackerOs.Taskbar.Blazor.Taskbar.Commands.set -> void
 HackerOs.Taskbar.Blazor.Taskbar.Dispose() -> void
 HackerOs.Taskbar.Blazor.Taskbar.Launcher.get -> HackerOs.Taskbar.Blazor.ITaskbarLauncher?
 HackerOs.Taskbar.Blazor.Taskbar.Launcher.set -> void
+HackerOs.Taskbar.Blazor.Taskbar.NotificationAreaContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
+HackerOs.Taskbar.Blazor.Taskbar.NotificationAreaContent.set -> void
 HackerOs.Taskbar.Blazor.Taskbar.Options.get -> HackerOs.Taskbar.Blazor.TaskbarOptions!
 HackerOs.Taskbar.Blazor.Taskbar.Options.set -> void
 HackerOs.Taskbar.Blazor.Taskbar.SessionCommands.get -> HackerOs.Taskbar.Blazor.ITaskbarSessionCommands?

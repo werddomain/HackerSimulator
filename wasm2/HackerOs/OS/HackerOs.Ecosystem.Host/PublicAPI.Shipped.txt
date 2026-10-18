@@ -10,7 +10,7 @@ HackerOs.Ecosystem.CpuAccountingRegistration.Registration.get -> System.IDisposa
 HackerOs.Ecosystem.CpuAccountingRegistration.Registration.init -> void
 HackerOs.Ecosystem.EcosystemBootCoordinator
 HackerOs.Ecosystem.EcosystemBootCoordinator.BootAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Ecosystem.EcosystemBootResult!>
-HackerOs.Ecosystem.EcosystemBootCoordinator.EcosystemBootCoordinator(HackerOs.Infrastructure.Browser.FileSystem.IndexedDbFileSystemBootstrapper! fileSystemBootstrapper, HackerOs.Platform.Core.Settings.SettingsStoreToFilesMigration! settingsMigration, HackerOs.App.Abstractions.Policy.IPersistentCapabilityGrantRepository! grants, HackerOs.App.Abstractions.IPersistentAppCatalogRepository! catalog, HackerOs.Platform.Core.AppCatalog! selectedCatalog, HackerOs.Platform.Core.Apps.AppEnablementToFilesMigration! appsMigration, HackerOs.Simulation.Abstractions.Sessions.ILocalGroupRepository! groups, HackerOs.Simulation.Abstractions.Sessions.ILocalUserRepository! users, HackerOs.Platform.Core.Diagnostics.LogFileWriter? logWriter = null, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemService? fileSystem = null, HackerOs.Platform.Core.Time.SimulationClockDriver? clockDriver = null, HackerOs.Platform.Core.Apps.AppInstallationService? installation = null, HackerOs.Platform.Core.Processes.ResourceSamplingService? resourceSampling = null, HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingPlan? resourceAccounting = null, HackerOs.Platform.Core.Lifecycle.SystemStartupSignal? startup = null, HackerOs.Platform.Core.Execution.IRemoteProcessHost? remoteHost = null, HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus? workers = null, HackerOs.Platform.Core.Lifecycle.ServiceStartupCoordinator? serviceStartup = null, HackerOs.Platform.Core.Storage.StorageSpaceMonitor? spaceMonitor = null, HackerOs.Platform.Core.Backup.SystemBackupService? backup = null) -> void
+HackerOs.Ecosystem.EcosystemBootCoordinator.EcosystemBootCoordinator(HackerOs.Infrastructure.Browser.FileSystem.IndexedDbFileSystemBootstrapper! fileSystemBootstrapper, HackerOs.Platform.Core.Settings.SettingsStoreToFilesMigration! settingsMigration, HackerOs.App.Abstractions.Policy.IPersistentCapabilityGrantRepository! grants, HackerOs.App.Abstractions.IPersistentAppCatalogRepository! catalog, HackerOs.Platform.Core.AppCatalog! selectedCatalog, HackerOs.Platform.Core.Apps.AppEnablementToFilesMigration! appsMigration, HackerOs.Simulation.Abstractions.Sessions.ILocalGroupRepository! groups, HackerOs.Simulation.Abstractions.Sessions.ILocalUserRepository! users, HackerOs.Platform.Core.Diagnostics.LogFileWriter? logWriter = null, HackerOs.Simulation.Abstractions.FileSystem.IFileSystemService? fileSystem = null, HackerOs.Platform.Core.Time.SimulationClockDriver? clockDriver = null, HackerOs.Platform.Core.Apps.AppInstallationService? installation = null, HackerOs.Platform.Core.Processes.ResourceSamplingService? resourceSampling = null, HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingPlan? resourceAccounting = null, HackerOs.Platform.Core.Lifecycle.SystemStartupSignal? startup = null, HackerOs.Platform.Core.Execution.IRemoteProcessHost? remoteHost = null, HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus? workers = null, HackerOs.Platform.Core.Lifecycle.ServiceStartupCoordinator? serviceStartup = null, HackerOs.Platform.Core.Storage.StorageSpaceMonitor? spaceMonitor = null, HackerOs.Platform.Core.Backup.SystemBackupService? backup = null, HackerOs.Platform.Core.Processes.OomKiller? oomKiller = null, HackerOs.Platform.Core.Settings.IOsSettingsService? settings = null, HackerOs.Platform.Core.Isolation.CrossOriginIsolationProbe? isolation = null) -> void
 HackerOs.Ecosystem.EcosystemBootCoordinator.MarkSystemStarted() -> void
 HackerOs.Ecosystem.EcosystemBootResult
 HackerOs.Ecosystem.EcosystemBootResult.CatalogEntryCount.get -> int
@@ -52,6 +52,7 @@ HackerOs.Ecosystem.HackerOsBrowserHostOptions.RootSelector.get -> string!
 HackerOs.Ecosystem.HackerOsBrowserHostOptions.RootSelector.init -> void
 HackerOs.Ecosystem.HackerOsBrowserHostOptions.WorkerPreloadAssemblies.get -> System.Collections.Generic.IReadOnlyList<string!>?
 HackerOs.Ecosystem.HackerOsBrowserHostOptions.WorkerPreloadAssemblies.init -> void
+HackerOs.Ecosystem.HardwareServiceCollectionExtensions
 HackerOs.Ecosystem.HostAppCatalog
 HackerOs.Ecosystem.HostAppCatalog.Catalog.get -> HackerOs.Platform.Core.AppCatalog!
 HackerOs.Ecosystem.HostAppCatalog.Images.get -> System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.App.Abstractions.AppImage!>!
@@ -74,6 +75,11 @@ HackerOs.Ecosystem.ResourceAccountingHookInstallation.Installation.get -> System
 HackerOs.Ecosystem.ResourceAccountingHookInstallation.Installation.init -> void
 HackerOs.Ecosystem.ResourceAccountingHookInstallation.ResourceAccountingHookInstallation(System.IDisposable! Installation) -> void
 HackerOs.Ecosystem.ResourceAccountingServiceCollectionExtensions
+HackerOs.Ecosystem.ResourceLimitsServiceCollectionExtensions
+HackerOs.Ecosystem.ResourceLimitsSettings
+HackerOs.Ecosystem.ResourceLimitsSettings.Enabled.get -> bool
+HackerOs.Ecosystem.ResourceLimitsSettings.Enabled.init -> void
+HackerOs.Ecosystem.ResourceLimitsSettings.ResourceLimitsSettings(bool Enabled) -> void
 HackerOs.Ecosystem.WebAssemblyEcosystemHostEnvironment
 HackerOs.Ecosystem.WebAssemblyEcosystemHostEnvironment.IsDevelopment.get -> bool
 HackerOs.Ecosystem.WebAssemblyEcosystemHostEnvironment.WebAssemblyEcosystemHostEnvironment(Microsoft.AspNetCore.Components.WebAssembly.Hosting.IWebAssemblyHostEnvironment! inner) -> void
@@ -83,16 +89,23 @@ HackerOs.Ecosystem.WebAssemblyLazyAssemblyTransport.WebAssemblyLazyAssemblyTrans
 HackerOs.Ecosystem._Imports
 HackerOs.Ecosystem._Imports.Execute() -> void
 HackerOs.Ecosystem._Imports._Imports() -> void
+const HackerOs.Ecosystem.HardwareServiceCollectionExtensions.SectionName = "HackerOs:Hardware" -> string!
 const HackerOs.Ecosystem.ResourceAccountingServiceCollectionExtensions.SectionName = "HackerOs:ResourceAccounting" -> string!
+const HackerOs.Ecosystem.ResourceLimitsServiceCollectionExtensions.SectionName = "HackerOs:ResourceLimits" -> string!
 override HackerOs.Ecosystem.App.OnAfterRender(bool firstRender) -> void
 override HackerOs.Ecosystem.App.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override HackerOs.Ecosystem.LoginProgressScreen.OnInitialized() -> void
 static HackerOs.Ecosystem.EcosystemServiceCollectionExtensions.AddHackerOsEcosystem(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, HackerOs.Platform.Core.AppCatalog? catalog = null, System.Func<System.IServiceProvider!, System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.Platform.Core.Discovery.AppDescriptor!>!>? descriptorProvider = null, System.Func<System.IServiceProvider!, HackerOs.Platform.Core.Lifecycle.IAppDescriptorLoader?>? descriptorLoaderProvider = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static HackerOs.Ecosystem.HackerOsBrowserHostExtensions.AddHackerOsBrowserHost(this Microsoft.AspNetCore.Components.WebAssembly.Hosting.WebAssemblyHostBuilder! builder, HackerOs.Ecosystem.HostAppCatalog! apps, HackerOs.Ecosystem.HackerOsBrowserHostOptions? options = null) -> Microsoft.AspNetCore.Components.WebAssembly.Hosting.WebAssemblyHostBuilder!
+static HackerOs.Ecosystem.HardwareServiceCollectionExtensions.AddHackerOsHardware(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration? configuration) -> HackerOs.Simulation.Abstractions.Processes.VirtualHardwareProfile!
+static HackerOs.Ecosystem.HardwareServiceCollectionExtensions.ReadProfile(Microsoft.Extensions.Configuration.IConfiguration? configuration) -> HackerOs.Simulation.Abstractions.Processes.VirtualHardwareProfile!
 static HackerOs.Ecosystem.HostAppCatalog.Load(System.Reflection.Assembly! hostAssembly) -> HackerOs.Ecosystem.HostAppCatalog!
 static HackerOs.Ecosystem.ResourceAccountingServiceCollectionExtensions.AddHackerOsResourceAccounting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingSettings! settings, HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingBuildSupport build, System.Func<HackerOs.Simulation.Abstractions.Processes.IExecutionContextSwitchObserver!, System.IDisposable!>? hookInstaller, System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.App.Abstractions.AppImage!>? images = null) -> HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingPlan!
 static HackerOs.Ecosystem.ResourceAccountingServiceCollectionExtensions.AddHackerOsResourceAccounting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration? configuration, System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.App.Abstractions.AppImage!>? images = null) -> HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingPlan!
 static HackerOs.Ecosystem.ResourceAccountingServiceCollectionExtensions.CompiledSupport.get -> HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingBuildSupport
 static HackerOs.Ecosystem.ResourceAccountingServiceCollectionExtensions.ReadSettings(Microsoft.Extensions.Configuration.IConfiguration? configuration) -> HackerOs.Platform.Core.Processes.Accounting.ResourceAccountingSettings!
+static HackerOs.Ecosystem.ResourceLimitsServiceCollectionExtensions.AddHackerOsResourceLimits(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration? configuration) -> HackerOs.Ecosystem.ResourceLimitsSettings!
+static HackerOs.Ecosystem.ResourceLimitsServiceCollectionExtensions.ReadSettings(Microsoft.Extensions.Configuration.IConfiguration? configuration) -> HackerOs.Ecosystem.ResourceLimitsSettings!
+static HackerOs.Ecosystem.ResourceLimitsSettings.Default.get -> HackerOs.Ecosystem.ResourceLimitsSettings!
 ~override HackerOs.Ecosystem.App.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Ecosystem.LoginProgressScreen.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

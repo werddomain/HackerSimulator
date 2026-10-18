@@ -324,6 +324,7 @@ HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.RevisionConflict
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.RootContainmentViolation = 1402 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.SymbolicLinkLimitExceeded = 1401 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.SymbolicLinkLoop = 1400 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
+HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.TooManyOpenFiles = 1802 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode.UnsupportedOperation = 1501 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemErrorCode
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemHandleAccess
 HackerOs.Simulation.Abstractions.FileSystem.FileSystemHandleAccess.Enumerate = 4 -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemHandleAccess
@@ -546,6 +547,7 @@ HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway.CreateAsync(Hack
 HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway.DeleteAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemDeleteRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemMutationResult!>
 HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway.EnumerateAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemEnumerateRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemResult<HackerOs.Simulation.Abstractions.FileSystem.FileSystemDirectorySnapshot!>!>
 HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway.MoveAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemMoveRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemMutationResult!>
+HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway.OpenDescriptorAsync(HackerOs.App.Abstractions.VirtualPath path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemResult<System.IDisposable!>!>
 HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway.ReadAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemReadRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemResult<HackerOs.Simulation.Abstractions.FileSystem.FileSystemContentReadHandle!>!>
 HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway.SetPermissionsAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemSetPermissionsRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemMutationResult!>
 HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway.StatAsync(HackerOs.Simulation.Abstractions.FileSystem.FileSystemStatRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.Simulation.Abstractions.FileSystem.FileSystemResult<HackerOs.Simulation.Abstractions.FileSystem.FileSystemEntrySnapshot!>!>
@@ -568,10 +570,13 @@ HackerOs.Simulation.Abstractions.Gateways.IAppNotificationGateway.Post(HackerOs.
 HackerOs.Simulation.Abstractions.Gateways.IAppPermissionErrorGateway
 HackerOs.Simulation.Abstractions.Gateways.IAppPermissionErrorGateway.PermissionDenied -> System.EventHandler<HackerOs.Simulation.Abstractions.Gateways.AppPermissionErrorEventArgs!>?
 HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway
+HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway.GetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> int
 HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway.Kill(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, HackerOs.Simulation.Abstractions.Processes.ProcessExitReason reason = HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Killed) -> HackerOs.Simulation.Abstractions.Processes.ProcessRecord!
 HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway.KillAsync(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, HackerOs.Simulation.Abstractions.Processes.ProcessExitReason reason = HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Killed, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.Processes.ProcessRecord!>!
 HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway.ListProcesses() -> System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Processes.ProcessRecord!>!
 HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway.OwnProcess.get -> HackerOs.Simulation.Abstractions.Processes.ProcessRecord!
+HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway.SetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, int nice) -> int
+HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway.SetResourceLimitAsync(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind kind, HackerOs.Simulation.Abstractions.Processes.ResourceLimit limit, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult>!
 HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway.StartChild(string! appId, HackerOs.Simulation.Abstractions.Processes.AppInstanceId appInstanceId, HackerOs.App.Abstractions.AppKind kind, HackerOs.Simulation.Abstractions.Processes.ResourceProfile! resourceProfile) -> HackerOs.Simulation.Abstractions.Processes.ProcessRecord!
 HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway.StopAsync(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, System.TimeSpan timeout, HackerOs.Simulation.Abstractions.Processes.ProcessExitReason reason = HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.CloseRequested, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.Processes.ProcessRecord!>!
 HackerOs.Simulation.Abstractions.Gateways.IAppServiceControlGateway
@@ -593,6 +598,8 @@ HackerOs.Simulation.Abstractions.Gateways.IFileSystemSelectedResourceHandleRegis
 HackerOs.Simulation.Abstractions.Gateways.IFileSystemSelectedResourceHandleRegistry.RevokeAllForProcess(HackerOs.Simulation.Abstractions.Processes.ProcessId processId) -> int
 HackerOs.Simulation.Abstractions.Gateways.IFileSystemSelectedResourceHandleRegistry.RevokeAllForUser(string! userId) -> int
 HackerOs.Simulation.Abstractions.Gateways.IFileSystemSelectedResourceHandleRegistry.TryGet(System.Guid handleId, out HackerOs.Simulation.Abstractions.FileSystem.FileSystemSelectedResourceHandle! handle) -> bool
+HackerOs.Simulation.Abstractions.Gateways.NoDescriptor
+HackerOs.Simulation.Abstractions.Gateways.NoDescriptor.Dispose() -> void
 HackerOs.Simulation.Abstractions.Gateways.NullAppServiceNotifyGateway
 HackerOs.Simulation.Abstractions.Gateways.NullAppServiceNotifyGateway.Notify(HackerOs.Simulation.Abstractions.Gateways.ServiceNotification! notification) -> void
 HackerOs.Simulation.Abstractions.Gateways.ServiceActiveState
@@ -1121,19 +1128,29 @@ HackerOs.Simulation.Abstractions.Processes.IProcessEnvironmentTable.Get(HackerOs
 HackerOs.Simulation.Abstractions.Processes.IProcessEnvironmentTable.SetVariable(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, string! name, string? value) -> void
 HackerOs.Simulation.Abstractions.Processes.IProcessEnvironmentTable.SetWorkingDirectory(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, HackerOs.App.Abstractions.VirtualPath directory) -> void
 HackerOs.Simulation.Abstractions.Processes.IProcessEnvironmentTable.TryGet(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, out HackerOs.Simulation.Abstractions.Processes.ProcessEnvironmentSnapshot! snapshot) -> bool
+HackerOs.Simulation.Abstractions.Processes.IProcessFileDescriptorTable
+HackerOs.Simulation.Abstractions.Processes.IProcessFileDescriptorTable.Close(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, int descriptor) -> void
+HackerOs.Simulation.Abstractions.Processes.IProcessFileDescriptorTable.GetOpen(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Processes.ProcessFileDescriptor>!
+HackerOs.Simulation.Abstractions.Processes.IProcessFileDescriptorTable.TryOpen(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, string! target, out int descriptor) -> bool
 HackerOs.Simulation.Abstractions.Processes.IProcessManager
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.Complete(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, int exitCode) -> HackerOs.Simulation.Abstractions.Processes.ProcessRecord!
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.Fault(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, HackerOs.Simulation.Abstractions.Processes.ProcessExitReason reason = HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Fault) -> HackerOs.Simulation.Abstractions.Processes.ProcessRecord!
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.GetActiveProcesses() -> System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Processes.ProcessRecord!>!
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.GetCancellationToken(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> System.Threading.CancellationToken
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.GetHistory() -> System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Processes.ProcessRecord!>!
+HackerOs.Simulation.Abstractions.Processes.IProcessManager.GetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> int
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.Kill(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, HackerOs.Simulation.Abstractions.Processes.ProcessExitReason reason = HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Killed) -> HackerOs.Simulation.Abstractions.Processes.ProcessRecord!
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.MarkRunning(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> HackerOs.Simulation.Abstractions.Processes.ProcessRecord!
+HackerOs.Simulation.Abstractions.Processes.IProcessManager.SetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, int nice) -> int
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.SetServiceHealth(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, HackerOs.Simulation.Abstractions.Processes.ServiceHealth health) -> HackerOs.Simulation.Abstractions.Processes.ProcessRecord?
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.Start(HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest! request) -> HackerOs.Simulation.Abstractions.Processes.ProcessRecord!
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.StopAsync(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, System.TimeSpan timeout, HackerOs.Simulation.Abstractions.Processes.ProcessExitReason reason = HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.CloseRequested, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.Processes.ProcessRecord!>!
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.TryGetActive(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, out HackerOs.Simulation.Abstractions.Processes.ProcessRecord! process) -> bool
 HackerOs.Simulation.Abstractions.Processes.IProcessManager.TryGetSingleton(string! appId, out HackerOs.Simulation.Abstractions.Processes.ProcessRecord! process) -> bool
+HackerOs.Simulation.Abstractions.Processes.IProcessResourceLimitTable
+HackerOs.Simulation.Abstractions.Processes.IProcessResourceLimitTable.IsEnabled.get -> bool
+HackerOs.Simulation.Abstractions.Processes.IProcessResourceLimitTable.TryGet(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, out HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits! limits) -> bool
+HackerOs.Simulation.Abstractions.Processes.IProcessResourceLimitTable.TrySet(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind kind, HackerOs.Simulation.Abstractions.Processes.ResourceLimit limit, bool privileged) -> HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult
 HackerOs.Simulation.Abstractions.Processes.IResourceSimulator
 HackerOs.Simulation.Abstractions.Processes.IResourceSimulator.GetHistory(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Processes.ProcessResourceSample!>!
 HackerOs.Simulation.Abstractions.Processes.IResourceSimulator.GetSystemHistory() -> System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Processes.SystemResourceSample!>!
@@ -1190,18 +1207,32 @@ HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
 HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Cancelled = 2 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
 HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.CloseRequested = 1 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
 HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Completed = 0 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
+HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.CpuLimitExceeded = 12 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
 HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.DependencyStop = 8 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
 HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Disabled = 6 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
 HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Fault = 9 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
 HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Killed = 3 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
 HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Logout = 4 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
+HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.MemoryLimitExceeded = 13 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
+HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.OutOfMemory = 14 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
 HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.PlatformChanged = 10 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
 HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Shutdown = 5 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
 HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Terminated = 11 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
 HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Timeout = 7 -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
+HackerOs.Simulation.Abstractions.Processes.ProcessFileDescriptor
+HackerOs.Simulation.Abstractions.Processes.ProcessFileDescriptor.Number.get -> int
+HackerOs.Simulation.Abstractions.Processes.ProcessFileDescriptor.Number.init -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessFileDescriptor.ProcessFileDescriptor() -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessFileDescriptor.ProcessFileDescriptor(int Number, string! Target) -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessFileDescriptor.Target.get -> string!
+HackerOs.Simulation.Abstractions.Processes.ProcessFileDescriptor.Target.init -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessId
 HackerOs.Simulation.Abstractions.Processes.ProcessId.ProcessId() -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessId.Value.get -> long
+HackerOs.Simulation.Abstractions.Processes.ProcessLimitExceededException
+HackerOs.Simulation.Abstractions.Processes.ProcessLimitExceededException.ErrorName.get -> string!
+HackerOs.Simulation.Abstractions.Processes.ProcessLimitExceededException.Limit.get -> long
+HackerOs.Simulation.Abstractions.Processes.ProcessLimitExceededException.ProcessLimitExceededException(long limit) -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessMemoryUsage
 HackerOs.Simulation.Abstractions.Processes.ProcessMemoryUsage.AllocatedBytes.get -> long
 HackerOs.Simulation.Abstractions.Processes.ProcessMemoryUsage.AllocatedBytes.init -> void
@@ -1217,6 +1248,7 @@ HackerOs.Simulation.Abstractions.Processes.ProcessMemoryUsage.PrivateBytes.get -
 HackerOs.Simulation.Abstractions.Processes.ProcessMemoryUsage.ProcessMemoryUsage() -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessMemoryUsage.ProcessMemoryUsage(long ImageBytes, long FileBytes, long AnonymousBytes, long KernelBytes, long AllocatedBytes) -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessMemoryUsage.ResidentBytes.get -> long
+HackerOs.Simulation.Abstractions.Processes.ProcessNice
 HackerOs.Simulation.Abstractions.Processes.ProcessRecord
 HackerOs.Simulation.Abstractions.Processes.ProcessRecord.AppId.get -> string!
 HackerOs.Simulation.Abstractions.Processes.ProcessRecord.AppInstanceId.get -> HackerOs.Simulation.Abstractions.Processes.AppInstanceId
@@ -1235,6 +1267,18 @@ HackerOs.Simulation.Abstractions.Processes.ProcessRecord.StartedAtUtc.get -> Sys
 HackerOs.Simulation.Abstractions.Processes.ProcessRecord.State.get -> HackerOs.Simulation.Abstractions.Processes.ProcessState
 HackerOs.Simulation.Abstractions.Processes.ProcessRecord.StoppedAtUtc.get -> System.DateTimeOffset?
 HackerOs.Simulation.Abstractions.Processes.ProcessRecord.UserId.get -> HackerOs.Simulation.Abstractions.Sessions.LocalUserId
+HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits
+HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.Cpu.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
+HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.Cpu.init -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.NProc.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
+HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.NProc.init -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.NoFile.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
+HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.NoFile.init -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.ProcessResourceLimits(HackerOs.Simulation.Abstractions.Processes.ResourceLimit Cpu, HackerOs.Simulation.Abstractions.Processes.ResourceLimit Rss, HackerOs.Simulation.Abstractions.Processes.ResourceLimit NoFile, HackerOs.Simulation.Abstractions.Processes.ResourceLimit NProc) -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.Rss.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
+HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.Rss.init -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.With(HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind kind, HackerOs.Simulation.Abstractions.Processes.ResourceLimit limit) -> HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits!
+HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.this[HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind kind].get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
 HackerOs.Simulation.Abstractions.Processes.ProcessResourceSample
 HackerOs.Simulation.Abstractions.Processes.ProcessResourceSample.AtUtc.get -> System.DateTimeOffset
 HackerOs.Simulation.Abstractions.Processes.ProcessResourceSample.CpuUsage.get -> double
@@ -1257,9 +1301,17 @@ HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.Environment.get -
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.Environment.init -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.Kind.get -> HackerOs.App.Abstractions.AppKind
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.Kind.init -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.Nice.get -> int?
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.Nice.init -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.OomScoreAdjust.get -> int?
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.OomScoreAdjust.init -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ParentPid.get -> HackerOs.Simulation.Abstractions.Processes.ProcessId?
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ParentPid.init -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ProcessStartRequest(HackerOs.Simulation.Abstractions.Processes.ProcessId? ParentPid, string! AppId, HackerOs.Simulation.Abstractions.Processes.AppInstanceId AppInstanceId, HackerOs.App.Abstractions.AppKind Kind, HackerOs.Simulation.Abstractions.Sessions.LocalUserId UserId, HackerOs.Simulation.Abstractions.Sessions.SessionId SessionId, HackerOs.Simulation.Abstractions.Processes.ResourceProfile! ResourceProfile, System.Collections.Generic.IReadOnlyList<string!>? Arguments = null, HackerOs.App.Abstractions.VirtualPath? WorkingDirectory = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Environment = null, bool Auxiliary = false, bool SystemScope = false) -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ResourceLimitExempt.get -> bool
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ResourceLimitExempt.init -> void
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ResourceLimits.get -> HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits?
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ResourceLimits.init -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ResourceProfile.get -> HackerOs.Simulation.Abstractions.Processes.ResourceProfile!
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ResourceProfile.init -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.SessionId.get -> HackerOs.Simulation.Abstractions.Sessions.SessionId
@@ -1297,6 +1349,25 @@ HackerOs.Simulation.Abstractions.Processes.ProcessStopRequest.Reason.get -> Hack
 HackerOs.Simulation.Abstractions.Processes.ProcessStopRequest.Reason.init -> void
 HackerOs.Simulation.Abstractions.Processes.ProcessStopRequest.RequestedAtUtc.get -> System.DateTimeOffset
 HackerOs.Simulation.Abstractions.Processes.ProcessStopRequest.RequestedAtUtc.init -> void
+HackerOs.Simulation.Abstractions.Processes.ResourceLimit
+HackerOs.Simulation.Abstractions.Processes.ResourceLimit.Hard.get -> long
+HackerOs.Simulation.Abstractions.Processes.ResourceLimit.Hard.init -> void
+HackerOs.Simulation.Abstractions.Processes.ResourceLimit.IsFinite.get -> bool
+HackerOs.Simulation.Abstractions.Processes.ResourceLimit.IsValid.get -> bool
+HackerOs.Simulation.Abstractions.Processes.ResourceLimit.ResourceLimit() -> void
+HackerOs.Simulation.Abstractions.Processes.ResourceLimit.ResourceLimit(long Soft, long Hard) -> void
+HackerOs.Simulation.Abstractions.Processes.ResourceLimit.Soft.get -> long
+HackerOs.Simulation.Abstractions.Processes.ResourceLimit.Soft.init -> void
+HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult
+HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult.Applied = 0 -> HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult
+HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult.InvalidArgument = 1 -> HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult
+HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult.NoSuchProcess = 3 -> HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult
+HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult.PermissionDenied = 2 -> HackerOs.Simulation.Abstractions.Processes.ResourceLimitChangeResult
+HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind
+HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind.Cpu = 0 -> HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind
+HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind.NProc = 3 -> HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind
+HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind.NoFile = 2 -> HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind
+HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind.Rss = 1 -> HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind
 HackerOs.Simulation.Abstractions.Processes.ResourceMeasurementSource
 HackerOs.Simulation.Abstractions.Processes.ResourceMeasurementSource.Measured = 1 -> HackerOs.Simulation.Abstractions.Processes.ResourceMeasurementSource
 HackerOs.Simulation.Abstractions.Processes.ResourceMeasurementSource.Simulated = 0 -> HackerOs.Simulation.Abstractions.Processes.ResourceMeasurementSource
@@ -1821,6 +1892,9 @@ HackerOs.Simulation.Abstractions.Time.SimulationSchedulerFault.Exception.init ->
 HackerOs.Simulation.Abstractions.Time.SimulationSchedulerFault.SimulationSchedulerFault(long Tick, System.Exception! Exception) -> void
 HackerOs.Simulation.Abstractions.Time.SimulationSchedulerFault.Tick.get -> long
 HackerOs.Simulation.Abstractions.Time.SimulationSchedulerFault.Tick.init -> void
+HackerOs.Simulation.Abstractions.Workers.ISynchronousWebWorker
+HackerOs.Simulation.Abstractions.Workers.ISynchronousWebWorker.AnswerSynchronousCall(int callId, string! reply) -> HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome
+HackerOs.Simulation.Abstractions.Workers.ISynchronousWebWorker.SupportsSynchronousCalls.get -> bool
 HackerOs.Simulation.Abstractions.Workers.IWebWorker
 HackerOs.Simulation.Abstractions.Workers.IWebWorker.Faulted -> System.Action<string!>?
 HackerOs.Simulation.Abstractions.Workers.IWebWorker.Id.get -> int
@@ -1828,6 +1902,8 @@ HackerOs.Simulation.Abstractions.Workers.IWebWorker.IsTerminated.get -> bool
 HackerOs.Simulation.Abstractions.Workers.IWebWorker.MessageReceived -> System.Action<string!>?
 HackerOs.Simulation.Abstractions.Workers.IWebWorker.Post(string! message) -> void
 HackerOs.Simulation.Abstractions.Workers.IWebWorker.Terminate() -> void
+HackerOs.Simulation.Abstractions.Workers.IWebWorkerMemoryMeter
+HackerOs.Simulation.Abstractions.Workers.IWebWorkerMemoryMeter.MeasureWorkersAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<int, long>?>!
 HackerOs.Simulation.Abstractions.Workers.IWebWorkerRuntime
 HackerOs.Simulation.Abstractions.Workers.IWebWorkerRuntime.HardwareConcurrency.get -> int
 HackerOs.Simulation.Abstractions.Workers.IWebWorkerRuntime.StartAsync(HackerOs.Simulation.Abstractions.Workers.WebWorkerStartOptions! options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.Workers.IWebWorker!>!
@@ -1836,6 +1912,10 @@ HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus
 HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus.Capacity.get -> int
 HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus.GetWorkers() -> System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot!>!
 HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus.PoolSize.get -> int
+HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome
+HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome.Delivered = 0 -> HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome
+HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome.Late = 1 -> HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome
+HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome.TooLarge = 2 -> HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome
 HackerOs.Simulation.Abstractions.Workers.WebWorkerStartException
 HackerOs.Simulation.Abstractions.Workers.WebWorkerStartException.WebWorkerStartException(string! message, System.Exception? innerException = null) -> void
 HackerOs.Simulation.Abstractions.Workers.WebWorkerStartOptions
@@ -1865,6 +1945,8 @@ HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot.ProcessIds.get -> System
 HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot.ProcessIds.init -> void
 HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot.Role.get -> HackerOs.Simulation.Abstractions.Workers.WorkerRole
 HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot.Role.init -> void
+HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot.RuntimeHeapBytes.get -> long
+HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot.RuntimeHeapBytes.init -> void
 HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot.RuntimeMemoryBytes.get -> long
 HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot.RuntimeMemoryBytes.init -> void
 HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot.StartedAtUtc.get -> System.DateTimeOffset
@@ -1927,6 +2009,15 @@ const HackerOs.Simulation.Abstractions.Network.SimulatedNetworkErrors.NoRoute = 
 const HackerOs.Simulation.Abstractions.Network.SimulatedNetworkErrors.TooManyRedirects = "ERR_TOO_MANY_REDIRECTS" -> string!
 const HackerOs.Simulation.Abstractions.Network.SimulatedNetworkErrors.UnknownHost = "ERR_NAME_NOT_RESOLVED" -> string!
 const HackerOs.Simulation.Abstractions.Notifications.NotificationAction.LaunchAppPrefix = "launch:" -> string!
+const HackerOs.Simulation.Abstractions.Processes.ProcessLimitExceededException.ResourceTemporarilyUnavailable = "Resource temporarily unavailable" -> string!
+const HackerOs.Simulation.Abstractions.Processes.ProcessNice.Default = 0 -> int
+const HackerOs.Simulation.Abstractions.Processes.ProcessNice.DefaultAdjustment = 10 -> int
+const HackerOs.Simulation.Abstractions.Processes.ProcessNice.Max = 19 -> int
+const HackerOs.Simulation.Abstractions.Processes.ProcessNice.Min = -20 -> int
+const HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.DefaultNProc = 4096 -> long
+const HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.DefaultNoFileHard = 524288 -> long
+const HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.DefaultNoFileSoft = 1024 -> long
+const HackerOs.Simulation.Abstractions.Processes.ResourceLimit.Unlimited = 9223372036854775807 -> long
 const HackerOs.Simulation.Abstractions.Processes.VirtualHardwareProfile.DefaultStorageCapacityBytes = 8589934592 -> long
 const HackerOs.Simulation.Abstractions.Sessions.LocalLoginName.MaximumLength = 32 -> int
 const HackerOs.Simulation.Abstractions.Settings.LayeredConfigResolver.LockedSectionName = "locked" -> string!
@@ -1948,6 +2039,7 @@ override HackerOs.Simulation.Abstractions.FileSystem.SymbolicLinkMetadata.Kind.g
 override HackerOs.Simulation.Abstractions.Notifications.NotificationId.ToString() -> string!
 override HackerOs.Simulation.Abstractions.Processes.AppInstanceId.ToString() -> string!
 override HackerOs.Simulation.Abstractions.Processes.ProcessId.ToString() -> string!
+override HackerOs.Simulation.Abstractions.Processes.ResourceLimit.ToString() -> string!
 override HackerOs.Simulation.Abstractions.Sessions.DeviceId.ToString() -> string!
 override HackerOs.Simulation.Abstractions.Sessions.InstallationId.ToString() -> string!
 override HackerOs.Simulation.Abstractions.Sessions.LocalGroupId.ToString() -> string!
@@ -1985,6 +2077,7 @@ static HackerOs.Simulation.Abstractions.FileSystem.FileSystemTopics.ForDirectory
 static HackerOs.Simulation.Abstractions.FileSystem.FileSystemTransactionResult.Cancelled(System.Guid transactionId, HackerOs.Simulation.Abstractions.FileSystem.FileSystemError! error) -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemTransactionResult!
 static HackerOs.Simulation.Abstractions.FileSystem.FileSystemTransactionResult.Committed(System.Guid transactionId, System.Collections.Generic.IEnumerable<HackerOs.Simulation.Abstractions.FileSystem.FileSystemEntryId>! affectedEntryIds) -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemTransactionResult!
 static HackerOs.Simulation.Abstractions.FileSystem.FileSystemTransactionResult.Rejected(System.Guid transactionId, HackerOs.Simulation.Abstractions.FileSystem.FileSystemError! error) -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemTransactionResult!
+static HackerOs.Simulation.Abstractions.Gateways.NoDescriptor.Instance.get -> HackerOs.Simulation.Abstractions.Gateways.NoDescriptor!
 static HackerOs.Simulation.Abstractions.Gateways.NullAppServiceNotifyGateway.Instance.get -> HackerOs.Simulation.Abstractions.Gateways.NullAppServiceNotifyGateway!
 static HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot.NeverStarted.get -> HackerOs.Simulation.Abstractions.Gateways.ServiceStatusSnapshot!
 static HackerOs.Simulation.Abstractions.Metrics.CpuTimes.operator +(HackerOs.Simulation.Abstractions.Metrics.CpuTimes left, HackerOs.Simulation.Abstractions.Metrics.CpuTimes right) -> HackerOs.Simulation.Abstractions.Metrics.CpuTimes
@@ -2029,6 +2122,12 @@ static HackerOs.Simulation.Abstractions.Processes.KernelMemoryCharge.None.get ->
 static HackerOs.Simulation.Abstractions.Processes.ProcessEnvironmentRules.ValidateName(string! name, string! parameterName = "name") -> void
 static HackerOs.Simulation.Abstractions.Processes.ProcessEnvironmentRules.ValidateValue(string! value, string! parameterName = "value") -> void
 static HackerOs.Simulation.Abstractions.Processes.ProcessId.FromInt64(long value) -> HackerOs.Simulation.Abstractions.Processes.ProcessId
+static HackerOs.Simulation.Abstractions.Processes.ProcessNice.Clamp(int nice) -> int
+static HackerOs.Simulation.Abstractions.Processes.ProcessNice.ToPriority(int nice) -> int
+static HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.KernelDefaults.get -> HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits!
+static HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits.None.get -> HackerOs.Simulation.Abstractions.Processes.ProcessResourceLimits!
+static HackerOs.Simulation.Abstractions.Processes.ResourceLimit.Format(long value) -> string!
+static HackerOs.Simulation.Abstractions.Processes.ResourceLimit.Infinite.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
 static HackerOs.Simulation.Abstractions.Processes.ResourceProfile.None.get -> HackerOs.Simulation.Abstractions.Processes.ResourceProfile!
 static HackerOs.Simulation.Abstractions.Processes.VirtualHardwareProfile.Default.get -> HackerOs.Simulation.Abstractions.Processes.VirtualHardwareProfile!
 static HackerOs.Simulation.Abstractions.Processes.WorkloadActivity.FromIntensity(double intensity) -> HackerOs.Simulation.Abstractions.Processes.WorkloadActivity

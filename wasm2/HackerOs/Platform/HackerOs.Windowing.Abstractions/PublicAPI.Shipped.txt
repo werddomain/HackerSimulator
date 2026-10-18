@@ -53,6 +53,12 @@ HackerOs.Windowing.Abstractions.RestoreWindowCommand
 HackerOs.Windowing.Abstractions.RestoreWindowCommand.RestoreWindowCommand(HackerOs.Windowing.Abstractions.WindowId WindowId) -> void
 HackerOs.Windowing.Abstractions.RestoreWindowCommand.WindowId.get -> HackerOs.Windowing.Abstractions.WindowId
 HackerOs.Windowing.Abstractions.RestoreWindowCommand.WindowId.init -> void
+HackerOs.Windowing.Abstractions.SetWindowRespondingCommand
+HackerOs.Windowing.Abstractions.SetWindowRespondingCommand.IsResponding.get -> bool
+HackerOs.Windowing.Abstractions.SetWindowRespondingCommand.IsResponding.init -> void
+HackerOs.Windowing.Abstractions.SetWindowRespondingCommand.SetWindowRespondingCommand(HackerOs.Windowing.Abstractions.WindowId WindowId, bool IsResponding) -> void
+HackerOs.Windowing.Abstractions.SetWindowRespondingCommand.WindowId.get -> HackerOs.Windowing.Abstractions.WindowId
+HackerOs.Windowing.Abstractions.SetWindowRespondingCommand.WindowId.init -> void
 HackerOs.Windowing.Abstractions.SetWindowTitleCommand
 HackerOs.Windowing.Abstractions.SetWindowTitleCommand.SetWindowTitleCommand(HackerOs.Windowing.Abstractions.WindowId WindowId, string! Title) -> void
 HackerOs.Windowing.Abstractions.SetWindowTitleCommand.Title.get -> string!
@@ -133,6 +139,12 @@ HackerOs.Windowing.Abstractions.WindowResizedEvent.PreviousBounds.init -> void
 HackerOs.Windowing.Abstractions.WindowResizedEvent.WindowId.get -> HackerOs.Windowing.Abstractions.WindowId
 HackerOs.Windowing.Abstractions.WindowResizedEvent.WindowId.init -> void
 HackerOs.Windowing.Abstractions.WindowResizedEvent.WindowResizedEvent(HackerOs.Windowing.Abstractions.WindowId WindowId, HackerOs.Windowing.Abstractions.WindowBounds PreviousBounds, HackerOs.Windowing.Abstractions.WindowBounds Bounds) -> void
+HackerOs.Windowing.Abstractions.WindowRespondingChangedEvent
+HackerOs.Windowing.Abstractions.WindowRespondingChangedEvent.IsResponding.get -> bool
+HackerOs.Windowing.Abstractions.WindowRespondingChangedEvent.IsResponding.init -> void
+HackerOs.Windowing.Abstractions.WindowRespondingChangedEvent.WindowId.get -> HackerOs.Windowing.Abstractions.WindowId
+HackerOs.Windowing.Abstractions.WindowRespondingChangedEvent.WindowId.init -> void
+HackerOs.Windowing.Abstractions.WindowRespondingChangedEvent.WindowRespondingChangedEvent(HackerOs.Windowing.Abstractions.WindowId WindowId, bool IsResponding) -> void
 HackerOs.Windowing.Abstractions.WindowRuntimeState
 HackerOs.Windowing.Abstractions.WindowRuntimeState.AppId.get -> string!
 HackerOs.Windowing.Abstractions.WindowRuntimeState.Bounds.get -> HackerOs.Windowing.Abstractions.WindowBounds
@@ -141,6 +153,8 @@ HackerOs.Windowing.Abstractions.WindowRuntimeState.Content.get -> Microsoft.AspN
 HackerOs.Windowing.Abstractions.WindowRuntimeState.IconAssetPath.get -> string?
 HackerOs.Windowing.Abstractions.WindowRuntimeState.Id.get -> HackerOs.Windowing.Abstractions.WindowId
 HackerOs.Windowing.Abstractions.WindowRuntimeState.IsFocused.get -> bool
+HackerOs.Windowing.Abstractions.WindowRuntimeState.IsResponding.get -> bool
+HackerOs.Windowing.Abstractions.WindowRuntimeState.IsResponding.init -> void
 HackerOs.Windowing.Abstractions.WindowRuntimeState.Modality.get -> HackerOs.Windowing.Abstractions.WindowModality
 HackerOs.Windowing.Abstractions.WindowRuntimeState.OnRequestClose.get -> System.Func<System.Threading.Tasks.Task!>?
 HackerOs.Windowing.Abstractions.WindowRuntimeState.OwnerId.get -> HackerOs.Windowing.Abstractions.WindowId?

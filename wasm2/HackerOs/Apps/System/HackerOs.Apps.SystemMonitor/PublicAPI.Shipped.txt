@@ -241,6 +241,7 @@ HackerOs.Apps.SystemMonitor.Processes.ProcessColumn.DiskWrite = 7 -> HackerOs.Ap
 HackerOs.Apps.SystemMonitor.Processes.ProcessColumn.Memory = 5 -> HackerOs.Apps.SystemMonitor.Processes.ProcessColumn
 HackerOs.Apps.SystemMonitor.Processes.ProcessColumn.Name = 1 -> HackerOs.Apps.SystemMonitor.Processes.ProcessColumn
 HackerOs.Apps.SystemMonitor.Processes.ProcessColumn.Pid = 0 -> HackerOs.Apps.SystemMonitor.Processes.ProcessColumn
+HackerOs.Apps.SystemMonitor.Processes.ProcessColumn.Priority = 8 -> HackerOs.Apps.SystemMonitor.Processes.ProcessColumn
 HackerOs.Apps.SystemMonitor.Processes.ProcessColumn.State = 3 -> HackerOs.Apps.SystemMonitor.Processes.ProcessColumn
 HackerOs.Apps.SystemMonitor.Processes.ProcessColumn.User = 2 -> HackerOs.Apps.SystemMonitor.Processes.ProcessColumn
 HackerOs.Apps.SystemMonitor.Processes.ProcessRow
@@ -257,6 +258,8 @@ HackerOs.Apps.SystemMonitor.Processes.ProcessRow.MemoryEstimated.get -> bool
 HackerOs.Apps.SystemMonitor.Processes.ProcessRow.MemoryEstimated.init -> void
 HackerOs.Apps.SystemMonitor.Processes.ProcessRow.Name.get -> string!
 HackerOs.Apps.SystemMonitor.Processes.ProcessRow.Name.init -> void
+HackerOs.Apps.SystemMonitor.Processes.ProcessRow.Nice.get -> int
+HackerOs.Apps.SystemMonitor.Processes.ProcessRow.Nice.init -> void
 HackerOs.Apps.SystemMonitor.Processes.ProcessRow.ParentPid.get -> long?
 HackerOs.Apps.SystemMonitor.Processes.ProcessRow.ParentPid.init -> void
 HackerOs.Apps.SystemMonitor.Processes.ProcessRow.Pid.get -> long
@@ -289,6 +292,8 @@ HackerOs.Apps.SystemMonitor.Processes.ProcessTable.SelectAll() -> void
 HackerOs.Apps.SystemMonitor.Processes.ProcessTable.Selected.get -> System.Collections.Generic.IReadOnlySet<long>!
 HackerOs.Apps.SystemMonitor.Processes.ProcessTable.SelectedRows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Apps.SystemMonitor.Processes.ProcessRow!>!
 HackerOs.Apps.SystemMonitor.Processes.ProcessTable.SetRows(System.Collections.Generic.IEnumerable<HackerOs.Apps.SystemMonitor.Processes.ProcessRow!>! rows) -> void
+HackerOs.Apps.SystemMonitor.Processes.ProcessTable.ShowPriority.get -> bool
+HackerOs.Apps.SystemMonitor.Processes.ProcessTable.ShowPriority.set -> void
 HackerOs.Apps.SystemMonitor.Processes.ProcessTable.SortColumn.get -> HackerOs.Apps.SystemMonitor.Processes.ProcessColumn
 HackerOs.Apps.SystemMonitor.Processes.ProcessTable.SortDescending.get -> bool
 HackerOs.Apps.SystemMonitor.Processes.ProcessTable.ToggleSort(HackerOs.Apps.SystemMonitor.Processes.ProcessColumn column) -> void

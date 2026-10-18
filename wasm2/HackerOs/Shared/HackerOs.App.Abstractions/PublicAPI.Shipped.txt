@@ -127,6 +127,8 @@ HackerOs.App.Abstractions.AppManifest.Localizations.get -> System.Collections.Ge
 HackerOs.App.Abstractions.AppManifest.Localizations.init -> void
 HackerOs.App.Abstractions.AppManifest.Name.get -> string!
 HackerOs.App.Abstractions.AppManifest.Name.init -> void
+HackerOs.App.Abstractions.AppManifest.OomScoreAdj.get -> int?
+HackerOs.App.Abstractions.AppManifest.OomScoreAdj.init -> void
 HackerOs.App.Abstractions.AppManifest.OsCompatibility.get -> HackerOs.App.Abstractions.OsCompatibilityManifest?
 HackerOs.App.Abstractions.AppManifest.OsCompatibility.init -> void
 HackerOs.App.Abstractions.AppManifest.Platform.get -> HackerOs.App.Abstractions.AppManifestPlatform?
@@ -898,6 +900,7 @@ virtual HackerOs.App.Abstractions.AppDefinition.Intents.get -> System.Collection
 virtual HackerOs.App.Abstractions.AppDefinition.LaunchVisibility.get -> HackerOs.App.Abstractions.AppLaunchVisibility
 virtual HackerOs.App.Abstractions.AppDefinition.Localizations.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.LocalizationManifest!>!
 virtual HackerOs.App.Abstractions.AppDefinition.MobileEntryPoint.get -> System.Type?
+virtual HackerOs.App.Abstractions.AppDefinition.OomScoreAdjust.get -> int?
 virtual HackerOs.App.Abstractions.AppDefinition.PublisherId.get -> string!
 virtual HackerOs.App.Abstractions.AppDefinition.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 virtual HackerOs.App.Abstractions.AppDefinition.SdkCompatibility.get -> HackerOs.App.Abstractions.AppSdkCompatibilityManifest?

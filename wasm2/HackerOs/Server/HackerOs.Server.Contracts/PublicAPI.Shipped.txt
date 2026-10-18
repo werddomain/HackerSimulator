@@ -78,6 +78,20 @@ HackerOs.Server.Contracts.Admin.ServerHealthResponse.Uptime.get -> string!
 HackerOs.Server.Contracts.Admin.ServerHealthResponse.Uptime.init -> void
 HackerOs.Server.Contracts.Admin.ServerHealthResponse.Version.get -> string!
 HackerOs.Server.Contracts.Admin.ServerHealthResponse.Version.init -> void
+HackerOs.Server.Contracts.Hosting.HostInfoResponse
+HackerOs.Server.Contracts.Hosting.HostInfoResponse.ApiVersion.get -> string?
+HackerOs.Server.Contracts.Hosting.HostInfoResponse.ApiVersion.init -> void
+HackerOs.Server.Contracts.Hosting.HostInfoResponse.HostInfoResponse(string! Product, bool IsServer, string? ServerVersion = null, string? ApiVersion = null) -> void
+HackerOs.Server.Contracts.Hosting.HostInfoResponse.IsServer.get -> bool
+HackerOs.Server.Contracts.Hosting.HostInfoResponse.IsServer.init -> void
+HackerOs.Server.Contracts.Hosting.HostInfoResponse.Product.get -> string!
+HackerOs.Server.Contracts.Hosting.HostInfoResponse.Product.init -> void
+HackerOs.Server.Contracts.Hosting.HostInfoResponse.ServerVersion.get -> string?
+HackerOs.Server.Contracts.Hosting.HostInfoResponse.ServerVersion.init -> void
+HackerOs.Server.Contracts.Hosting.HostInfoRoutes
+HackerOs.Server.Contracts.Hosting.HostingContractsJsonContext
+HackerOs.Server.Contracts.Hosting.HostingContractsJsonContext.HostingContractsJsonContext() -> void
+HackerOs.Server.Contracts.Hosting.HostingContractsJsonContext.HostingContractsJsonContext(System.Text.Json.JsonSerializerOptions! options) -> void
 HackerOs.Server.Contracts.Identity.CreateAccountRequest
 HackerOs.Server.Contracts.Identity.CreateAccountRequest.CreateAccountRequest(string! Username, string! PasswordHash, string! Salt, string! DeviceName, string! DeviceFingerprint) -> void
 HackerOs.Server.Contracts.Identity.CreateAccountRequest.DeviceFingerprint.get -> string!
@@ -569,6 +583,9 @@ HackerOs.Server.Contracts.Versioning.CompatibilityCheckResponse.VersionSunset.in
 HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext
 HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.VersioningContractsJsonContext() -> void
 HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.VersioningContractsJsonContext(System.Text.Json.JsonSerializerOptions! options) -> void
+const HackerOs.Server.Contracts.Hosting.HostInfoRoutes.ApiPath = "/api/hackeros/host-info" -> string!
+const HackerOs.Server.Contracts.Hosting.HostInfoRoutes.DiscoveryFile = "hackeros-host.json" -> string!
+const HackerOs.Server.Contracts.Hosting.HostInfoRoutes.ServerProduct = "HackerOS Server" -> string!
 const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.BlockedAddress = "BLOCKED_ADDRESS" -> string!
 const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.BlockedPort = "BLOCKED_PORT" -> string!
 const HackerOs.Server.Contracts.Proxy.ProxyErrorCode.BodyMismatch = "BODY_MISMATCH" -> string!
@@ -601,12 +618,14 @@ const HackerOs.Server.Contracts.Sync.SyncDomain.FileSystem = "filesystem" -> str
 const HackerOs.Server.Contracts.Sync.SyncDomain.Grants = "grants" -> string!
 const HackerOs.Server.Contracts.Sync.SyncDomain.Settings = "settings" -> string!
 override HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
+override HackerOs.Server.Contracts.Hosting.HostingContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
 override HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
 override HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
 override HackerOs.Server.Contracts.Sync.ContentTransferContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
 override HackerOs.Server.Contracts.Sync.SyncContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
 override HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.GetTypeInfo(System.Type! type) -> System.Text.Json.Serialization.Metadata.JsonTypeInfo?
 static HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Admin.AdminContractsJsonContext!
+static HackerOs.Server.Contracts.Hosting.HostingContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Hosting.HostingContractsJsonContext!
 static HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext!
 static HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext.Default.get -> HackerOs.Server.Contracts.Proxy.ProxyContractsJsonContext!
 static HackerOs.Server.Contracts.Proxy.ProxyHttpRequest.Create(System.Guid requestId, string! targetUrl, string! httpMethod, System.Collections.Generic.IReadOnlyList<HackerOs.Server.Contracts.Proxy.ProxyHeader!>! headers, byte[]? body, string? contentType, int timeoutSeconds, string! appId, bool includeBody) -> HackerOs.Server.Contracts.Proxy.ProxyHttpRequest!
@@ -632,6 +651,9 @@ static HackerOs.Server.Contracts.Versioning.VersioningContractsJsonContext.Defau
 ~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.NullableDateTimeOffset.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.DateTimeOffset?>
 ~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.ServerHealthResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Admin.ServerHealthResponse>
 ~HackerOs.Server.Contracts.Admin.AdminContractsJsonContext.String.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<string>
+~HackerOs.Server.Contracts.Hosting.HostingContractsJsonContext.Boolean.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<bool>
+~HackerOs.Server.Contracts.Hosting.HostingContractsJsonContext.HostInfoResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Hosting.HostInfoResponse>
+~HackerOs.Server.Contracts.Hosting.HostingContractsJsonContext.String.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<string>
 ~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.Boolean.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<bool>
 ~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.CreateAccountRequest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Identity.CreateAccountRequest>
 ~HackerOs.Server.Contracts.Identity.IdentityContractsJsonContext.CreateAccountResponse.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.Server.Contracts.Identity.CreateAccountResponse>
