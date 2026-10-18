@@ -346,7 +346,10 @@ public sealed partial class ShellInterpreter
             return 1;
         }
 
-        if (DeclaresShellControl(resolution.Manifest))
+        // ADR 0136: `sudo nice -n -5 cmd` is the one shell-control command sudo accepts, because nice
+        // only execs its command: the shell's own state is never touched.
+        bool isNice = string.Equals(resolution.AppId, NiceCommandId, StringComparison.Ordinal);
+        if (DeclaresShellControl(resolution.Manifest) && !isNice)
         {
             // The target never reaches the shell: an elevated `cd` would have nothing to act on.
             await error.WriteLineAsync("sudo: " + texts["Sudo.ShellBuiltin", name]).ConfigureAwait(false);
@@ -369,9 +372,16 @@ public sealed partial class ShellInterpreter
         // Only the command is elevated: a redirection was already opened by the unelevated shell,
         // so `sudo echo x > /etc/f` fails as on Linux.
         ProcessId? parent = HackExecutionContext.CurrentOrNull?.ProcessId ?? session.ProcessId;
-        StageOutcome outcome = await StartAsync(
-            "sudo", session, resolution, parent, input, output, error, options, ticket, shell: null,
-            ChildEnvironment(session, []), processStarted: null, cancellationToken).ConfigureAwait(false);
+        StageOutcome outcome = isNice
+            // ADR 0136: nice runs as the user and hands the root ticket to the command it execs, which
+            // is what runs as root (and may get a lower niceness). The ticket stays single-use.
+            ? await StartAsync(
+                "sudo", session, resolution, parent, input, output, error, options, elevation: null,
+                new ShellSessionAccess(this, session, options, input, ticket),
+                ChildEnvironment(session, []), processStarted: null, cancellationToken).ConfigureAwait(false)
+            : await StartAsync(
+                "sudo", session, resolution, parent, input, output, error, options, ticket, shell: null,
+                ChildEnvironment(session, []), processStarted: null, cancellationToken).ConfigureAwait(false);
         return outcome.ExitCode;
     }
 
@@ -379,7 +389,9 @@ public sealed partial class ShellInterpreter
     /// <c>nice</c>'s side of the shell (ADR 0127): runs the command as a child of the caller (the
     /// <c>nice</c> process) at the caller's niceness plus <paramref name="adjustment"/>, without
     /// access to the shell. Only root may lower the niceness; otherwise, as GNU <c>nice</c> does,
-    /// the command still runs, at the caller's niceness, after a warning.
+    /// the command still runs, at the caller's niceness, after a warning. Under <c>sudo nice</c>
+    /// (ADR 0136), <paramref name="elevation"/> is sudo's root ticket: the command runs as root and
+    /// may be given a lower niceness.
     /// </summary>
     internal async ValueTask<int> RunNicedAsync(
         ShellSession session,
@@ -389,7 +401,8 @@ public sealed partial class ShellInterpreter
         TextWriter output,
         TextWriter error,
         ShellExecutionOptions options,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ShellElevation? elevation = null)
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(output);
@@ -412,7 +425,7 @@ public sealed partial class ShellInterpreter
         IAppExecutionContext? caller = HackExecutionContext.CurrentOrNull;
         int current = caller is null ? ProcessNice.Default : caller.Processes.GetNice(caller.ProcessId);
         int nice = ProcessNice.Clamp(current + adjustment);
-        if (nice < current && caller?.IsRootElevated != true)
+        if (nice < current && caller?.IsRootElevated != true && elevation is null)
         {
             await error.WriteLineAsync("nice: " + texts["Nice.PermissionDenied"]).ConfigureAwait(false);
             nice = current;
@@ -424,7 +437,7 @@ public sealed partial class ShellInterpreter
             : null;
         ProcessId? parent = caller?.ProcessId ?? session.ProcessId;
         StageOutcome outcome = await StartAsync(
-            "nice", session, resolution, parent, input, output, error, options, elevation: null, shell,
+            "nice", session, resolution, parent, input, output, error, options, elevation, shell,
             ChildEnvironment(session, []), processStarted: null, cancellationToken, nice).ConfigureAwait(false);
         return outcome.ExitCode;
     }
@@ -520,6 +533,9 @@ public sealed partial class ShellInterpreter
                 return StageOutcome.Failed(1, ShellFailure.Fault);
         }
     }
+
+    /// <summary>The <c>nice</c> command's app id: the one shell-control command <c>sudo</c> runs (ADR 0136).</summary>
+    private const string NiceCommandId = "org.hackeros.commands.nice";
 
     /// <summary>Whether a command asks for its calling shell (ADR 0051, section 3).</summary>
     private static bool DeclaresShellControl(AppManifest manifest) =>

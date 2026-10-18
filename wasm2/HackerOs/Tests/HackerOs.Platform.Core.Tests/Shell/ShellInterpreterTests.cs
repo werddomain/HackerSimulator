@@ -308,6 +308,33 @@ public sealed partial class ShellInterpreterTests
     }
 
     [Fact]
+    public async Task Sudo_nice_runs_the_command_as_root_with_a_lower_niceness()
+    {
+        Fixture fixture = await Fixture.CreateAsync();
+        List<string> prompts = [];
+
+        Output unelevated = await fixture.RunAsync("nice -n -5 rootnice");
+        Output elevated = await fixture.RunAsync("sudo nice -n -5 rootnice", credentialPrompt: (description, _) =>
+        {
+            prompts.Add(description);
+            ElevationTicket ticket = fixture.Tickets.Issue(ElevationScope.SudoRoot, "admin-id", "admin");
+            return Task.FromResult<ShellElevation?>(new ShellElevation(ticket.Token, ticket.Scope));
+        });
+
+        // Without sudo, GNU nice warns and runs the command at the caller's niceness.
+        Assert.Equal("user 0\n", unelevated.Stdout);
+        Assert.Contains("nice:", unelevated.Stderr, StringComparison.Ordinal);
+        // ADR 0136: one credential prompt; nice execs the command, which runs as root at -5.
+        Assert.Equal(0, elevated.ExitCode);
+        Assert.Equal("root -5\n", elevated.Stdout);
+        Assert.Equal(string.Empty, elevated.Stderr);
+        Assert.Equal(["Run as root: nice -n -5 rootnice"], prompts);
+        ProcessRecord nice = fixture.Manager.GetHistory().Last(p => p.AppId == "org.hackeros.commands.nice");
+        ProcessRecord command = fixture.Manager.GetHistory().Last(p => p.AppId == "org.test.rootnice");
+        Assert.Equal(nice.Pid, command.ParentPid);
+    }
+
+    [Fact]
     public async Task Sudo_refuses_shell_builtins_and_failed_credentials()
     {
         Fixture fixture = await Fixture.CreateAsync();
@@ -517,6 +544,17 @@ public sealed partial class ShellInterpreterTests
         }
     }
 
+    /// <summary>Prints whether it runs as root and its niceness (ADR 0136).</summary>
+    private sealed class RootNiceCommand(AppManifest manifest) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            int nice = context.App.Processes.GetNice(context.App.ProcessId);
+            await context.StandardOutput.WriteLineAsync($"{(context.App.IsRootElevated ? "root" : "user")} {nice}");
+            return 0;
+        }
+    }
+
     /// <summary>Prints whether it received the shell; it does not declare shell.control.</summary>
     private sealed class HasShellCommand(AppManifest manifest) : TerminalAppBase(manifest)
     {
@@ -602,7 +640,7 @@ public sealed partial class ShellInterpreterTests
                 Command<ArgsCommand>("args"), Command<EchoCommand>("echo"), Command<UpperCommand>("upper"),
                 Command<CountCommand>("count"), Command<ExitWithCommand>("exitwith"), Command<YesCommand>("yes"),
                 Command<HeadOneCommand>("head1"), Command<HangCommand>("hang"), Command<WhereCommand>("where"),
-                Command<CatOneCommand>("cat1"), Command<AmRootCommand>("amroot"), Command<HasShellCommand>("hasshell"),
+                Command<CatOneCommand>("cat1"), Command<AmRootCommand>("amroot"), Command<RootNiceCommand>("rootnice"), Command<HasShellCommand>("hasshell"),
                 Command<PrintEnvCommand>("printenv1"),
                 .. CatalogCommands
             ];
@@ -735,7 +773,9 @@ public sealed partial class ShellInterpreterTests
                 new HackerOs.Commands.Jobs.JobsApp(), new HackerOs.Commands.Kill.KillApp(), new HackerOs.Commands.Which.WhichApp(),
                 new HackerOs.Commands.Sleep.SleepApp(), new HackerOs.Commands.Ip.IpApp(), new HackerOs.Commands.Top.TopApp(),
                 // ADR 0069: grep -r checkpoints between files.
-                new HackerOs.Commands.Grep.GrepApp()
+                new HackerOs.Commands.Grep.GrepApp(),
+                // ADR 0127 and 0136: nice, alone and under sudo.
+                new HackerOs.Commands.Nice.NiceApp()
             }.Select(AppDefinitionMapper.ToManifest)
         ];
 

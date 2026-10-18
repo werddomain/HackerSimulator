@@ -29,6 +29,7 @@ $ nice                      # la gentillesse du shell
 $ nice -n 10 find / -name '*.log'   # lance find à 10
 $ nice -n -5 make           # sans sudo : refusé, lancé à la valeur courante
 nice: cannot set niceness: Permission denied
+$ sudo nice -n -5 make      # ADR 0136 : make tourne en root à -5
 $ renice -n 5 -p 42
 42 (process ID) old priority 0, new priority 5
 $ ps -l
@@ -176,9 +177,11 @@ voir [`cpu-accounting.md`](cpu-accounting.md) et
   `nice nice`) : la commande reçoit le shell comme si elle était lancée
   directement (ADR 0051 §3). Les intégrés spéciaux (`cd`, `export`…) restent
   introuvables pour `nice`, comme sous GNU.
-- **`sudo nice -n -5 …`** : `sudo` refuse les commandes qui pilotent le shell
-  (ADR 0042), dont `nice` ; baisser une valeur passe aujourd'hui par
-  `sudo renice`. La question est posée à Benoit (voir le fil du chantier).
+- **`sudo nice -n -5 …`** (ADR 0136, réponse de Benoit) : `sudo` accepte
+  `nice`, seule exception aux commandes qui pilotent le shell. `nice` tourne
+  sous l'utilisateur et passe le ticket root de `sudo` à sa commande, qui
+  tourne en root et peut recevoir une valeur plus basse ; le ticket reste à
+  usage unique. `sudo renice` marche toujours pour un processus déjà lancé.
 - **`renice` sur le thread principal** : un worker n'a pas encore de passerelle
   vers les priorités de la table des processus (ADR 0072).
 - **Attribution par le CPU mesuré** : une attente n'est imputée à une fenêtre
