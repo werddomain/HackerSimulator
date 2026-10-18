@@ -320,6 +320,11 @@ HackerOs.Platform.Blazor.Shell.PlatformShellSwitchCoordinator
 HackerOs.Platform.Blazor.Shell.PlatformShellSwitchCoordinator.PlatformShellSwitchCoordinator(HackerOs.Windowing.Core.WindowRuntime! windowRuntime, HackerOs.Platform.Core.Lifecycle.AppLifecycleOrchestrator! orchestrator, HackerOs.Platform.Blazor.Windows.WindowCloseGuardRegistry! closeGuards, HackerOs.Platform.Core.Shell.UiPlatformPreferenceService! platformPreference, HackerOs.Platform.Core.AppCatalog! catalog) -> void
 HackerOs.Platform.Blazor.Shell.PlatformShellSwitchCoordinator.RequestAutoAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 HackerOs.Platform.Blazor.Shell.PlatformShellSwitchCoordinator.RequestExplicitAsync(HackerOs.App.Abstractions.AppPlatformId targetPlatform, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.OnOpenSettings.get -> Microsoft.AspNetCore.Components.EventCallback
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.OnOpenSettings.set -> void
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.ServerStatusIndicator() -> void
 HackerOs.Platform.Blazor.Shell.TaskbarClockPanelSourceAdapter
 HackerOs.Platform.Blazor.Shell.TaskbarClockPanelSourceAdapter.Changed -> System.Action?
 HackerOs.Platform.Blazor.Shell.TaskbarClockPanelSourceAdapter.Close() -> void
@@ -375,6 +380,8 @@ HackerOs.Platform.Blazor.Windows.BrowserWindowClientAreaProbe
 HackerOs.Platform.Blazor.Windows.BrowserWindowClientAreaProbe.BrowserWindowClientAreaProbe(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
 HackerOs.Platform.Blazor.Windows.BrowserWindowClientAreaProbe.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Platform.Blazor.Windows.BrowserWindowClientAreaProbe.MeasureAsync(HackerOs.Windowing.Abstractions.WindowId windowId) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.HackWindowSize?>
+HackerOs.Platform.Blazor.Windows.IRemoteWindowRendering
+HackerOs.Platform.Blazor.Windows.IRemoteWindowRendering.GetHostComponent(HackerOs.Platform.Core.Discovery.AppDescriptor! descriptor) -> System.Type?
 HackerOs.Platform.Blazor.Windows.IWindowClientAreaProbe
 HackerOs.Platform.Blazor.Windows.IWindowClientAreaProbe.MeasureAsync(HackerOs.Windowing.Abstractions.WindowId windowId) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.HackWindowSize?>
 HackerOs.Platform.Blazor.Windows.SavedWindowGeometry
@@ -385,6 +392,22 @@ HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.IsMaximized.init -> void
 HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.SavedWindowGeometry(double Width, double Height, bool IsMaximized) -> void
 HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.Width.get -> double
 HackerOs.Platform.Blazor.Windows.SavedWindowGeometry.Width.init -> void
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowDialog
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowDialog.AppName.get -> string?
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowDialog.AppName.set -> void
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowDialog.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowDialog.OnTerminate.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowDialog.OnTerminate.set -> void
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowDialog.OnWait.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Abstractions.WindowId>
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowDialog.OnWait.set -> void
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowDialog.UnresponsiveWindowDialog() -> void
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowDialog.Window.get -> HackerOs.Windowing.Abstractions.WindowRuntimeState!
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowDialog.Window.set -> void
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowOverlay
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowOverlay.Dispose() -> void
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowOverlay.UnresponsiveWindowOverlay() -> void
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowOverlay.Window.get -> HackerOs.Windowing.Abstractions.WindowRuntimeState!
+HackerOs.Platform.Blazor.Windows.UnresponsiveWindowOverlay.Window.set -> void
 HackerOs.Platform.Blazor.Windows.WindowAppEventDispatcher
 HackerOs.Platform.Blazor.Windows.WindowAppEventDispatcher.Dispose() -> void
 HackerOs.Platform.Blazor.Windows.WindowAppEventDispatcher.Register(HackerOs.Windowing.Abstractions.WindowId windowId, HackerOs.AppSdk.Blazor.IWindowAppEventTarget! target) -> System.IDisposable!
@@ -508,6 +531,28 @@ HackerOs.Platform.Blazor.Windows.WindowMenuState.X.get -> double
 HackerOs.Platform.Blazor.Windows.WindowMenuState.X.init -> void
 HackerOs.Platform.Blazor.Windows.WindowMenuState.Y.get -> double
 HackerOs.Platform.Blazor.Windows.WindowMenuState.Y.init -> void
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessHost
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessHost.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessHost.Monitor.get -> HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor!
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessHost.Monitor.set -> void
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessHost.ReportInputAsync(string! windowId, double latencyMilliseconds) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessHost.WindowResponsivenessHost() -> void
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.Changed -> System.Action?
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.Dispose() -> void
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.Evaluate() -> void
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.InterceptClose(HackerOs.Windowing.Abstractions.WindowId windowId) -> bool
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.IsDialogEnabled.get -> bool
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.IsDialogOpen(HackerOs.Windowing.Abstractions.WindowId windowId) -> bool
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.IsMeasuring.get -> bool
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.ReportInput(HackerOs.Windowing.Abstractions.WindowId windowId, System.TimeSpan latency) -> void
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.StartAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.TerminateAsync(HackerOs.Windowing.Abstractions.WindowId windowId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.Threshold.get -> System.TimeSpan
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.UnresponsiveWindows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowId>!
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.Wait(HackerOs.Windowing.Abstractions.WindowId windowId) -> void
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.WindowResponsivenessMonitor(HackerOs.Windowing.Core.WindowRuntime! runtime, HackerOs.Simulation.Abstractions.Processes.IProcessManager! processes, HackerOs.Simulation.Abstractions.Processes.ICpuTimeAccountant! accountant) -> void
+HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.WindowResponsivenessMonitor(HackerOs.Windowing.Core.WindowRuntime! runtime, HackerOs.Simulation.Abstractions.Processes.IProcessManager! processes, HackerOs.Simulation.Abstractions.Processes.ICpuTimeAccountant! accountant, System.TimeSpan threshold, System.TimeProvider? timeProvider, HackerOs.Platform.Core.Settings.IOsSettingsService? settings, Microsoft.Extensions.Logging.ILogger<HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor!>? logger) -> void
 HackerOs.Platform.Blazor._Imports
 HackerOs.Platform.Blazor._Imports.Execute() -> void
 HackerOs.Platform.Blazor._Imports._Imports() -> void
@@ -527,6 +572,7 @@ override HackerOs.Platform.Blazor.Shell.ClockPanel.OnInitialized() -> void
 override HackerOs.Platform.Blazor.Shell.DesktopShell.OnInitialized() -> void
 override HackerOs.Platform.Blazor.Shell.MobileShell.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override HackerOs.Platform.Blazor.Shell.MobileShell.OnInitialized() -> void
+override HackerOs.Platform.Blazor.Windows.UnresponsiveWindowOverlay.OnInitialized() -> void
 static HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome.Cancelled(string! name) -> HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome!
 static HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome.Failed(string! name, string! detail) -> HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome!
 static HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome.Loaded(string! name, System.Reflection.Assembly! assembly) -> HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome!
@@ -536,6 +582,7 @@ static HackerOs.Platform.Blazor.LazyLoading.StaticWebAssetAppAssetSource.Relativ
 static HackerOs.Platform.Blazor.Shell.LauncherAppProjection.Create(System.Collections.Generic.IEnumerable<HackerOs.App.Abstractions.AppManifest!>! manifests, HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry! enablement, System.Collections.Generic.IEnumerable<string!>! pinnedAppIds, string? selectedCategory = null, string? searchQuery = null) -> HackerOs.Platform.Blazor.Shell.LauncherAppProjectionResult!
 static HackerOs.Platform.Blazor.Shell.LauncherAppProjectionResult.Empty.get -> HackerOs.Platform.Blazor.Shell.LauncherAppProjectionResult!
 static HackerOs.Platform.Blazor.Shell.MobileRecentProjection.BuildItems(System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowRuntimeState!>! windows) -> System.Collections.Generic.IReadOnlyList<HackerOs.MobileShell.Blazor.MobileRecentItem!>!
+static HackerOs.Platform.Blazor.Windows.UnresponsiveWindowOverlay.ForWindow.get -> Microsoft.AspNetCore.Components.RenderFragment<HackerOs.Windowing.Abstractions.WindowRuntimeState!>!
 static HackerOs.Platform.Blazor.Windows.WindowAppEventDispatcher.EstimateClientSize(HackerOs.Windowing.Abstractions.WindowBounds bounds) -> HackerOs.AppSdk.Blazor.HackWindowSize
 static HackerOs.Platform.Blazor.Windows.WindowAppRenderValidator.Validate(HackerOs.Windowing.Abstractions.WindowRuntimeState! window, HackerOs.Platform.Core.Discovery.AppDescriptor! descriptor, HackerOs.AppSdk.IAppExecutionContext! appContext) -> void
 static HackerOs.Platform.Blazor.Windows.WindowGeometrySettings.GetFile(string! appId) -> HackerOs.Platform.Core.Settings.OsSettingsFile!
@@ -545,6 +592,9 @@ static HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.InitialBounds(Ha
 static HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.RestoredBounds(HackerOs.App.Abstractions.WindowOptions! options, double savedWidth, double savedHeight, int cascadeIndex, HackerOs.Windowing.Abstractions.WindowBounds workArea) -> HackerOs.Windowing.Abstractions.WindowBounds
 static HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.ToConstraints(HackerOs.App.Abstractions.WindowOptions! options) -> HackerOs.Windowing.Abstractions.WindowConstraints!
 static readonly HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder.DefaultDebounce -> System.TimeSpan
+static readonly HackerOs.Platform.Blazor.Windows.WindowResponsivenessHost.SampleInterval -> System.TimeSpan
+static readonly HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.LongInputDelay -> System.TimeSpan
+static readonly HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.TerminateGracePeriod -> System.TimeSpan
 ~override HackerOs.Platform.Blazor.Controls.PlatformComplexControlsProof.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Dialogs.AppChooserDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Dialogs.CredentialPromptDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
@@ -559,3 +609,4 @@ static readonly HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder.DefaultD
 ~override HackerOs.Platform.Blazor.Shell.DesktopShell.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Shell.LogoutDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Shell.MobileShell.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.Platform.Blazor.Windows.UnresponsiveWindowOverlay.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

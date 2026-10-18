@@ -223,13 +223,18 @@ Documents : [`hack-file-api.md`](hack-file-api.md),
   [`README.md`](README.md) dans le même changement.
 - Chaque série de chantiers a sa branche d'intégration : `rebuild/base`
   (phases 1 à 4, fusionnée dans `main`), `web/base` (sites ASP.Hack et Blazor),
-  puis `v3/base` (fin de la migration wasm v3, partie de `web/base`). Chaque
+  puis `v3/base` (fin de la migration wasm v3, partie de `web/base`), `v3.1/base`
+  et `exec/base` (suites de la phase 5, partie de `v3.1/base`). Chaque
   chantier part de la branche de sa série (`v3/<n>-<sujet>`…) et y revient ;
   seul le propriétaire du dépôt fusionne vers `main`.
 - État : la migration wasm v3 est terminée, le SDK a été gelé en 1.0.0
-  (ADR 0114) puis publié en 1.1.0 par la série v3.1 (ADR 0117 §5,
-  [`sdk-packages.md`](sdk-packages.md#sdk-11)) ; le bilan et ce qui reste ouvert sont dans
-  [`wasm-v3-final-status.md`](wasm-v3-final-status.md). Un autre dépôt peut se construire sur
+  (ADR 0114), publié en 1.1.0 par la série v3.1 (ADR 0117 §5) puis en 1.2.0
+  à la fin de la série `exec` (ADR 0132 §2,
+  [`sdk-packages.md`](sdk-packages.md#sdk-12)) ; le bilan de la migration est dans
+  [`wasm-v3-final-status.md`](wasm-v3-final-status.md), celui de la série `exec`
+  (limites, OOM killer, priorités, tâches de fond, hôte Server en WebAssembly,
+  isolation cross-origin) dans
+  [`execution-followups-plan.md`](execution-followups-plan.md#11-vérification-finale). Un autre dépôt peut se construire sur
   le SDK 1.x ([`building-on-hackeros.md`](building-on-hackeros.md)).
 
 ## Tâches de ce document
@@ -240,3 +245,4 @@ Documents : [`hack-file-api.md`](hack-file-api.md),
 - [x] Décrire la séquence de démarrage.
 - [x] Lister les règles vérifiées au build.
 - [x] Relecture finale de la migration v3 (`v3/16-final`) : branches d'intégration et état du projet.
+- [x] Relecture finale de la série `exec` (`exec/10-final`) : SDK 1.2, branches d'intégration.

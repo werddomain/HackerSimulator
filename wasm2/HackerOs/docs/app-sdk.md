@@ -374,7 +374,8 @@ s'appliquent ; `stdin`/`stdout`/`stderr` passent par messages. `StopRequested`,
 `CheckpointAsync`, les codes 130/137 et `OnStoppingAsync` se comportent comme
 sur le fil principal. Ce qui n'est pas disponible dans un worker (hôte de
 shell, administration, page HTTP du navigateur simulé, `StartChild`, formes
-synchrones de `Kill` et `ListProcesses`, `WithSelectedHandle`) lève
+synchrones de `Kill` et `ListProcesses`, `WithSelectedHandle`, `SetNice`,
+`RegisterSharedChannel` hors d'une portée `VirtualPath`) lève
 `NotSupportedException` : une app qui en a besoin déclare `MainThread`.
 Exception : quand la page est isolée (`crossOriginIsolated`, ADR 0131 et 0143),
 les formes synchrones de `Kill` et `ListProcesses` marchent aussi dans un
@@ -500,6 +501,19 @@ traduit de l'app. La plateforme donne à chaque fenêtre une `IAppWindowGateway`
 par valeur en cascade fixe, jamais par injection : une app n'atteint que sa
 propre fenêtre et le SDK ne référence aucun type `HackerOs.Windowing.*`
 (ADR 0055). Voir [`window-model.md`](window-model.md) §4.
+
+### API du SDK 1.2 (série `exec`, ADR 0124 à 0128, ADR 0132)
+
+Ajouts seulement : une app 1.0 ou 1.1 tourne sans changement. Liste complète
+dans la [référence du SDK](sdk-reference.md).
+
+| API | Rôle | Capacité | Document |
+|---|---|---|---|
+| `[assembly: HackWireContext(typeof(…))]` (`HackWireContextAttribute`) | Types d'une app qui traversent la frontière d'un worker : charges de `HackEvents`, entrées et résultats de `HackBackground` | — | [ci-dessus](#processus-dans-des-web-workers-adr-0070-et-0071), [ADR 0124](adr/0124-remote-event-and-watch-gateways.md) |
+| `HackProcess.GetResourceLimitsAsync` → `HackResourceLimits`, `SetResourceLimitAsync` ; `ProcessLimitExceededException` (`EAGAIN`), `FileSystemErrorCode.TooManyOpenFiles` (`EMFILE`), `ProcessExitReason.CpuLimitExceeded`, `MemoryLimitExceeded` | Limites façon `setrlimit` d'un processus | `process.manage` pour un autre processus | [`process-limits.md`](process-limits.md) |
+| `AppDefinition.OomScoreAdjust` (manifeste `oomScoreAdj`), `ProcessExitReason.OutOfMemory` | `oom_score_adj` de départ, négatif pour une app système seulement (`HOSAPP0024`) ; raison de fin d'une victime de l'OOM killer | — | [`oom-killer.md`](oom-killer.md) |
+| `HackProcess.Nice`, `BasePriority`, `IShellSession.RunNicedAsync`, `ProcessNice` | Priorité `nice` d'un processus ; lancer une commande avec un ajustement | `process.manage` hors de son processus et de ses enfants ; `shell.control` | [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md) |
+| `HackBackground.RunAsync`, `HackBackgroundJob<TInput, TResult>`, `HackBackgroundContext`, `IAppExecutionContext.Background` ; analyseur `HOSBG0001` à `HOSBG0004` | Calcul long dans un processus enfant de l'app, placé dans un worker ; méthode statique vérifiée au build | — | [`background-jobs.md`](background-jobs.md) |
 
 ### API ajoutées après la phase 4 (ADR 0061 à 0065)
 

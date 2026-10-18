@@ -21,6 +21,8 @@ HackerOs.Windowing.Blazor.DesktopArea.OnWindowMenu.get -> Microsoft.AspNetCore.C
 HackerOs.Windowing.Blazor.DesktopArea.OnWindowMenu.set -> void
 HackerOs.Windowing.Blazor.DesktopArea.WindowContent.get -> Microsoft.AspNetCore.Components.RenderFragment<HackerOs.Windowing.Abstractions.WindowRuntimeState!>?
 HackerOs.Windowing.Blazor.DesktopArea.WindowContent.set -> void
+HackerOs.Windowing.Blazor.DesktopArea.WindowOverlay.get -> Microsoft.AspNetCore.Components.RenderFragment<HackerOs.Windowing.Abstractions.WindowRuntimeState!>?
+HackerOs.Windowing.Blazor.DesktopArea.WindowOverlay.set -> void
 HackerOs.Windowing.Blazor.DesktopArea.Windows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowRuntimeState!>!
 HackerOs.Windowing.Blazor.DesktopArea.Windows.set -> void
 HackerOs.Windowing.Blazor.SingleSurfaceArea
@@ -37,6 +39,8 @@ HackerOs.Windowing.Blazor.SingleSurfaceArea.OnToggleMaximize.set -> void
 HackerOs.Windowing.Blazor.SingleSurfaceArea.SingleSurfaceArea() -> void
 HackerOs.Windowing.Blazor.SingleSurfaceArea.WindowContent.get -> Microsoft.AspNetCore.Components.RenderFragment<HackerOs.Windowing.Abstractions.WindowRuntimeState!>?
 HackerOs.Windowing.Blazor.SingleSurfaceArea.WindowContent.set -> void
+HackerOs.Windowing.Blazor.SingleSurfaceArea.WindowOverlay.get -> Microsoft.AspNetCore.Components.RenderFragment<HackerOs.Windowing.Abstractions.WindowRuntimeState!>?
+HackerOs.Windowing.Blazor.SingleSurfaceArea.WindowOverlay.set -> void
 HackerOs.Windowing.Blazor.SingleSurfaceArea.Windows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Windowing.Abstractions.WindowRuntimeState!>!
 HackerOs.Windowing.Blazor.SingleSurfaceArea.Windows.set -> void
 HackerOs.Windowing.Blazor.WindowChrome
@@ -82,6 +86,8 @@ HackerOs.Windowing.Blazor.WindowHost.OnToggleMaximize.get -> Microsoft.AspNetCor
 HackerOs.Windowing.Blazor.WindowHost.OnToggleMaximize.set -> void
 HackerOs.Windowing.Blazor.WindowHost.OnWindowMenu.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.Windowing.Blazor.WindowMenuRequest!>
 HackerOs.Windowing.Blazor.WindowHost.OnWindowMenu.set -> void
+HackerOs.Windowing.Blazor.WindowHost.Overlay.get -> Microsoft.AspNetCore.Components.RenderFragment?
+HackerOs.Windowing.Blazor.WindowHost.Overlay.set -> void
 HackerOs.Windowing.Blazor.WindowHost.ShowChrome.get -> bool
 HackerOs.Windowing.Blazor.WindowHost.ShowChrome.set -> void
 HackerOs.Windowing.Blazor.WindowHost.Window.get -> HackerOs.Windowing.Abstractions.WindowRuntimeState!

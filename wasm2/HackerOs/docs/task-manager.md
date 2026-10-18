@@ -88,8 +88,12 @@ compositeur (ADR 0067, [`resource-accounting.md`](resource-accounting.md#apps-ex
 - « Not responding » (ADR 0067) : quand `/proc/<pid>/status` porte
   `Responding: 0` (`HackProcess.Responding` faux), la colonne d'état affiche
   « Not responding » en rouge à la place de l'état, avec une infobulle ; le tri
-  par état en tient compte. Affichage seulement : rien n'est arrêté, « End
-  task » reste le seul moyen. Voir [`cpu-accounting.md`](cpu-accounting.md).
+  par état en tient compte. Affichage seulement : le gestionnaire n'arrête
+  rien de lui-même, « End task » reste son seul moyen. Voir
+  [`cpu-accounting.md`](cpu-accounting.md). Pour une app à fenêtre, la fenêtre
+  elle-même affiche aussi « (Not responding) » et la boîte « Attendre |
+  Terminer l'application » (ADR 0127,
+  [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md)).
   Pour un processus dans un Web Worker (ADR 0070), l'état apparaît **pendant**
   le blocage : son worker ne bat plus depuis 5 s, et le reste de l'interface
   continue de répondre ; « End task » puis « Force kill » terminent le worker
@@ -97,7 +101,16 @@ compositeur (ADR 0067, [`resource-accounting.md`](resource-accounting.md#apps-ex
 - Priorité (ADR 0127 §1) : colonne « Priority » (`ProcessColumn.Priority`,
   `ProcessRow.Nice`) affichée par un bouton bascule (`ProcessTable.ShowPriority`,
   masquée au départ) ; elle montre la valeur `nice` lue dans
-  `/proc/<pid>/stat` et se trie. Voir [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md).
+  `/proc/<pid>/stat` et se trie. Le gestionnaire l'affiche seulement : on la
+  change avec `renice`. Voir [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md).
+- Tâches de fond : une tâche `HackBackground.RunAsync` est un processus enfant
+  de son app (ADR 0128, 0140) ; elle apparaît comme une ligne à part, nommée
+  d'après la tâche (`Name:` de `status`, lignes `Job:` et `Host:`), et
+  « End task » l'arrête comme les autres ([`background-jobs.md`](background-jobs.md)).
+- Un processus tué par l'OOM killer (ADR 0126) ou par sa limite `rss`/`cpu`
+  (ADR 0125) disparaît simplement de la table à la lecture suivante ; une
+  victime de l'OOM killer laisse sa trace dans `dmesg`
+  ([`oom-killer.md`](oom-killer.md), [`process-limits.md`](process-limits.md)).
 - Tri par colonne (clic sur l'en-tête ; même colonne : sens inverse ; colonne
   de mesure : plus grand d'abord). À valeur égale, ordre par PID, pour que les
   lignes ne sautent pas à chaque seconde.
@@ -172,6 +185,12 @@ await p.KillAsync();                                           // SIGKILL
 - Priorité (ADR 0127 §1) : `Nice` (champ 19 de `stat`, de -20 à 19) et
   `BasePriority` (`20 + Nice`, le `PR` de `top`) ; `ParseStatNice(texte)`.
   Changer la priorité passe par `IAppProcessGateway.SetNice` (commande `renice`).
+- Limites (ADR 0125, [`process-limits.md`](process-limits.md)) :
+  `GetResourceLimitsAsync()` lit `/proc/<pid>/limits` (`HackResourceLimits` :
+  `Cpu`, `Rss`, `NoFile`, `NProc`, `Enforcement`, `IsCpuMeasured`,
+  `IsMemoryMeasured`) ; `SetResourceLimitAsync(kind, souple, dure)` en change
+  une comme `prlimit` (`process.manage` pour un autre processus, `sudo` pour
+  monter une limite dure ou toucher le processus d'un autre utilisateur).
 - Lecture : `/proc` (liste et date de création de `/proc/<pid>` comme
   `StartTime`), `status`, `stat`, `cmdline`, `cwd` (cible du lien), `io`, `environ`.
   Visibilité de `/proc` : son propre processus, les autres avec
@@ -335,5 +354,6 @@ surcharges sans culture restent invariantes. Les noms et valeurs lus dans
 
 - [x] `Metrics/ProcFiles.cs` lit `/proc/hackeros/workers` (`ProcWorkers`, `ProcWorker`, `ParseWorkers`) ; `ProcReader` le lit s'il existe.
 - [x] Onglet Performance : section « Workers » (capacité, taille du pool, une carte par worker avec rôle, état, cœur, mémoire, processus) ; « Not responding » en rouge.
+  Depuis `exec/9` (ADR 0131, 0143), quand la page est isolée, la mémoire d'une carte est celle que le navigateur mesure pour ce worker (`memory-measure: browser` dans `/proc/hackeros/workers`) ; l'app n'a pas changé.
 - [x] « Not responding » visible pendant le blocage d'une commande dans un worker ; « Force kill » termine le worker.
 - [x] Tests : `ProcFilesTests` (`ParseWorkers`).

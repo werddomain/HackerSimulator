@@ -10,14 +10,14 @@ using HackerOs.Tests.Support;
 namespace HackerOs.SdkCompatibility.Tests;
 
 /// <summary>
-/// ADR 0098 §8, ADR 0114: an app compiled against an earlier SDK (the <c>1.0.0</c> package kept in
-/// <c>Tests/fixtures/sdk-compat</c>) is admitted by the current catalog, binds to the current SDK
+/// ADR 0098 §8, ADR 0114, ADR 0132 §1: an app compiled against an earlier SDK (the <c>1.0.0</c> and
+/// <c>1.1.0</c> packages kept in <c>Tests/fixtures/sdk-compat</c>) is admitted by the current catalog, binds to the current SDK
 /// assemblies and runs. Its Chromium counterpart, which boots a host with the package, is in
 /// <c>HackerOs.Templates.E2E.Tests</c>.
 /// </summary>
 public sealed class SdkCompatibilityTests
 {
-    /// <summary>The fixture packages, one per earlier SDK major version.</summary>
+    /// <summary>The fixture packages, one per earlier SDK version that has one (1.0.0, 1.1.0).</summary>
     public static TheoryData<string> Packages()
     {
         TheoryData<string> data = [];
@@ -32,6 +32,14 @@ public sealed class SdkCompatibilityTests
     [Fact]
     public void The_SDK_1_0_0_fixture_is_present() =>
         Assert.Contains("Contoso.Sdk1Compat.1.0.0.nupkg", FixturePackage.All().Select(Path.GetFileName));
+
+    [Fact]
+    public void The_SDK_1_1_0_fixture_is_present_and_needs_SDK_1_1()
+    {
+        FixturePackage fixture = FixturePackage.Open("Contoso.Sdk11Compat.1.1.0.nupkg");
+        Assert.All(fixture.Manifests, manifest => Assert.Equal("1.1.0", manifest.SdkCompatibility!.MinimumVersion));
+        Assert.False(fixture.Manifests.Single(item => item.Id == "com.contoso.sdk11-window").Window!.RememberGeometry);
+    }
 
     [Theory]
     [MemberData(nameof(Packages))]
@@ -119,8 +127,39 @@ public sealed class SdkCompatibilityTests
     [Fact]
     public async Task The_SDK_1_0_0_command_runs_on_the_current_SDK()
     {
-        FixturePackage fixture = FixturePackage.Open("Contoso.Sdk1Compat.1.0.0.nupkg");
-        AppManifest manifest = fixture.Manifests.Single(item => item.Id == "com.contoso.sdk1-command");
+        (int exitCode, string stdout, string stderr, FakeAppFileSystemGateway fileSystem) =
+            await RunCommandAsync("Contoso.Sdk1Compat.1.0.0.nupkg", "com.contoso.sdk1-command", ["still", "binds"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(string.Empty, stderr);
+        Assert.Equal("still binds", fileSystem.ContentOf("/home/user/sdk1-compat.txt"));
+        Assert.Equal($"sdk1-compat: still binds (compiled against 1.0.0, running on {HackerOsSdk.Version})", stdout);
+    }
+
+    /// <summary>
+    /// The 1.1.0 command also calls what SDK 1.1 added (<c>HackUserAccounts.ValidateNewPassword</c>,
+    /// ADR 0120): the rule still answers the same way on the current SDK.
+    /// </summary>
+    [Fact]
+    public async Task The_SDK_1_1_0_command_runs_on_the_current_SDK()
+    {
+        (int exitCode, string stdout, string stderr, FakeAppFileSystemGateway fileSystem) =
+            await RunCommandAsync("Contoso.Sdk11Compat.1.1.0.nupkg", "com.contoso.sdk11-command", ["still", "binds"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(string.Empty, stderr);
+        Assert.Equal("still binds", fileSystem.ContentOf("/home/user/sdk11-compat.txt"));
+        Assert.Equal(
+            $"sdk11-compat: still binds [valid password] (compiled against 1.1.0, running on {HackerOsSdk.Version})",
+            stdout);
+    }
+
+    /// <summary>Starts a fixture command the way the OS starts a terminal app and captures its output.</summary>
+    private static async Task<(int ExitCode, string Stdout, string Stderr, FakeAppFileSystemGateway FileSystem)> RunCommandAsync(
+        string package, string appId, IReadOnlyList<string> arguments)
+    {
+        FixturePackage fixture = FixturePackage.Open(package);
+        AppManifest manifest = fixture.Manifests.Single(item => item.Id == appId);
         Type entryPoint = fixture.Assembly.GetType(manifest.EntryPoint!.Type, throwOnError: true)!;
         TerminalAppBase command = (TerminalAppBase)Activator.CreateInstance(entryPoint, manifest)!;
 
@@ -129,7 +168,7 @@ public sealed class SdkCompatibilityTests
         StringWriter stdout = new();
         StringWriter stderr = new();
         TerminalExecutionContext context = new(
-            app, ["still", "binds"], TextReader.Null, stdout, stderr, "/home/user",
+            app, [.. arguments], TextReader.Null, stdout, stderr, "/home/user",
             new Dictionary<string, string>(StringComparer.Ordinal) { ["HOME"] = "/home/user", ["USER"] = "user" });
 
         int exitCode;
@@ -138,12 +177,7 @@ public sealed class SdkCompatibilityTests
             exitCode = await command.ExecuteAsync(context, CancellationToken.None);
         }
 
-        Assert.Equal(0, exitCode);
-        Assert.Equal(string.Empty, stderr.ToString());
-        Assert.Equal("still binds", fileSystem.ContentOf("/home/user/sdk1-compat.txt"));
-        Assert.Equal(
-            $"sdk1-compat: still binds (compiled against 1.0.0, running on {HackerOsSdk.Version})",
-            stdout.ToString().TrimEnd());
+        return (exitCode, stdout.ToString().TrimEnd(), stderr.ToString(), fileSystem);
     }
 
     /// <summary>

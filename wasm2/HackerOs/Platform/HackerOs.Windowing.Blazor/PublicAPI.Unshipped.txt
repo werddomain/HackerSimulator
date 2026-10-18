@@ -1,7 +1,1 @@
 #nullable enable
-HackerOs.Windowing.Blazor.DesktopArea.WindowOverlay.get -> Microsoft.AspNetCore.Components.RenderFragment<HackerOs.Windowing.Abstractions.WindowRuntimeState!>?
-HackerOs.Windowing.Blazor.DesktopArea.WindowOverlay.set -> void
-HackerOs.Windowing.Blazor.SingleSurfaceArea.WindowOverlay.get -> Microsoft.AspNetCore.Components.RenderFragment<HackerOs.Windowing.Abstractions.WindowRuntimeState!>?
-HackerOs.Windowing.Blazor.SingleSurfaceArea.WindowOverlay.set -> void
-HackerOs.Windowing.Blazor.WindowHost.Overlay.get -> Microsoft.AspNetCore.Components.RenderFragment?
-HackerOs.Windowing.Blazor.WindowHost.Overlay.set -> void

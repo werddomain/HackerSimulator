@@ -9,11 +9,14 @@
     change of the SDK. PublicAPI.Unshipped.txt of each library says which one a release needs.
     1.1.0 (chantier v3.1/4-sdk-1-1, ADR 0117 §5): window title, window geometry opt-out, user
     accounts and passwd, per-user default handlers.
+    1.2.0 (chantier exec/10-final, ADR 0132 §2): process limits, niceness, OOM score adjustment,
+    HackBackground and its analyzer, HackWireContext for remote gateways, all published once at the
+    end of the exec series.
 
     The App SDK version an app is compiled against comes from this number (HackerOsSdk.Version), and
     the manifest generator writes it as the app's sdkCompatibility.minimumVersion (ADR 0098 §3).
   -->
   <PropertyGroup>
-    <HackerOsVersion>1.1.0</HackerOsVersion>
+    <HackerOsVersion>1.2.0</HackerOsVersion>
   </PropertyGroup>
 </Project>
