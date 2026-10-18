@@ -1,1 +1,2 @@
 #nullable enable
+HackerOs.Simulation.Abstractions.Gateways.IAppEventGateway.PublishAsync<TPayload>(HackerOs.Simulation.Abstractions.Events.TopicName topic, TPayload payload, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.Events.TopicPublishResult!>!

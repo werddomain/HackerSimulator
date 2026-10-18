@@ -277,6 +277,16 @@ build/tools/ship-public-api.sh --check   # ce qu'une publication verserait, sans
 build/tools/ship-public-api.sh           # à la publication, puis HackerOsVersion dans build/Versions.props
 ```
 
+### Ajouts depuis la 1.2.0 (prochaine mineure)
+
+Ces ajouts sont dans `PublicAPI.Unshipped.txt` ; ils partiront avec la
+prochaine publication (1.3.0, mineure d'après SemVer puisque ce sont des
+ajouts). `HackerOsVersion` reste `1.2.0` d'ici là.
+
+| Bibliothèque | Ajout | Décision |
+|---|---|---|
+| `HackerOs.Simulation.Abstractions` | `IAppEventGateway.PublishAsync` (implémentation par défaut qui appelle `Publish`) : le vrai résultat d'une publication, même dans un worker | ADR 0145 |
+
 ### App de compatibilité
 
 `Tests/fixtures/sdk-compat/packages` garde une app par version publiée qui en

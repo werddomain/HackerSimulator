@@ -861,8 +861,39 @@ internal sealed class RemoteProcessSession
                 _events.Acknowledge(a.GetInt32("s"), a.GetInt32("n"));
                 return static _ => { };
             case RemoteOps.EventPublish:
-                PublishFromWorker(a);
+            {
+                TopicPublishResult result = PublishFromWorker(a);
+                if (result.Outcome != TopicPublishOutcome.Delivered)
+                {
+                    // Publish is synchronous and provisional in the worker: the refusal goes to the app's log (ADR 0138, section 3).
+                    c.Logging.Log(HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Warning,
+                        $"The OS refused a publication on '{a.GetString("top")}': {result.Outcome}.");
+                }
+
                 return static _ => { };
+            }
+
+            case RemoteOps.EventPublishWithResult:
+            {
+                // PublishAsync (ADR 0145): the app reads the outcome itself, nothing is logged.
+                TopicPublishResult result = PublishFromWorker(a);
+                return writer =>
+                {
+                    writer.WriteNumber("o", (int)result.Outcome);
+                    if (result.SubscriberFaults.Count > 0)
+                    {
+                        writer.WriteStartArray("f");
+                        foreach (EventDispatchFault fault in result.SubscriberFaults)
+                        {
+                            writer.WriteStartObject();
+                            RemoteErrors.Write(writer, fault.Exception);
+                            writer.WriteEndObject();
+                        }
+
+                        writer.WriteEndArray();
+                    }
+                };
+            }
             case RemoteOps.EventSharedChannel:
                 try
                 {
@@ -987,17 +1018,12 @@ internal sealed class RemoteProcessSession
     /// waits for the answer in the worker (ADR 0138), so a refusal goes to the app's log, where the
     /// developer looks when a message never arrives.
     /// </summary>
-    private void PublishFromWorker(JsonElement a)
+    /// <summary>Publishes a worker's message on the OS's bus with the process's own identity (<c>ev.pub</c>, <c>ev.pubr</c>).</summary>
+    private TopicPublishResult PublishFromWorker(JsonElement a)
     {
         string json = a.GetString("j");
-        string topic = a.GetString("top");
-        TopicPublishResult result = TrustedEvents().PublishWire(
-            WirePayloadCodec.ParseTopic(topic), a.GetString("w"), json, type => WirePayloadCodec.Deserialize(type, json));
-        if (result.Outcome != TopicPublishOutcome.Delivered)
-        {
-            _context.Logging.Log(HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Warning,
-                $"The OS refused a publication on '{topic}': {result.Outcome}.");
-        }
+        return TrustedEvents().PublishWire(
+            WirePayloadCodec.ParseTopic(a.GetString("top")), a.GetString("w"), json, type => WirePayloadCodec.Deserialize(type, json));
     }
 
     private AppEventGateway TrustedEvents() =>
