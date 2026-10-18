@@ -181,8 +181,9 @@ HackBackground.RunAsync ──► IAppExecutionContext.Background
   une app qui marche dans ses tests marche en worker.
 - Un processus par tâche, enfant de l'app : visible, tuable seul, terminé avec
   l'app (raison `DependencyStop`, jeton annulé tout de suite).
-- `nice` est borné et enregistré ; l'ordonnancement par `nice` arrive avec
-  `exec/4` (ADR 0127).
+- `nice` est borné et devient la valeur `nice` du processus de la tâche
+  (`ps -o ni`, `/proc/<pid>/stat`) ; il fixe sa place dans la file des workers
+  (ADR 0127, [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md)).
 
 ## Apps de base
 

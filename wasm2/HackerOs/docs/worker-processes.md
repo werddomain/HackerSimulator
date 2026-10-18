@@ -193,7 +193,7 @@ avec le type et la pile d'origine ; `killed` porte la raison `rs`.
   lancement n'attire pas la suivante derrière elle.
 - **File d'attente** (ADR 0127 §1, `WorkerRunQueue`) : au plafond, les
   demandes attendent par `nice` croissant puis par ordre d'arrivée ; un
-  processus `nice` ≥ 10 ne prend pas un worker qui démarre pour un autre. La
+  processus de valeur `nice` positive ne prend pas le worker prêt pendant qu'un autre worker démarre. La
   priorité ne découpe pas le temps : rien n'est préempté.
 - **Placement** : le cœur libre le moins chargé ; les étapes d'un pipeline
   (`ExecutionPlacement.BeginGroup` dans `ShellInterpreter`) vont sur le même
