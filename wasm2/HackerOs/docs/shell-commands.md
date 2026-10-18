@@ -81,7 +81,9 @@ shell :
 
 1. résout la commande cible (`sudo: x: command not found`, code `1`) ;
 2. refuse une commande qui déclare `shell.control` (`sudo: cd: shell builtin`,
-   code `1`), sans demander d'identifiants ;
+   code `1`), sans demander d'identifiants, sauf `nice` (ADR 0136) : `nice`
+   reçoit l'accès au shell et le ticket root, qu'il passe à la commande qu'il
+   lance ;
 3. appelle `ShellExecutionOptions.CredentialPrompt` (le terminal ouvre la
    fenêtre d'identifiants d'un administrateur et obtient un ticket `SudoRoot`,
    ADR 0042) ; un refus donne `sudo: authentication failed`, code `1` ;

@@ -7,13 +7,15 @@ namespace HackerOs.Platform.Core.Shell;
 /// section 3): a narrow view over the running <see cref="ShellSession"/> (or over its copy inside a
 /// pipe), built by <see cref="ShellInterpreter"/> for one stage. It is what lets the catalog's
 /// <c>cd</c>, <c>export</c>, <c>unset</c>, <c>help</c> and <c>sudo</c> replace the names the
-/// terminal used to intercept.
+/// terminal used to intercept. Under <c>sudo nice</c> (ADR 0136) it also carries sudo's root
+/// ticket, which <see cref="RunNicedAsync"/> hands to the command nice runs.
 /// </summary>
 internal sealed class ShellSessionAccess(
     ShellInterpreter interpreter,
     ShellSession session,
     ShellExecutionOptions options,
-    TextReader standardInput) : IShellSession
+    TextReader standardInput,
+    ShellElevation? niceElevation = null) : IShellSession
 {
     /// <inheritdoc />
     public string WorkingDirectory => session.CurrentDirectory;
@@ -116,7 +118,7 @@ internal sealed class ShellSessionAccess(
         TextWriter standardOutput,
         TextWriter standardError,
         CancellationToken cancellationToken) =>
-        interpreter.RunNicedAsync(session, arguments, adjustment, standardInput, standardOutput, standardError, options, cancellationToken);
+        interpreter.RunNicedAsync(session, arguments, adjustment, standardInput, standardOutput, standardError, options, cancellationToken, niceElevation);
 
     /// <summary>
     /// Requires a shell identifier, <c>[A-Za-z_][A-Za-z0-9_]*</c> (ADR 0050, section 3): the only
