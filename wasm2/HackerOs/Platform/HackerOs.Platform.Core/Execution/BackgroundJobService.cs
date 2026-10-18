@@ -114,8 +114,11 @@ public sealed class BackgroundJobService
             nice = 0;
         }
 
+        // ConfigureAwait(false) throughout: this bookkeeping is the OS's, not the caller's. The caller's
+        // scheduler drops its continuations once it is killed (ADR 0069), and the task's process must
+        // still be ended and its place released then. The task's own code runs on its own scheduler.
         SemaphoreSlim gate = _gates.GetOrAdd($"{caller.UserId}\n{caller.Manifest.Id}", _ => new SemaphoreSlim(MaxConcurrentJobsPerApp));
-        await gate.WaitAsync(cancellationToken).ConfigureAwait(true);
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             ProcessRecord parent = caller.Processes.OwnProcess;
@@ -140,8 +143,8 @@ public sealed class BackgroundJobService
             {
                 _processManager.MarkRunning(process.Pid);
                 string? result = remote is null
-                    ? await RunOnMainThreadAsync(child, assembly, request, progress, cancellationToken).ConfigureAwait(true)
-                    : await RunInWorkerAsync(remote, child, request with { Name = name, Nice = nice }, progress, cancellationToken).ConfigureAwait(true);
+                    ? await RunOnMainThreadAsync(child, assembly, request, progress, cancellationToken).ConfigureAwait(false)
+                    : await RunInWorkerAsync(remote, child, request with { Name = name, Nice = nice }, progress, cancellationToken).ConfigureAwait(false);
                 End(process.Pid, 0);
                 return result;
             }
@@ -197,8 +200,8 @@ public sealed class BackgroundJobService
         HackBackgroundContext context = new(child.ProcessId.Value, linked.Token, progress);
         using IDisposable ambient = HackExecutionContext.Enter(child);
         return child is AppExecutionContext trusted
-            ? await trusted.Control.RunAsync(() => HackBackgroundFaults.RunAsync(job, context)).ConfigureAwait(true)
-            : await HackBackgroundFaults.RunAsync(job, context).ConfigureAwait(true);
+            ? await trusted.Control.RunAsync(() => HackBackgroundFaults.RunAsync(job, context)).ConfigureAwait(false)
+            : await HackBackgroundFaults.RunAsync(job, context).ConfigureAwait(false);
     }
 
     /// <summary>The task in a Web Worker of the pool (ADR 0128, section 3), and how it ended.</summary>
@@ -211,7 +214,7 @@ public sealed class BackgroundJobService
     {
         RemoteProcessExit exit = await remote.RunBackgroundJobAsync(
             new RemoteBackgroundJobLaunch(child, child is AppExecutionContext trusted ? trusted.Control : null, request, progress),
-            cancellationToken).ConfigureAwait(true);
+            cancellationToken).ConfigureAwait(false);
         switch (exit.Status)
         {
             case RemoteProcessExitStatus.Exited when exit.ExitCode == 0:

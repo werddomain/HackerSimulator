@@ -72,7 +72,7 @@ internal sealed class OsFixture : IAsyncDisposable
             () => Manager!, resources, VirtualHardwareProfile.Default, Clock,
             environments: () => Manager?.Environments,
             transactionIdFactory: () => new Guid(_transactionId++, 0, 0, new byte[8]),
-            metrics: new ProcMetricsSources(Workers: () => Pool, Listeners: () => Ports));
+            metrics: new ProcMetricsSources(Workers: () => Pool, Listeners: () => Ports) { BackgroundJobs = () => BackgroundJobs });
         FileSystemMountRouter router = new(repository,
         [
             new FileSystemMount(ProcFileSystemProvider.DefaultMountPath, proc),
@@ -144,7 +144,11 @@ internal sealed class OsFixture : IAsyncDisposable
             appCatalog: new AppCatalogGatewayServices(Catalog, enablement),
             shellHostProvider: () => ShellHost!,
             metrics: new SystemMetricsServices(Drives: new AppDriveGateway(() => router, VirtualHardwareProfile.Default)),
-            localNetwork: localNetwork);
+            localNetwork: localNetwork)
+        {
+            // ADR 0128: HackBackground tasks as child processes, in a worker when the fixture has some.
+            BackgroundJobs = () => BackgroundJobs!
+        };
 
         if (workers)
         {
@@ -162,10 +166,16 @@ internal sealed class OsFixture : IAsyncDisposable
                 Startup);
         }
 
+        RemoteHost = Pool is null ? null : new WorkerRemoteProcessHost(Pool);
         Orchestrator = new AppLifecycleOrchestrator(
             Catalog, descriptors, enablement, Manager, _grants, contextFactory, EventBus,
             elevationTickets: new InMemoryElevationTicketStore(),
-            remoteHost: Pool is null ? null : new WorkerRemoteProcessHost(Pool));
+            remoteHost: RemoteHost);
+        BackgroundJobs = new BackgroundJobService(
+            Manager,
+            appId => Orchestrator.TryGetDescriptor(appId, out AppDescriptor? descriptor) ? descriptor : null,
+            () => RemoteHost,
+            maxConcurrentJobsPerApp: 2);
         Interpreter = new ShellInterpreter(Orchestrator, Catalog, enablement);
         ShellHost = new ShellHostService(Interpreter, Manager, new RefusingElevationService());
         Dispatcher = new AppIntentDispatcher(
@@ -225,6 +235,12 @@ internal sealed class OsFixture : IAsyncDisposable
     public LoopbackWebWorkerRuntime? Runtime { get; }
 
     public WorkerPool? Pool { get; }
+
+    /// <summary>Gets the out-of-thread host of the fixture, when it has workers.</summary>
+    public WorkerRemoteProcessHost? RemoteHost { get; }
+
+    /// <summary>Gets the background tasks of the OS (ADR 0128), two at a time per app and user.</summary>
+    public BackgroundJobService BackgroundJobs { get; }
 
     /// <summary>Gets the table of listening ports (ADR 0074).</summary>
     public ListeningPortTable Ports { get; }

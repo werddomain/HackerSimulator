@@ -27,7 +27,8 @@ internal static class TestCommands
         Web<EchoSite>("org.test.wiki", "http://wiki.hack/"),
         Web<MvcSiteWebHost>("org.test.mvc", "http://mvc.hack/"),
         Web<BlazorSiteWebHost>("org.test.blazor", "http://blazor.hack/"),
-        .. RemoteEventCommands.Manifests
+        .. RemoteEventCommands.Manifests,
+        .. BackgroundJobCommands.Manifests
     ];
 
     /// <summary>Lets every <c>spin</c> stuck in a terminated loopback worker return, so the test run ends cleanly.</summary>

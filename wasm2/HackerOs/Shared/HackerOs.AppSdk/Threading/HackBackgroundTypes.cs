@@ -11,10 +11,12 @@ namespace HackerOs.AppSdk.Threading;
 public readonly record struct HackBackgroundProgress(double Fraction, string? Message = null)
 {
     /// <inheritdoc />
-    public override string ToString() =>
-        Message is null
-            ? Fraction.ToString("P0", CultureInfo.InvariantCulture)
-            : $"{Fraction.ToString("P0", CultureInfo.InvariantCulture)} {Message}";
+    public override string ToString()
+    {
+        // "42%" as progress bars and wget print it, whatever the culture.
+        string percent = (Fraction * 100d).ToString("0", CultureInfo.InvariantCulture) + "%";
+        return Message is null ? percent : $"{percent} {Message}";
+    }
 }
 
 /// <summary>Options of one <see cref="HackBackground"/> task (ADR 0128, section 1).</summary>
