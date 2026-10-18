@@ -69,7 +69,7 @@ public sealed class TextEditorApp : AppDefinition
 - `sdkCompatibility` (ADR 0098 §3) : par défaut, `minimumVersion` est la version
   du SDK contre laquelle l'app a été compilée. Le générateur la lit dans
   l'`AssemblyInformationalVersion` de la `HackerOs.App.Abstractions.dll`
-  référencée par l'app (par exemple `1.1.0`, voir
+  référencée par l'app (par exemple `1.2.0`, voir
   [`sdk-packages.md`](sdk-packages.md)) et la passe à
   `ToManifest(definition, sdkMinimumVersion)` ; `ToManifest(definition)` prend
   `HackerOsSdk.Version`, la version du SDK chargé. Une app qui veut une plage
@@ -129,8 +129,9 @@ public sealed class CdApp : AppDefinition { … }
 - Une commande ou un service qui a besoin de ce qu'un worker n'offre pas déclare
   `MainThread`, **avec la raison en commentaire** au-dessus de l'attribut. Dans
   `HackerOs.Commands` : les built-ins du shell (`cd`, `exit`, `export`,
-  `unset`, `jobs`, `read`, `help`, `which`, `kill`, `sudo`, `watch`) et les
-  commandes plein écran (`nano`, `top`, `htop`). Le service d'exemple et
+  `unset`, `jobs`, `read`, `help`, `which`, `kill`, `sudo`, `watch`), `passwd`,
+  `hackbackup`, `nice` et `renice` (ADR 0127), et les commandes plein écran
+  (`nano`, `top`, `htop`). Le service d'exemple et
   `hackwebd` sont en worker dédié depuis l'ADR 0124. Les autres commandes vont
   dans le pool (liste à jour dans [`worker-processes.md`](worker-processes.md)).
 - Le validateur refuse `pool` et `dedicated` pour une app web
@@ -138,7 +139,9 @@ public sealed class CdApp : AppDefinition { … }
   (`manifest.execution.web-only`). Une app web déclare ses URL par
   `AppDefinition.Urls` (champ `web.urls`) : voir
   [`listening-ports-and-dns.md`](listening-ports-and-dns.md).
-- Un hôte sans Web Worker (`HackerOs.Server`) ignore `execution` (ADR 0070 §6).
+- Un hôte sans Web Worker ignore `execution` (ADR 0070 §6). Il n'y en a plus
+  dans ce dépôt : `HackerOs.Server` sert l'OS en WebAssembly depuis
+  l'[ADR 0130](adr/0130-server-serves-webassembly-os-and-api.md).
 
 Détails du mécanisme : [`worker-processes.md`](worker-processes.md).
 
@@ -333,9 +336,10 @@ sont pas déclarés comme assets. Erreur : `HOSAPP0040`. Voir
 ### Déclarer un hôte
 
 Un projet hôte déclare `<HackerOsAppHost>true</HackerOsAppHost>`. Dans ce dépôt,
-seul `OS/HackerOs.Ecosystem` le fait. `test/test` et le serveur réutilisent le
-catalogue compilé de l'Ecosystem (`BuildKnownLazyApps.Catalog`) et ne
-s'agrègent pas eux-mêmes. Hors du dépôt, un hôte référence le paquet
+seul `OS/HackerOs.Ecosystem` le fait. `test/test` réutilise le catalogue
+compilé de l'Ecosystem (`BuildKnownLazyApps.Catalog`) et ne s'agrège pas
+lui-même ; le serveur sert les fichiers publiés de l'Ecosystem tels quels, apps
+comprises (ADR 0130). Hors du dépôt, un hôte référence le paquet
 `HackerOs.App.Build` et déclare la même propriété (modèle `hackeros-host`, voir
 [`sdk-packages.md`](sdk-packages.md)).
 
@@ -539,4 +543,5 @@ dangereuses accordées d'office arrivent avec l'ADR 0049.
 - [x] `v3/4-intents` (ADR 0096) : intents déclarés reçus par l'app, schémas d'URI `x-scheme-handler/<schéma>`, commande `xdg-open`.
 - [x] `v3/4b` (ADR 0121) : associations de fichiers et de schémas propres à chaque utilisateur, commande `xdg-mime`.
 - [x] `v3/12-localization` (ADR 0104) : `AppManifest.<culture>.resx` → `localization/`, `HOSAPP0040`, propriété `localized` de `BuiltInApplications.json`, `AppCatalog.Localize`.
+- [x] `exec/3-oom-killer` (ADR 0126, ADR 0142) : `AppDefinition.OomScoreAdjust` (SDK 1.2), champ `oomScoreAdj`, `HOSAPP0024`.
 - [x] `rebuild/2-app-migration` : classes `[AppManifest]` pour les 43 autres apps, test d'égalité avec les anciens JSON, suppression des `app.manifest.json`, `StaticManifest`, des listes manuelles de l'hôte et de la cible `_HackerOsMarkLegacySystemManifests`, de la règle `Content Update` de `Directory.Build.targets` et des exceptions « transition ».

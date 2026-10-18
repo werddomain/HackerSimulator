@@ -74,7 +74,7 @@ produit dans `artifacts/local-nupkg`, un `nuget.config` (modèle
 projet :
 
 ```bash
-dotnet new install <HackerOS>/artifacts/local-nupkg/HackerOs.Templates.1.1.0.nupkg
+dotnet new install <HackerOS>/artifacts/local-nupkg/HackerOs.Templates.1.2.0.nupkg
 dotnet new hackeros-window -n Contoso.Notes --appId com.contoso.notes
 dotnet new hackeros-host -n Contoso.Os          # un hôte qui lance tout l'OS
 ```
@@ -145,6 +145,7 @@ plus utiles :
 | `AutoStart` | Pour un service : démarré à la connexion. |
 | `LaunchVisibility` | `Hidden` pour ne pas apparaître dans le menu Démarrer (commandes, services). |
 | `Icons`, `Category`, `Version` | Présentation dans le lanceur. |
+| `OomScoreAdjust` | `oom_score_adj` de départ (SDK 1.2) ; une valeur négative, qui protège de l'OOM killer, est réservée aux apps système (`HOSAPP0024`, [`oom-killer.md`](oom-killer.md)). |
 
 Règles imposées par le générateur : classe publique, non abstraite, avec un
 constructeur sans paramètre ; getters purs (le générateur instancie la classe
@@ -555,7 +556,11 @@ qui demande `Boot` démarre à la connexion, avec un avertissement dans
 Le service apparaît dans l'onglet Services du gestionnaire de tâches et dans
 `/proc`. Il communique avec les autres apps par les sujets du bus
 d'événements (`context.Events.Publish(topic, payload)` dans son propre espace
-de noms, ADR 0038) : voir `Apps/Samples/HackerOs.Samples.ServiceApp`.
+de noms, ADR 0038) : voir `Apps/Samples/HackerOs.Samples.ServiceApp`. Un
+service tourne par défaut dans un Web Worker dédié (ADR 0070) : le type de ses
+charges doit alors être déclaré par `[assembly: HackWireContext(typeof(…))]`
+(SDK 1.2, ADR 0124), comme le fait `SampleTickerJsonContext` de l'exemple ;
+voir [`app-sdk.md`](app-sdk.md#processus-dans-des-web-workers-adr-0070-et-0071).
 
 ## 6. Utiliser les services de l'OS
 
@@ -580,6 +585,7 @@ build (`HOSAPP0031`). Les tâches courantes :
 | Presse-papiers | `HackClipboard` | `clipboard.read` / `.write` |
 | Réseau simulé (et réel si l'OS l'autorise) | `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient`, `HackUdpClient` | `network.simulated.*`, `network.real.access` (dangereuse) |
 | Processus et services | `HackProcess`, `HackServiceController` | `process.list`, `process.manage`, `services.manage` |
+| Lire ou baisser les limites de son processus (`ulimit`) | `HackProcess.GetResourceLimitsAsync`, `SetResourceLimitAsync` (SDK 1.2, [`process-limits.md`](process-limits.md)) | aucune pour son processus ; `process.manage` pour un autre |
 | Héberger un shell (terminal, éditeur de code) | `HackShell.StartAsync` | `shell.host` (dangereuse) |
 | Sauvegarder ou restaurer toute la machine (apps système) | `HackSystemBackup.CreateAsync`, `RestoreAsync` | `system.backup` (dangereuse) + administrateur |
 | Temps simulé, minuteries | `AppContext.Clock` | aucune |
@@ -593,7 +599,11 @@ concurrente), `HackIOException`, `HackUnauthorizedAccessException` (avec
 `HackIOException` avec `ErrorCode` `NoSpace` (`ENOSPC` : quota du navigateur
 atteint, ou réserve de root atteinte pour un utilisateur simple) ou
 `FileTooLarge` (`EFBIG`, plus de 16 Mio) ; `ShellErrorText.Describe` donne le
-message Linux ([`system-backup.md`](system-backup.md)).
+message Linux ([`system-backup.md`](system-backup.md)). Une ouverture au-delà
+de la limite `nofile` du processus lève `HackIOException` avec
+`TooManyOpenFiles` (`EMFILE`, SDK 1.2) ; un lancement au-delà de `nproc`
+échoue avec « Resource temporarily unavailable » (`EAGAIN`)
+([`process-limits.md`](process-limits.md)).
 
 Exemples détaillés par domaine : [`hack-file-api.md`](hack-file-api.md),
 [`settings-files.md`](settings-files.md), [`logging.md`](logging.md),
@@ -770,3 +780,4 @@ façon : `ProjectReference` ou `PackageReference` (paquet d'app produit par
 - [x] Sauvegarde de la machine et erreurs `NoSpace`/`FileTooLarge` (`v3/7-storage-backup`).
 - [x] Traduire son app : ressources, `GetLocalizer<T>`, `AppManifest.fr.resx` (`v3/12`, ADR 0104).
 - [x] Calculs lourds hors de la fenêtre avec `HackBackground` (`exec/5`, ADR 0128 et 0140).
+- [x] SDK 1.2 : `HackWireContext` d'un service en worker, `OomScoreAdjust`, limites de processus, `TooManyOpenFiles` (`exec/10-final`).

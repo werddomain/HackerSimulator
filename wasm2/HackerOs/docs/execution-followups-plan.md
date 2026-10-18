@@ -243,13 +243,13 @@ et les conséquences de chaque choix ; réponses du 2026-10-18 (ADR 0134).
 - [x] Garde du vrai navigateur (`exec/3-oom-killer`, ADR 0142).
 
 ### Fenêtres
-- [ ] « (Not responding) » et « Attendre / Forcer à quitter », `nice`/`renice`.
-- [ ] `HackBackground.RunAsync`, analyseur, exemple, migration des apps de base.
+- [x] « (Not responding) » et « Attendre \| Terminer l'application », `nice`/`renice` (`exec/4-not-responding-ui`, ADR 0127, PR #183).
+- [x] `HackBackground.RunAsync`, analyseur, exemple, migration des apps de base (`exec/5-background-jobs`, ADR 0140).
 - [x] Preuve de faisabilité du rendu en worker et ADR de décision (`exec/6-remote-renderer-poc`, ADR 0133 : on s'arrête).
 - [x] ~~Fenêtres en worker (si décidé).~~ Sans objet : l'ADR 0133 conclut « on s'arrête » (mémoire d'un worker de fenêtre 66,5 Mio pour 40 Mio permis).
 
 ### Hôte Server
-- [ ] OS servi en WebAssembly, API seulement côté serveur, retrait d'Interactive Server, vérification des hôtes adaptée.
+- [x] OS servi en WebAssembly, API seulement côté serveur, retrait d'Interactive Server, vérification des hôtes adaptée (`exec/8-server-wasm`, ADR 0134 et 0137).
 
 ### Isolation cross-origin
 - [x] Audit de compatibilité (`exec/9-cross-origin-isolation`, ADR 0143 : passé, `auto = on`).
@@ -257,8 +257,8 @@ et les conséquences de chaque choix ; réponses du 2026-10-18 (ADR 0134).
 - [x] Tubes partagés, appels synchrones, mémoire réelle par worker, minuteries (`exec/9-cross-origin-isolation`, ADR 0143).
 
 ### Fin
-- [ ] Publication du SDK 1.2 et app de compatibilité 1.1 (ADR 0132).
-- [ ] `build/verify-hosts.sh` étendu (section 5.2), vérification finale, documents et index.
+- [x] Publication du SDK 1.2 et app de compatibilité 1.1 (`exec/10-final`, ADR 0132).
+- [x] `build/verify-hosts.sh` étendu (section 5.2, fait au fil des chantiers), vérification finale (section 11), documents et index (`exec/10-final`).
 
 ## 9. Hors périmètre
 
@@ -285,3 +285,37 @@ et les conséquences de chaque choix ; réponses du 2026-10-18 (ADR 0134).
   [`memory-accounting.md`](memory-accounting.md),
   [`resource-accounting.md`](resource-accounting.md),
   [`ecosystem-rebuild-plan.md`](ecosystem-rebuild-plan.md).
+
+## 11. Vérification finale
+
+Faite par `exec/10-final` le 2026-10-18 sur `exec/base` (avec `exec/1` à
+`exec/9`, PR #177 à #186) plus ce chantier. GitHub Actions ne tournant pas, la
+barre est la suite locale de l'ADR 0132 §4 (.NET 10, `NuGetAudit=false`,
+`MSBUILDDISABLENODEREUSE=1`, suites E2E en série).
+
+| Étape | Résultat |
+|---|---|
+| SDK 1.2 | `build/tools/ship-public-api.sh` : 795 lignes versées de `Unshipped` dans `Shipped` (une ligne `*REMOVED*`, constructeur d'`EcosystemBootCoordinator`), `HackerOsVersion` = `1.2.0`, manifestes générés à `minimumVersion: 1.2.0` ([`sdk-packages.md`](sdk-packages.md#sdk-12)) |
+| App de compatibilité 1.1 | `Contoso.Sdk11Compat.1.1.0.nupkg`, compilée contre les paquets du sommet de `v3.1/base` (titre de fenêtre, `HackUserAccounts.ValidateNewPassword`) |
+| Build Debug et Release de `HackerOs.sln` | 0 avertissement, 0 erreur |
+| Tests unitaires et de composants (42 projets) | 3761 réussis, 0 échec (dont `HackerOs.SdkCompatibility.Tests` 10/10 : apps 1.0.0 et 1.1.0) |
+| `HackerOs.E2E.Tests` | 18/18 |
+| `HackerOs.UI.E2E.Tests` | 27/27 ; `WindowKeyboardCommandsTests` a échoué une fois, le hôte `test/test` n'ayant pas répondu dans le délai du harnais (instabilité connue sous charge), puis réussi seul deux fois |
+| `HackerOs.Pwa.E2E.Tests` | 6/6 après correction de trois tests : depuis `exec/9`, le service worker garde le cache `hackeros-isolation`, indépendant des versions (ADR 0143), que les tests ne connaissaient pas |
+| `HackerOs.Templates.E2E.Tests` | 6/6, dont l'hôte généré avec les apps de compatibilité 1.0.0 et 1.1.0 dans Chromium |
+| `build/publish-trimmed.sh` | PASS (136 fichiers `.wasm`, 27,2 Mio, 8,2 Mio en Brotli) |
+| `build/verify-hosts.sh` | PASS sur les 9 parcours : `ecosystem`, `ecosystem-build-off`, `ecosystem-settings-off`, `ecosystem-limits-off`, `ecosystem-oom`, `ecosystem-isolated`, `ecosystem-isolation-off`, `test-host`, `server` |
+
+Documents relus et mis à jour : `system-metrics.md`, `task-manager.md`,
+`worker-processes.md`, `app-sdk.md`, `sdk-reference.md`,
+`sdk-developer-guide.md`, `app-model.md`, `linux-commands.md`,
+`virtual-proc-and-dev.md`, `building-and-testing.md`, `sdk-packages.md`,
+`building-on-hackeros.md`, `project-overview.md`, index `README.md`.
+
+Restent ouvertes, avec le choix recommandé appliqué en attendant Benoit : les
+cartes des fils « Exec 1 » (publication depuis un worker), « Exec 4 »
+(`sudo nice`), « Exec 5 » (délai de grâce, PID de la tâche), « Exec 6 »
+(arrêt de l'essai de rendu en worker, `exec/7` n'a pas lieu) et « Exec 9 »
+(quatre cartes sur l'isolation). La fusion d'`exec/base` vers `main` est la
+décision de Benoit.
+

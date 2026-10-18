@@ -4,8 +4,9 @@
 
 Le guide d'un dépôt qui **utilise** HackerOS sans en copier le code : tout
 projet qui veut ses propres apps et son propre hôte d'OS. **Aucun jeu sur ce repository** ([ADR 0135](adr/0135-no-game-in-this-repository.md)). Il part du SDK 1.0, gelé par le chantier `v3/15`
-([ADR 0114](adr/0114-sdk-1-0-freeze.md)) ; la version courante est la **1.1.0**
-(série v3.1, [ADR 0117](adr/0117-sdk-window-title-and-sdk-1-1.md) §5, voir « Ce que la 1.1 ajoute »).
+([ADR 0114](adr/0114-sdk-1-0-freeze.md)) ; la version courante est la **1.2.0**
+(série `exec`, [ADR 0132](adr/0132-exec-series-sdk-1-2-and-merge-rules.md) §2, voir « Ce que la 1.2 ajoute » ;
+la 1.1 vient de la série v3.1, [ADR 0117](adr/0117-sdk-window-title-and-sdk-1-1.md) §5).
 
 Détails des paquets et du mode paquet de `HackerOs.App.Build` :
 [`sdk-packages.md`](sdk-packages.md). Écrire une app (API, exemples) :
@@ -31,7 +32,7 @@ nuget.org). Dans un clone de HackerOS, sur la version voulue :
 ```bash
 git -C ../HackerSimulator checkout <tag ou branche>
 ../HackerSimulator/wasm2/HackerOs/build/pack-local.sh      # ou pack-local.ps1
-# -> ../HackerSimulator/wasm2/HackerOs/artifacts/local-nupkg/*.1.1.0.nupkg
+# -> ../HackerSimulator/wasm2/HackerOs/artifacts/local-nupkg/*.1.2.0.nupkg
 ```
 
 `--output <dossier>` écrit ailleurs (par exemple un dossier partagé de votre
@@ -77,7 +78,7 @@ que celle-ci :
 ```xml
 <Project>
   <PropertyGroup>
-    <HackerOsVersion>1.1.0</HackerOsVersion>
+    <HackerOsVersion>1.2.0</HackerOsVersion>
   </PropertyGroup>
 </Project>
 ```
@@ -85,7 +86,7 @@ que celle-ci :
 ## 4. Créer les projets
 
 ```bash
-dotnet new install ../HackerSimulator/wasm2/HackerOs/artifacts/local-nupkg/HackerOs.Templates.1.1.0.nupkg
+dotnet new install ../HackerSimulator/wasm2/HackerOs/artifacts/local-nupkg/HackerOs.Templates.1.2.0.nupkg
 dotnet new hackeros-window  -n Contoso.Notes -o src/Contoso.Notes --appId com.contoso.notes --publisherId pub.contoso
 dotnet new hackeros-command -n Contoso.Hello -o src/Contoso.Hello --appId com.contoso.hello --publisherId pub.contoso
 dotnet new hackeros-service -n Contoso.Sync  -o src/Contoso.Sync  --appId com.contoso.sync  --publisherId pub.contoso
@@ -171,6 +172,40 @@ statique ; le service worker ne s'enregistre que hors de `localhost`. Voir
 4. Les manifestes régénérés portent le nouveau minimum : une app reconstruite
    ne se charge plus sur un OS plus ancien.
 
+### Ce que la 1.2 ajoute
+
+Une mineure : une app compilée contre 1.0.0 ou 1.1.0 tourne sans changement
+sur l'OS 1.2 (vérifié par les deux apps figées de `Tests/fixtures/sdk-compat`).
+Pour utiliser les ajouts, passer `HackerOsVersion` à `1.2.0` et reconstruire ;
+l'app exige alors un OS 1.2 ou plus récent.
+
+- **Tâches lourdes hors de la fenêtre** : `HackBackground.RunAsync` avec une
+  méthode statique et des arguments sérialisables, ou une classe
+  `HackBackgroundJob<TInput, TResult>` ; progression, annulation et
+  `CheckpointAsync` par `HackBackgroundContext`. L'analyseur `HOSBG0001` à
+  `HOSBG0004`, livré dans `HackerOs.AppSdk`, refuse une lambda qui capture
+  (ADR 0128, 0140, [`background-jobs.md`](background-jobs.md)).
+- **Limites par processus** : `HackProcess.GetResourceLimitsAsync`,
+  `SetResourceLimitAsync`, `HackResourceLimits` ; `EMFILE`
+  (`FileSystemErrorCode.TooManyOpenFiles`) et `EAGAIN`
+  (`ProcessLimitExceededException`) à traiter comme des erreurs d'E/S
+  ordinaires ; nouvelles raisons de sortie `CpuLimitExceeded`,
+  `MemoryLimitExceeded`, `OutOfMemory` (ADR 0125, 0139,
+  [`process-limits.md`](process-limits.md)).
+- **OOM killer** : `AppDefinition.OomScoreAdjust` pour qu'une app soit tuée
+  plus tard (ou plus tôt) quand la mémoire manque ; l'OOM killer est coupé par
+  défaut (ADR 0126, 0142, [`oom-killer.md`](oom-killer.md)).
+- **Priorité** : `HackProcess.Nice`, `BasePriority` (ADR 0127,
+  [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md)).
+- **Commandes en worker qui écoutent des événements** :
+  `[assembly: HackWireContext(typeof(MonContexteJson))]` pour que
+  `HackEvents` et `Watch` passent par la passerelle distante (ADR 0124, 0138,
+  [`worker-processes.md`](worker-processes.md)).
+
+La liste exacte et la rupture hors SDK d'un hôte (constructeur
+d'`EcosystemBootCoordinator`) sont dans
+[`sdk-packages.md`](sdk-packages.md#sdk-12).
+
 ### Ce que la 1.1 ajoute
 
 Une mineure : une app compilée contre 1.0.0 tourne sans changement sur l'OS
@@ -209,4 +244,5 @@ La liste exacte et les ruptures hors SDK d'un hôte (trois changements de
 - [x] Flux local, `nuget.config`, version épinglée.
 - [x] Modèles, hôte, apps en projets et en paquets.
 - [x] Tests, publication trimmée, montée de version.
-- [x] SDK 1.1 : version courante, ajouts et lien vers les ruptures hors SDK (`v3.1/4-sdk-1-1`).
+- [x] SDK 1.1 : ajouts et lien vers les ruptures hors SDK (`v3.1/4-sdk-1-1`).
+- [x] SDK 1.2 : version courante, ajouts et lien vers la rupture hors SDK (`exec/10-final`).

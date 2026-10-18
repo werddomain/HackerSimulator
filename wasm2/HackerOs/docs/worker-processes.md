@@ -43,12 +43,14 @@ Une fenêtre reste sur le fil principal : l'essai de rendu dans un worker
 [`remote-window-rendering.md`](remote-window-rendering.md)). Son prototype,
 coupé par défaut, est le seul à démarrer un processus `start` `k = 3`.
 
-Les 70 commandes de `HackerOs.Commands` : 54 en `pool`, 16 en `mainThread`
+Les 74 commandes de `HackerOs.Commands` : 56 en `pool`, 18 en `mainThread`
 avec la raison en commentaire dans leur définition (`cd`, `exit`, `export`,
 `unset`, `jobs`, `read`, `help`, `which`, `kill` pilotent le shell ; `sudo`
 demande un mot de passe à l'agent d'authentification ; `passwd` lit le terminal sans écho ; `hackbackup` ouvre
 le sélecteur de fichiers du navigateur, qui exige le geste de l'utilisateur ; `nano`, `top`, `htop`,
-`watch` utilisent l'écran alternatif du terminal) ; ces raisons ont été
+`watch` utilisent l'écran alternatif du terminal ; `nice` lance sa commande
+par le shell appelant (`RunNicedAsync`) et `renice` change une priorité, ce
+qu'aucune passerelle d'un worker n'offre, ADR 0127) ; les 16 premières raisons ont été
 relues par `exec/1-remote-gateways` et tiennent toujours (ADR 0138 §9). Le
 service d'exemple et `hackwebd` tournent en worker dédié depuis que `HackEvents`
 et `Watch` traversent la frontière (ADR 0124).
@@ -82,7 +84,7 @@ worker, a été retiré). Un hôte composé sans `IWebWorkerRuntime` écrit dans
 | `Platform/HackerOs.Platform.Core` | `IRemoteProcessHost`, `RemoteProcessLaunch`, `RemoteProcessExit`, `IRemoteService`, `ExecutionPlacement` (groupe d'un pipeline), `SystemStartupSignal` ; `AppLifecycleOrchestrator` lance à distance ce que `ShouldRunRemotely` accepte ; `/proc/hackeros/workers`. |
 | `Platform/HackerOs.Platform.WorkerHost` | **Protocole** : `WorkerMessages`, `WireCodec` (encodage explicite, sans réflexion), `RemoteErrors`, `RemoteOps`. **Côté worker** : `WorkerProcessHost`, `RemoteAppExecutionContext`, passerelles distantes (`RemoteGateways`, `RemoteFileSystemGateway`, `RemoteStandardStreams`), `WorkerCpuMeter`, `WorkerAssemblyLoader`, `BrowserWorkerEntryPoint`. **Côté OS** : `WorkerPool`, `WorkerConnection`, `RemoteProcessSession`, `WorkerRemoteProcessHost`, `WorkerAwareCpuTimeAccountant`, `WorkerAwareMemoryAccountant`, `AddHackerOsWorkerProcesses`. **Tests** : `LoopbackWebWorkerRuntime`. |
 | `Infrastructure/HackerOs.Infrastructure.Browser` | `wwwroot/workerHost.js` (création, `postMessage`, `terminate`, `hardwareConcurrency`, `requestIdleCallback`), `wwwroot/workerBootstrap.js` (runtime .NET du worker), `Workers/BrowserWebWorkerRuntime`. Aucun hôte ne les référence : ils sont importés par le C# (`_content/HackerOs.Infrastructure.Browser/…`). |
-| `OS/HackerOs.Ecosystem` | `Program.cs` enregistre `BrowserWebWorkerRuntime` et les workers **dans le navigateur seulement** (`OperatingSystem.IsBrowser()`), en préchargeant `HackerOs.Commands.dll` ; `EcosystemBootCoordinator.MarkSystemStarted` donne le signal de fin de boot. |
+| `OS/HackerOs.Ecosystem.Host` | `AddHackerOsBrowserHost` (appelé par le `Program.cs` de l'Ecosystem) enregistre `BrowserWebWorkerRuntime` et les workers **dans le navigateur seulement** (`OperatingSystem.IsBrowser()`), en préchargeant `HackerOs.Commands.dll` et avec `KnownAssemblies` = les assemblies paresseuses du catalogue (ADR 0124 §4) ; `EcosystemBootCoordinator.MarkSystemStarted` donne le signal de fin de boot. |
 | `Apps/System/HackerOs.Apps.SystemMonitor` | `ProcWorkers`/`ParseWorkers`, section « Workers » de l'onglet Performance. |
 
 ### Démarrage d'un worker
@@ -193,11 +195,11 @@ avec le type et la pile d'origine ; `killed` porte la raison `rs`.
 | `ready` | Toujours un, une fois le système démarré ; remplacé aussitôt qu'il est pris. |
 | `dedicated` | Prend le worker prêt pour un processus `dedicated` ; libéré à sa fin. |
 | `overflow` | Le worker prêt pris par une commande quand aucun cœur n'est libre ; retiré après 30 s vide. |
+| `web` | Un seul pour tous les sites (`AppKind.Web`, ADR 0073 §1) : le premier site prend le worker prêt, les suivants le partagent ; terminé quand son dernier site s'arrête. Requêtes HTTP par `hreq`/`hres` ([`listening-ports-and-dns.md`](listening-ports-and-dns.md)). |
 
 Un worker `pool` ou `overflow` qui a hébergé une victime de l'OOM killer est
 retiré dès qu'il n'héberge plus aucun processus, puis remplacé : sa mémoire
 WebAssembly ne rétrécit jamais (ADR 0142 §5, [`oom-killer.md`](oom-killer.md)).
-| `web` | Un seul pour tous les sites (`AppKind.Web`, ADR 0073 §1) : le premier site prend le worker prêt, les suivants le partagent ; terminé quand son dernier site s'arrête. Requêtes HTTP par `hreq`/`hres` ([`listening-ports-and-dns.md`](listening-ports-and-dns.md)). |
 
 - **Capacité** : `max(2, navigator.hardwareConcurrency)` workers en tout. Au
   plafond, une demande attend qu'un worker se libère et `/var/log/syslog` le
@@ -370,7 +372,7 @@ seule réponse : son descripteur est rendu dès cette réponse (ADR 0139 §3).
 
 - `Tests/HackerOs.Platform.WorkerHost.Tests` (OS complet sans interface, workers
   en boucle locale) :
-  - `CommandParityTests` : **les 70 commandes intégrées** (`nslookup`, `ausearch`, `xdg-open`, `xdg-mime`, `passwd` et `hackbackup` comprises) exécutées dans les
+  - `CommandParityTests` : **les 74 commandes intégrées** (`nslookup`, `ausearch`, `xdg-open`, `xdg-mime`, `passwd`, `hackbackup`, `dmesg`, `nice`, `renice` et `prlimit` comprises) exécutées dans les
     deux modes (fil principal, worker) avec la même sortie, le même code et le
     même arbre de fichiers (`HACKEROS_PARITY_DUMP` pour inspecter) ;
   - `WorkerPoolTests` : démarrage avant / après la fin du boot, worker prêt
@@ -388,10 +390,10 @@ seule réponse : son descripteur est rendu dès cette réponse (ADR 0139 §3).
     assembly inconnue.
 - `Tests/HackerOs.App.Abstractions.Tests` : `Execution` dans le mappeur, le
   validateur, le sérialiseur et le schéma.
-- `Tests/HackerOs.HostSmoke.Tests` (`build/verify-hosts.sh`) : dans les hôtes
-  navigateur, pipeline, `/proc/hackeros/workers`, `echo` pendant `stress`,
-  « not-responding », `kill -9` et `kill` ; sur le serveur, absence de
-  `/proc/hackeros`.
+- `Tests/HackerOs.HostSmoke.Tests` (`build/verify-hosts.sh`) : sur les trois
+  hôtes (le serveur sert le même OS depuis l'ADR 0130), pipeline,
+  `/proc/hackeros/workers`, `echo` pendant `stress`, « not-responding »,
+  `kill -9` et `kill`.
 
 ## Liste des tâches du chantier `rebuild/5-worker-processes`
 
@@ -414,7 +416,7 @@ seule réponse : son descripteur est rendu dès cette réponse (ADR 0139 §3).
 
 - [x] Bus « wire » côté OS (`IWireTopicMessageBus`, `IWireEventBus`), mêmes règles d'autorisation.
 - [x] Opérations `ev.*`, `watch.open` et message `ev` ; crédit de 256 messages.
-- [x] Codecs intégrés et `HackWireContextAttribute` (SDK 1.2, `PublicAPI.Unshipped.txt`).
+- [x] Codecs intégrés et `HackWireContextAttribute` (SDK 1.2 ; versé dans `PublicAPI.Shipped.txt` par `exec/10-final`, ADR 0132 §2).
 - [x] Désabonnement à la fin, au `kill` et à la mort du worker.
 - [x] Service d'exemple et `hackwebd` en worker dédié ; revue des 16 commandes en `mainThread`.
 - [x] `KnownAssemblies`, refus avec le code 127 ; `sample-cmd` dans l'Ecosystem et le test des hôtes.

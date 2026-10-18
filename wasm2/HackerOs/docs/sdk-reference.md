@@ -26,13 +26,13 @@ Conventions de l'API :
 ## Bibliothèques
 
 Toutes sont publiées en paquets NuGet locaux du même nom, à la version de
-`build/Versions.props` (`1.1.0` depuis la série v3.1, ADR 0117 §5 ; `1.0.0` au gel du SDK, ADR 0114) ; un autre
+`build/Versions.props` (`1.2.0` depuis la fin de la série `exec`, ADR 0132 §2 ; `1.1.0` pour la série v3.1, ADR 0117 §5 ; `1.0.0` au gel du SDK, ADR 0114) ; un autre
 dépôt les consomme comme le décrit [`building-on-hackeros.md`](building-on-hackeros.md).
 La promesse de compatibilité SemVer couvre les bibliothèques de cette page et
 `HackerOs.Theming.Blazor`, pas la plateforme (ADR 0114 §2).
 
 Cette page présente les API qu'une app utilise au quotidien ; elle n'est pas
-exhaustive. La liste complète et exacte de la surface publique 1.1 est le
+exhaustive. La liste complète et exacte de la surface publique 1.2 est le
 fichier `PublicAPI.Shipped.txt` de chaque projet (environ 940 types au gel de la 1.0),
 vérifié au build par l'analyseur d'API publique : un ajout va dans
 `PublicAPI.Unshipped.txt`, un retrait exige une ligne `*REMOVED*` (ADR 0114).
@@ -41,7 +41,7 @@ vérifié au build par l'analyseur d'API publique : un ajout va dans
 |---|---|---|
 | `Shared/HackerOs.App.Abstractions` | `HackerOs.App.Abstractions` | Définir une app (`AppDefinition`, capacités, manifeste). |
 | `Shared/HackerOs.Simulation.Abstractions` | `HackerOs.Simulation.Abstractions.*` | Types de données du système simulé (chemins, passerelles, journaux, notifications, processus). |
-| `Shared/HackerOs.AppSdk` | `HackerOs.AppSdk`, `.IO`, `.Settings`, `.Keyring`, `.Apps`, `.Net`, `.Clipboard`, `.Diagnostics`, `.ServiceProcess`, `.Shell`, `.Administration` | Façades `Hack*`, contexte d'exécution, commandes et services. |
+| `Shared/HackerOs.AppSdk` | `HackerOs.AppSdk`, `.IO`, `.Settings`, `.Keyring`, `.Apps`, `.Net`, `.Clipboard`, `.Diagnostics`, `.ServiceProcess`, `.Shell`, `.Administration`, `.Threading` (SDK 1.2) | Façades `Hack*`, contexte d'exécution, commandes et services. |
 | `Shared/HackerOs.AppSdk.Blazor` | `HackerOs.AppSdk.Blazor`, `.Charts`, `.Interop`, `.Settings` | Apps fenêtrées, dialogues, graphiques. |
 | `Shared/HackerOs.AppSdk.FileView` | `HackerOs.AppSdk.FileView` | Vue de fichiers réutilisable. |
 | `Shared/HackerOs.AppSdk.Terminal` | `HackerOs.AppSdk.Terminal` | Terminal xterm.js. |
@@ -65,8 +65,8 @@ vérifié au build par l'analyseur d'API publique : un ajout va dans
 | `AppSettingsSchemaManifest(SchemaVersion, Fields)`, `AppSettingFieldManifest(Key, ValueType, DefaultValue, Scope, Sensitivity, AllowedValues, Group)` | Schéma des paramètres ; `AppSettingValueType` : `String`, `Integer`, `Boolean`, `Enum`. |
 | `AppResourceProfileManifest` | Poids CPU, mémoire, disque et réseau simulés (`None` par défaut). |
 | `AppDefinitionMapper.ToManifest(definition)` | Définition → `AppManifest` (utile dans les tests). |
-| `HackerOsSdk` | `Version` (version du SDK chargé, par exemple `1.1.0`), `SemanticVersion`, `IsCompatible(range)` (ADR 0098 §3). `AppDefinition.SdkCompatibility` déclare une plage ; par défaut, la version contre laquelle l'app est compilée est le minimum. |
-| `AppManifest` | Manifeste validé, lu par l'OS ; `AppContext.Manifest` à l'exécution. |
+| `HackerOsSdk` | `Version` (version du SDK chargé, par exemple `1.2.0`), `SemanticVersion`, `IsCompatible(range)` (ADR 0098 §3). `AppDefinition.SdkCompatibility` déclare une plage ; par défaut, la version contre laquelle l'app est compilée est le minimum. |
+| `AppManifest` | Manifeste validé, lu par l'OS ; `AppContext.Manifest` à l'exécution. `OomScoreAdj` (champ `oomScoreAdj`, SDK 1.2, ADR 0126 §4) : valeur de `AppDefinition.OomScoreAdjust`. |
 | `AppCapabilities` | Catalogue des capacités (voir ci-dessous) ; `Describe`, `IsDangerous`, `GetRisk`, `IsKnown`, `RequiresWindowKind`, `All`. |
 | `VirtualPath` | Chemin absolu canonique (`Parse`, `Value`). |
 
@@ -122,7 +122,7 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `StopRequested`, `StopRequest` | Demande d'arrêt (`SIGTERM`, ADR 0069), levée une fois avant l'annulation du jeton : `HackStopRequestedEventArgs` (`Reason`, `Deadline`, `Defer`). Préférer `HackProcess.Current`. Après un kill, chaque passerelle lève `HackProcessKilledException`. |
 | `UserId`, `UserLoginName`, `UserDisplayName`, `HomeDirectory`, `UserAuthority`, `IsRootElevated` | Utilisateur effectif. |
 | `GrantedCapabilities`, `Capabilities` | Capacités accordées à cette instance. |
-| `FileSystem`, `Watch` | Système de fichiers brut (préférer `HackFile`…) et surveillance. |
+| `FileSystem`, `Watch` | Système de fichiers brut (préférer `HackFile`…) et surveillance ; `Watch` (et `HackFileSystemWatcher`) marche aussi dans un worker depuis l'ADR 0124. |
 | `Logging` | `Log(severity, message, properties)` → `/var/log/apps/<appId>.log`. |
 | `Notifications` | `Post(severity, title, message, actions, expiresAfter)` ; `notifications.post`. |
 | `Events` | Bus d'événements : sujets de l'app (`Publish(topic, payload)`, `Subscribe`, `SubscribeChannel`, `RegisterSharedChannel`) et événements de la plateforme (`Subscribe<TEvent>`). Dans un worker, les charges d'un type de l'app sont déclarées par `[assembly: HackWireContext(typeof(...))]` (`HackWireContextAttribute`, SDK 1.2, ADR 0124) ; voir [`app-sdk.md`](app-sdk.md#processus-dans-des-web-workers-adr-0070-et-0071). |
@@ -180,6 +180,7 @@ porte le code du moteur, et `ShellErrorText.Describe` donne le message Linux.
 |---|---|---|---|
 | `NoSpace` (1800) | `ENOSPC` | Le navigateur refuse l'écriture (quota atteint), ou il reste moins que la réserve de root et l'appelant n'est pas administrateur | `No space left on device` |
 | `FileTooLarge` (1801) | `EFBIG` | Le contenu dépasse 16 Mio (taille maximale d'un fichier) | `File too large` |
+| `TooManyOpenFiles` (1802, SDK 1.2) | `EMFILE` | Le processus a atteint sa limite `nofile` de descripteurs ouverts (ADR 0125, [`process-limits.md`](process-limits.md)) | `Too many open files` |
 
 ### Paramètres (`HackerOs.AppSdk.Settings`)
 
@@ -219,10 +220,11 @@ porte le code du moteur, et `ShellErrorText.Describe` donne le message Linux.
 
 | API | Membres | Capacité | Document |
 |---|---|---|---|
-| `HackProcess` (`.Diagnostics`) | `GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `GetChildren`, `KillAsync` (`SIGKILL`), `TerminateAsync` (`SIGTERM`, 5 s), `CloseMainWindowAsync` ; état, CPU, mémoire (`WorkingSet64` = `VmRSS`, `PrivateMemorySize64` = `RssAnon`, ADR 0068), E/S, arguments ; `UserProcessorTime`, `PrivilegedProcessorTime`, `TotalProcessorTime`, `Responding` (ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)) ; `GetResourceLimitsAsync` → `HackResourceLimits`, `SetResourceLimitAsync` (`getrlimit`/`prlimit`, ADR 0125, SDK 1.2, [`process-limits.md`](process-limits.md)) ; raison de fin `ProcessExitReason.OutOfMemory` d'un processus tué par l'OOM killer (SDK 1.2, [`oom-killer.md`](oom-killer.md)) | `filesystem.system.read` pour `/proc`, `process.list`, `process.manage` | [`task-manager.md`](task-manager.md) |
+| `HackProcess` (`.Diagnostics`) | `GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `GetChildren`, `KillAsync` (`SIGKILL`), `TerminateAsync` (`SIGTERM`, 5 s), `CloseMainWindowAsync` ; état, CPU, mémoire (`WorkingSet64` = `VmRSS`, `PrivateMemorySize64` = `RssAnon`, ADR 0068), E/S, arguments ; `UserProcessorTime`, `PrivilegedProcessorTime`, `TotalProcessorTime`, `Responding` (ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)) ; `GetResourceLimitsAsync` → `HackResourceLimits` (`Cpu`, `Rss`, `NoFile`, `NProc`, `Enforcement` : `HackResourceLimitEnforcement`, `IsCpuMeasured`, `IsMemoryMeasured`), `SetResourceLimitAsync(ResourceLimitKind, soft, hard)` (`getrlimit`/`prlimit`, ADR 0125, SDK 1.2, [`process-limits.md`](process-limits.md)) ; raisons de fin `ProcessExitReason.CpuLimitExceeded`, `MemoryLimitExceeded` (SDK 1.2, ADR 0125) et `OutOfMemory` d'un processus tué par l'OOM killer (SDK 1.2, [`oom-killer.md`](oom-killer.md)) | `filesystem.system.read` pour `/proc`, `process.list`, `process.manage` | [`task-manager.md`](task-manager.md) |
 | `HackProcess.Current` → `HackCurrentProcess` ; `HackProcess.CheckpointAsync` (`.Diagnostics`) | `Id`, `StopToken`, `IsStopRequested`, `StopRequest`, `StopRequested` ; point d'arrêt : lève si l'arrêt est demandé, rend la main au-delà de 8 ms, sinon sans allocation | — | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
 | `HackStopRequestedEventArgs`, `HackProcessKilledException` (`.Diagnostics`) | `Reason`, `RequestedAt`, `Deadline`, `GracePeriod`, `Defer(Task)` ; exception des passerelles d'un processus tué, avec sa `Reason` (`Killed` par défaut, SDK 1.2, ADR 0140) ; elle dérive de `OperationCanceledException` | — | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
-| `HackProcess.Nice`, `BasePriority`, `ParseStatNice` (`.Diagnostics`) ; `IAppProcessGateway.GetNice` / `SetNice` (`Simulation.Abstractions`) ; `IShellSession.RunNicedAsync` | Priorité `nice` (-20..19) d'un processus, lue dans `/proc/<pid>/stat` ; la changer (monter : son processus ; baisser ou autre utilisateur : root) ; lancer une commande avec un ajustement (ADR 0127 §1) | `process.manage` hors de son processus et de ses enfants (ADR 0140), `shell.control` | [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md) |
+| `HackProcess.Nice`, `BasePriority`, `ParseStatNice` (`.Diagnostics`) ; `IAppProcessGateway.GetNice` / `SetNice`, `ProcessNice` (`Simulation.Abstractions`) ; `IShellSession.RunNicedAsync` | Priorité `nice` (-20..19) d'un processus, lue dans `/proc/<pid>/stat` ; la changer (monter : son processus ; baisser ou autre utilisateur : root) ; lancer une commande avec un ajustement (SDK 1.2, ADR 0127 §1) | `process.manage` hors de son processus et de ses enfants (ADR 0140), `shell.control` | [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md) |
+| `ResourceLimitKind`, `ResourceLimit`, `ProcessResourceLimits`, `ResourceLimitChangeResult`, `ProcessLimitExceededException`, `IAppProcessGateway.SetResourceLimitAsync` (`Simulation.Abstractions`, SDK 1.2) | Contrat des limites (ADR 0125) : `ResourceLimit.Unlimited` vaut `long.MaxValue` ; `ProcessLimitExceededException` (`EAGAIN`, « Resource temporarily unavailable ») : refus par l'OS d'un lancement au-delà de `nproc`, vu par l'app comme un échec de lancement | `process.manage` pour changer la limite d'un autre processus | [`process-limits.md`](process-limits.md) |
 | `IAppProcessGateway.KillAsync(pid, reason)` (`Simulation.Abstractions`) | Tuer un processus en attendant l'accusé de l'OS ; utilisé par `HackProcess.KillAsync`, y compris depuis un Web Worker (méthode par défaut qui retombe sur `Kill`) | `process.manage` | [`worker-processes.md`](worker-processes.md) |
 | `HackServiceController` (`.ServiceProcess`) | `GetServicesAsync`, `RefreshAsync`, `RefreshStatusAsync`, `StartAsync`, `StopAsync`, `ResetFailedAsync`, `SetStartTypeAsync`, `Status`, `StartType`, `ActiveState`, `Result`, `Health`, `StatusText`, `ActiveStateChangedAt`, `ExitCode` ; `HackServiceStates.ToSystemdName` (ADR 0097) | `services.manage` sur les autres apps | [`task-manager.md`](task-manager.md) |
 
@@ -497,4 +499,5 @@ paramètre `Tokens` appliqué par-dessus le thème de base.
 - [x] Localisation : `Culture`/`FormatCulture`, `HackLocale`, `GetLocalizer<T>`, `IShellSession.GetCommands(culture)` (`v3/12`, ADR 0104).
 - [x] Titre de fenêtre : `WindowTitle`, `SetWindowTitleAsync`, `FormatWindowTitle`, `IAppWindowGateway` (`v3.1/3`, SDK 1.1, versé dans `PublicAPI.Shipped.txt` par `v3.1/4-sdk-1-1`).
 - [x] Tâches en arrière-plan : `HackBackground`, `HackBackgroundContext`, `IAppExecutionContext.Background`, `HackProcessKilledException.Reason`, analyseur `HOSBG` (`exec/5`, ADR 0128 et 0140).
+- [x] SDK 1.2 (ADR 0132) : `HackWireContextAttribute` (`exec/1`), limites de processus et `TooManyOpenFiles` (`exec/2`), `OomScoreAdjust`/`OomScoreAdj` et `OutOfMemory` (`exec/3`), `nice` (`exec/4`), versés dans `PublicAPI.Shipped.txt` par `exec/10-final`.
 - [x] Relecture finale de la migration v3 (`v3/16-final`) : renvoi vers les fichiers `PublicAPI.Shipped.txt`, liste exhaustive de la surface 1.0.

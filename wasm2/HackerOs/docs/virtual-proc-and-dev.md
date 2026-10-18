@@ -7,7 +7,8 @@ Mise en œuvre de la section 5.4 du [plan de refonte](ecosystem-rebuild-plan.md)
 
 HackerOS expose l'état du système comme Linux : `/proc` décrit les processus,
 la mémoire, le CPU et la charge ; `/dev` offre les périphériques `null`, `zero`,
-`random` et `urandom`. Les deux montages sont **calculés à chaque lecture** et
+`random` et `urandom`, plus `kmsg` quand l'hôte fournit le journal du noyau
+(ADR 0126). Les deux montages sont **calculés à chaque lecture** et
 **jamais écrits dans IndexedDB**.
 
 ## Architecture
@@ -19,7 +20,7 @@ Code : `Platform/HackerOs.Platform.Core/FileSystem/Virtual/`.
 | `IVirtualFileSystemProvider` | Marqueur d'un fournisseur calculé, jamais persisté. `FileSystemService` n'émet aucun `FileSystemChangeEvent` pour ses chemins. |
 | `VirtualFileSystemProvider` | Base commune : identité stable (SHA-256 de `"<providerId>:<chemin>"`), révision = `CurrentTick + 1`, refus `PermissionDenied` de toute création, suppression, déplacement, copie et `chmod`. |
 | `ProcFileSystemProvider` (`procfs`) | Monté sur `/proc`. Lit `IProcessManager`, `IResourceSimulator`, `VirtualHardwareProfile` et `ISimulationClock`, et les compteurs de `ProcMetricsSources` (ADR 0057, [`system-metrics.md`](system-metrics.md)). |
-| `DevFileSystemProvider` (`devfs`) | Monté sur `/dev`. Quatre entrées `CharacterDevice` en `0666`. |
+| `DevFileSystemProvider` (`devfs`) | Monté sur `/dev`. Quatre entrées `CharacterDevice` en `0666`, plus `kmsg` en `0644` quand l'hôte fournit le journal du noyau (`KernelLog`, ADR 0126). |
 
 Branchement : `EcosystemServiceCollectionExtensions` passe les deux montages au
 `FileSystemMountRouter`, pour les deux hôtes WASM. Le gestionnaire de processus
@@ -53,9 +54,9 @@ Contrats touchés :
 | `/proc/<pid>/environ` | fichier `0400` | paires `NOM=valeur` terminées par NUL (phase 3) ; vide sans entrée |
 | `/proc/<pid>/cwd` | lien `0777` | répertoire courant du processus (phase 3) ; `/home/<login>` sans entrée |
 | `/proc/<pid>/stat` | fichier `0444` | une ligne au format `proc(5)`, 52 champs ; `utime` et `stime` (14 et 15) en `USER_HZ`, mesurés quand la mesure CPU est active, sinon `utime` reconstruit depuis le simulateur (phase 5, ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)) ; `priority` et `nice` (18 et 19) depuis la valeur `nice` du processus (ADR 0127, [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md)) |
-| `/proc/<pid>/limits` | fichier `0444` | tableau de `proc(5)` (`Max cpu time`, `Max resident set`, `Max open files`, `Max processes` et les autres lignes de Linux en `unlimited`), puis `# enforcement: strict (worker)`, `best-effort (main thread)` ou `off (HackerOs:ResourceLimits:Enabled=false)` et, sans mesure, `# cpu, rss: inactive (not measured)` (ADR 0125 et 0139, [`process-limits.md`](process-limits.md)) |
+| `/proc/<pid>/limits` | fichier `0444` | tableau de `proc(5)` limité aux quatre limites appliquées (`Max cpu time`, `Max resident set`, `Max processes`, `Max open files`), puis `# enforcement: strict (worker)`, `best-effort (main thread)` ou `off (HackerOs:ResourceLimits:Enabled=false)` et, sans mesure, `# cpu, rss: inactive (not measured)` (ADR 0125 et 0139, [`process-limits.md`](process-limits.md)) |
 | `/proc/<pid>/fd/` | dossier `0500` | un lien par descripteur ouvert : `0`, `1`, `2` vers `/dev/tty` (terminal) ou `/dev/null`, puis le fichier lu ou écrit (`exec/2`) |
-| `/proc/<pid>/oom_score` | fichier `0444` | `VmRSS × 1000 / MemTotal + oom_score_adj`, borné à `[0, 2000]` (ADR 0126, [`oom-killer.md`](oom-killer.md)) |
+| `/proc/<pid>/oom_score` | fichier `0444` | `VmRSS × 1000 / MemTotal + oom_score_adj`, borné à `[0, 2000]` ; `0` pour un processus exempté (`oom_score_adj` = `-1000`) (ADR 0126, [`oom-killer.md`](oom-killer.md)) |
 | `/proc/<pid>/oom_score_adj` | fichier `0644` | `-1000` à `1000` ; le propriétaire monte la valeur, descendre sous le plancher demande `sudo` (ADR 0142 §2) |
 | `/proc/<pid>/io` | fichier `0400` | `rchar`, `wchar`, `syscr`, `syscw`, `read_bytes`, `write_bytes`, `cancelled_write_bytes` (phase 4, ADR 0057) |
 | `/proc/self` | lien `0777` | `/proc/<pid de l'appelant>`, absent sans processus |
@@ -232,6 +233,10 @@ pour agir.
   est vérifié au seul endroit qui publie, `FileSystemService`.
 - **Mutations refusées par le fournisseur lui-même**, en plus des bits de mode :
   même l'autorité `System`, qui ignore les modes, reçoit `PermissionDenied`.
+  Deux écritures font exception depuis la série `exec` : `/proc/<pid>/oom_score_adj`
+  (seul fichier inscriptible de `/proc`, ADR 0126 §4 et 0142 §2) et une ligne
+  écrite dans `/dev/kmsg` par root (ADR 0142 §7) ; ni l'une ni l'autre n'est
+  persistée.
 
 ## Tests
 
@@ -260,3 +265,4 @@ pour agir.
 - [x] Faire lire `/proc` par `ps`.
 - [x] Écrire les tests de contrat.
 - [x] `/proc/<pid>/limits` et `/proc/<pid>/fd/` (`exec/2-process-limits`).
+- [x] `/proc/<pid>/oom_score`, `oom_score_adj`, `oom_kill` de `/proc/vmstat` et `/dev/kmsg` (`exec/3-oom-killer`).

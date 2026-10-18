@@ -18,7 +18,7 @@ empreintes des ressources, ADR 0098 §3 à §5) sont décrites dans
 
 ## Version unique
 
-- `build/Versions.props` définit `HackerOsVersion` (aujourd'hui `1.1.0`, publiée par le chantier `v3.1/4-sdk-1-1`),
+- `build/Versions.props` définit `HackerOsVersion` (aujourd'hui `1.2.0`, publiée par le chantier `exec/10-final`),
   importé par `Directory.Build.props` : chaque projet de la solution porte ce
   `Version`.
 - Avant le gel : `0.9.0-preview.<n>`. Depuis le gel du SDK 1.0 (chantier
@@ -220,6 +220,7 @@ app n'est touchée : ces types ne font pas partie du SDK.
 | 1.1.0 | `HackerOs.Platform.Blazor` | `WindowGeometryPersistence.RestoreAsync` rend `SavedWindowGeometry?` au lieu de `WindowBounds?` ; `SaveAsync` prend `SavedWindowGeometry` au lieu de `(WindowBounds, isEligible)` (ADR 0116, 0122 : seules la taille et l'état agrandi sont retenus) | passer par `SavedWindowGeometry`, ou par `WindowGeometryRecorder` |
 | 1.1.0 | `HackerOs.Platform.Blazor` | `WindowGeometrySettings.Parse` rend `SavedWindowGeometry?` ; `Serialize(WindowBounds)` devient `Serialize(appId, SavedWindowGeometry)` | adapter l'appel |
 | 1.1.0 | `HackerOs.Platform.Blazor` | `WindowLaunchCoordinator.Present(...)` (deux surcharges) remplacé par `PresentAsync(...)` ; le constructeur prend maintenant l'enregistreur de géométrie | appeler `PresentAsync` ; laisser l'injection de dépendances construire le coordinateur (`AddHackerOsBrowserHost`) |
+| 1.2.0 | `HackerOs.Ecosystem.Host` | le constructeur d'`EcosystemBootCoordinator` prend trois paramètres optionnels de plus (`OomKiller? oomKiller`, `IOsSettingsService? settings`, `CrossOriginIsolationProbe? isolation`, ADR 0126, 0131) : rupture binaire, le code source compile toujours | recompiler l'hôte ; laisser l'injection de dépendances construire le coordinateur (`AddHackerOsEcosystem`) |
 
 ## SDK 1.1
 
@@ -242,17 +243,57 @@ Une app reconstruite contre 1.1.0 porte `sdkCompatibility.minimumVersion:
 1.1.0` et n'est plus admise par un OS 1.0. L'app de compatibilité compilée en
 1.0.0 se charge et tourne toujours sur l'OS 1.1 (voir ci-dessous).
 
+## SDK 1.2
+
+Publiée une seule fois, à la fin de la série `exec`, par le chantier
+`exec/10-final` ([ADR 0132](adr/0132-exec-series-sdk-1-2-and-merge-rules.md) §2,
+réponse E4 A de Benoit) : `build/tools/ship-public-api.sh` verse chaque
+`PublicAPI.Unshipped.txt` dans son `PublicAPI.Shipped.txt` (795 lignes, triées
+en ordre ordinal, `*REMOVED*` appliqués) et `HackerOsVersion` passe à `1.2.0`.
+Ajouts du SDK, tous compatibles avec une app 1.0 ou 1.1 (chaque nouveau membre
+d'interface a une implémentation par défaut, chaque nouvelle valeur
+d'énumération prend un nombre à la fin) :
+
+| Bibliothèque | Ajout | Décision |
+|---|---|---|
+| `HackerOs.AppSdk` | `HackWireContextAttribute` (`[assembly: HackWireContext(typeof(...))]`), pour les passerelles d'événements et de surveillance appelées depuis un worker | ADR 0124, 0138 |
+| `HackerOs.AppSdk` | `HackProcess.GetResourceLimitsAsync`, `SetResourceLimitAsync`, `HackResourceLimits`, `HackResourceLimitEnforcement`, `HackProcessKilledException.Reason` et son constructeur à raison | ADR 0125, 0139 |
+| `HackerOs.AppSdk` | `HackProcess.Nice`, `BasePriority`, `ParseStatNice` ; `IShellSession.RunNicedAsync` | ADR 0127 |
+| `HackerOs.AppSdk` | `HackBackground.RunAsync` (cinq surcharges), `HackBackgroundJob<TInput, TResult>`, `HackBackgroundContext`, `HackBackgroundOptions`, `HackBackgroundProgress`, `HackBackgroundJobException`, `IAppBackgroundGateway`, `IAppExecutionContext.Background` ; analyseur `HOSBG0001` à `HOSBG0004` dans le paquet | ADR 0128, 0140 |
+| `HackerOs.App.Abstractions` | `AppDefinition.OomScoreAdjust`, `AppManifest.OomScoreAdj` (`oomScoreAdj` du manifeste) | ADR 0126, 0142 |
+| `HackerOs.Simulation.Abstractions` | `ResourceLimit`, `ResourceLimitKind`, `ProcessResourceLimits`, `ResourceLimitChangeResult`, `ProcessLimitExceededException`, `IProcessResourceLimitTable`, `IProcessFileDescriptorTable`, `ProcessFileDescriptor`, `NoDescriptor`, `IAppFileSystemGateway.OpenDescriptorAsync`, `IAppProcessGateway.SetResourceLimitAsync`, `ProcessStartRequest.ResourceLimits` et `ResourceLimitExempt`, `FileSystemErrorCode.TooManyOpenFiles`, `ProcessExitReason.CpuLimitExceeded`, `MemoryLimitExceeded`, `OutOfMemory` | ADR 0125, 0126, 0139 |
+| `HackerOs.Simulation.Abstractions` | `ProcessNice`, `IProcessManager.GetNice`/`SetNice`, `IAppProcessGateway.GetNice`/`SetNice`, `ProcessStartRequest.Nice` et `OomScoreAdjust` | ADR 0126, 0127 |
+| `HackerOs.Simulation.Abstractions` | `WorkerSnapshot.RuntimeHeapBytes`, `IWebWorkerMemoryMeter`, `ISynchronousWebWorker`, `SynchronousAnswerOutcome` | ADR 0131, 0142, 0143 |
+
+Les autres bibliothèques publiées (plateforme, hôte, serveur, apps de base)
+reçoivent les ajouts de la série sans la promesse du SDK ; la seule rupture est
+listée dans « Ruptures hors SDK ». Une app reconstruite contre 1.2.0 porte
+`sdkCompatibility.minimumVersion: 1.2.0` et n'est plus admise par un OS 1.0 ou
+1.1. Les apps de compatibilité compilées en 1.0.0 et en 1.1.0 se chargent et
+tournent sur l'OS 1.2 (voir ci-dessous).
+
+```bash
+build/tools/ship-public-api.sh --check   # ce qu'une publication verserait, sans rien changer
+build/tools/ship-public-api.sh           # à la publication, puis HackerOsVersion dans build/Versions.props
+```
+
 ### App de compatibilité
 
-`Tests/fixtures/sdk-compat` garde `packages/Contoso.Sdk1Compat.1.0.0.nupkg`,
-une app (fenêtre `com.contoso.sdk1-window`, commande `sdk1-compat`) compilée une
-fois contre les paquets `1.0.0` par `produce-fixture.sh`, hors du dépôt, et
-**jamais reconstruite**. Les tests la chargent dans l'OS courant ; à une 2.0,
-une app `2.0.0` s'y ajoute et celle de la 1.0 devient un test de refus.
+`Tests/fixtures/sdk-compat/packages` garde une app par version publiée qui en
+a reçu une, chacune compilée **une fois** par `produce-fixture.sh`, hors du
+dépôt, contre les paquets de sa version, et **jamais reconstruite** :
+
+| Paquet | Compilé contre | Contenu |
+|---|---|---|
+| `Contoso.Sdk1Compat.1.0.0.nupkg` | 1.0.0 (`v3/15`) | fenêtre `com.contoso.sdk1-window` (enregistre et relit un fichier), commande `sdk1-compat` |
+| `Contoso.Sdk11Compat.1.1.0.nupkg` | 1.1.0, paquets du sommet de `v3.1/base` (`exec/10-final`, ADR 0132 §1) | fenêtre `com.contoso.sdk11-window` qui se nomme avec `SetWindowTitleAsync` et `FormatWindowTitle` (`note.txt — SDK 1.1 Window`), `rememberGeometry: false` ; commande `sdk11-compat` qui appelle aussi `HackUserAccounts.ValidateNewPassword` |
+
+Les tests les chargent dans l'OS courant ; à une 2.0, une app `2.0.0` s'y
+ajoute et celles de la 1.x deviennent des tests de refus.
 
 ```bash
 build/pack-local.sh
-Tests/fixtures/sdk-compat/produce-fixture.sh     # seulement pour une nouvelle majeure
+Tests/fixtures/sdk-compat/produce-fixture.sh --project Contoso.Sdk11Compat --version 1.1.0 --feed <flux 1.1.0>
 ```
 
 ## Tests
@@ -260,8 +301,8 @@ Tests/fixtures/sdk-compat/produce-fixture.sh     # seulement pour une nouvelle m
 | Où | Quoi |
 |---|---|
 | `Tests/HackerOs.Templates.E2E.Tests` | empaquette tout (`pack-local`, ou le flux de `HACKEROS_LOCAL_FEED`), installe les modèles dans un `DOTNET_CLI_HOME` isolé, génère et compile chaque modèle d'app hors du dépôt avec un cache NuGet isolé (manifeste, genre, version minimale du SDK vérifiés) ; puis génère un hôte, y ajoute une app fenêtrée et une commande générées, le compile (catalogue agrégé vérifié), le lance, crée le profil dans Chromium, ouvre l'app (`Clicked 0 times` puis `1`) et exécute `hello Morpheus` dans le terminal (`Hello, Morpheus!`). |
-| `Tests/HackerOs.Templates.E2E.Tests` (`A_host_runs_an_app_package_compiled_against_SDK_1_0_0`) | un hôte généré, avec `PackageReference` vers l'app de compatibilité 1.0.0 (source `hackeros-sdk-fixtures`), démarre dans Chromium ; la fenêtre enregistre et relit un fichier, `sdk1-compat still binds` s'exécute dans le terminal (ADR 0114 §4) |
-| `Tests/HackerOs.SdkCompatibility.Tests` | l'app de compatibilité 1.0.0 : admise par le catalogue courant, chaque type et membre HackerOS qu'elle référence existe, chaque méthode compile contre le SDK courant (JIT), la commande tourne (ADR 0114 §4) |
+| `Tests/HackerOs.Templates.E2E.Tests` (`A_host_runs_app_packages_compiled_against_SDK_1_0_0_and_1_1_0`) | un hôte généré, avec `PackageReference` vers les apps de compatibilité 1.0.0 et 1.1.0 (source `hackeros-sdk-fixtures`), démarre dans Chromium ; chaque fenêtre enregistre et relit un fichier, celle de la 1.1 affiche son titre (`note.txt — SDK 1.1 Window`, puis `sdk11-window.txt — SDK 1.1 Window`), `sdk1-compat still binds` et `sdk11-compat still binds` s'exécutent dans le terminal (ADR 0114 §4, ADR 0132 §1) |
+| `Tests/HackerOs.SdkCompatibility.Tests` | les apps de compatibilité 1.0.0 et 1.1.0 : admises par le catalogue courant, chaque type et membre HackerOS qu'elles référencent existe, chaque méthode compile contre le SDK courant (JIT), les deux commandes tournent (ADR 0114 §4, ADR 0132 §1) |
 | `Tests/HackerOs.App.Abstractions.Tests` (`HackerOsSdkTests`) | lecture de la version, compatibilité des plages |
 | `Tests/HackerOs.Tools.ManifestGenerator.Tests` | version du SDK lue dans la référence, empreintes et `HOSAPP0023`, `HOSAPP0022`, app plus récente que le SDK de l'hôte (`HOSAPP0021`) |
 | `Tests/HackerOs.Platform.Core.Tests` | `AppCatalog` (refus, cascade des dépendances, propriétaire des commandes), `AppAssetStore`, `ShellCommandResolver` |
@@ -303,4 +344,5 @@ Vérifié à la main aussi : une app qui ajoute la référence
 - [x] Cinq modèles et leur test de bout en bout.
 - [x] Gel du SDK 1.0 (`v3/15`, ADR 0114) : tout en `Shipped`, version `1.0.0`, API obsolètes retirées, app de compatibilité et ses tests, guide [`building-on-hackeros.md`](building-on-hackeros.md).
 - [x] SDK 1.1 (`v3.1/4-sdk-1-1`, ADR 0117 §5) : `Unshipped` versé dans `Shipped`, version `1.1.0`, ruptures hors SDK listées, app de compatibilité 1.0 toujours chargée.
+- [x] SDK 1.2 (`exec/10-final`, ADR 0132 §2) : `build/tools/ship-public-api.sh`, `Unshipped` versé dans `Shipped`, version `1.2.0`, rupture hors SDK listée, app de compatibilité 1.1.0 ajoutée, 1.0.0 et 1.1.0 chargées.
 - [x] Documentation (ce fichier, `app-model`, `app-sdk`, `sdk-reference`, `sdk-developer-guide`, `building-and-testing`, `project-overview`, mesure des ressources, notes des documents archivés) et index.
