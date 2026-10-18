@@ -303,6 +303,9 @@
   <data name="Errno.IsDirectory" xml:space="preserve">
     <value>Est un dossier</value>
   </data>
+  <data name="Errno.TooManyOpenFiles" xml:space="preserve">
+    <value>Trop de fichiers ouverts</value>
+  </data>
   <data name="Errno.NoSpace" xml:space="preserve">
     <value>Aucun espace disponible sur le périphérique</value>
   </data>
@@ -440,6 +443,12 @@ Annuler : décider au prochain lancement.</value>
   </data>
   <data name="Shell.JobAlreadyInBackground" xml:space="preserve">
     <value>bg : la tâche {0} est déjà en arrière-plan</value>
+  </data>
+  <data name="Shell.CpuLimitExceeded" xml:space="preserve">
+    <value>Limite de temps CPU dépassée</value>
+  </data>
+  <data name="Shell.ForkFailed" xml:space="preserve">
+    <value>fork : ressource temporairement indisponible</value>
   </data>
   <data name="Shell.Killed" xml:space="preserve">
     <value>Processus arrêté</value>

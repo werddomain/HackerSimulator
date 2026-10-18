@@ -421,10 +421,17 @@ public sealed partial class ShellInterpreter
         {
             case AppLaunchStatus.Launched or AppLaunchStatus.FocusedExisting:
                 if (launch.ExitCode == KilledExitCode
-                    && launch.Process?.ExitReason is ProcessExitReason.Killed or ProcessExitReason.Timeout)
+                    && launch.Process?.ExitReason is ProcessExitReason.Killed or ProcessExitReason.Timeout
+                        or ProcessExitReason.CpuLimitExceeded or ProcessExitReason.MemoryLimitExceeded)
                 {
-                    // Like bash for a job ended by SIGKILL (kill -9, or its worker was terminated, ADR 0070).
+                    // Like bash for a job ended by SIGKILL (kill -9, its worker was terminated, ADR 0070,
+                    // or a hard CPU or memory limit, ADR 0125).
                     await error.WriteLineAsync(texts["Shell.Killed"]).ConfigureAwait(false);
+                }
+                else if (launch.ExitCode == CpuLimitExitCode && launch.Process?.ExitReason == ProcessExitReason.CpuLimitExceeded)
+                {
+                    // Like bash for a job ended by SIGXCPU (ADR 0125, section 2).
+                    await error.WriteLineAsync(texts["Shell.CpuLimitExceeded"]).ConfigureAwait(false);
                 }
 
                 return StageOutcome.Completed(launch.ExitCode ?? 0, denials, elevation is not null);
@@ -441,6 +448,13 @@ public sealed partial class ShellInterpreter
                 if (cancellationToken.IsCancellationRequested)
                 {
                     return StageOutcome.Failed(InterruptedExitCode, ShellFailure.None);
+                }
+
+                if (launch.ErrorCode == AppLifecycleOrchestrator.ProcessLimitErrorCode)
+                {
+                    // ADR 0125: the nproc limit refused the fork (EAGAIN), as bash reports it.
+                    await error.WriteLineAsync($"{caller}: " + texts["Shell.ForkFailed"]).ConfigureAwait(false);
+                    return StageOutcome.Failed(1, ShellFailure.Fault);
                 }
 
                 await error.WriteLineAsync($"{caller}: " + texts["Shell.Error", name, launch.ErrorMessage ?? launch.ErrorCode ?? string.Empty]).ConfigureAwait(false);

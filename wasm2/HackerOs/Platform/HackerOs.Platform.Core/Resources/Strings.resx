@@ -303,6 +303,9 @@
   <data name="Errno.IsDirectory" xml:space="preserve">
     <value>Is a directory</value>
   </data>
+  <data name="Errno.TooManyOpenFiles" xml:space="preserve">
+    <value>Too many open files</value>
+  </data>
   <data name="Errno.NoSpace" xml:space="preserve">
     <value>No space left on device</value>
   </data>
@@ -440,6 +443,12 @@ Cancel: decide at the next launch.</value>
   </data>
   <data name="Shell.JobAlreadyInBackground" xml:space="preserve">
     <value>bg: job {0} already in background</value>
+  </data>
+  <data name="Shell.CpuLimitExceeded" xml:space="preserve">
+    <value>CPU time limit exceeded</value>
+  </data>
+  <data name="Shell.ForkFailed" xml:space="preserve">
+    <value>fork: Resource temporarily unavailable</value>
   </data>
   <data name="Shell.Killed" xml:space="preserve">
     <value>Killed</value>

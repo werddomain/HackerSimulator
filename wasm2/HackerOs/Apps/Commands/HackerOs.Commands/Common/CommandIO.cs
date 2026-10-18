@@ -114,6 +114,7 @@ internal static class CommandIO
             {
                 FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied => Errno.PermissionDenied,
                 FileSystemErrorCode.NotFile => Errno.IsDirectory,
+                FileSystemErrorCode.TooManyOpenFiles => Errno.TooManyOpenFiles,
                 _ => Errno.NotFound
             };
             await context.StandardError.WriteLineAsync(CommandText.FileError(context, command, file, CommandText.Reason(context, reason)));

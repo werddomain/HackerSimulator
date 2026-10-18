@@ -50,7 +50,12 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     private static readonly string[] SystemFiles = ["cpuinfo", "diskstats", "loadavg", "meminfo", "mounts", "stat", "uptime"];
     private static readonly string[] NetFiles = ["dev", "tcp"];
-    private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", "io", "stat", "status"];
+    private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", FdDirectory, "io", "limits", "stat", "status"];
+
+    /// <summary>The open descriptors of a process (ADR 0125): one link per descriptor, owner-only like Linux.</summary>
+    private const string FdDirectory = "fd";
+
+    private const ushort OwnerDirectoryMode = 0b101_000_000; // 0500
 
     /// <summary>Linux's <c>USER_HZ</c>, the unit of <c>utime</c>, <c>stime</c> and <c>starttime</c>.</summary>
     private const int UserHz = 100;
@@ -170,6 +175,9 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             [] => RootNames(context),
             [NetDirectory] => NetFiles,
             [HackerOsDirectory] => [WorkersFile],
+            [string pid, FdDirectory] => ParsePid(pid) is { } value && FindVisible(value, context) is { } process
+                ? DescriptorsOf(process).Select(static open => open.Number.ToString(CultureInfo.InvariantCulture))
+                : [],
             _ => ProcessEntries
         };
 
@@ -222,6 +230,9 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             [string pid, string entry] => ParsePid(pid) is { } value && FindVisible(value, context) is { } process
                 ? ProcessEntry(path, process, entry, context)
                 : null,
+            [string pid, FdDirectory, string number] => ParsePid(pid) is { } value && FindVisible(value, context) is { } process
+                ? DescriptorLink(path, process, number)
+                : null,
             _ => null
         };
 
@@ -240,7 +251,8 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         DateTimeOffset started = StartTime(process);
         return entry switch
         {
-            "status" or "cmdline" or "stat" => File(path, owner, owner, PublicFileMode, started),
+            "status" or "cmdline" or "stat" or "limits" => File(path, owner, owner, PublicFileMode, started),
+            FdDirectory => Directory(path, owner, owner, OwnerDirectoryMode, started),
             // io is private like environ (ADR 0057 section 3): the owner, or System authority.
             "environ" or "io" => File(path, owner, owner, PrivateFileMode, started),
             "cwd" => Link(path, owner, owner, started,
@@ -248,6 +260,28 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             _ => null
         };
     }
+
+    /// <summary>One entry of <c>/proc/&lt;pid&gt;/fd</c>: a link to what the descriptor designates.</summary>
+    private SymbolicLinkMetadata? DescriptorLink(VirtualPath path, ProcessRecord process, string number)
+    {
+        if (!int.TryParse(number, NumberStyles.None, CultureInfo.InvariantCulture, out int descriptor))
+        {
+            return null;
+        }
+
+        foreach (ProcessFileDescriptor open in DescriptorsOf(process))
+        {
+            if (open.Number == descriptor)
+            {
+                return Link(path, Owner(process), Owner(process), StartTime(process), open.Target);
+            }
+        }
+
+        return null;
+    }
+
+    private IReadOnlyList<ProcessFileDescriptor> DescriptorsOf(ProcessRecord process) =>
+        _metrics.FileDescriptors?.Invoke()?.GetOpen(process.Pid) ?? [];
 
     private SymbolicLinkMetadata? SelfLink(VirtualPath path, FileSystemAuthorizationContext context)
     {
@@ -315,9 +349,58 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             ? string.Concat(environment.Variables.Select(static pair => $"{pair.Key}={pair.Value}\0"))
             : string.Empty,
         "io" => RenderProcessIo(process),
+        "limits" => RenderLimits(process),
         "stat" => RenderProcessStat(process),
         _ => throw new InvalidOperationException($"'{entry}' is not a readable /proc/<pid> file.")
     };
+
+    /// <summary>
+    /// Renders <c>/proc/&lt;pid&gt;/limits</c> (ADR 0125, section 4): the table of Linux for the four
+    /// limits HackerOS applies, then HackerOS's own comment lines on how they are enforced.
+    /// </summary>
+    private string RenderLimits(ProcessRecord process)
+    {
+        IProcessResourceLimitTable? table = _metrics.ResourceLimits?.Invoke();
+        ProcessResourceLimits limits = table is not null && table.TryGet(process.Pid, out ProcessResourceLimits found)
+            ? found
+            : ProcessResourceLimits.None;
+        StringBuilder builder = new();
+        AppendLimit(builder, "Limit", "Soft Limit", "Hard Limit", "Units");
+        AppendRow(builder, "Max cpu time", limits.Cpu, "seconds");
+        AppendRow(builder, "Max resident set", limits.Rss, "bytes");
+        AppendRow(builder, "Max processes", limits.NProc, "processes");
+        AppendRow(builder, "Max open files", limits.NoFile, "files");
+
+        if (table is not { IsEnabled: true })
+        {
+            builder.Append("# enforcement: off (HackerOs:ResourceLimits:Enabled=false)\n");
+            return builder.ToString();
+        }
+
+        bool inWorker = WorkerPool()?.GetWorkers().Any(worker => worker.ProcessIds.Contains(process.Pid.Value)) == true;
+        builder.Append(inWorker ? "# enforcement: strict (worker)\n" : "# enforcement: best-effort (main thread)\n");
+        bool cpuMeasured = _metrics.CpuAccountant?.IsMeasuring == true;
+        bool memoryMeasured = _metrics.MemoryAccountant?.IsMeasuring == true;
+        string? inactive = (cpuMeasured, memoryMeasured) switch
+        {
+            (false, false) => "cpu, rss",
+            (false, true) => "cpu",
+            (true, false) => "rss",
+            _ => null
+        };
+        if (inactive is not null)
+        {
+            builder.Append(CultureInfo.InvariantCulture, $"# {inactive}: inactive (not measured)\n");
+        }
+
+        return builder.ToString();
+
+        static void AppendLimit(StringBuilder target, string name, object soft, object hard, string units) =>
+            target.Append(CultureInfo.InvariantCulture, $"{name,-25} {soft,-20} {hard,-20} {units,-10}\n");
+
+        static void AppendRow(StringBuilder target, string name, ResourceLimit limit, string units) =>
+            AppendLimit(target, name, ResourceLimit.Format(limit.Soft), ResourceLimit.Format(limit.Hard), units);
+    }
 
     private ProcessEnvironmentSnapshot? EnvironmentOf(ProcessRecord process) =>
         _environments?.Invoke() is { } table && table.TryGet(process.Pid, out ProcessEnvironmentSnapshot snapshot)

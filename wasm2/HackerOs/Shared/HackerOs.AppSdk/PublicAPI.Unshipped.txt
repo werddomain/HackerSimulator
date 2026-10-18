@@ -1,1 +1,25 @@
 #nullable enable
+HackerOs.AppSdk.Diagnostics.HackProcess.GetResourceLimitsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Diagnostics.HackResourceLimits!>!
+HackerOs.AppSdk.Diagnostics.HackProcess.SetResourceLimitAsync(HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind kind, long soft, long hard, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement
+HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement.BestEffort = 1 -> HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement
+HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement.Off = 0 -> HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement
+HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement.Strict = 2 -> HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement
+HackerOs.AppSdk.Diagnostics.HackResourceLimits
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.Cpu.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.Cpu.init -> void
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.Enforcement.get -> HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.Enforcement.init -> void
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.HackResourceLimits(HackerOs.Simulation.Abstractions.Processes.ResourceLimit Cpu, HackerOs.Simulation.Abstractions.Processes.ResourceLimit Rss, HackerOs.Simulation.Abstractions.Processes.ResourceLimit NoFile, HackerOs.Simulation.Abstractions.Processes.ResourceLimit NProc, HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement Enforcement, bool IsCpuMeasured, bool IsMemoryMeasured) -> void
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.IsCpuMeasured.get -> bool
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.IsCpuMeasured.init -> void
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.IsMemoryMeasured.get -> bool
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.IsMemoryMeasured.init -> void
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.NoFile.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.NoFile.init -> void
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.NProc.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.NProc.init -> void
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.Rss.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.Rss.init -> void
+HackerOs.AppSdk.Diagnostics.HackResourceLimits.this[HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind kind].get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
+static HackerOs.AppSdk.Diagnostics.HackResourceLimits.Parse(string! text) -> HackerOs.AppSdk.Diagnostics.HackResourceLimits!

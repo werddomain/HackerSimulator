@@ -275,7 +275,11 @@ public sealed class AppExecutionContextFactory
         AppClipboardGateway clipboardGateway = new(_clipboard, capabilities, process.SessionId, process.Pid);
 
         AppFileSystemGateway fileSystem = new(
-            _fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise, kernelMemory: _metrics?.KernelMemory);
+            _fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise, kernelMemory: _metrics?.KernelMemory)
+        {
+            // ADR 0125: every open of the app counts toward its process's nofile limit.
+            Descriptors = (_processManager as Processes.InMemoryProcessManager)?.FileDescriptors
+        };
         AdministrationGateways administration = CreateAdministrationGateways(manifest, principal, isRootElevated, capabilities, fileSystem, language);
 
         AppAccessibilityGateway? accessibilityGateway = _accessibility is null ? null : new AppAccessibilityGateway(_accessibility);
@@ -297,7 +301,12 @@ public sealed class AppExecutionContextFactory
                 isSystemApp: _appCatalog?.Catalog.IsSystemApp(manifest.Id) == true,
                 isWebApp: manifest.Kind == AppKind.Web),
             clock,
-            new AppProcessGateway(_processManager, capabilities, process.Pid),
+            new AppProcessGateway(_processManager, capabilities, process.Pid)
+            {
+                // ADR 0125 section 4: setrlimit/prlimit, under the caller's identity and elevation.
+                ResourceLimits = (_processManager as Processes.InMemoryProcessManager)?.ResourceLimits,
+                IsRootElevated = isRootElevated
+            },
             intents,
             new AppFileSystemWatchGateway(_fileSystem, _topicBus, _clock, operationContext, groupIds, process.Pid.ToString()),
             permissionErrors,

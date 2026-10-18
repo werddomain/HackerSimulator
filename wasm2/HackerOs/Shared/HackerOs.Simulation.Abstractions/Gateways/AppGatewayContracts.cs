@@ -96,6 +96,21 @@ public interface IAppFileSystemGateway
     /// <returns>The charge; <see cref="KernelMemoryCharge.None"/> when the OS does not measure memory.</returns>
     KernelMemoryCharge ChargeStreamBuffer() => KernelMemoryCharge.None;
 
+    /// <summary>
+    /// Opens one descriptor of the calling process for <paramref name="path"/> and holds it until the
+    /// returned handle is disposed (ADR 0125, <c>RLIMIT_NOFILE</c>): what a write stream
+    /// (<c>HackFileStream</c>) holds while it buffers. A read handle from <see cref="ReadAsync"/>
+    /// already holds its own descriptor.
+    /// </summary>
+    /// <param name="path">The file the descriptor designates.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>
+    /// The handle, or <see cref="FileSystemErrorCode.TooManyOpenFiles"/> (<c>EMFILE</c>). Defaults to a
+    /// handle that holds nothing, for gateways that do not count descriptors.
+    /// </returns>
+    ValueTask<FileSystemResult<IDisposable>> OpenDescriptorAsync(VirtualPath path, CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(FileSystemResult<IDisposable>.Success(NoDescriptor.Instance));
+
     /// <summary>Opens streamed regular-file content.</summary>
     ValueTask<FileSystemResult<FileSystemContentReadHandle>> ReadAsync(
         FileSystemReadRequest request, CancellationToken cancellationToken = default);
@@ -294,6 +309,39 @@ public interface IAppProcessGateway
     {
         cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(Kill(pid, reason));
+    }
+
+    /// <summary>
+    /// Changes one resource limit of a process (ADR 0125, section 4, <c>setrlimit</c>/<c>prlimit</c>):
+    /// the calling app's own process, or with <see cref="AppCapabilities.ProcessManage"/> another
+    /// process of the same user, or any process when the caller is elevated (<c>sudo</c>). Only an
+    /// elevated caller raises a hard limit.
+    /// </summary>
+    /// <param name="pid">The process.</param>
+    /// <param name="kind">The resource.</param>
+    /// <param name="limit">The new soft and hard values.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The outcome, with its <c>errno</c>.</returns>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies management of another app's process.</exception>
+    /// <exception cref="NotSupportedException">This gateway does not manage limits (the default).</exception>
+    Task<ResourceLimitChangeResult> SetResourceLimitAsync(
+        ProcessId pid, ResourceLimitKind kind, ResourceLimit limit, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This process gateway does not manage resource limits.");
+}
+
+/// <summary>The descriptor handle of a gateway that does not count descriptors: disposing it does nothing.</summary>
+public sealed class NoDescriptor : IDisposable
+{
+    private NoDescriptor()
+    {
+    }
+
+    /// <summary>Gets the shared instance.</summary>
+    public static NoDescriptor Instance { get; } = new();
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
     }
 }
 

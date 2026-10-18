@@ -45,7 +45,20 @@ public sealed record ProcMetricsSources(
     ICpuTimeAccountant? CpuAccountant = null,
     IMemoryAccountant? MemoryAccountant = null,
     Func<HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus?>? Workers = null,
-    Func<HackerOs.Platform.Core.Network.Local.ListeningPortTable?>? Listeners = null);
+    Func<HackerOs.Platform.Core.Network.Local.ListeningPortTable?>? Listeners = null)
+{
+    /// <summary>
+    /// Lazily resolves the resource limits (ADR 0125) behind <c>/proc/&lt;pid&gt;/limits</c>; missing,
+    /// every limit reads <c>unlimited</c>.
+    /// </summary>
+    public Func<IProcessResourceLimitTable?>? ResourceLimits { get; init; }
+
+    /// <summary>
+    /// Lazily resolves the open descriptors (ADR 0125, <c>RLIMIT_NOFILE</c>) behind
+    /// <c>/proc/&lt;pid&gt;/fd</c>; missing, the directory is empty.
+    /// </summary>
+    public Func<IProcessFileDescriptorTable?>? FileDescriptors { get; init; }
+}
 
 /// <summary>One line of <c>/proc/mounts</c>: what is mounted where, with which type and options.</summary>
 /// <param name="Source">Device or pseudo-source, e.g. <c>/dev/hda</c> or <c>proc</c>.</param>
