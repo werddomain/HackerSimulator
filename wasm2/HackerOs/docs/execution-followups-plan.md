@@ -235,8 +235,8 @@ et les conséquences de chaque choix ; réponses du 2026-10-18 (ADR 0134).
 - [x] Pool ouvert à toute assembly de commande ou de service (`exec/1-remote-gateways`, ADR 0138).
 
 ### Limites et OOM killer
-- [ ] Contrat de limites, `limits.conf`, héritage, `ulimit`, `prlimit`, `/proc/<pid>/limits`.
-- [ ] `SIGXCPU`, limite mémoire, `EMFILE`/`EAGAIN`.
+- [x] Contrat de limites, `limits.conf`, héritage, `ulimit`, `prlimit`, `/proc/<pid>/limits` (`exec/2-process-limits`, ADR 0139).
+- [x] `SIGXCPU`, limite mémoire, `EMFILE`/`EAGAIN` (`exec/2-process-limits`, ADR 0139).
 - [ ] `oom_score`, `oom_score_adj`, choix et mise à mort, journal du noyau, `dmesg`.
 - [ ] Garde du vrai navigateur.
 

@@ -150,6 +150,19 @@ public sealed class AppLifecycleOrchestrator
     }
 
     /// <summary>
+    /// Error code of a launch refused by the <c>nproc</c> limit (ADR 0125): <c>fork</c> failed with
+    /// <c>EAGAIN</c>, "Resource temporarily unavailable".
+    /// </summary>
+    public const string ProcessLimitErrorCode = "lifecycle.process.eagain";
+
+    /// <summary>
+    /// Gets the session limits of root processes (ADR 0125, section 3), read from
+    /// <c>/etc/security/limits.conf</c> like <c>pam_limits</c>; <see langword="null"/> gives them the
+    /// kernel's defaults.
+    /// </summary>
+    public LoginResourceLimitsProvider? LoginResourceLimits { get; init; }
+
+    /// <summary>
     /// Gets or sets how long a service may stay <c>activating</c> (its <c>OnStartAsync</c>) before
     /// the OS kills it and marks it <c>failed (Result: timeout)</c> (ADR 0097, section 1). 30 s, like
     /// systemd's <c>TimeoutStartSec</c> default of 90 s scaled to the simulation.
@@ -448,7 +461,15 @@ public sealed class AppLifecycleOrchestrator
         HashSet<string> grantedCapabilities = ComputeGrantedCapabilities(descriptor.Manifest, request.Principal);
         (VirtualPath? workingDirectory, IReadOnlyDictionary<string, string>? environment) =
             await ResolveStartEnvironmentAsync(request, cancellationToken).ConfigureAwait(false);
-        ProcessRecord process = _processManager.Start(new ProcessStartRequest(
+        // ADR 0125 section 3: a session's root process gets the limits of limits.conf; a boot
+        // service (hackeros-svc, section 5) and every child get the kernel's or their parent's.
+        ProcessResourceLimits? sessionLimits = request.ParentPid is null && !request.SystemScope && LoginResourceLimits is { } pamLimits
+            ? await pamLimits.GetAsync(request.Principal, cancellationToken).ConfigureAwait(false)
+            : null;
+        ProcessRecord process;
+        try
+        {
+            process = _processManager.Start(new ProcessStartRequest(
             request.ParentPid,
             request.AppId,
             AppInstanceId.FromGuid(Guid.NewGuid()),
@@ -465,9 +486,17 @@ public sealed class AppLifecycleOrchestrator
             workingDirectory,
             environment,
             SystemScope: request.SystemScope)
+            {
+                Nice = request.Nice,
+                ResourceLimits = sessionLimits,
+                // ADR 0125 section 5: an elevated root is not held by nproc (CAP_SYS_RESOURCE).
+                ResourceLimitExempt = isRootElevated
+            });
+        }
+        catch (ProcessLimitExceededException exception)
         {
-            Nice = request.Nice,
-        });
+            return new AppLaunchResult(AppLaunchStatus.EntryPointFault, ErrorCode: ProcessLimitErrorCode, ErrorMessage: exception.Message);
+        }
 
         IAppExecutionContext context = _contextFactory.Create(
             descriptor.Manifest, request.Principal, process, grantedCapabilities, process.AppInstanceId.Value,
@@ -1040,7 +1069,8 @@ public sealed class AppLifecycleOrchestrator
         catch (OperationCanceledException) when (executionCancellation.IsCancellationRequested || context.StopRequest is not null)
         {
             // Also when HackProcess.CheckpointAsync saw the stop request just before the token was cancelled (ADR 0069).
-            exitCode = 130;
+            // ADR 0125 section 2: ended by the SIGXCPU of its CPU limit, 128 + 24.
+            exitCode = StoppedExitCode(context);
         }
         catch (ShellBrokenPipeException)
         {
@@ -1079,11 +1109,24 @@ public sealed class AppLifecycleOrchestrator
         {
             RemoteProcessExitStatus.Exited => exit.ExitCode,
             RemoteProcessExitStatus.Killed => throw new HackProcessKilledException(context.ProcessId.Value),
-            RemoteProcessExitStatus.Cancelled => 130,
+            RemoteProcessExitStatus.Cancelled => StoppedExitCode(context),
             RemoteProcessExitStatus.BrokenPipe => 141,
             _ => throw new RemoteProcessFaultException(exit.FaultMessage ?? "The command faulted in its worker.")
         };
     }
+
+    /// <summary>
+    /// The exit code of a command that ended on its stop request: 152 (128 + <c>SIGXCPU</c>) when the
+    /// request was its CPU limit (ADR 0125, section 2), otherwise 130, as before.
+    /// </summary>
+    /// <remarks>
+    /// A process killed while it was being cancelled (<c>SIGKILL</c> of a hard CPU limit cancels its token
+    /// too) reports 137: the kill wins, as the kernel reports the signal that ended it.
+    /// </remarks>
+    private static int StoppedExitCode(IAppExecutionContext context) =>
+        ControlOf(context)?.IsKilled == true ? 137
+        : context.StopRequest?.Reason == ProcessExitReason.CpuLimitExceeded ? InMemoryProcessManager.CpuLimitExitCode
+        : 130;
 
     private static ProcessControlBlock? ControlOf(IAppExecutionContext context) =>
         context is AppExecutionContext trusted ? trusted.Control : null;
@@ -1137,6 +1180,7 @@ public sealed class AppLifecycleOrchestrator
     /// <param name="environment">Variables applied over the inherited ones (a subshell's own environment, prefix assignments).</param>
     /// <param name="processStarted">Called with the new process (background jobs record it).</param>
     /// <returns>The process and its trusted context; the caller completes the process.</returns>
+    /// <exception cref="ProcessLimitExceededException">The user's <c>nproc</c> limit is reached (<c>EAGAIN</c>, ADR 0125).</exception>
     public (ProcessRecord Process, IAppExecutionContext Context) StartShellProcess(
         IAppExecutionContext parent,
         AuthenticatedPrincipal principal,
@@ -1164,7 +1208,11 @@ public sealed class AppLifecycleOrchestrator
             ResourceProfile.None,
             arguments,
             workingDirectory,
-            overrides ?? new Dictionary<string, string>(StringComparer.Ordinal) { ["PWD"] = workingDirectory.Value }));
+            overrides ?? new Dictionary<string, string>(StringComparer.Ordinal) { ["PWD"] = workingDirectory.Value })
+        {
+            // ADR 0125 section 5: an elevated root is not held by nproc.
+            ResourceLimitExempt = parent.IsRootElevated
+        });
         try
         {
             _processManager.MarkRunning(process.Pid);

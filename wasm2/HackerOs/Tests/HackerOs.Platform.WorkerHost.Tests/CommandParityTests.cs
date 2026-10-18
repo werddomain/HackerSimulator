@@ -56,6 +56,7 @@ public sealed class CommandParityTests
         new("nmap", ["nmap example.hackeros", "nmap -p 80-443 -sV 10.0.0.10"]),
         new("passwd", ["passwd -S", "passwd bob", "passwd -x"]),
         new("ping", ["ping example.hackeros", "ping nowhere.invalid"]),
+        new("prlimit", ["prlimit --nofile --nproc", "prlimit --nofile=512:1024 --nofile", "prlimit --pid 99999", "prlimit --bogus"]),
         new("printf", ["printf '%s-%d\\n' a 1 b 2"]),
         new("ps", ["ps", "ps -a -u", "ps -o pid,ni,comm", "ps -o bogus"]),
         new("pwd", ["pwd"]),
@@ -112,7 +113,7 @@ public sealed class CommandParityTests
             .Where(name => !covered.Contains(name))];
 
         Assert.Empty(missing);
-        Assert.Equal(72, OsFixture.BuiltInCommands.Count);
+        Assert.Equal(73, OsFixture.BuiltInCommands.Count);
     }
 
     [Fact]

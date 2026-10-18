@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Description.cpu" xml:space="preserve">
+    <value>CPU time</value>
+  </data>
+  <data name="Description.nofile" xml:space="preserve">
+    <value>max number of open files</value>
+  </data>
+  <data name="Description.nproc" xml:space="preserve">
+    <value>max number of processes</value>
+  </data>
+  <data name="Description.rss" xml:space="preserve">
+    <value>max resident set size</value>
+  </data>
+  <data name="GetFailed" xml:space="preserve">
+    <value>prlimit: failed to get the {0} resource limit: {1}</value>
+  </data>
+  <data name="InvalidArgument" xml:space="preserve">
+    <value>Invalid argument</value>
+  </data>
+  <data name="InvalidLimit" xml:space="preserve">
+    <value>prlimit: failed to parse {0} limit</value>
+  </data>
+  <data name="InvalidPid" xml:space="preserve">
+    <value>prlimit: invalid PID argument: '{0}'</value>
+  </data>
+  <data name="NoSuchProcess" xml:space="preserve">
+    <value>No such process</value>
+  </data>
+  <data name="OperationNotPermitted" xml:space="preserve">
+    <value>Operation not permitted</value>
+  </data>
+  <data name="SetFailed" xml:space="preserve">
+    <value>prlimit: failed to set the {0} resource limit: {1}</value>
+  </data>
+  <data name="UnknownOption" xml:space="preserve">
+    <value>prlimit: unrecognized option '{0}'</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>Usage: prlimit [--pid &lt;pid&gt;] [--cpu[=soft:hard]] [--rss[=…]] [--nofile[=…]] [--nproc[=…]] [--noheadings]</value>
+  </data>
+</root>

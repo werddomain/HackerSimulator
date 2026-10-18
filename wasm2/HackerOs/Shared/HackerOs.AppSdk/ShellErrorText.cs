@@ -36,6 +36,7 @@ public static class ShellErrorText
             HackIOException { ErrorCode: FileSystemErrorCode.NotDirectory } => "Errno.NotDirectory",
             HackIOException { ErrorCode: FileSystemErrorCode.NoSpace } => "Errno.NoSpace",
             HackIOException { ErrorCode: FileSystemErrorCode.FileTooLarge } => "Errno.FileTooLarge",
+            HackIOException { ErrorCode: FileSystemErrorCode.TooManyOpenFiles } => "Errno.TooManyOpenFiles",
             ArgumentException => "Errno.InvalidPath",
             _ => null
         };

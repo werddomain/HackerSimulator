@@ -170,6 +170,13 @@ public sealed class HackFileStream : Stream
                 : new HackFileConflictException(path.Value, existing.Metadata.Revision);
         }
 
+        // ADR 0125: a write stream holds a descriptor of its process while it buffers (EMFILE past nofile).
+        FileSystemResult<IDisposable> opened = await gateway.OpenDescriptorAsync(path, cancellationToken).ConfigureAwait(false);
+        if (!opened.Succeeded)
+        {
+            throw HackFileSystemErrorTranslator.Translate(opened.Error!, HackEntryTarget.File, path.Value);
+        }
+
         HackFileStream stream = new(
             gateway,
             path,
@@ -180,6 +187,7 @@ public sealed class HackFileStream : Stream
             options?.ExpectedRevision ?? existing?.Metadata.Revision,
             strict: options?.ExpectedRevision is not null)
         {
+            OpenDescriptor = opened.Value,
             CreateOptions = options,
             // A replacing open truncates even if nothing is written; an append open creates a missing file.
             _dirty = !append || existing is null,
@@ -189,6 +197,9 @@ public sealed class HackFileStream : Stream
     }
 
     private HackWriteOptions? CreateOptions { get; init; }
+
+    /// <summary>The descriptor a write stream holds until it is released (ADR 0125); a read stream's is held by its read handle.</summary>
+    private IDisposable? OpenDescriptor { get; init; }
 
     /// <summary>Keeps an existing text file's media type (as UTF-8 text); anything else is published as binary.</summary>
     private static FileSystemContentDescriptor DescriptorFor(FileSystemEntrySnapshot? existing) =>
@@ -345,6 +356,7 @@ public sealed class HackFileStream : Stream
         {
             _disposed = true;
             _bufferCharge.Dispose();
+            OpenDescriptor?.Dispose();
             if (_readHandle is not null)
             {
                 await _readHandle.DisposeAsync().ConfigureAwait(false);
@@ -379,6 +391,7 @@ public sealed class HackFileStream : Stream
 
         _disposed = true;
         _bufferCharge.Dispose();
+        OpenDescriptor?.Dispose();
         _inner.Dispose();
         base.Dispose(disposing);
     }

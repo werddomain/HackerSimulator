@@ -83,7 +83,7 @@ public sealed partial class InMemoryProcessManagerTests
         ProcessRecord other = fixture.Manager.Start(fixture.RequestFor("com.hackeros.ls") with { UserId = LocalUserId.FromGuid(Guid.NewGuid()) });
         FixedCapabilities capabilities = new(AppCapabilities.ProcessList, AppCapabilities.ProcessManage);
         AppProcessGateway user = new(fixture.Manager, capabilities, shell.Pid);
-        AppProcessGateway root = new(fixture.Manager, capabilities, shell.Pid, isRoot: true);
+        AppProcessGateway root = new(fixture.Manager, capabilities, shell.Pid) { IsRootElevated = true };
 
         UnauthorizedAccessException denied = Assert.Throws<UnauthorizedAccessException>(() => user.SetNice(other.Pid, 5));
         Assert.Equal("Operation not permitted", denied.Message);

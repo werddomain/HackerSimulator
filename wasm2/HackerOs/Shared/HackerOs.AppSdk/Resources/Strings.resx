@@ -21,6 +21,9 @@
   <data name="Errno.IsDirectory" xml:space="preserve">
     <value>Is a directory</value>
   </data>
+  <data name="Errno.TooManyOpenFiles" xml:space="preserve">
+    <value>Too many open files</value>
+  </data>
   <data name="Errno.NoSpace" xml:space="preserve">
     <value>No space left on device</value>
   </data>

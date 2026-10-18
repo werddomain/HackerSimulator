@@ -115,7 +115,13 @@ public enum FileSystemErrorCode
     /// The content exceeds the largest file the storage accepts, 16 MiB (ADR 0094): Linux
     /// <c>EFBIG</c>, "File too large". Nothing of the operation was committed.
     /// </summary>
-    FileTooLarge = 1801
+    FileTooLarge = 1801,
+
+    /// <summary>
+    /// The process already holds as many open descriptors as its <c>nofile</c> soft limit allows
+    /// (ADR 0125): Linux <c>EMFILE</c>, "Too many open files". Nothing was opened.
+    /// </summary>
+    TooManyOpenFiles = 1802
 }
 
 /// <summary>Describes one unsuccessful filesystem operation.</summary>

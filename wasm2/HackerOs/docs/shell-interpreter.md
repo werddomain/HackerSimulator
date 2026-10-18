@@ -168,7 +168,9 @@ variable exportée existante) ; les commandes ne l'héritent pas.
 `set [-eufx] [-o nom] [-- args]` (sans argument : toutes les variables),
 `local nom[=valeur]`, `eval args`, `. fichier` / `source fichier [args]`,
 `wait [%n|pid]`, `fg [%n]`, `bg`, `exec commande`, `trap action EXIT`,
-`command [-v|-V] nom`, `type nom`. Tout le reste vient du catalogue
+`command [-v|-V] nom`, `type nom`, `ulimit [-SH] [-a|-f|-m|-n|-t|-u] [limite]`
+(limites du processus du shell, héritées par les commandes lancées ensuite ;
+ADR 0125, [`process-limits.md`](process-limits.md)). Tout le reste vient du catalogue
 ([`shell-commands.md`](shell-commands.md), [`linux-commands.md`](linux-commands.md)).
 
 ### Fonctions

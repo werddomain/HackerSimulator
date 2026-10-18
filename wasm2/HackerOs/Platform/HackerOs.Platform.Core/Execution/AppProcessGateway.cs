@@ -13,31 +13,25 @@ public sealed class AppProcessGateway : IAppProcessGateway
 {
     private readonly IProcessManager _processManager;
     private readonly ICapabilityChecker _capabilities;
-    private readonly bool _isRoot;
-
-    /// <summary>Initializes a process gateway bound to the process hosting this app instance, for a process that is not root.</summary>
-    public AppProcessGateway(IProcessManager processManager, ICapabilityChecker capabilities, ProcessId ownPid)
-        : this(processManager, capabilities, ownPid, isRoot: false)
-    {
-    }
 
     /// <summary>Initializes a process gateway bound to the process hosting this app instance.</summary>
-    /// <param name="processManager">The process table.</param>
-    /// <param name="capabilities">The app's capability checks.</param>
-    /// <param name="ownPid">The process hosting the app.</param>
-    /// <param name="isRoot">
-    /// Whether the process runs as root (<c>sudo</c>, ADR 0042): only root may lower a niceness or
-    /// renice another user's process (ADR 0127).
-    /// </param>
-    public AppProcessGateway(IProcessManager processManager, ICapabilityChecker capabilities, ProcessId ownPid, bool isRoot)
+    public AppProcessGateway(IProcessManager processManager, ICapabilityChecker capabilities, ProcessId ownPid)
     {
         _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
         _capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
         OwnPid = ownPid;
-        _isRoot = isRoot;
     }
 
     private ProcessId OwnPid { get; }
+
+    /// <summary>Gets the limit table behind <see cref="SetResourceLimitAsync"/> (ADR 0125); without it the call is not supported.</summary>
+    public IProcessResourceLimitTable? ResourceLimits { get; init; }
+
+    /// <summary>
+    /// Gets whether the app runs as an elevated root (<c>sudo</c>): it may raise hard limits and act on any
+    /// user's process, and lower a niceness or renice another user's process (ADR 0127).
+    /// </summary>
+    public bool IsRootElevated { get; init; }
 
     /// <inheritdoc />
     public ProcessRecord OwnProcess =>
@@ -107,7 +101,7 @@ public sealed class AppProcessGateway : IAppProcessGateway
         }
 
         int requested = ProcessNice.Clamp(nice);
-        if (!_isRoot)
+        if (!IsRootElevated)
         {
             if (target.UserId != OwnProcess.UserId)
             {
@@ -121,6 +115,34 @@ public sealed class AppProcessGateway : IAppProcessGateway
         }
 
         return _processManager.SetNice(pid, requested);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// ADR 0125 section 4, the rules of <c>prlimit(2)</c>: the app's own process, or another process of
+    /// the same user with <see cref="AppCapabilities.ProcessManage"/>, or any process when elevated.
+    /// </remarks>
+    public Task<ResourceLimitChangeResult> SetResourceLimitAsync(
+        ProcessId pid, ResourceLimitKind kind, ResourceLimit limit, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (ResourceLimits is not { } table)
+        {
+            throw new NotSupportedException("This host does not manage resource limits.");
+        }
+
+        RequireManageUnlessOwn(pid);
+        if (!_processManager.TryGetActive(pid, out ProcessRecord target))
+        {
+            return Task.FromResult(ResourceLimitChangeResult.NoSuchProcess);
+        }
+
+        if (!IsRootElevated && pid != OwnPid && target.UserId != OwnProcess.UserId)
+        {
+            return Task.FromResult(ResourceLimitChangeResult.PermissionDenied);
+        }
+
+        return Task.FromResult(table.TrySet(pid, kind, limit, privileged: IsRootElevated));
     }
 
     private void RequireManageUnlessOwn(ProcessId pid)

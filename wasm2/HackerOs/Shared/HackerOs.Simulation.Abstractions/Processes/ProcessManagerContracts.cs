@@ -54,6 +54,19 @@ public sealed record ProcessStartRequest(
     /// <c>fork</c> copies the parent's <c>nice</c>. A value out of range is clamped.
     /// </summary>
     public int? Nice { get; init; }
+
+    /// <summary>
+    /// Limits of a process with no live parent (ADR 0125, section 3): the session's, computed from
+    /// <c>/etc/security/limits.conf</c> at login. <see langword="null"/> gives a root process the
+    /// kernel's defaults; a child always inherits its parent's limits and ignores this value.
+    /// </summary>
+    public ProcessResourceLimits? ResourceLimits { get; init; }
+
+    /// <summary>
+    /// Whether the start is exempt from the <c>nproc</c> limit (ADR 0125, section 5): an elevated
+    /// <c>root</c> (<c>CAP_SYS_RESOURCE</c>) or a system process.
+    /// </summary>
+    public bool ResourceLimitExempt { get; init; }
 }
 
 /// <summary>
@@ -69,6 +82,7 @@ public interface IProcessManager
     /// current session's root cancellation token.
     /// </summary>
     /// <exception cref="InvalidOperationException"><paramref name="request"/> declares a parent PID that is not currently active.</exception>
+    /// <exception cref="ProcessLimitExceededException">The user already runs as many processes as the <c>nproc</c> soft limit allows (ADR 0125).</exception>
     ProcessRecord Start(ProcessStartRequest request);
 
     /// <summary>

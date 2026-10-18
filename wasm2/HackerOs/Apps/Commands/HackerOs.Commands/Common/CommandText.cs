@@ -29,6 +29,9 @@ internal enum Errno
     /// <summary><c>EFBIG</c>: "File too large".</summary>
     FileTooLarge,
 
+    /// <summary><c>EMFILE</c>: "Too many open files" (ADR 0125).</summary>
+    TooManyOpenFiles,
+
     /// <summary><c>EEXIST</c>: "File exists".</summary>
     FileExists,
 
@@ -68,6 +71,7 @@ internal static class CommandText
         ["Not a directory"] = Errno.NotDirectory,
         ["No space left on device"] = Errno.NoSpace,
         ["File too large"] = Errno.FileTooLarge,
+        ["Too many open files"] = Errno.TooManyOpenFiles,
         ["File exists"] = Errno.FileExists,
         ["Directory not empty"] = Errno.NotEmpty,
         ["Invalid path"] = Errno.InvalidPath,

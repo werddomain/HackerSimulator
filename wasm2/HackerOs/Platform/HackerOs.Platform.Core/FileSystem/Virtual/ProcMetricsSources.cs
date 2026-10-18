@@ -48,6 +48,18 @@ public sealed record ProcMetricsSources(
     Func<HackerOs.Platform.Core.Network.Local.ListeningPortTable?>? Listeners = null)
 {
     /// <summary>
+    /// Lazily resolves the resource limits (ADR 0125) behind <c>/proc/&lt;pid&gt;/limits</c>; missing,
+    /// every limit reads <c>unlimited</c>.
+    /// </summary>
+    public Func<IProcessResourceLimitTable?>? ResourceLimits { get; init; }
+
+    /// <summary>
+    /// Lazily resolves the open descriptors (ADR 0125, <c>RLIMIT_NOFILE</c>) behind
+    /// <c>/proc/&lt;pid&gt;/fd</c>; missing, the directory is empty.
+    /// </summary>
+    public Func<IProcessFileDescriptorTable?>? FileDescriptors { get; init; }
+
+    /// <summary>
     /// Gets the background tasks of ADR 0128 behind the <c>Job</c> and <c>Host</c> lines of
     /// <c>/proc/&lt;pid&gt;/status</c> (and the task's name in <c>Name</c>); missing, a task reads like
     /// any process of its app.
