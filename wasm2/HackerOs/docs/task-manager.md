@@ -94,6 +94,10 @@ compositeur (ADR 0067, [`resource-accounting.md`](resource-accounting.md#apps-ex
   le blocage : son worker ne bat plus depuis 5 s, et le reste de l'interface
   continue de répondre ; « End task » puis « Force kill » terminent le worker
   ([`worker-processes.md`](worker-processes.md)).
+- Priorité (ADR 0127 §1) : colonne « Priority » (`ProcessColumn.Priority`,
+  `ProcessRow.Nice`) affichée par un bouton bascule (`ProcessTable.ShowPriority`,
+  masquée au départ) ; elle montre la valeur `nice` lue dans
+  `/proc/<pid>/stat` et se trie. Voir [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md).
 - Tri par colonne (clic sur l'en-tête ; même colonne : sens inverse ; colonne
   de mesure : plus grand d'abord). À valeur égale, ordre par PID, pour que les
   lignes ne sautent pas à chaque seconde.
@@ -165,6 +169,9 @@ await p.KillAsync();                                           // SIGKILL
   `Responding` (`Responding:` de `status`, toujours vrai quand le CPU n'est pas
   mesuré). `ParseStatTimes(texte)` analyse une ligne `stat`. Voir
   [`cpu-accounting.md`](cpu-accounting.md).
+- Priorité (ADR 0127 §1) : `Nice` (champ 19 de `stat`, de -20 à 19) et
+  `BasePriority` (`20 + Nice`, le `PR` de `top`) ; `ParseStatNice(texte)`.
+  Changer la priorité passe par `IAppProcessGateway.SetNice` (commande `renice`).
 - Lecture : `/proc` (liste et date de création de `/proc/<pid>` comme
   `StartTime`), `status`, `stat`, `cmdline`, `cwd` (cible du lien), `io`, `environ`.
   Visibilité de `/proc` : son propre processus, les autres avec
