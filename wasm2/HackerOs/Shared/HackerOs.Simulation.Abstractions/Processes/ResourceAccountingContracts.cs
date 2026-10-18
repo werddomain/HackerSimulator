@@ -115,7 +115,7 @@ public interface IMemoryAccountant
     /// <param name="process">The process to read.</param>
     /// <param name="active">Every live process, among which the resident heap is split.</param>
     /// <param name="usage">The layers of <paramref name="process"/>.</param>
-    /// <returns><see langword="true"/> when the process is measured; otherwise the simulator applies (a game-content process that runs no code).</returns>
+    /// <returns><see langword="true"/> when the process is measured; otherwise the simulator applies (a simulated process that runs no code).</returns>
     bool TryGetProcessMemory(ProcessRecord process, IReadOnlyList<ProcessRecord> active, out ProcessMemoryUsage usage);
 
     /// <summary>Gets the measured memory of the whole machine, behind <c>/proc/meminfo</c>.</summary>

@@ -119,7 +119,7 @@ dernier GC n'a pas encore de `RssAnon`.
 
 Un processus est mesuré si le catalogue de l'hôte connaît son image (toutes
 les apps intégrées) ou s'il a exécuté du code sous son frame (le shell, une
-app installée au runtime). Les autres (contenu de jeu sans code) restent
+app installée au runtime). Les autres (processus simulés sans code) restent
 simulés, comme le veut l'ADR 0066 §4.
 
 Un processus dans un Web Worker (ADR 0070) reçoit en plus, en `RssAnon`, sa part
