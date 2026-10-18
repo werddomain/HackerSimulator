@@ -26,7 +26,8 @@ internal static class TestCommands
         Web<EchoSite>("org.test.intranet", "http://intranet.hack/"),
         Web<EchoSite>("org.test.wiki", "http://wiki.hack/"),
         Web<MvcSiteWebHost>("org.test.mvc", "http://mvc.hack/"),
-        Web<BlazorSiteWebHost>("org.test.blazor", "http://blazor.hack/")
+        Web<BlazorSiteWebHost>("org.test.blazor", "http://blazor.hack/"),
+        .. RemoteEventCommands.Manifests
     ];
 
     /// <summary>Lets every <c>spin</c> stuck in a terminated loopback worker return, so the test run ends cleanly.</summary>
@@ -34,7 +35,7 @@ internal static class TestCommands
 
     public static void ArmSpinners() => s_release = false;
 
-    private static AppManifest Command<TCommand>(string name, AppExecutionHost execution = AppExecutionHost.Pool) => new()
+    internal static AppManifest Command<TCommand>(string name, AppExecutionHost execution = AppExecutionHost.Pool) => new()
     {
         Id = $"org.test.{name}",
         Name = name,
@@ -50,7 +51,7 @@ internal static class TestCommands
         Execution = execution
     };
 
-    private static AppManifest Service<TService>(string id) => new()
+    internal static AppManifest Service<TService>(string id) => new()
     {
         Id = id,
         Name = "ticker",

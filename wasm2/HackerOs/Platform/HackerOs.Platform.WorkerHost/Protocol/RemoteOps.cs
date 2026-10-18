@@ -79,6 +79,15 @@ internal static class RemoteOps
     public const string ClipboardSetFiles = "clip.setfiles";
     public const string ClipboardClear = "clip.clear";
 
+    // Events and directory watches (ADR 0124): the bus stays in the OS; a worker subscribes by
+    // message and receives each delivery as an `ev` message, acknowledged by `ev.ack` (credit).
+    public const string EventSubscribe = "ev.sub";
+    public const string EventUnsubscribe = "ev.unsub";
+    public const string EventPublish = "ev.pub";
+    public const string EventSharedChannel = "ev.chan";
+    public const string EventAcknowledge = "ev.ack";
+    public const string WatchOpen = "watch.open";
+
     // Browser database of a web site (IAppWebDatabaseGateway, ADR 0088): the schema or the batch as JSON.
     public const string WebDbOpen = "wdb.open";
     public const string WebDbExecute = "wdb.exec";

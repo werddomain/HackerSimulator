@@ -230,9 +230,9 @@ et les conséquences de chaque choix ; réponses du 2026-10-18 (ADR 0134).
 - [x] Réponses de Benoit aux questions E1 à E4 (section 6.1, ADR 0134 et 0135).
 
 ### Passerelles distantes
-- [ ] `HackEvents` et `Watch` en worker, tests de parité.
-- [ ] Service d'exemple et `hackwebd` en worker.
-- [ ] Pool ouvert à toute assembly de commande ou de service.
+- [x] `HackEvents` et `Watch` en worker, tests de parité (`exec/1-remote-gateways`, ADR 0138).
+- [x] Service d'exemple et `hackwebd` en worker (`exec/1-remote-gateways`, ADR 0138).
+- [x] Pool ouvert à toute assembly de commande ou de service (`exec/1-remote-gateways`, ADR 0138).
 
 ### Limites et OOM killer
 - [ ] Contrat de limites, `limits.conf`, héritage, `ulimit`, `prlimit`, `/proc/<pid>/limits`.

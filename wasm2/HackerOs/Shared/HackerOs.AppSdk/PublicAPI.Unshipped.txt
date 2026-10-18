@@ -1,1 +1,4 @@
 #nullable enable
+HackerOs.AppSdk.HackWireContextAttribute
+HackerOs.AppSdk.HackWireContextAttribute.ContextType.get -> System.Type!
+HackerOs.AppSdk.HackWireContextAttribute.HackWireContextAttribute(System.Type! contextType) -> void
