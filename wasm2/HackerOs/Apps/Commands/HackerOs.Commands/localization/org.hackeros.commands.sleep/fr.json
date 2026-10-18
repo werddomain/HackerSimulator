@@ -1,0 +1,5 @@
+{
+  "name": "sleep",
+  "description": "Attend pendant une durée donnée",
+  "terminalUsage": "sleep nombre[s|m|h|d]..."
+}

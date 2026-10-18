@@ -1,0 +1,13 @@
+/* The anchor takes no room: once the content moved to the surface it is empty, and before that
+   (or after the surface closed) the content lays out as if the anchor were not there. */
+.surface-anchor {
+    display: contents;
+}
+
+.surface-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+}

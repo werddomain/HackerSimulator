@@ -3,7 +3,10 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.IO;
+using HackerOs.Commands.Common;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Grep;
 
@@ -19,8 +22,10 @@ namespace HackerOs.Commands.Grep;
 /// </remarks>
 public sealed class GrepCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public GrepCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)
@@ -58,7 +63,7 @@ public sealed class GrepCommand : TerminalAppBase
 
         if (pattern is null)
         {
-            context.StandardError.WriteLine("grep: missing pattern");
+            context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["MissingPattern"]);
             return 2;
         }
 
@@ -67,7 +72,7 @@ public sealed class GrepCommand : TerminalAppBase
         try { regex = new Regex(pattern, regexOpts); }
         catch
         {
-            context.StandardError.WriteLine($"grep: invalid regular expression '{pattern}'");
+            context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["InvalidRegex", pattern]);
             return 2;
         }
 
@@ -118,7 +123,7 @@ public sealed class GrepCommand : TerminalAppBase
                 var res = await context.App.FileSystem.ReadAsync(req, cancellationToken);
                 if (!res.Succeeded || res.Value is null)
                 {
-                    context.StandardError.WriteLine($"grep: {file}: No such file or directory");
+                    context.StandardError.WriteLine(CommandText.FileError(context, "grep", file, CommandText.Reason(context, CommandIO.ReadErrno(res.Error))));
                     continue;
                 }
 

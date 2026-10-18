@@ -3,6 +3,7 @@ using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk.Shell;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Platform.Core.Shell;
 
@@ -10,21 +11,28 @@ namespace HackerOs.Platform.Core.Shell;
 /// Turns the terminal's <see cref="HackCredentialPrompt"/> into the three questions the
 /// interpreter asks (ADR 0056, section 7): <c>sudo</c>'s ticket, the one-shot approval after a
 /// permission denial (ADR 0042) and the text-mode approval of dangerous capabilities (ADR 0049,
-/// section 5). The terminal reads; this class verifies through the OS.
+/// section 5). The terminal reads; this class verifies through the OS. Its texts are in the
+/// shell's language (ADR 0104), as <c>sudo</c> prints its prompts in the locale of its process.
 /// </summary>
 internal sealed class ShellHostPrompts : IDangerousCapabilityApprovalPrompt
 {
     private readonly HackCredentialPrompt _prompt;
     private readonly IElevationService _elevation;
+    private readonly Func<System.Globalization.CultureInfo> _language;
 
     /// <summary>Creates the adapter for one hosted shell.</summary>
     /// <param name="prompt">The terminal's prompt.</param>
     /// <param name="elevation">Verifies the credentials and mints tickets (ADR 0042).</param>
-    public ShellHostPrompts(HackCredentialPrompt prompt, IElevationService elevation)
+    /// <param name="language">The shell's current language, read at each prompt; English when <see langword="null"/>.</param>
+    public ShellHostPrompts(HackCredentialPrompt prompt, IElevationService elevation, Func<System.Globalization.CultureInfo>? language = null)
     {
         _prompt = prompt ?? throw new ArgumentNullException(nameof(prompt));
         _elevation = elevation ?? throw new ArgumentNullException(nameof(elevation));
+        _language = language ?? (static () => HackerOs.AppSdk.Globalization.HackLocale.DefaultLanguage);
     }
+
+    /// <summary>Gets the core's texts in the shell's current language.</summary>
+    private IStringLocalizer Text => Strings.For(_language());
 
     /// <summary>
     /// <c>sudo</c>'s credential window (ADR 0051, section 4): an administrator's credentials mint
@@ -34,7 +42,7 @@ internal sealed class ShellHostPrompts : IDangerousCapabilityApprovalPrompt
     public async Task<ShellElevation?> RequestSudoAsync(string description, CancellationToken cancellationToken)
     {
         HackCredential? credential = await _prompt.ReadCredentialAsync(
-            new HackCredentialRequest("Administrator Authorization Required", description), cancellationToken).ConfigureAwait(false);
+            new HackCredentialRequest(Text["Prompt.Sudo.Title"], description), cancellationToken).ConfigureAwait(false);
         if (credential is null)
         {
             return null;
@@ -47,7 +55,7 @@ internal sealed class ShellHostPrompts : IDangerousCapabilityApprovalPrompt
             return new ShellElevation(token, ElevationScope.SudoRoot);
         }
 
-        await _prompt.WriteLineAsync("Sorry, try again.", HackPromptLineKind.Error, cancellationToken).ConfigureAwait(false);
+        await _prompt.WriteLineAsync(Text["Prompt.SorryTryAgain"], HackPromptLineKind.Error, cancellationToken).ConfigureAwait(false);
         return null;
     }
 
@@ -60,8 +68,8 @@ internal sealed class ShellHostPrompts : IDangerousCapabilityApprovalPrompt
         FileSystemError denied = denial.Error;
         HackCredential? credential = await _prompt.ReadCredentialAsync(
             new HackCredentialRequest(
-                "Permission Denied — Request Approval?",
-                $"'{denial.CommandName}' was denied {denied.Code} on '{denied.Path}'. Approve this one operation?"),
+                Text["Prompt.PermissionApproval.Title"],
+                Text["Prompt.PermissionApproval.Description", denial.CommandName, denied.Code, denied.Path?.ToString() ?? string.Empty]),
             cancellationToken).ConfigureAwait(false);
         if (credential is null)
         {
@@ -75,7 +83,7 @@ internal sealed class ShellHostPrompts : IDangerousCapabilityApprovalPrompt
             return new ShellElevation(token, ElevationScope.CapabilityApproval);
         }
 
-        await _prompt.WriteLineAsync("Sorry, try again.", HackPromptLineKind.Error, cancellationToken).ConfigureAwait(false);
+        await _prompt.WriteLineAsync(Text["Prompt.SorryTryAgain"], HackPromptLineKind.Error, cancellationToken).ConfigureAwait(false);
         return null;
     }
 
@@ -92,12 +100,14 @@ internal sealed class ShellHostPrompts : IDangerousCapabilityApprovalPrompt
     {
         ArgumentNullException.ThrowIfNull(request);
         AppManifest app = request.Manifest;
+        IStringLocalizer text = Text;
 
-        await WriteAsync("*** AUTORISATION ADMINISTRATEUR REQUISE ***", HackPromptLineKind.Warning).ConfigureAwait(false);
+        await WriteAsync(text["Prompt.Dangerous.Banner"], HackPromptLineKind.Warning).ConfigureAwait(false);
         await WriteAsync(
-            $"La commande non système '{app.Terminal?.Name ?? app.Name}' ({app.Id}, éditeur {app.PublisherId}, version {app.Version}) demande :",
+            text["Prompt.Dangerous.Request", app.Terminal?.Name ?? app.Name, app.Id, app.PublisherId, app.Version],
             HackPromptLineKind.Warning).ConfigureAwait(false);
-        foreach (CapabilityDescription capability in request.Capabilities)
+        foreach (CapabilityDescription capability in request.Capabilities.Select(description =>
+                     HackerOs.Platform.Core.Policy.CapabilityText.Localize(description, _language())))
         {
             await WriteAsync($"  - {capability.Title} [{capability.Capability}]", HackPromptLineKind.Warning).ConfigureAwait(false);
             if (!string.IsNullOrEmpty(capability.RiskDescription))
@@ -106,35 +116,32 @@ internal sealed class ShellHostPrompts : IDangerousCapabilityApprovalPrompt
             }
         }
 
-        await WriteAsync("Cette décision sera inscrite dans /var/log/auth.log.", HackPromptLineKind.Info).ConfigureAwait(false);
+        await WriteAsync(text["Prompt.Dangerous.AuditNotice"], HackPromptLineKind.Info).ConfigureAwait(false);
 
         HackConfirmation choice = await _prompt.ConfirmAsync(new HackConfirmationRequest(
-            "Autorisation administrateur requise",
-            $"Autoriser '{app.Name}' à utiliser ces capacités ?\n"
-                + "Oui : un administrateur saisit son nom et son mot de passe.\n"
-                + "Non : refuser pour vous (on ne vous le redemandera plus).\n"
-                + "Annuler : décider au prochain lancement."), cancellationToken).ConfigureAwait(false);
+            text["Prompt.Dangerous.Title"],
+            text["Prompt.Dangerous.Question", app.Name]), cancellationToken).ConfigureAwait(false);
 
         if (choice == HackConfirmation.No)
         {
-            await WriteAsync("Capacités refusées pour vous.", HackPromptLineKind.Info).ConfigureAwait(false);
+            await WriteAsync(text["Prompt.Dangerous.Refused"], HackPromptLineKind.Info).ConfigureAwait(false);
             return DangerousCapabilityApprovalOutcome.Refused;
         }
 
         if (choice != HackConfirmation.Yes)
         {
-            await WriteAsync("Aucune décision : la commande démarre sans ces capacités.", HackPromptLineKind.Info).ConfigureAwait(false);
+            await WriteAsync(text["Prompt.Dangerous.Dismissed"], HackPromptLineKind.Info).ConfigureAwait(false);
             return DangerousCapabilityApprovalOutcome.Dismissed;
         }
 
         while (true)
         {
             HackCredential? credential = await _prompt.ReadCredentialAsync(new HackCredentialRequest(
-                "Autorisation administrateur requise",
-                $"Approuver les capacités dangereuses de '{app.Name}' pour toute la machine."), cancellationToken).ConfigureAwait(false);
+                text["Prompt.Dangerous.Title"],
+                text["Prompt.Dangerous.CredentialDescription", app.Name]), cancellationToken).ConfigureAwait(false);
             if (credential is null)
             {
-                await WriteAsync("Aucune décision : la commande démarre sans ces capacités.", HackPromptLineKind.Info).ConfigureAwait(false);
+                await WriteAsync(text["Prompt.Dangerous.Dismissed"], HackPromptLineKind.Info).ConfigureAwait(false);
                 return DangerousCapabilityApprovalOutcome.Dismissed;
             }
 
@@ -142,19 +149,19 @@ internal sealed class ShellHostPrompts : IDangerousCapabilityApprovalPrompt
                 credential.LoginName, credential.Password, cancellationToken).ConfigureAwait(false);
             if (attempt.Succeeded)
             {
-                await WriteAsync("Capacités autorisées par un administrateur.", HackPromptLineKind.Info).ConfigureAwait(false);
+                await WriteAsync(text["Prompt.Dangerous.Approved"], HackPromptLineKind.Info).ConfigureAwait(false);
                 return DangerousCapabilityApprovalOutcome.Approved;
             }
 
             if (attempt.RemainingAttempts <= 0)
             {
                 await WriteAsync(
-                    $"{DangerousCapabilityApprovalRequest.MaxAttempts} essais incorrects : demande annulée.",
+                    text["Prompt.Dangerous.TooManyAttempts", DangerousCapabilityApprovalRequest.MaxAttempts],
                     HackPromptLineKind.Error).ConfigureAwait(false);
                 return DangerousCapabilityApprovalOutcome.Dismissed;
             }
 
-            await WriteAsync("Désolé, réessayez.", HackPromptLineKind.Error).ConfigureAwait(false);
+            await WriteAsync(text["Prompt.SorryTryAgain"], HackPromptLineKind.Error).ConfigureAwait(false);
         }
 
         Task WriteAsync(string text, HackPromptLineKind kind) => _prompt.WriteLineAsync(text, kind, cancellationToken);

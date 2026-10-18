@@ -13,19 +13,43 @@ public sealed class DevFileSystemProviderTests
     private const string Write = AppCapabilities.FileSystemSystemWrite;
 
     [Fact]
-    public async Task Dev_lists_the_four_character_devices()
+    public async Task Dev_lists_the_five_character_devices()
     {
         VirtualFileSystemFixture fixture = await CreateSeededAsync();
 
         FileSystemResult<FileSystemDirectorySnapshot> listing = await fixture.Service.EnumerateAsync(
             new FileSystemEnumerateRequest(VirtualPath.Parse("/dev")), fixture.AppContext(null, Read));
 
-        Assert.Equal(["null", "random", "urandom", "zero"], listing.Value!.Entries.Select(static entry => entry.Name.Value));
+        Assert.Equal(["kmsg", "null", "random", "urandom", "zero"], listing.Value!.Entries.Select(static entry => entry.Name.Value));
         Assert.All(listing.Value.Entries, static entry =>
         {
             Assert.Equal(FileSystemEntryKind.CharacterDevice, entry.Metadata.Kind);
-            Assert.Equal(0x1B6, entry.Metadata.Permissions.Mode); // 0666
+            // 0666, except the kernel log: 0644, read by all, written by root (ADR 0126).
+            Assert.Equal(entry.Name.Value == "kmsg" ? 0x1A4 : 0x1B6, entry.Metadata.Permissions.Mode);
         });
+    }
+
+    [Fact]
+    public async Task Kmsg_reads_the_ring_buffer_and_only_root_adds_a_line_to_it()
+    {
+        VirtualFileSystemFixture fixture = await CreateSeededAsync();
+        fixture.Clock.Advance(15);
+        fixture.KernelLog.Write(HackerOs.Platform.Core.Diagnostics.KernelLogLevel.Warning, "oom-killer: disabled, memory is not measured");
+
+        Assert.Equal("4,0,1500000,-;oom-killer: disabled, memory is not measured\n",
+            await fixture.ReadTextAsync("/dev/kmsg", fixture.AppContext(null, Read)));
+
+        FileSystemMutationResult denied = await fixture.Service.WriteAsync(
+            new FileSystemWriteRequest(VirtualPath.Parse("/dev/kmsg")), new BytesSource("hello\n"u8.ToArray()), fixture.AppContext(null, Read, Write));
+        Assert.False(denied.Succeeded);
+
+        FileSystemMutationResult written = await fixture.Service.WriteAsync(
+            new FileSystemWriteRequest(VirtualPath.Parse("/dev/kmsg")), new BytesSource("hello from root\n"u8.ToArray()), fixture.SystemContext());
+        Assert.True(written.Succeeded);
+        HackerOs.Platform.Core.Diagnostics.KernelLogEntry entry = fixture.KernelLog.ReadAll()[^1];
+        Assert.Equal("hello from root", entry.Message);
+        Assert.Equal(HackerOs.Platform.Core.Diagnostics.KernelLogLevel.Notice, entry.Level);
+        Assert.Equal(0, fixture.Root.Mutations);
     }
 
     [Fact]

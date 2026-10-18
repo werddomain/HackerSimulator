@@ -1,0 +1,5 @@
+{
+  "name": "printf",
+  "description": "Formate et affiche des données",
+  "terminalUsage": "printf format [argument...]"
+}

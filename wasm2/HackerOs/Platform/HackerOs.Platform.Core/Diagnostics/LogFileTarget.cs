@@ -21,6 +21,18 @@ public sealed record LogFileTarget
     /// <summary>Audit log: logins, <c>sudo</c>, permission approvals. Mode <c>0600</c>, like Linux.</summary>
     public static readonly LogFileTarget AuthLog = new(VirtualPath.Parse("/var/log/auth.log"), 0b110_000_000);
 
+    /// <summary>
+    /// Filesystem audit log: every protected write under <c>/etc</c>, <c>/bin</c> and <c>/var</c>, in the
+    /// format of <c>auditd</c> (ADR 0100, section 3). Mode <c>0600</c>, read with <c>sudo ausearch</c>.
+    /// </summary>
+    public static readonly LogFileTarget AuditLog = new(VirtualPath.Parse("/var/log/audit.log"), 0b110_000_000);
+
+    /// <summary>
+    /// Kernel log: every line of the kernel's ring buffer (<c>kern.*</c>, ADR 0126), such as the OOM
+    /// killer's. Mode <c>0644</c>; <c>dmesg</c> reads the ring buffer itself through <c>/dev/kmsg</c>.
+    /// </summary>
+    public static readonly LogFileTarget KernLog = new(VirtualPath.Parse("/var/log/kern.log"), 0b110_100_100);
+
     private LogFileTarget(VirtualPath path, ushort mode)
     {
         Path = path;
@@ -46,6 +58,50 @@ public sealed record LogFileTarget
         ArgumentException.ThrowIfNullOrWhiteSpace(appId);
         FileSystemEntryName name = FileSystemEntryName.Parse($"{appId}.log");
         return new LogFileTarget(VirtualPath.Parse($"{AppLogDirectory.Value}/{name.Value}"), 0b110_100_100);
+    }
+
+    /// <summary>
+    /// Returns a daemon log of a system app, <c>/var/log/&lt;directory&gt;/&lt;file&gt;.log</c>, mode
+    /// <c>0644</c> (ADR 0080, section 3), for example <c>/var/log/hackweb/docs.access.log</c>.
+    /// </summary>
+    /// <param name="relativePath"><c>&lt;directory&gt;/&lt;file&gt;.log</c>: two plain segments, the second ending in <c>.log</c>.</param>
+    /// <exception cref="ArgumentException">
+    /// The path has not exactly two segments, a segment is not a valid file name, the file does not
+    /// end in <c>.log</c>, or the directory is <c>apps</c> (reserved for <see cref="ForApp"/>).
+    /// </exception>
+    public static LogFileTarget ForDaemon(string relativePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
+        string[] segments = relativePath.Split('/');
+        if (segments.Length != 2
+            || !TryParseName(segments[0], out FileSystemEntryName directory)
+            || !TryParseName(segments[1], out FileSystemEntryName file)
+            || !file.Value.EndsWith(".log", StringComparison.Ordinal)
+            || file.Value.Length == ".log".Length)
+        {
+            throw new ArgumentException($"'{relativePath}' is not a daemon log path ('<directory>/<file>.log').", nameof(relativePath));
+        }
+
+        if (string.Equals(directory.Value, "apps", StringComparison.Ordinal))
+        {
+            throw new ArgumentException("/var/log/apps holds the per-app logs; a daemon log uses a directory of its own.", nameof(relativePath));
+        }
+
+        return new LogFileTarget(VirtualPath.Parse($"{LogDirectory.Value}/{directory.Value}/{file.Value}"), 0b110_100_100);
+    }
+
+    private static bool TryParseName(string value, out FileSystemEntryName name)
+    {
+        try
+        {
+            name = FileSystemEntryName.Parse(value);
+            return true;
+        }
+        catch (FormatException)
+        {
+            name = default;
+            return false;
+        }
     }
 
     /// <summary>Returns the path of archive <paramref name="index"/> (<c>&lt;file&gt;.1</c> is the newest).</summary>

@@ -14,22 +14,36 @@ public sealed class FileExplorerState
     private readonly Stack<string> _backStack = new();
     private readonly Stack<string> _forwardStack = new();
 
+    /// <summary>Starts the history at <paramref name="initialPath"/>, normalized, with empty back and forward stacks.</summary>
+    /// <param name="initialPath">The directory shown first; <c>/home/user</c> by default.</param>
     public FileExplorerState(string initialPath = "/home/user")
     {
         CurrentPath = NormalizePath(initialPath);
     }
 
+    /// <summary>The normalized absolute path of the directory being shown.</summary>
     public string CurrentPath { get; private set; }
 
+    /// <summary>True when there is a previously visited directory to go back to.</summary>
     public bool CanNavigateBack => _backStack.Count > 0;
+    /// <summary>True after going back, until a new navigation clears the forward history.</summary>
     public bool CanNavigateForward => _forwardStack.Count > 0;
+    /// <summary>True unless the current directory is the root <c>/</c>.</summary>
     public bool CanNavigateUp => CurrentPath != "/";
 
+    /// <summary>The layout the embedded <see cref="FileView"/> uses (details by default).</summary>
     public FileViewMode ViewMode { get; set; } = FileViewMode.Details;
+    /// <summary>The filter text typed in the search box; empty when no filter is applied.</summary>
     public string SearchQuery { get; set; } = string.Empty;
 
+    /// <summary>Raised whenever <see cref="CurrentPath"/> changes, or when <see cref="NotifyStateChanged"/> is called.</summary>
     public event Action? StateChanged;
 
+    /// <summary>
+    /// Navigates to a directory like a browser link: the current path is pushed on the back stack and
+    /// the forward history is discarded. Navigating to the directory already shown does nothing.
+    /// </summary>
+    /// <param name="newPath">The target path; <c>.</c> and <c>..</c> segments are resolved.</param>
     public void NavigateTo(string newPath)
     {
         string normalized = NormalizePath(newPath);
@@ -44,6 +58,7 @@ public sealed class FileExplorerState
         NotifyStateChanged();
     }
 
+    /// <summary>Returns to the previously visited directory, keeping the current one for <see cref="NavigateForward"/>.</summary>
     public void NavigateBack()
     {
         if (_backStack.Count == 0)
@@ -56,6 +71,7 @@ public sealed class FileExplorerState
         NotifyStateChanged();
     }
 
+    /// <summary>Re-visits the directory left by the last <see cref="NavigateBack"/>.</summary>
     public void NavigateForward()
     {
         if (_forwardStack.Count == 0)
@@ -68,6 +84,7 @@ public sealed class FileExplorerState
         NotifyStateChanged();
     }
 
+    /// <summary>Navigates to the parent directory, recorded in the back history like any navigation.</summary>
     public void NavigateUp()
     {
         if (!CanNavigateUp)
@@ -80,6 +97,7 @@ public sealed class FileExplorerState
         NavigateTo(parentPath);
     }
 
+    /// <summary>Raises <see cref="StateChanged"/> so the window re-renders, e.g. after the view mode or search changed.</summary>
     public void NotifyStateChanged()
     {
         StateChanged?.Invoke();

@@ -100,9 +100,13 @@ public sealed class SettingsStoreToFilesMigration : IUserProfileInitializer
         foreach (OsSettingsDocument document in new[]
                  {
                      AppearanceSettingsDocuments.Document,
+                     // ADR 0105: high contrast, text size and reduced motion, all following the host.
+                     AccessibilitySettingsDocuments.Document,
                      UiPlatformPreferenceSettingsDocuments.Document,
                      PolicySettingsDocuments.Document,
-                     Clipboard.ClipboardSettingsDocuments.Document
+                     Clipboard.ClipboardSettingsDocuments.Document,
+                     // ADR 0127 §5: the "not responding" dialog switch.
+                     Shell.WindowManagerSettingsDocuments.Document
                  })
         {
             await WriteIfAbsentAsync(system, document.SystemPath, DefaultConfig(document), cancellationToken).ConfigureAwait(false);
@@ -114,11 +118,24 @@ public sealed class SettingsStoreToFilesMigration : IUserProfileInitializer
             FileAssociationSettingsDocuments.DefaultContent,
             cancellationToken).ConfigureAwait(false);
 
+        // ADR 0095, section 3: the window manager's shortcuts, every line commented out.
+        await WriteIfAbsentAsync(
+            system,
+            Shell.WindowKeyBindingsSettingsDocuments.Document.SystemPath,
+            Shell.WindowKeyBindingsSettingsDocuments.DefaultSystemFileContent,
+            cancellationToken).ConfigureAwait(false);
+
         // ADR 0049: the dangerous-capability policy and the (empty) machine decisions.
         await WriteIfAbsentAsync(
             system,
             SecuritySettingsDocuments.Document.SystemPath,
             SecuritySettingsDocuments.DefaultContent,
+            cancellationToken).ConfigureAwait(false);
+        // ADR 0126: the OOM killer's switch, off.
+        await WriteIfAbsentAsync(
+            system,
+            Processes.MemorySettingsDocuments.Document.SystemPath,
+            Processes.MemorySettingsDocuments.DefaultContent,
             cancellationToken).ConfigureAwait(false);
         await WriteIfAbsentAsync(
             system,

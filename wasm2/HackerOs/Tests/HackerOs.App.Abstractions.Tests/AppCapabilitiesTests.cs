@@ -62,13 +62,17 @@ public sealed class AppCapabilitiesTests
         { AppCapabilities.NetworkSimulatedRead, CapabilityRisk.Normal },
         { AppCapabilities.NetworkSimulatedWrite, CapabilityRisk.Normal },
         { AppCapabilities.NetworkRealAccess, CapabilityRisk.Dangerous },
-        { AppCapabilities.GameplayDomainAccess, CapabilityRisk.Normal },
+        { AppCapabilities.NetworkListen, CapabilityRisk.Normal },
+        { AppCapabilities.NetworkListenPrivileged, CapabilityRisk.Dangerous },
         { AppCapabilities.ShellControl, CapabilityRisk.Normal },
         { AppCapabilities.PermissionsManage, CapabilityRisk.Dangerous },
         { AppCapabilities.ServerConnectionManage, CapabilityRisk.Dangerous },
         { AppCapabilities.SystemPower, CapabilityRisk.Dangerous },
         { AppCapabilities.SystemStorageInspect, CapabilityRisk.Dangerous },
+        { AppCapabilities.SystemBackup, CapabilityRisk.Dangerous },
         { AppCapabilities.ShellHost, CapabilityRisk.Dangerous },
+        { AppCapabilities.KeyringReadAll, CapabilityRisk.Dangerous },
+        { AppCapabilities.UsersManage, CapabilityRisk.Dangerous },
     };
 
     [Theory]

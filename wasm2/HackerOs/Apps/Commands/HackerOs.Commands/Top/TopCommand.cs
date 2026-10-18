@@ -4,6 +4,8 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Diagnostics;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Top;
 
@@ -21,6 +23,8 @@ public sealed class TopCommand(AppManifest manifest) : TerminalAppBase(manifest)
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        // Only the messages are translated: the summary and the table stay English for scripts (ADR 0104, section 5).
+        IStringLocalizer<Strings> messages = context.App.GetLocalizer<Strings>();
         bool batch = false;
         int? iterations = null;
         double delay = 3;
@@ -45,8 +49,8 @@ public sealed class TopCommand(AppManifest manifest) : TerminalAppBase(manifest)
                         break;
                     }
 
-                    await context.StandardError.WriteLineAsync($"top: unknown option '{arg}'");
-                    await context.StandardError.WriteLineAsync("Usage: top -b [-n iterations] [-d delay] [-u user] [-o field]");
+                    await context.StandardError.WriteLineAsync(messages["UnknownOption", arg]);
+                    await context.StandardError.WriteLineAsync(messages["Usage"]);
                     return 1;
             }
         }
@@ -181,7 +185,7 @@ public sealed class TopCommand(AppManifest manifest) : TerminalAppBase(manifest)
             string name = process.ProcessName.Length > 0 ? process.ProcessName : process.AppId;
             string line = string.Create(
                 CultureInfo.InvariantCulture,
-                $"{process.Id,7} {Truncate(process.UserName.Length > 0 ? process.UserName : process.UserId, 8),-8}  20   0 {resKb * 3,7} {resKb,6} {resKb / 4,6} {process.StateCode} {process.CpuUsage,5:0.0} {memPercent,5:0.0} {SystemSnapshot.FormatCpuTime(process, now),9} {name}");
+                $"{process.Id,7} {Truncate(process.UserName.Length > 0 ? process.UserName : process.UserId, 8),-8} {process.BasePriority,3} {process.Nice,3} {resKb * 3,7} {resKb,6} {resKb / 4,6} {process.StateCode} {process.CpuUsage,5:0.0} {memPercent,5:0.0} {SystemSnapshot.FormatCpuTime(process, now),9} {name}");
             lines.Add(line.Length > columns ? line[..columns] : line);
         }
 

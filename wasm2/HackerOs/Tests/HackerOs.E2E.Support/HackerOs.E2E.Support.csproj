@@ -2,7 +2,8 @@
 
   <!--
     Shared Playwright plumbing for every browser-driven suite (HackerOs.E2E.Tests,
-    HackerOs.UI.E2E.Tests, HackerOs.Pwa.E2E.Tests, HackerOs.HostSmoke.Tests). Test-only code:
+    HackerOs.UI.E2E.Tests, HackerOs.Pwa.E2E.Tests, HackerOs.HostSmoke.Tests,
+    HackerOs.TrimmedPublish.E2E.Tests). Test-only code:
     never referenced by a shipping project, so the trim analysis Directory.Build.props turns on
     for every non-".Tests" project does not apply here.
   -->

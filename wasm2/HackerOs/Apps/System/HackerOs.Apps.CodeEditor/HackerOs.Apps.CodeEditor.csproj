@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <Import Project="../../../Platform/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.Apps.CodeEditor</PackageId>
+    <Description>The base HackerOS code editor workbench app, to include in an OS host (ProjectReference or PackageReference, optionally IsSystemApp).</Description>
+    <PackageTags>hackeros;app</PackageTags>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -17,6 +25,11 @@
     <ProjectReference Include="..\..\..\Shared\HackerOs.AppSdk.Blazor\HackerOs.AppSdk.Blazor.csproj" />
     <ProjectReference Include="..\..\..\Shared\HackerOs.AppSdk.FileView\HackerOs.AppSdk.FileView.csproj" />
     <ProjectReference Include="..\..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The background search task and its DTOs are internal (ADR 0140); the tests run them inline. -->
+    <InternalsVisibleTo Include="HackerOs.Apps.CodeEditor.Tests" />
   </ItemGroup>
 
   <Target Name="ValidateCodeEditorAssets" BeforeTargets="PrepareForBuild">

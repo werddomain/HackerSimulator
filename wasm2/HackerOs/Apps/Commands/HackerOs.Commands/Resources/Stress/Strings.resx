@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Completed" xml:space="preserve">
+    <value>stress: info: [{0}] successful run completed in {1:0}s</value>
+  </data>
+  <data name="Dispatching" xml:space="preserve">
+    <value>stress: info: [{0}] dispatching hogs: {1} cpu, 0 io, {2} vm, 0 hdd</value>
+  </data>
+  <data name="InvalidOption" xml:space="preserve">
+    <value>stress: invalid option '{0}'</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>Usage: stress [-c N] [-m N] [--vm-bytes B] [--vm-keep] [-t SECONDS] [--yield]</value>
+  </data>
+  <data name="InvalidBytes" xml:space="preserve">
+    <value>stress: invalid size '{0}' (use B, K, M or G)</value>
+  </data>
+  <data name="VmAllocFailed" xml:space="preserve">
+    <value>stress: FAIL: [{0}] hogvm malloc failed: out of memory</value>
+  </data>
+</root>

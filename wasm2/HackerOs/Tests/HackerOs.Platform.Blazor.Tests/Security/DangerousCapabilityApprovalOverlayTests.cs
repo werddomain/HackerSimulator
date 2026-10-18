@@ -1,6 +1,9 @@
+using System.Globalization;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Icons;
 using HackerOs.Platform.Blazor.Security;
+using HackerOs.Platform.Blazor.Tests.Localization;
+using HackerOs.Platform.Core.Globalization;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Simulation.Abstractions.Sessions;
 using Microsoft.AspNetCore.Components;
@@ -23,14 +26,15 @@ public sealed class DangerousCapabilityApprovalOverlayTests
         string html = await RenderAsync(broker);
         string text = System.Net.WebUtility.HtmlDecode(html);
 
-        Assert.Contains("Autorisation administrateur requise", html, StringComparison.Ordinal);
+        Assert.Contains("Administrator authorization required", html, StringComparison.Ordinal);
         Assert.Contains("Scanner", html, StringComparison.Ordinal);
         Assert.Contains("org.example.scanner", html, StringComparison.Ordinal);
-        Assert.Contains("App non système", text, StringComparison.Ordinal);
+        Assert.Contains("Non-system app", text, StringComparison.Ordinal);
         Assert.Contains("1.2.0", html, StringComparison.Ordinal);
         foreach (string capability in new[] { AppCapabilities.NetworkRealAccess, AppCapabilities.ProcessManage })
         {
-            CapabilityDescription description = AppCapabilities.Describe(capability);
+            // The texts are translated (ADR 0104): English before any session language.
+            CapabilityDescription description = CapabilityText.Describe(capability, language: null);
             Assert.Contains(capability, html, StringComparison.Ordinal);
             Assert.Contains(description.Title, text, StringComparison.Ordinal);
             Assert.Contains(description.RiskDescription!, text, StringComparison.Ordinal);
@@ -40,6 +44,26 @@ public sealed class DangerousCapabilityApprovalOverlayTests
         Assert.Matches("<button type=\"submit\" class=\"dca-approve\" disabled", html);
         Assert.Contains("/var/log/auth.log", html, StringComparison.Ordinal);
         Assert.False(outcome.IsCompleted);
+    }
+
+    [Fact]
+    public async Task Overlay_speaks_the_session_language_French_after_sign_in()
+    {
+        DangerousCapabilityApprovalBroker broker = new();
+        using IDisposable host = broker.Attach();
+        _ = broker.RequestAsync(CreateRequest(suggestedLogin: "root"));
+
+        string text = System.Net.WebUtility.HtmlDecode(
+            await RenderAsync(broker, TestLocalization.CreateSessionLocale("fr_FR.UTF-8")));
+
+        Assert.Contains("Autorisation administrateur requise", text, StringComparison.Ordinal);
+        Assert.Contains("App non système", text, StringComparison.Ordinal);
+        Assert.Contains("Nom d'administrateur", text, StringComparison.Ordinal);
+        Assert.Contains("Mot de passe", text, StringComparison.Ordinal);
+        Assert.Contains(CapabilityText.Describe(AppCapabilities.NetworkRealAccess, new CultureInfo("fr")).Title, text, StringComparison.Ordinal);
+        Assert.Contains(">Refuser</button>", text, StringComparison.Ordinal);
+        Assert.Contains("Autoriser", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Administrator authorization required", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -75,10 +99,19 @@ public sealed class DangerousCapabilityApprovalOverlayTests
         Assert.Null(broker.Current);
     }
 
-    private static async Task<string> RenderAsync(DangerousCapabilityApprovalBroker broker)
+    private static async Task<string> RenderAsync(DangerousCapabilityApprovalBroker broker, SessionLocaleService? locale = null)
     {
         ServiceCollection services = new();
         services.AddSingleton(broker);
+        if (locale is null)
+        {
+            services.AddEnglishLocalizer();
+        }
+        else
+        {
+            services.AddSessionLocalizer(locale);
+        }
+
         services.AddSingleton<IIconCatalog, IconCatalog>();
         await using ServiceProvider provider = services.BuildServiceProvider();
         await using HtmlRenderer renderer = new(provider, NullLoggerFactory.Instance);
@@ -100,7 +133,7 @@ public sealed class DangerousCapabilityApprovalOverlayTests
             Description = "Overlay fixture.",
             Kind = AppKind.Window,
             EntryPoint = new AppEntryPointManifest("Scanner", "Scanner.ScannerWindow"),
-            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
             Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
             Resources = AppResourceProfileManifest.None,
             Capabilities = [AppCapabilities.NetworkRealAccess, AppCapabilities.ProcessManage]

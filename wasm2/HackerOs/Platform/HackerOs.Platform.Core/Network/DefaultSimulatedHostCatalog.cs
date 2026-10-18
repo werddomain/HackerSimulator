@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using HackerOs.Platform.Core.Network.Websites;
 using HackerOs.Simulation.Abstractions.Network;
 
 namespace HackerOs.Platform.Core.Network;
@@ -15,7 +16,8 @@ public static class DefaultSimulatedHostCatalog
     /// </summary>
     public static IReadOnlyList<SimulatedHost> Build() =>
     [
-        // localhost
+        // localhost: its open ports are the system daemons of this machine (sshd, mysqld), listed
+        // by netstat without a process. HTTP ports belong to the apps that listen (ADR 0074).
         new SimulatedHost(
             Ip:          "127.0.0.1",
             Hostname:    "localhost",
@@ -24,9 +26,7 @@ public static class DefaultSimulatedHostCatalog
             Ports:
             [
                 Port(22,   SimulatedPortState.Open,     "ssh",        "OpenSSH 8.2p1",     "SSH protocol 2.0"),
-                Port(80,   SimulatedPortState.Open,     "http",       "Apache httpd 2.4.41","HTTP server"),
                 Port(3306, SimulatedPortState.Open,     "mysql",      "MySQL 5.7.30",       "MySQL database server"),
-                Port(8080, SimulatedPortState.Open,     "http-proxy", "nginx 1.18.0",       "Proxy server"),
                 Port(25,   SimulatedPortState.Filtered, "smtp"),
                 Port(443,  SimulatedPortState.Filtered, "https"),
             ],
@@ -193,6 +193,20 @@ public static class DefaultSimulatedHostCatalog
             LatencyMs:   0,
             Ports: [],
             OsFingerprint: null),
+    ];
+
+    /// <summary>
+    /// Returns the website controllers that serve the default hosts: HackerSearch (the Browser's
+    /// home page and search engine), HackMail, CryptoBank, the darknet market and the hacker forum.
+    /// A new instance per call, so every network composed from it has its own sessions.
+    /// </summary>
+    public static IReadOnlyList<ISimulatedWebsiteController> BuildWebsites() =>
+    [
+        new HackerSearchController(),
+        new HackMailController(),
+        new CryptoBankController(),
+        new DarknetMarketController(),
+        new HackerForumController(),
     ];
 
     // ── Port factory helpers ───────────────────────────────────────────────

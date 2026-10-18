@@ -1,4 +1,5 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.Platform.Core.Execution;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -11,9 +12,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace HackerOs.Platform.Core.Processes;
 
 /// <summary>
-/// Pure rules of the login environment (ADR 0050, section 5): the variables every root process of
-/// a session starts with, then the <c>NAME=value</c> lines of <c>/etc/environment</c>, read like
-/// Linux's <c>pam_env</c>.
+/// Pure rules of the login environment (ADR 0050, section 5; ADR 0104, section 2): the variables
+/// every root process of a session starts with, then the system locale (<c>/etc/locale.conf</c>),
+/// the <c>NAME=value</c> lines of <c>/etc/environment</c> read like Linux's <c>pam_env</c>, and
+/// last the user's own locale (<c>~/.config/locale.conf</c>), as a systemd user session does.
 /// </summary>
 public static class LoginEnvironment
 {
@@ -33,7 +35,18 @@ public static class LoginEnvironment
     public const string DefaultShell = "/bin/hsh";
 
     /// <summary>Default locale recorded in <c>LANG</c>.</summary>
-    public const string DefaultLanguage = "en_US.UTF-8";
+    public const string DefaultLanguage = HackLocale.DefaultLocale;
+
+    /// <summary>System locale file (systemd's <c>locale.conf</c>, written by <c>localectl</c>), <c>0644</c>, owned by root.</summary>
+    public static readonly VirtualPath SystemLocaleFilePath = VirtualPath.Parse("/etc/locale.conf");
+
+    /// <summary>Location of the user's locale file under their home directory (<c>~/.config/locale.conf</c>).</summary>
+    public const string UserLocaleFileRelativePath = ".config/locale.conf";
+
+    /// <summary>Content written to a freshly seeded <c>/etc/locale.conf</c>.</summary>
+    public const string DefaultSystemLocaleFileContent =
+        "# /etc/locale.conf: system locale (ADR 0104), changed with 'localectl set-locale'.\n" +
+        "LANG=" + HackLocale.DefaultLocale + "\n";
 
     /// <summary>Content written to a freshly seeded <c>/etc/environment</c>.</summary>
     public const string DefaultEnvironmentFileContent =
@@ -42,19 +55,32 @@ public static class LoginEnvironment
 
     private static readonly HashSet<string> ProtectedNames = new(StringComparer.Ordinal) { "HOME", "USER", "LOGNAME" };
 
+    /// <summary>Returns the path of a user's <c>~/.config/locale.conf</c>.</summary>
+    /// <param name="homeDirectory">The user's home directory.</param>
+    public static VirtualPath UserLocaleFilePath(string homeDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(homeDirectory);
+        return VirtualPath.Parse($"{homeDirectory.TrimEnd('/')}/{UserLocaleFileRelativePath}");
+    }
+
     /// <summary>
-    /// Builds the login environment of one user: the fixed variables of ADR 0050, then the lines of
-    /// <paramref name="environmentFile"/> on top.
+    /// Builds the login environment of one user: the fixed variables of ADR 0050, then
+    /// <paramref name="systemLocaleFile"/>, the lines of <paramref name="environmentFile"/>, and
+    /// <paramref name="userLocaleFile"/> on top (ADR 0104, section 2).
     /// </summary>
     /// <param name="loginName">Login name, for <c>USER</c> and <c>LOGNAME</c>.</param>
     /// <param name="homeDirectory">Home directory, for <c>HOME</c> and the initial <c>PWD</c>.</param>
     /// <param name="environmentFile">Content of <c>/etc/environment</c>, or <see langword="null"/> when absent.</param>
     /// <param name="warnings">Receives one message per ignored line, for the system log.</param>
+    /// <param name="systemLocaleFile">Content of <c>/etc/locale.conf</c>, or <see langword="null"/> when absent.</param>
+    /// <param name="userLocaleFile">Content of <c>~/.config/locale.conf</c>, or <see langword="null"/> when absent.</param>
     public static IReadOnlyDictionary<string, string> Build(
         string loginName,
         string homeDirectory,
         string? environmentFile,
-        ICollection<string>? warnings = null)
+        ICollection<string>? warnings = null,
+        string? systemLocaleFile = null,
+        string? userLocaleFile = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(loginName);
         ArgumentException.ThrowIfNullOrWhiteSpace(homeDirectory);
@@ -70,9 +96,35 @@ public static class LoginEnvironment
             ["LANG"] = DefaultLanguage
         };
 
+        ApplyLocaleFile(variables, systemLocaleFile, SystemLocaleFilePath.Value, warnings);
+        ApplyEnvironmentFile(variables, environmentFile, warnings);
+        ApplyLocaleFile(variables, userLocaleFile, $"{homeDirectory.TrimEnd('/')}/{UserLocaleFileRelativePath}", warnings);
+        return variables;
+    }
+
+    /// <summary>Applies a systemd <c>locale.conf</c>: only <c>LANG</c>, <c>LANGUAGE</c> and <c>LC_*</c> lines count.</summary>
+    private static void ApplyLocaleFile(
+        Dictionary<string, string> variables, string? content, string path, ICollection<string>? warnings)
+    {
+        List<(int Line, string Message)> problems = [];
+        foreach (KeyValuePair<string, string> variable in HackLocale.ParseLocaleConf(content, problems))
+        {
+            variables[variable.Key] = variable.Value;
+        }
+
+        foreach ((int line, string message) in problems)
+        {
+            warnings?.Add($"locale: {path}:{line}: {message}");
+        }
+    }
+
+    /// <summary>Applies the <c>NAME=value</c> lines of <c>/etc/environment</c>, like <c>pam_env</c>.</summary>
+    private static void ApplyEnvironmentFile(
+        Dictionary<string, string> variables, string? environmentFile, ICollection<string>? warnings)
+    {
         if (environmentFile is null)
         {
-            return variables;
+            return;
         }
 
         string[] lines = environmentFile.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
@@ -99,8 +151,6 @@ public static class LoginEnvironment
 
             variables[name] = value;
         }
-
-        return variables;
     }
 
     /// <summary>Returns the machine name held by <c>/etc/hostname</c>: its first non-blank line, trimmed.</summary>
@@ -228,10 +278,14 @@ public sealed class LoginEnvironmentProvider
             IAppFileSystemGateway root = new AppFileSystemGateway(_fileSystem, _clock, RootOperation(), ["system"]);
             string? environmentFile = await ReadAsync(root, LoginEnvironment.EnvironmentFilePath, cancellationToken).ConfigureAwait(false);
             string? hostNameFile = await ReadAsync(root, LoginEnvironment.HostNameFilePath, cancellationToken).ConfigureAwait(false);
+            // ADR 0104: the system locale, then the user's own, around /etc/environment.
+            string? systemLocaleFile = await ReadAsync(root, LoginEnvironment.SystemLocaleFilePath, cancellationToken).ConfigureAwait(false);
+            string? userLocaleFile = await ReadAsync(
+                root, LoginEnvironment.UserLocaleFilePath(principal.HomePath), cancellationToken).ConfigureAwait(false);
 
             List<string> warnings = [];
             IReadOnlyDictionary<string, string> variables = LoginEnvironment.Build(
-                principal.LoginName.Value, principal.HomePath, environmentFile, warnings);
+                principal.LoginName.Value, principal.HomePath, environmentFile, warnings, systemLocaleFile, userLocaleFile);
             foreach (string warning in warnings)
             {
                 _logger.LogWarning("{EnvironmentWarning}", warning);

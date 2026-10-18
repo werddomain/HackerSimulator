@@ -90,6 +90,14 @@ comptable : `user + system + idle` vaut toujours le temps écoulé.
 - Sur le thread principal, l'état n'est visible qu'**après coup**, à la fin de
   la tranche : rien d'autre ne s'exécute pendant. Une boucle infinie gèle
   encore l'OS ; seul un Web Worker (ADR 0070) l'isole.
+- **Attention (ADR 0127 §4)** : une app fenêtrée tourne sur le fil principal.
+  Une boucle longue sans `await` y gèle tout le bureau, souris comprise, et
+  aucune boîte ne peut s'afficher pendant le gel. Un calcul lourd va dans
+  `HackBackground.RunAsync` (ADR 0128) ; une boucle longue qui doit rester sur
+  le fil appelle `CheckpointAsync` (ADR 0069) assez souvent pour rendre la main.
+- Une fenêtre dont le processus reste « Not responding » reçoit le suffixe
+  « (Not responding) », un voile gris et la boîte « Attendre | Terminer
+  l'application » (ADR 0127 §2-3, [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md)).
 - Dans un Web Worker (commandes et services, [`worker-processes.md`](worker-processes.md)),
   le worker mesure les tranches de ses processus avec le même crochet et les
   envoie dans son battement de cœur (250 ms) ; l'OS les ajoute au temps noyau
@@ -98,6 +106,11 @@ comptable : `user + system + idle` vaut toujours le temps écoulé.
   occupé (ADR 0072 §6).
 
 ### Coût
+
+Résolution : dans le navigateur, `Stopwatch.GetTimestamp` lit
+`performance.now()`, arrondi à 100 µs, ou à 5 µs quand la page est isolée
+(ADR 0131 §4, ADR 0143 §7) ; `/proc/hackeros/workers` affiche la valeur
+mesurée (`timer-resolution-us`).
 
 Le chemin chaud lit l'horloge (`Stopwatch.GetTimestamp`), quelques champs
 `[ThreadStatic]`, et additionne avec `Interlocked` dans un emplacement trouvé
@@ -135,7 +148,7 @@ bool responding = editor.Responding;               // false : « Not responding 
 | `/proc/<pid>/status` | `Cpu` = usage de la dernière seconde, `CpuSource: measured`, puis `Responding`, `LongTasks`, `voluntary_ctxt_switches`, `nonvoluntary_ctxt_switches` | exactement le fichier d'avant : `Cpu` simulé, `CpuSource: simulated`, sans les quatre champs |
 | `/proc/stat` | `cpu0` = le thread principal (`user`, `system` = `stime` + compositeur, `idle`) ; le cœur `k` ajoute le temps occupé du worker du pool qui le porte (ADR 0070, [`worker-processes.md`](worker-processes.md)) ; sans worker, les autres cœurs restent `idle` | temps simulé (ADR 0057) |
 
-Un processus qui n'a encore rien exécuté (ou un processus du contenu de jeu,
+Un processus qui n'a encore rien exécuté (ou un processus simulé,
 qui n'exécute pas de code) n'est pas mesuré : il garde ses valeurs simulées.
 
 ### Configurer

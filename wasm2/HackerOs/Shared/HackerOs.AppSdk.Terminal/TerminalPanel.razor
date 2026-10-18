@@ -3,6 +3,7 @@
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
 @using HackerOs.AppSdk.Components
+@using HackerOs.AppSdk.Globalization
 @using HackerOs.AppSdk.IO
 @using HackerOs.AppSdk.Shell
 @using HackerOs.AppSdk.VirtualKeyboard
@@ -39,6 +40,12 @@
     /// <summary>Gets or sets the host app's execution context (filesystem, cancellation, logging).</summary>
     [Parameter, EditorRequired]
     public IAppExecutionContext AppContext { get; set; } = default!;
+
+    /// <summary>
+    /// Gets the terminal's own texts (banner, status lines, labels) in the host app's language
+    /// (ADR 0104); the shell prints its diagnostics in its own language.
+    /// </summary>
+    private Microsoft.Extensions.Localization.IStringLocalizer<Strings> L => AppContext.GetLocalizer<Strings>();
 
     /// <summary>
     /// Gets or sets the app id of the hosting app. Kept for compatibility: the shell's parent is
@@ -189,7 +196,7 @@
         {
             // The host lacks shell.host, or runs without a platform: show why, as a terminal whose
             // shell failed to exec prints the error and stays open.
-            _startError = $"hsh: cannot start the shell: {exception.Message}";
+            _startError = "hsh: " + L["Panel.StartFailed", exception.Message];
             AppContext.Logging.Log(DiagnosticSeverity.Error, _startError);
             WriteLine(_startError, TerminalAnsi.Error);
         }
@@ -268,6 +275,8 @@
 
         try
         {
+            HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences accessibility =
+                await AppContext.Accessibility.GetPreferencesAsync(AppContext.CancellationToken);
             _dotNetReference = DotNetObjectReference.Create(this);
             _module = await JavaScript.InvokeAsync<IJSObjectReference>(
                 "import", "./_content/HackerOs.AppSdk.Terminal/TerminalPanel.razor.js");
@@ -275,7 +284,15 @@
                 "mountTerminal",
                 _surfaceRef,
                 _dotNetReference,
-                new { useVirtualKeyboard = UseVirtualKeyboard, ariaLabel = "Terminal command input" });
+                new
+                {
+                    useVirtualKeyboard = UseVirtualKeyboard,
+                    ariaLabel = L["Panel.InputLabel"].Value,
+                    highContrast = accessibility.HighContrast,
+                    reducedMotion = accessibility.ReducedMotion
+                });
+            // ADR 0105: a terminal draws its own grid, so it follows the preferences itself.
+            AppContext.Accessibility.Changed += OnAccessibilityChanged;
         }
         catch (Exception)
         {
@@ -421,10 +438,12 @@
     /// <summary>
     /// The canonical-mode line discipline of a running command's standard input: printable keys
     /// are echoed and gathered, Backspace and Ctrl+U erase, Enter sends the line, Ctrl+D sends
-    /// the partial line or, on an empty one, an end of input (ADR 0064).
+    /// the partial line or, on an empty one, an end of input (ADR 0064). With echo off (a password,
+    /// ADR 0120) nothing typed or erased is shown; Enter still moves to the next line.
     /// </summary>
     private void HandleInputKey(TerminalInputReader input, TerminalKeyEvent key)
     {
+        bool echo = input.EchoEnabled;
         switch (key.Key)
         {
             case TerminalKey.Enter:
@@ -436,7 +455,10 @@
                 if (_inputLine.Length > 0)
                 {
                     _inputLine.Length--;
-                    Write("\b \b");
+                    if (echo)
+                    {
+                        Write("\b \b");
+                    }
                 }
 
                 break;
@@ -451,7 +473,11 @@
                         _inputLine.Clear();
                         break;
                     case "u":
-                        Write(string.Concat(Enumerable.Repeat("\b \b", _inputLine.Length)));
+                        if (echo)
+                        {
+                            Write(string.Concat(Enumerable.Repeat("\b \b", _inputLine.Length)));
+                        }
+
                         _inputLine.Clear();
                         break;
                 }
@@ -459,7 +485,10 @@
                 break;
             case TerminalKey.Character when !key.Alt && !string.IsNullOrEmpty(key.Text):
                 _inputLine.Append(key.Text);
-                Write(key.Text);
+                if (echo)
+                {
+                    Write(key.Text);
+                }
                 break;
         }
     }
@@ -649,7 +678,7 @@
             return;
         }
 
-        WriteLine($"[hsh exited with status {_shell?.ExitStatus ?? 0}]", TerminalAnsi.Notice);
+        WriteLine(L["Panel.ShellExited", _shell?.ExitStatus ?? 0], TerminalAnsi.Notice);
     }
 
     private static bool TryMapToTerminalKey(VirtualKeyPressedEvent evt, out TerminalKeyEvent terminalKeyEvent)
@@ -715,7 +744,7 @@
         if (_shell is null || _shell.HasExited)
         {
             _continuation = null;
-            WriteLine(_startError ?? "hsh: the shell has exited", TerminalAnsi.Error);
+            WriteLine(_startError ?? "hsh: " + L["Panel.ShellGone"], TerminalAnsi.Error);
             ShowPrompt();
             return null;
         }
@@ -759,7 +788,7 @@
         }
         catch (ObjectDisposedException)
         {
-            WriteLine("hsh: the shell has exited", TerminalAnsi.Error);
+            WriteLine("hsh: " + L["Panel.ShellGone"], TerminalAnsi.Error);
             status = 1;
         }
         catch (OperationCanceledException)
@@ -770,7 +799,7 @@
         catch (Exception ex)
         {
             AppContext.Logging.Log(DiagnosticSeverity.Error, $"Shell fault: {ex.Message}");
-            WriteLine($"Fault: {ex.Message}", TerminalAnsi.Error);
+            WriteLine(L["Panel.Fault", ex.Message], TerminalAnsi.Error);
             status = 1;
         }
         finally
@@ -1016,7 +1045,7 @@
     private void WriteBanner()
     {
         Write(TerminalAnsi.Banner + BannerArt + "\n" + TerminalAnsi.Reset);
-        Write("HackerOS Terminal v1.0.0 — Type 'help' for available commands.\n\n");
+        Write(L["Panel.Welcome"] + "\n\n");
     }
 
     /// <summary>
@@ -1179,6 +1208,34 @@
         _fullScreenSession?.UpdateViewport(columns, rows);
     }
 
+    /// <summary>
+    /// The session's accessibility preferences changed (ADR 0105): the emulator takes the new text
+    /// size, palette and cursor. A failure only leaves the old look.
+    /// </summary>
+    private void OnAccessibilityChanged(object? sender, EventArgs args) => _ = InvokeAsync(async () =>
+    {
+        IJSObjectReference? terminal = _terminal;
+        if (terminal is null || _disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            HackerOs.AppSdk.Accessibility.HackAccessibilityPreferences preferences =
+                await AppContext.Accessibility.GetPreferencesAsync(CancellationToken.None);
+            await terminal.InvokeVoidAsync("applyAccessibility", new
+            {
+                highContrast = preferences.HighContrast,
+                reducedMotion = preferences.ReducedMotion
+            });
+        }
+        catch (Exception exception) when (exception is JSException or JSDisconnectedException or ObjectDisposedException or TaskCanceledException)
+        {
+            // The terminal went away meanwhile.
+        }
+    });
+
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
@@ -1188,6 +1245,7 @@
         }
 
         _disposed = true;
+        AppContext.Accessibility.Changed -= OnAccessibilityChanged;
         _activeCts?.Cancel();
         // Closing the panel ends its shell's process and every command still running in it.
         if (_shell is not null)

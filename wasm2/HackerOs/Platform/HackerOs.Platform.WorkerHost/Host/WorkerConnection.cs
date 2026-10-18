@@ -19,6 +19,9 @@ internal sealed class WorkerConnection
     private readonly Dictionary<long, ProcessSample> _samples = [];
     private readonly TaskCompletionSource _hello = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private IWebWorker? _worker;
+    private long _heartbeatMemory;
+    private long _browserMemory;
+    private long _browserMemoryAt;
     private long _lastHeartbeat;
     private long _lastPlaced;
     private long _emptySince;
@@ -36,6 +39,9 @@ internal sealed class WorkerConnection
 
     /// <summary>Gets the worker number.</summary>
     public int Id { get; }
+
+    /// <summary>Gets the runtime's id of the Web Worker behind this connection (<see cref="IWebWorker.Id"/>), once attached.</summary>
+    public int? WorkerId => _worker?.Id;
 
     /// <summary>Gets or sets what the worker is for (changes when the ready worker is taken).</summary>
     public WorkerRole Role { get; set; }
@@ -64,8 +70,39 @@ internal sealed class WorkerConnection
         }
     }
 
-    /// <summary>Gets the managed heap of the worker's runtime at its last heartbeat.</summary>
-    public long RuntimeMemoryBytes { get; private set; }
+    /// <summary>
+    /// Gets the whole memory of the worker: the browser's own measurement when a recent one exists
+    /// (ADR 0131, section 4; ADR 0126, section 6), else its runtime's at the last heartbeat (its
+    /// WebAssembly memory, else its managed heap).
+    /// </summary>
+    public long RuntimeMemoryBytes => IsMemoryMeasuredByBrowser ? Interlocked.Read(ref _browserMemory) : _heartbeatMemory;
+
+    /// <summary>Gets whether <see cref="RuntimeMemoryBytes"/> is the browser's measurement (fresh within three periods).</summary>
+    public bool IsMemoryMeasuredByBrowser
+    {
+        get
+        {
+            long at = Interlocked.Read(ref _browserMemoryAt);
+            return at != 0 && Stopwatch.GetElapsedTime(at) <= _pool.Options.MemoryMeasurePeriod * 3;
+        }
+    }
+
+    /// <summary>Records the browser's measurement of this worker (<c>measureUserAgentSpecificMemory</c>).</summary>
+    /// <param name="bytes">Bytes the browser attributes to the worker.</param>
+    public void ApplyBrowserMemory(long bytes)
+    {
+        Interlocked.Exchange(ref _browserMemory, Math.Max(0, bytes));
+        Interlocked.Exchange(ref _browserMemoryAt, Stopwatch.GetTimestamp());
+    }
+
+    /// <summary>Gets the managed heap of the worker's runtime at the last heartbeat (ADR 0126, section 5).</summary>
+    public long RuntimeHeapBytes { get; private set; }
+
+    /// <summary>
+    /// Gets or sets whether the worker is replaced once it hosts no process (ADR 0142): it hosted an
+    /// OOM victim, and its WebAssembly memory, grown by the victim, never shrinks.
+    /// </summary>
+    public bool RecycleWhenIdle { get; set; }
 
     /// <summary>Gets the CPU time the worker's thread spent running processes, from its heartbeats.</summary>
     public TimeSpan BusyTime { get; private set; }
@@ -178,6 +215,7 @@ internal sealed class WorkerConnection
             writer.WriteNumber("hb", (int)_pool.Options.HeartbeatPeriod.TotalMilliseconds);
             writer.WriteBoolean("cpu", _pool.Options.MeterCpu);
             WireCodec.WriteStrings(writer, "pre", _pool.Options.PreloadAssemblies);
+            WireCodec.WriteStrings(writer, "known", _pool.Options.KnownAssemblies);
         }));
     }
 
@@ -190,6 +228,30 @@ internal sealed class WorkerConnection
         if (!IsTerminated)
         {
             _worker?.Post(message);
+        }
+    }
+
+    /// <summary>
+    /// Answers a synchronous call (ADR 0131, section 4) in the worker's shared slot, where its thread
+    /// waits in <c>Atomics.wait</c>. An answer too large for the slot is replaced by an I/O error; a
+    /// late one (the worker gave up) is dropped, as a late <c>result</c> of an abandoned call is.
+    /// </summary>
+    /// <param name="callId">The call's number.</param>
+    /// <param name="reply">Its <c>result</c> message.</param>
+    public void AnswerSynchronously(int callId, string reply)
+    {
+        if (IsTerminated || _worker is not ISynchronousWebWorker synchronous)
+        {
+            return;
+        }
+
+        if (synchronous.AnswerSynchronousCall(callId, reply) == SynchronousAnswerOutcome.TooLarge)
+        {
+            synchronous.AnswerSynchronousCall(callId, WorkerMessage.Create(WorkerMessageType.Result, writer =>
+            {
+                writer.WriteNumber("i", callId);
+                RemoteErrors.Write(writer, new IOException("The answer is too large for a synchronous call; use the asynchronous member."));
+            }));
         }
     }
 
@@ -290,20 +352,31 @@ internal sealed class WorkerConnection
                     OnHeartbeat(root);
                     break;
                 case WorkerMessageType.Call:
+                {
+                    bool synchronous = root.GetFlag("s");
                     if (Find(root) is { } caller)
                     {
-                        _ = caller.OnCallAsync(root.GetInt32("i"), root.GetString("o"), root.GetProperty("a").Clone());
+                        _ = caller.OnCallAsync(root.GetInt32("i"), root.GetString("o"), root.GetProperty("a").Clone(), synchronous);
                     }
                     else
                     {
-                        Post(WorkerMessage.Create(WorkerMessageType.Result, writer =>
+                        string killed = WorkerMessage.Create(WorkerMessageType.Result, writer =>
                         {
                             writer.WriteNumber("i", root.GetInt32("i"));
                             RemoteErrors.Write(writer, new HackerOs.AppSdk.Diagnostics.HackProcessKilledException(root.GetInt64("p")));
-                        }));
+                        });
+                        if (synchronous)
+                        {
+                            AnswerSynchronously(root.GetInt32("i"), killed);
+                        }
+                        else
+                        {
+                            Post(killed);
+                        }
                     }
 
                     break;
+                }
                 case WorkerMessageType.Notify:
                     if (Find(root) is { } notifier)
                     {
@@ -336,6 +409,12 @@ internal sealed class WorkerConnection
                 case WorkerMessageType.Log:
                     _pool.Log(root.GetString("m"));
                     break;
+                case WorkerMessageType.UiOutput:
+                    Find(root)?.UiReceiver?.Invoke(root.GetProperty("d"));
+                    break;
+                case WorkerMessageType.HttpResponse:
+                    Find(root)?.OnHttpResponse(root.GetInt32("sk"), root.GetInt64("x"), WireCodec.ReadListenerReply(root.GetProperty("r")));
+                    break;
             }
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
@@ -349,7 +428,8 @@ internal sealed class WorkerConnection
         Interlocked.Exchange(ref _lastHeartbeat, Stopwatch.GetTimestamp());
         // The runtime's whole memory when the platform reports it, else its managed heap.
         long heap = root.GetInt64("heap");
-        RuntimeMemoryBytes = root.GetOptional("rss") is { } rss && rss.GetInt64() > heap ? rss.GetInt64() : heap;
+        RuntimeHeapBytes = heap;
+        _heartbeatMemory = root.GetOptional("rss") is { } rss && rss.GetInt64() > heap ? rss.GetInt64() : heap;
         if (root.GetOptional("busy") is { } busy)
         {
             BusyTime = TimeSpan.FromTicks(busy.GetInt64());
@@ -387,7 +467,16 @@ internal sealed class WorkerConnection
         }
 
         RemoteProcessExit exit = new(
-            (RemoteProcessExitStatus)root.GetInt32("s"), root.GetInt32("c"), root.GetOptionalString("m"));
+            (RemoteProcessExitStatus)root.GetInt32("s"), root.GetInt32("c"), root.GetOptionalString("m"))
+        {
+            // ADR 0128: the result, fault or refusal of a background task.
+            JobResult = root.GetOptionalString("jr"),
+            JobFault = root.GetOptional("jf") is { } fault
+                ? new HackerOs.AppSdk.Threading.HackBackgroundJobException(
+                    fault.GetOptionalString("ty") ?? "System.Exception", fault.GetOptionalString("m") ?? string.Empty, fault.GetOptionalString("st"))
+                : null,
+            JobRejected = root.GetFlag("jx")
+        };
         _ = CompleteAsync();
 
         async Task CompleteAsync()

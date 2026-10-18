@@ -12,12 +12,18 @@ public sealed class AppCatalog
     private AppCatalog(
         IReadOnlyDictionary<string, AppManifest> manifests,
         IReadOnlyList<string> activationOrder,
-        IReadOnlySet<string> systemAppIds)
+        IReadOnlySet<string> systemAppIds,
+        IReadOnlyList<AppCatalogRejection> rejected,
+        IReadOnlyDictionary<string, string> commandOwners,
+        IReadOnlyList<AppCatalogError> warnings)
     {
+        CommandOwners = commandOwners;
+        Warnings = warnings;
         Manifests = manifests;
         ActivationOrder = activationOrder;
         DeactivationOrder = activationOrder.Reverse().ToArray();
         SystemAppIds = systemAppIds;
+        Rejected = rejected;
     }
 
     /// <summary>Gets manifests keyed by immutable app ID.</summary>
@@ -41,6 +47,42 @@ public sealed class AppCatalog
     /// </remarks>
     public IReadOnlySet<string> SystemAppIds { get; }
 
+    /// <summary>
+    /// Gets the apps the host shipped but this OS refuses to load (ADR 0098 §3), ordered by id: an
+    /// SDK range that does not contain <see cref="HackerOsSdk.Version"/>
+    /// (<c>catalog.sdk.incompatible</c>), or a required dependency refused for that reason
+    /// (<c>catalog.dependency.unavailable</c>). They are not in <see cref="Manifests"/>, so nothing
+    /// can launch them; Settings lists them as incompatible with the range they asked for.
+    /// </summary>
+    public IReadOnlyList<AppCatalogRejection> Rejected { get; }
+
+    /// <summary>
+    /// Gets the app that owns each terminal command name and alias (case-insensitive keys), the
+    /// shell's <c>PATH</c> (ADR 0098 §4). When two apps declare the same name, a system app keeps
+    /// it, otherwise the first in <see cref="ActivationOrder"/>; the other app stays launchable but
+    /// its command under that name is not registered, and <see cref="Warnings"/> says so.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> CommandOwners { get; }
+
+    /// <summary>
+    /// Gets the problems that did not stop the catalog, in deterministic order: today one
+    /// <c>catalog.command.duplicate</c> per command name lost by an app. The boot writes them, with
+    /// <see cref="Rejected"/>, to <c>/var/log/syslog</c>.
+    /// </summary>
+    public IReadOnlyList<AppCatalogError> Warnings { get; }
+
+    /// <summary>
+    /// Gets the app whose command answers to <paramref name="commandName"/> (name or alias,
+    /// case-insensitive), or <see langword="null"/> when none does.
+    /// </summary>
+    /// <param name="commandName">The name typed in the shell.</param>
+    /// <returns>The owning app id.</returns>
+    public string? FindCommandOwner(string commandName)
+    {
+        ArgumentNullException.ThrowIfNull(commandName);
+        return CommandOwners.TryGetValue(commandName, out string? owner) ? owner : null;
+    }
+
     /// <summary>Gets whether <paramref name="appId"/> is a system app of this catalog.</summary>
     /// <param name="appId">Application identifier (ordinal comparison).</param>
     /// <returns><see langword="true"/> when the host declared the app a system app.</returns>
@@ -56,6 +98,16 @@ public sealed class AppCatalog
     public static AppCatalogBuildResult Build(IEnumerable<AppManifest> manifests) => Build(manifests, []);
 
     /// <summary>
+    /// Builds a catalog for the SDK version of this process (<see cref="HackerOsSdk.SemanticVersion"/>).
+    /// See <see cref="Build(IEnumerable{AppManifest}, IEnumerable{string}, SemanticVersion)"/>.
+    /// </summary>
+    /// <param name="manifests">Candidate manifests selected by the build or package policy.</param>
+    /// <param name="systemAppIds">IDs the trusted host declared system apps.</param>
+    /// <returns>A catalog or every deterministic validation error.</returns>
+    public static AppCatalogBuildResult Build(IEnumerable<AppManifest> manifests, IEnumerable<string> systemAppIds) =>
+        Build(manifests, systemAppIds, HackerOsSdk.SemanticVersion);
+
+    /// <summary>
     /// Builds a host catalog from its aggregated <c>BuiltInApplications.json</c> entries: the
     /// manifests, plus the system-app flags the host wrote for them (ADR 0048 §1).
     /// </summary>
@@ -65,9 +117,39 @@ public sealed class AppCatalog
     {
         ArgumentNullException.ThrowIfNull(applications);
         BuiltInApplication[] items = applications.ToArray();
-        return Build(
+        AppCatalogBuildResult result = Build(
             items.Select(item => item.Manifest),
             items.Where(item => item.IsSystemApp).Select(item => item.Manifest.Id));
+        if (result.Catalog is { } catalog)
+        {
+            // ADR 0104 section 4: the translated texts the host build read from each app's localization files.
+            catalog.Localized = items
+                .Where(static item => item.Localized is { Count: > 0 })
+                .ToFrozenDictionary(static item => item.Manifest.Id, static item => item.Localized!, StringComparer.Ordinal);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Gets the translated name, description and usage of each app, by app id then culture
+    /// (ADR 0104, section 4). Apps only in English are absent.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyDictionary<string, AppManifestText>> Localized { get; private set; } =
+        FrozenDictionary<string, IReadOnlyDictionary<string, AppManifestText>>.Empty;
+
+    /// <summary>
+    /// Returns <paramref name="manifest"/> with its name, description and usage in
+    /// <paramref name="culture"/> when this catalog has them (ADR 0104, section 4), for display
+    /// only: ids, command names and everything else stay as they are.
+    /// </summary>
+    /// <param name="manifest">A manifest of this catalog (any other is returned unchanged).</param>
+    /// <param name="culture">The language of the surface showing it.</param>
+    public AppManifest Localize(AppManifest manifest, System.Globalization.CultureInfo culture)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        ArgumentNullException.ThrowIfNull(culture);
+        return AppManifestLocalization.Apply(manifest, Localized.GetValueOrDefault(manifest.Id), culture);
     }
 
     /// <summary>Builds a catalog without loading or executing app assemblies.</summary>
@@ -77,8 +159,14 @@ public sealed class AppCatalog
     /// (<c>catalog.system-app.unknown</c> otherwise), so a typo cannot silently leave an app
     /// uninstallable or unprotected.
     /// </param>
+    /// <param name="sdkVersion">
+    /// The App SDK version the apps must support (ADR 0098 §3). An app whose
+    /// <c>sdkCompatibility</c> range does not contain it, and every app that requires it, is moved
+    /// to <see cref="Rejected"/> instead of failing the whole catalog: one app built for another SDK
+    /// must not keep the OS from booting.
+    /// </param>
     /// <returns>A catalog or every deterministic validation error.</returns>
-    public static AppCatalogBuildResult Build(IEnumerable<AppManifest> manifests, IEnumerable<string> systemAppIds)
+    public static AppCatalogBuildResult Build(IEnumerable<AppManifest> manifests, IEnumerable<string> systemAppIds, SemanticVersion sdkVersion)
     {
         ArgumentNullException.ThrowIfNull(manifests);
         ArgumentNullException.ThrowIfNull(systemAppIds);
@@ -107,6 +195,8 @@ public sealed class AppCatalog
             }
         }
 
+        ValidateWebHostNames(byId.Values, errors);
+
         HashSet<string> systemIds = new(StringComparer.Ordinal);
         foreach (string systemAppId in systemAppIds.Order(StringComparer.Ordinal))
         {
@@ -124,6 +214,8 @@ public sealed class AppCatalog
             return new AppCatalogBuildResult(null, errors);
         }
 
+        IReadOnlyList<AppCatalogRejection> rejected = RejectIncompatible(byId, sdkVersion);
+
         ValidateDependencies(byId, errors);
         if (errors.Count > 0)
         {
@@ -138,9 +230,137 @@ public sealed class AppCatalog
 
         ReadOnlyDictionary<string, AppManifest> readOnlyManifests =
             new(new Dictionary<string, AppManifest>(byId, StringComparer.Ordinal));
+        List<AppCatalogError> warnings = [];
+        IReadOnlyDictionary<string, string> commandOwners = AssignCommands(byId, activationOrder, systemIds, warnings);
         return new AppCatalogBuildResult(
-            new AppCatalog(readOnlyManifests, activationOrder, systemIds.ToFrozenSet(StringComparer.Ordinal)),
+            new AppCatalog(
+                readOnlyManifests,
+                activationOrder,
+                systemIds.ToFrozenSet(StringComparer.Ordinal),
+                rejected,
+                commandOwners,
+                warnings),
             []);
+    }
+
+    /// <summary>
+    /// ADR 0098 §4, at load: gives each terminal command name and alias to one app. System apps
+    /// choose first, then the others, each group in activation order; a name already taken produces
+    /// one <c>catalog.command.duplicate</c> warning for the app that loses it. (The host build
+    /// already refuses duplicates among its own apps with <c>HOSAPP0022</c>; this covers apps that
+    /// reach the catalog another way.)
+    /// </summary>
+    private static IReadOnlyDictionary<string, string> AssignCommands(
+        IReadOnlyDictionary<string, AppManifest> manifests,
+        IReadOnlyList<string> activationOrder,
+        IReadOnlySet<string> systemIds,
+        List<AppCatalogError> warnings)
+    {
+        Dictionary<string, string> owners = new(StringComparer.OrdinalIgnoreCase);
+        IEnumerable<string> precedence = activationOrder.Where(systemIds.Contains)
+            .Concat(activationOrder.Where(id => !systemIds.Contains(id)));
+        foreach (string appId in precedence)
+        {
+            if (manifests[appId].Terminal is not { } terminal)
+            {
+                continue;
+            }
+
+            foreach (string name in terminal.Aliases.Prepend(terminal.Name).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (owners.TryAdd(name, appId))
+                {
+                    continue;
+                }
+
+                warnings.Add(new AppCatalogError(
+                    "catalog.command.duplicate",
+                    appId,
+                    $"Command '{name}' of '{appId}' is not registered: '{owners[name]}' already provides it."));
+            }
+        }
+
+        return new ReadOnlyDictionary<string, string>(owners);
+    }
+
+    /// <summary>
+    /// ADR 0098 §3: removes from <paramref name="byId"/> every app whose SDK range does not contain
+    /// <paramref name="sdkVersion"/>, then, until nothing changes, every app with a required
+    /// dependency so removed. Runs after manifest validation, so every range parses.
+    /// </summary>
+    private static IReadOnlyList<AppCatalogRejection> RejectIncompatible(
+        Dictionary<string, AppManifest> byId,
+        SemanticVersion sdkVersion)
+    {
+        List<AppCatalogRejection> rejected = [];
+        foreach (AppManifest manifest in byId.Values.OrderBy(static item => item.Id, StringComparer.Ordinal).ToArray())
+        {
+            if (HackerOsSdk.IsCompatible(manifest.SdkCompatibility, sdkVersion))
+            {
+                continue;
+            }
+
+            byId.Remove(manifest.Id);
+            string range = manifest.SdkCompatibility.MaximumVersion is { } maximum
+                ? $"{manifest.SdkCompatibility.MinimumVersion} to {maximum}"
+                : $"{manifest.SdkCompatibility.MinimumVersion} or later in major version {SemanticVersion.Parse(manifest.SdkCompatibility.MinimumVersion).Major}";
+            rejected.Add(new AppCatalogRejection(
+                "catalog.sdk.incompatible",
+                manifest,
+                $"'{manifest.Id}' needs App SDK {range}; this system runs {sdkVersion}."));
+        }
+
+        bool changed = rejected.Count > 0;
+        while (changed)
+        {
+            changed = false;
+            foreach (AppManifest manifest in byId.Values.OrderBy(static item => item.Id, StringComparer.Ordinal).ToArray())
+            {
+                AppDependencyManifest? missing = manifest.Dependencies.FirstOrDefault(dependency =>
+                    !dependency.Optional && rejected.Any(item => item.AppId == dependency.AppId));
+                if (missing is null)
+                {
+                    continue;
+                }
+
+                byId.Remove(manifest.Id);
+                rejected.Add(new AppCatalogRejection(
+                    "catalog.dependency.unavailable",
+                    manifest,
+                    $"'{manifest.Id}' requires '{missing.AppId}', which this system cannot load."));
+                changed = true;
+            }
+        }
+
+        return [.. rejected.OrderBy(static item => item.AppId, StringComparer.Ordinal)];
+    }
+
+    /// <summary>
+    /// ADR 0073, section 1: the resolver maps a host name to one web app, so two apps may not declare
+    /// the same name (<c>catalog.web.url-conflict</c>), whatever the port or path.
+    /// </summary>
+    private static void ValidateWebHostNames(IEnumerable<AppManifest> manifests, List<AppCatalogError> errors)
+    {
+        Dictionary<string, string> owners = new(StringComparer.OrdinalIgnoreCase);
+        foreach (AppManifest manifest in manifests.Where(static item => item.Web is not null).OrderBy(static item => item.Id, StringComparer.Ordinal))
+        {
+            HashSet<string> ownHosts = new(StringComparer.OrdinalIgnoreCase);
+            foreach (string url in manifest.Web!.Urls)
+            {
+                if (!WebAppUrls.TryParse(url, allowWildcardHost: false, out WebBinding binding, out _) || !ownHosts.Add(binding.Host))
+                {
+                    continue;
+                }
+
+                if (!owners.TryAdd(binding.Host, manifest.Id))
+                {
+                    errors.Add(new AppCatalogError(
+                        "catalog.web.url-conflict",
+                        manifest.Id,
+                        $"Host name '{binding.Host}' is already declared by '{owners[binding.Host]}'."));
+                }
+            }
+        }
     }
 
     private static void ValidateDependencies(
@@ -256,6 +476,18 @@ public sealed class AppCatalog
 /// <param name="AppId">App associated with the error, when available.</param>
 /// <param name="Message">Human-readable diagnostic.</param>
 public sealed record AppCatalogError(string Code, string AppId, string Message);
+
+/// <summary>
+/// An app the host shipped but the catalog refuses to load (ADR 0098 §3); see <see cref="AppCatalog.Rejected"/>.
+/// </summary>
+/// <param name="Code">Stable machine-readable reason: <c>catalog.sdk.incompatible</c> or <c>catalog.dependency.unavailable</c>.</param>
+/// <param name="Manifest">The refused app's manifest, for display (its name and requested SDK range).</param>
+/// <param name="Message">Human-readable reason.</param>
+public sealed record AppCatalogRejection(string Code, AppManifest Manifest, string Message)
+{
+    /// <summary>Gets the refused app's id.</summary>
+    public string AppId => Manifest.Id;
+}
 
 /// <summary>
 /// Contains either a complete immutable catalog or deterministic build errors.

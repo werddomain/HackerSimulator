@@ -1,3 +1,4 @@
+using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Simulation.Abstractions.Gateways;
 
 namespace HackerOs.Platform.Core.Apps;
@@ -32,12 +33,25 @@ public enum AppInstallationScope
 /// <param name="Success">Whether the file was written (or nothing needed writing).</param>
 /// <param name="AppIds">Every app ID whose line the request wrote or removed, in the order applied.</param>
 /// <param name="Errors">Stable error codes (<c>apps.*</c>) when <paramref name="Success"/> is <see langword="false"/>.</param>
-public sealed record AppInstallationResult(bool Success, IReadOnlyList<string> AppIds, IReadOnlyList<string> Errors)
+/// <param name="StoppedProcesses">
+/// For an uninstall: the processes it stopped, each marked when it was forced after its grace period
+/// (ADR 0097, section 5); <see langword="null"/> is read as none.
+/// </param>
+public sealed record AppInstallationResult(
+    bool Success,
+    IReadOnlyList<string> AppIds,
+    IReadOnlyList<string> Errors,
+    IReadOnlyList<AppProcessInfo>? StoppedProcesses = null)
 {
     /// <summary>Builds a failed result with one error code.</summary>
     /// <param name="error">Stable error code.</param>
     public static AppInstallationResult Failed(string error) => new(false, [], [error]);
 }
+
+/// <summary>What an uninstall would do (ADR 0097, section 5).</summary>
+/// <param name="AppIds">Every app it removes, dependents first, then the app itself.</param>
+/// <param name="RunningProcesses">The running processes of those apps.</param>
+public sealed record AppUninstallPlan(IReadOnlyList<string> AppIds, IReadOnlyList<AppProcessInfo> RunningProcesses);
 
 /// <summary>
 /// Uninstalls and reinstalls catalog apps through the two <c>apps.config</c> files (ADR 0048).
@@ -64,8 +78,20 @@ public interface IAppInstallationService
     IReadOnlyList<string> GetUninstallClosure(string appId);
 
     /// <summary>
+    /// Tells, without changing anything, what an uninstall of <paramref name="appId"/> would do
+    /// (ADR 0097, section 5): its closure (<see cref="GetUninstallClosure"/>) and the running
+    /// processes of those apps, which the uninstall would stop.
+    /// </summary>
+    /// <param name="appId">Exact catalog app ID.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <exception cref="ArgumentException">The app is not in the catalog.</exception>
+    ValueTask<AppUninstallPlan> PlanUninstallAsync(string appId, CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(new AppUninstallPlan(GetUninstallClosure(appId), []));
+
+    /// <summary>
     /// Uninstalls an app and its dependents in one scope, stopping their running instances. No data
-    /// is deleted. A system app, or a closure containing one, is refused.
+    /// is deleted, except the browser database (<c>hackweb.&lt;id&gt;</c>) of an uninstalled web app
+    /// (ADR 0088, section 4). A system app, or a closure containing one, is refused.
     /// </summary>
     /// <param name="appId">Exact catalog app ID.</param>
     /// <param name="scope">File to write.</param>

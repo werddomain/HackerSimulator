@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Failed" xml:space="preserve">
+    <value>renice: failed to set priority for {0} (process ID): {1}</value>
+  </data>
+  <data name="InvalidPid" xml:space="preserve">
+    <value>renice: invalid process ID '{0}'</value>
+  </data>
+  <data name="InvalidPriority" xml:space="preserve">
+    <value>renice: invalid priority '{0}'</value>
+  </data>
+  <data name="NoSuchProcess" xml:space="preserve">
+    <value>renice: failed to get priority for {0} (process ID): No such process</value>
+  </data>
+  <data name="OnlyProcessIds" xml:space="preserve">
+    <value>renice: {0}: only process IDs are supported</value>
+  </data>
+  <data name="PermissionDenied" xml:space="preserve">
+    <value>Permission denied</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>usage: renice [-n] N [-p] pid...</value>
+  </data>
+</root>

@@ -1,0 +1,591 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Chart.Throughput" xml:space="preserve">
+    <value>Débit de {0}</value>
+  </data>
+  <data name="Column.Cpu" xml:space="preserve">
+    <value>CPU</value>
+  </data>
+  <data name="Column.DiskRead" xml:space="preserve">
+    <value>Lecture disque</value>
+  </data>
+  <data name="Column.DiskWrite" xml:space="preserve">
+    <value>Écriture disque</value>
+  </data>
+  <data name="Column.Memory" xml:space="preserve">
+    <value>Mémoire</value>
+  </data>
+  <data name="Column.Name" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="Column.Pid" xml:space="preserve">
+    <value>PID</value>
+  </data>
+  <data name="Column.Priority" xml:space="preserve">
+    <value>Priorité</value>
+  </data>
+  <data name="Column.State" xml:space="preserve">
+    <value>État</value>
+  </data>
+  <data name="Column.User" xml:space="preserve">
+    <value>Utilisateur</value>
+  </data>
+  <data name="Common.Bytes" xml:space="preserve">
+    <value>Octets</value>
+  </data>
+  <data name="Common.Dismiss" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="Detail.AriaLabel" xml:space="preserve">
+    <value>Détails du processus</value>
+  </data>
+  <data name="Detail.Calls" xml:space="preserve">
+    <value>{0} · {1} appels</value>
+  </data>
+  <data name="Detail.Cancelled" xml:space="preserve">
+    <value>Annulé</value>
+  </data>
+  <data name="Detail.Children" xml:space="preserve">
+    <value>Enfants</value>
+  </data>
+  <data name="Detail.Close" xml:space="preserve">
+    <value>Fermer les détails</value>
+  </data>
+  <data name="Detail.CommandLine" xml:space="preserve">
+    <value>Ligne de commande</value>
+  </data>
+  <data name="Detail.Cpu" xml:space="preserve">
+    <value>CPU</value>
+  </data>
+  <data name="Detail.Empty" xml:space="preserve">
+    <value>Vide.</value>
+  </data>
+  <data name="Detail.EnvironPrivate" xml:space="preserve">
+    <value>Illisible : environ est réservé au propriétaire du processus (mode 0400).</value>
+  </data>
+  <data name="Detail.Environment" xml:space="preserve">
+    <value>Environnement</value>
+  </data>
+  <data name="Detail.Family" xml:space="preserve">
+    <value>Parenté</value>
+  </data>
+  <data name="Detail.FromDisk" xml:space="preserve">
+    <value>Depuis le disque</value>
+  </data>
+  <data name="Detail.Io" xml:space="preserve">
+    <value>E/S</value>
+  </data>
+  <data name="Detail.IoPrivate" xml:space="preserve">
+    <value>Illisible : io est réservé au propriétaire du processus (mode 0400).</value>
+  </data>
+  <data name="Detail.Kind" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Detail.Memory" xml:space="preserve">
+    <value>Mémoire</value>
+  </data>
+  <data name="Detail.None" xml:space="preserve">
+    <value>aucun</value>
+  </data>
+  <data name="Detail.NotVisible" xml:space="preserve">
+    <value>{0} (non visible)</value>
+  </data>
+  <data name="Detail.Overview" xml:space="preserve">
+    <value>Vue d'ensemble</value>
+  </data>
+  <data name="Detail.Parent" xml:space="preserve">
+    <value>Parent</value>
+  </data>
+  <data name="Detail.ReadChars" xml:space="preserve">
+    <value>Lu (rchar)</value>
+  </data>
+  <data name="Detail.Reading" xml:space="preserve">
+    <value>Lecture…</value>
+  </data>
+  <data name="Detail.Reload" xml:space="preserve">
+    <value>recharger</value>
+  </data>
+  <data name="Detail.Started" xml:space="preserve">
+    <value>Démarré</value>
+  </data>
+  <data name="Detail.StartedByOs" xml:space="preserve">
+    <value>— (lancé par le système)</value>
+  </data>
+  <data name="Detail.StartedValue" xml:space="preserve">
+    <value>{0} UTC</value>
+  </data>
+  <data name="Detail.State" xml:space="preserve">
+    <value>État</value>
+  </data>
+  <data name="Detail.Status" xml:space="preserve">
+    <value>Statut</value>
+  </data>
+  <data name="Detail.ToDisk" xml:space="preserve">
+    <value>Vers le disque</value>
+  </data>
+  <data name="Detail.User" xml:space="preserve">
+    <value>Utilisateur</value>
+  </data>
+  <data name="Detail.WorkingDirectory" xml:space="preserve">
+    <value>Répertoire de travail</value>
+  </data>
+  <data name="Detail.WrittenChars" xml:space="preserve">
+    <value>Écrit (wchar)</value>
+  </data>
+  <data name="Disk.ActiveTime" xml:space="preserve">
+    <value>Temps d'activité</value>
+  </data>
+  <data name="Disk.Activity" xml:space="preserve">
+    <value>Activité de {0}</value>
+  </data>
+  <data name="Disk.Free" xml:space="preserve">
+    <value>{0} libres sur {1}</value>
+  </data>
+  <data name="Disk.InFlight" xml:space="preserve">
+    <value>En cours</value>
+  </data>
+  <data name="Disk.Ms" xml:space="preserve">
+    <value>{0} ms</value>
+  </data>
+  <data name="Disk.MsBusy" xml:space="preserve">
+    <value>{0} ms d'activité</value>
+  </data>
+  <data name="Disk.NoDisk" xml:space="preserve">
+    <value>/proc/diskstats ne liste aucun disque.</value>
+  </data>
+  <data name="Disk.NoDrive" xml:space="preserve">
+    <value>Aucun lecteur signalé.</value>
+  </data>
+  <data name="Disk.Reads" xml:space="preserve">
+    <value>Lectures</value>
+  </data>
+  <data name="Disk.Requests" xml:space="preserve">
+    <value>Requêtes</value>
+  </data>
+  <data name="Disk.Series.Busy" xml:space="preserve">
+    <value>Occupé</value>
+  </data>
+  <data name="Disk.Series.Read" xml:space="preserve">
+    <value>Lecture</value>
+  </data>
+  <data name="Disk.Series.Write" xml:space="preserve">
+    <value>Écriture</value>
+  </data>
+  <data name="Disk.Space" xml:space="preserve">
+    <value>Espace</value>
+  </data>
+  <data name="Disk.Time" xml:space="preserve">
+    <value>Temps</value>
+  </data>
+  <data name="Disk.Used" xml:space="preserve">
+    <value>{0} utilisés ({1})</value>
+  </data>
+  <data name="Disk.UsedAria" xml:space="preserve">
+    <value>{0} utilisé</value>
+  </data>
+  <data name="Disk.Writes" xml:space="preserve">
+    <value>Écritures</value>
+  </data>
+  <data name="EndTask.AccessDenied" xml:space="preserve">
+    <value>Accès refusé : arrêter le processus d'une autre app demande process.manage.</value>
+  </data>
+  <data name="EndTask.Confirm.Many" xml:space="preserve">
+    <value>Arrêter ces {0} processus ? Chacun dispose de 5 secondes pour se fermer ; le travail non enregistré qu'ils contiennent peut être perdu.</value>
+  </data>
+  <data name="EndTask.Confirm.One" xml:space="preserve">
+    <value>Arrêter ce processus ? Il dispose de 5 secondes pour se fermer ; le travail non enregistré qu'il contient peut être perdu.</value>
+  </data>
+  <data name="EndTask.Title" xml:space="preserve">
+    <value>Arrêter la tâche</value>
+  </data>
+  <data name="Error.CannotReadProc" xml:space="preserve">
+    <value>Impossible de lire /proc : {0}</value>
+  </data>
+  <data name="ForceKill.Confirm.Many" xml:space="preserve">
+    <value>Tuer ces {0} processus maintenant ? Ils ne peuvent pas réagir : le travail non enregistré qu'ils contiennent sera perdu.</value>
+  </data>
+  <data name="ForceKill.Confirm.One" xml:space="preserve">
+    <value>Tuer ce processus maintenant ? Il ne peut pas réagir : le travail non enregistré qu'il contient sera perdu.</value>
+  </data>
+  <data name="ForceKill.Title" xml:space="preserve">
+    <value>Forcer l'arrêt</value>
+  </data>
+  <data name="Header.Subtitle" xml:space="preserve">
+    <value>lecture de /proc</value>
+  </data>
+  <data name="Header.Title" xml:space="preserve">
+    <value>Gestionnaire des tâches</value>
+  </data>
+  <data name="Kind.Service" xml:space="preserve">
+    <value>Service</value>
+  </data>
+  <data name="Kind.Terminal" xml:space="preserve">
+    <value>Commande</value>
+  </data>
+  <data name="Kind.Web" xml:space="preserve">
+    <value>Site web</value>
+  </data>
+  <data name="Kind.Window" xml:space="preserve">
+    <value>App à fenêtre</value>
+  </data>
+  <data name="Net.Dropped" xml:space="preserve">
+    <value>Perdus</value>
+  </data>
+  <data name="Net.Errors" xml:space="preserve">
+    <value>Erreurs</value>
+  </data>
+  <data name="Net.Loopback" xml:space="preserve">
+    <value>boucle locale</value>
+  </data>
+  <data name="Net.NoInterface" xml:space="preserve">
+    <value>/proc/net/dev ne liste aucune interface.</value>
+  </data>
+  <data name="Net.Packets" xml:space="preserve">
+    <value>Paquets</value>
+  </data>
+  <data name="Net.Received" xml:space="preserve">
+    <value>Reçu</value>
+  </data>
+  <data name="Net.Sent" xml:space="preserve">
+    <value>Envoyé</value>
+  </data>
+  <data name="Perf.Cores" xml:space="preserve">
+    <value>{0} cœur(s)</value>
+  </data>
+  <data name="Perf.Cpu" xml:space="preserve">
+    <value>Processeur</value>
+  </data>
+  <data name="Perf.CpuInfoUnreadable" xml:space="preserve">
+    <value>/proc/cpuinfo est illisible.</value>
+  </data>
+  <data name="Perf.CpuView" xml:space="preserve">
+    <value>Vue du processeur</value>
+  </data>
+  <data name="Perf.Hardware" xml:space="preserve">
+    <value>Matériel et système</value>
+  </data>
+  <data name="Perf.Load" xml:space="preserve">
+    <value>charge {0}</value>
+  </data>
+  <data name="Perf.LogicalProcessors" xml:space="preserve">
+    <value>processeurs logiques</value>
+  </data>
+  <data name="Perf.MemInfoUnreadable" xml:space="preserve">
+    <value>/proc/meminfo est illisible.</value>
+  </data>
+  <data name="Perf.Memory" xml:space="preserve">
+    <value>Mémoire</value>
+  </data>
+  <data name="Perf.MemoryChart" xml:space="preserve">
+    <value>Mémoire utilisée</value>
+  </data>
+  <data name="Perf.PerCore" xml:space="preserve">
+    <value>Par cœur</value>
+  </data>
+  <data name="Perf.Processes" xml:space="preserve">
+    <value>Processus</value>
+  </data>
+  <data name="Perf.ProcessesDetail" xml:space="preserve">
+    <value>{0} en cours · {1} depuis le démarrage</value>
+  </data>
+  <data name="Perf.Processor" xml:space="preserve">
+    <value>Processeur</value>
+  </data>
+  <data name="Perf.Role.Core" xml:space="preserve">
+    <value>cœur {0}</value>
+  </data>
+  <data name="Perf.Role.Dedicated" xml:space="preserve">
+    <value>dédié</value>
+  </data>
+  <data name="Perf.Role.Overflow" xml:space="preserve">
+    <value>cœur de débordement</value>
+  </data>
+  <data name="Perf.Role.Pool" xml:space="preserve">
+    <value>pool</value>
+  </data>
+  <data name="Perf.Role.Ready" xml:space="preserve">
+    <value>prêt</value>
+  </data>
+  <data name="Perf.Series.Usage" xml:space="preserve">
+    <value>Utilisation</value>
+  </data>
+  <data name="Perf.Series.Used" xml:space="preserve">
+    <value>Utilisée</value>
+  </data>
+  <data name="Perf.Total" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="Perf.TotalCpuChart" xml:space="preserve">
+    <value>Utilisation totale du processeur</value>
+  </data>
+  <data name="Perf.Uptime" xml:space="preserve">
+    <value>Temps de fonctionnement</value>
+  </data>
+  <data name="Perf.WaitingStat" xml:space="preserve">
+    <value>En attente d'une deuxième lecture de /proc/stat…</value>
+  </data>
+  <data name="Perf.Worker.Busy" xml:space="preserve">
+    <value>occupé</value>
+  </data>
+  <data name="Perf.Worker.Processes" xml:space="preserve">
+    <value>processus</value>
+  </data>
+  <data name="Perf.Worker.Runtime" xml:space="preserve">
+    <value>runtime</value>
+  </data>
+  <data name="Perf.WorkerName" xml:space="preserve">
+    <value>worker {0}</value>
+  </data>
+  <data name="Perf.WorkerState.Idle" xml:space="preserve">
+    <value>Inactif</value>
+  </data>
+  <data name="Perf.WorkerState.Running" xml:space="preserve">
+    <value>En cours</value>
+  </data>
+  <data name="Perf.WorkerState.Starting" xml:space="preserve">
+    <value>Démarrage…</value>
+  </data>
+  <data name="Perf.Workers" xml:space="preserve">
+    <value>Workers</value>
+  </data>
+  <data name="Perf.WorkersSummary" xml:space="preserve">
+    <value>{0} sur {1} · {2} cœur(s)</value>
+  </data>
+  <data name="ProcessState.Dead" xml:space="preserve">
+    <value>Terminé</value>
+  </data>
+  <data name="ProcessState.Idle" xml:space="preserve">
+    <value>Inactif</value>
+  </data>
+  <data name="ProcessState.Running" xml:space="preserve">
+    <value>En cours</value>
+  </data>
+  <data name="ProcessState.Sleeping" xml:space="preserve">
+    <value>En sommeil</value>
+  </data>
+  <data name="ProcessState.Stopping" xml:space="preserve">
+    <value>Arrêt en cours</value>
+  </data>
+  <data name="ProcessState.Zombie" xml:space="preserve">
+    <value>Zombie</value>
+  </data>
+  <data name="Processes.Count" xml:space="preserve">
+    <value>{0} / {1} processus</value>
+  </data>
+  <data name="Processes.Details" xml:space="preserve">
+    <value>Détails</value>
+  </data>
+  <data name="Processes.Details.Title" xml:space="preserve">
+    <value>Détails (Entrée)</value>
+  </data>
+  <data name="Processes.Empty.Filter" xml:space="preserve">
+    <value>Aucun processus ne correspond au filtre.</value>
+  </data>
+  <data name="Processes.Empty.None" xml:space="preserve">
+    <value>Aucun processus visible (process.list donne accès aux autres).</value>
+  </data>
+  <data name="Processes.EndTask.Title" xml:space="preserve">
+    <value>Demander aux processus sélectionnés de s'arrêter : SIGTERM, forcé après 5 s (Suppr)</value>
+  </data>
+  <data name="Processes.Estimated" xml:space="preserve">
+    <value>estimé</value>
+  </data>
+  <data name="Processes.Estimated.Title" xml:space="preserve">
+    <value>Simulé d'après le profil de ressources de l'app, non mesuré (CpuSource/MemSource dans /proc/&lt;pid&gt;/status)</value>
+  </data>
+  <data name="Processes.Filter.AriaLabel" xml:space="preserve">
+    <value>Filtrer les processus</value>
+  </data>
+  <data name="Processes.Filter.Placeholder" xml:space="preserve">
+    <value>Filtrer par nom, id d'app ou PID</value>
+  </data>
+  <data name="Processes.Menu" xml:space="preserve">
+    <value>Menu du processus</value>
+  </data>
+  <data name="Processes.Menu.DetailsKey" xml:space="preserve">
+    <value>Entrée</value>
+  </data>
+  <data name="Processes.Menu.EndKey" xml:space="preserve">
+    <value>SIGTERM · Suppr</value>
+  </data>
+  <data name="Processes.Menu.KillKey" xml:space="preserve">
+    <value>SIGKILL · Maj+Suppr</value>
+  </data>
+  <data name="Processes.NotResponding" xml:space="preserve">
+    <value>Ne répond pas</value>
+  </data>
+  <data name="Processes.NotResponding.Title" xml:space="preserve">
+    <value>Une tranche de ce processus a gardé le fil d'exécution plus longtemps que le seuil du système (Responding: 0 dans /proc/&lt;pid&gt;/status). Rien n'a été arrêté.</value>
+  </data>
+  <data name="Processes.PriorityColumn.Title" xml:space="preserve">
+    <value>Afficher ou masquer la colonne Priorité (niceness, NI)</value>
+  </data>
+  <data name="Processes.Selected" xml:space="preserve">
+    <value>{0} sélectionné(s)</value>
+  </data>
+  <data name="Report.EndedMany" xml:space="preserve">
+    <value>{0} processus arrêtés.</value>
+  </data>
+  <data name="Report.EndedOne" xml:space="preserve">
+    <value>1 processus arrêté.</value>
+  </data>
+  <data name="Report.Failed" xml:space="preserve">
+    <value>Impossible d'arrêter {0} processus :</value>
+  </data>
+  <data name="Report.Mixed" xml:space="preserve">
+    <value>{0} arrêté(s) ; impossible d'arrêter {1} :</value>
+  </data>
+  <data name="Services.Column.Health" xml:space="preserve">
+    <value>Santé</value>
+  </data>
+  <data name="Services.Column.Service" xml:space="preserve">
+    <value>Service</value>
+  </data>
+  <data name="Services.Column.StartType" xml:space="preserve">
+    <value>Type de démarrage</value>
+  </data>
+  <data name="Services.Column.Status" xml:space="preserve">
+    <value>État</value>
+  </data>
+  <data name="Services.Count" xml:space="preserve">
+    <value>{0} service(s) installé(s)</value>
+  </data>
+  <data name="Services.Empty" xml:space="preserve">
+    <value>Aucun service installé.</value>
+  </data>
+  <data name="Services.Error.Configure" xml:space="preserve">
+    <value>Impossible de configurer {0} : cela demande services.manage.</value>
+  </data>
+  <data name="Services.Error.Reset" xml:space="preserve">
+    <value>Impossible de réinitialiser {0} : cela demande services.manage.</value>
+  </data>
+  <data name="Services.Error.Start" xml:space="preserve">
+    <value>Impossible de démarrer {0} : cela demande services.manage.</value>
+  </data>
+  <data name="Services.Error.Stop" xml:space="preserve">
+    <value>Impossible d'arrêter {0} : cela demande services.manage.</value>
+  </data>
+  <data name="Services.Health.Degraded" xml:space="preserve">
+    <value>Dégradé</value>
+  </data>
+  <data name="Services.Health.Healthy" xml:space="preserve">
+    <value>En bonne santé</value>
+  </data>
+  <data name="Services.Health.Unhealthy" xml:space="preserve">
+    <value>Défaillant</value>
+  </data>
+  <data name="Services.Health.Unknown" xml:space="preserve">
+    <value>Inconnue</value>
+  </data>
+  <data name="Services.Reload" xml:space="preserve">
+    <value>Recharger</value>
+  </data>
+  <data name="Services.Reset" xml:space="preserve">
+    <value>Réinitialiser</value>
+  </data>
+  <data name="Services.Reset.Title" xml:space="preserve">
+    <value>Oublier l'échec (systemctl reset-failed)</value>
+  </data>
+  <data name="Services.Since" xml:space="preserve">
+    <value>{0} depuis le {1} UTC</value>
+  </data>
+  <data name="Services.Start" xml:space="preserve">
+    <value>Démarrer</value>
+  </data>
+  <data name="Services.StartTypeOf" xml:space="preserve">
+    <value>Type de démarrage de {0}</value>
+  </data>
+  <data name="Services.State.Failed" xml:space="preserve">
+    <value>En échec ({0})</value>
+  </data>
+  <data name="Services.State.Running" xml:space="preserve">
+    <value>En marche</value>
+  </data>
+  <data name="Services.State.Starting" xml:space="preserve">
+    <value>Démarrage</value>
+  </data>
+  <data name="Services.State.Stopped" xml:space="preserve">
+    <value>Arrêté</value>
+  </data>
+  <data name="Services.State.Stopping" xml:space="preserve">
+    <value>Arrêt en cours</value>
+  </data>
+  <data name="Services.Stop" xml:space="preserve">
+    <value>Arrêter</value>
+  </data>
+  <data name="Services.Unknown" xml:space="preserve">
+    <value>inconnu</value>
+  </data>
+  <data name="Services.Unknown.Title" xml:space="preserve">
+    <value>Lire le type de démarrage d'une autre app demande services.manage</value>
+  </data>
+  <data name="StartMode.Automatic" xml:space="preserve">
+    <value>Automatique</value>
+  </data>
+  <data name="StartMode.Disabled" xml:space="preserve">
+    <value>Désactivé</value>
+  </data>
+  <data name="StartMode.Manual" xml:space="preserve">
+    <value>Manuel</value>
+  </data>
+  <data name="Status.Idle" xml:space="preserve">
+    <value>INACTIF</value>
+  </data>
+  <data name="Status.Live" xml:space="preserve">
+    <value>DIRECT 1 s</value>
+  </data>
+  <data name="Status.Paused" xml:space="preserve">
+    <value>EN PAUSE</value>
+  </data>
+  <data name="Status.Title.Hidden" xml:space="preserve">
+    <value>Fenêtre masquée : actualisation suspendue</value>
+  </data>
+  <data name="Status.Title.Live" xml:space="preserve">
+    <value>Lecture de /proc chaque seconde</value>
+  </data>
+  <data name="Status.Title.Paused" xml:space="preserve">
+    <value>Actualisation suspendue par l'utilisateur</value>
+  </data>
+  <data name="Tab.Disk" xml:space="preserve">
+    <value>Disque</value>
+  </data>
+  <data name="Tab.Network" xml:space="preserve">
+    <value>Réseau</value>
+  </data>
+  <data name="Tab.Performance" xml:space="preserve">
+    <value>Performances</value>
+  </data>
+  <data name="Tab.Processes" xml:space="preserve">
+    <value>Processus</value>
+  </data>
+  <data name="Tab.Services" xml:space="preserve">
+    <value>Services</value>
+  </data>
+  <data name="Toolbar.Pause" xml:space="preserve">
+    <value>Pause</value>
+  </data>
+  <data name="Toolbar.Pause.Title" xml:space="preserve">
+    <value>Suspendre ou reprendre l'actualisation chaque seconde</value>
+  </data>
+  <data name="Toolbar.Refresh" xml:space="preserve">
+    <value>Actualiser</value>
+  </data>
+  <data name="Toolbar.Refresh.Title" xml:space="preserve">
+    <value>Lire /proc maintenant</value>
+  </data>
+  <data name="Toolbar.Resume" xml:space="preserve">
+    <value>Reprendre</value>
+  </data>
+</root>

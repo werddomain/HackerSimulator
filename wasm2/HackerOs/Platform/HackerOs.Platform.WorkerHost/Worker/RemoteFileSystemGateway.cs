@@ -1,4 +1,5 @@
 using System.Text.Json;
+using HackerOs.App.Abstractions;
 using HackerOs.Platform.WorkerHost.Protocol;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -17,6 +18,17 @@ namespace HackerOs.Platform.WorkerHost.Worker;
 /// </remarks>
 internal sealed class RemoteFileSystemGateway(RemoteProcessChannel channel) : IAppFileSystemGateway
 {
+    /// <summary>
+    /// Takes a descriptor in the OS's table for a write stream (ADR 0125): the OS answers
+    /// <see cref="FileSystemErrorCode.TooManyOpenFiles"/> at the <c>nofile</c> limit; disposing the
+    /// handle sends the <c>close(2)</c>.
+    /// </summary>
+    public async ValueTask<FileSystemResult<IDisposable>> OpenDescriptorAsync(VirtualPath path, CancellationToken cancellationToken = default)
+    {
+        JsonElement value = await channel.CallAsync(RemoteOps.FsDescriptorOpen, writer => writer.WriteString("p", path.Value), cancellationToken).ConfigureAwait(false);
+        return WireCodec.ReadResult<IDisposable>(value, element => new RemoteDescriptor(channel, element.GetInt32("fd")));
+    }
+
     public async ValueTask<FileSystemResult<FileSystemContentReadHandle>> ReadAsync(
         FileSystemReadRequest request, CancellationToken cancellationToken = default)
     {
@@ -210,4 +222,18 @@ internal static class RemoteUnsupported
     public static NotSupportedException Member(string member) =>
         new($"{member} is not available to a process running in a worker (ADR 0070). " +
             "An app that needs it declares [AppManifest(Execution = AppExecutionHost.MainThread)].");
+}
+
+/// <summary>A descriptor held in the OS's table by a process in a worker; disposing it closes it once.</summary>
+internal sealed class RemoteDescriptor(RemoteProcessChannel channel, int id) : IDisposable
+{
+    private int _closed;
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _closed, 1) == 0)
+        {
+            channel.Notify(RemoteOps.FsDescriptorClose, writer => writer.WriteNumber("fd", id));
+        }
+    }
 }

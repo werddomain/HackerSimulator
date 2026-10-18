@@ -96,6 +96,21 @@ public interface IAppFileSystemGateway
     /// <returns>The charge; <see cref="KernelMemoryCharge.None"/> when the OS does not measure memory.</returns>
     KernelMemoryCharge ChargeStreamBuffer() => KernelMemoryCharge.None;
 
+    /// <summary>
+    /// Opens one descriptor of the calling process for <paramref name="path"/> and holds it until the
+    /// returned handle is disposed (ADR 0125, <c>RLIMIT_NOFILE</c>): what a write stream
+    /// (<c>HackFileStream</c>) holds while it buffers. A read handle from <see cref="ReadAsync"/>
+    /// already holds its own descriptor.
+    /// </summary>
+    /// <param name="path">The file the descriptor designates.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>
+    /// The handle, or <see cref="FileSystemErrorCode.TooManyOpenFiles"/> (<c>EMFILE</c>). Defaults to a
+    /// handle that holds nothing, for gateways that do not count descriptors.
+    /// </returns>
+    ValueTask<FileSystemResult<IDisposable>> OpenDescriptorAsync(VirtualPath path, CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(FileSystemResult<IDisposable>.Success(NoDescriptor.Instance));
+
     /// <summary>Opens streamed regular-file content.</summary>
     ValueTask<FileSystemResult<FileSystemContentReadHandle>> ReadAsync(
         FileSystemReadRequest request, CancellationToken cancellationToken = default);
@@ -146,9 +161,9 @@ public interface IAppFileSystemGateway
 /// </summary>
 /// <remarks>
 /// Per <c>docs/adr/0038-emitter-authorized-topic-messaging.md</c>, this gateway has two lanes.
-/// <see cref="Subscribe{TEvent}"/>/<see cref="Publish{TEvent}"/> are the kernel lane: any app may still
+/// <see cref="Subscribe{TEvent}(Action{TEvent})"/>/<see cref="Publish{TEvent}(TEvent)"/> are the kernel lane: any app may still
 /// subscribe to a trusted platform lifecycle event type (read access was never the security problem),
-/// but <see cref="Publish{TEvent}"/> no longer forwards to the underlying bus for app-facing callers —
+/// but <see cref="Publish{TEvent}(TEvent)"/> no longer forwards to the underlying bus for app-facing callers —
 /// no CLR event type is currently allow-listed for app-initiated publish, since the one app that
 /// previously used it (<c>SampleTickerService</c>) migrated to the topic lane below. The topic-bus
 /// members (<see cref="Subscribe{TPayload}(TopicName, Action{TopicMessage{TPayload}})"/>,
@@ -188,6 +203,22 @@ public interface IAppEventGateway
     TopicPublishResult Publish<TPayload>(TopicName topic, TPayload payload) where TPayload : notnull;
 
     /// <summary>
+    /// Asynchronous form of <see cref="Publish{TPayload}(TopicName, TPayload)"/>, with the same rules
+    /// and the OS's real result everywhere (ADR 0145). A process running in a Web Worker (ADR 0070)
+    /// cannot wait synchronously for the OS, so its <see cref="Publish{TPayload}(TopicName, TPayload)"/>
+    /// returns a provisional <see cref="TopicPublishOutcome.Delivered"/> and logs a refusal (ADR 0138,
+    /// section 3); this member waits for the OS's answer instead. Defaults to
+    /// <see cref="Publish{TPayload}(TopicName, TPayload)"/> so existing implementations keep compiling.
+    /// </summary>
+    /// <returns>The outcome decided by the OS and the faults of its subscribers.</returns>
+    Task<TopicPublishResult> PublishAsync<TPayload>(TopicName topic, TPayload payload, CancellationToken cancellationToken = default)
+        where TPayload : notnull
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(Publish(topic, payload));
+    }
+
+    /// <summary>
     /// Idempotently registers <paramref name="root"/> as a shared channel owned by this app instance.
     /// </summary>
     void RegisterSharedChannel(TopicName root, SharedChannelPolicy policy);
@@ -214,6 +245,32 @@ public interface IAppLoggingGateway
 {
     /// <summary>Records one diagnostic entry attributed to the calling app.</summary>
     void Log(DiagnosticSeverity severity, string message, IReadOnlyDictionary<string, string>? properties = null);
+
+    /// <summary>
+    /// Appends one raw line to a daemon log file of its own, <c>/var/log/&lt;directory&gt;/&lt;file&gt;.log</c>,
+    /// like <c>nginx</c> writing <c>/var/log/nginx/access.log</c> (ADR 0080, section 3). Only a system
+    /// app may do so; the platform's log writer does the actual write (ADR 0045: an app never writes
+    /// under <c>/var/log</c> itself), with the same batching and rotation as every other log.
+    /// </summary>
+    /// <param name="relativePath">
+    /// <c>&lt;directory&gt;/&lt;file&gt;.log</c>, for example <c>hackweb/docs.access.log</c>. The
+    /// directory may not be <c>apps</c>, which belongs to <see cref="Log"/>.
+    /// </param>
+    /// <param name="line">The line, written as is (a line break inside it is escaped).</param>
+    /// <exception cref="UnauthorizedAccessException">The app is not a system app, or the host offers no daemon logs.</exception>
+    /// <exception cref="ArgumentException">The path is not a valid daemon log path.</exception>
+    void AppendToLogFile(string relativePath, string line) =>
+        throw new UnauthorizedAccessException("Daemon log files are not offered by this host.");
+
+    /// <summary>
+    /// Appends one line to the debug log of the calling web site, <c>/var/log/hackweb/&lt;app id&gt;.log</c>
+    /// (ADR 0073 section 3, ADR 0088 section 5). Only an app of kind <c>Web</c> may do so, when the site
+    /// enabled its debug log; the platform's log writer does the write, with the usual rotation.
+    /// </summary>
+    /// <param name="line">The line, written as is (a line break inside it is escaped).</param>
+    /// <exception cref="UnauthorizedAccessException">The app is not a web app, or the host offers no site logs.</exception>
+    void AppendToSiteDebugLog(string line) =>
+        throw new UnauthorizedAccessException("Site debug logs are not offered by this host.");
 }
 
 /// <summary>Provides one app instance's read-only deterministic simulation clock access.</summary>
@@ -269,6 +326,64 @@ public interface IAppProcessGateway
         cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(Kill(pid, reason));
     }
+
+    /// <summary>
+    /// Gets the niceness of one visible process (ADR 0127), like <c>getpriority(2)</c>. Defaults to
+    /// <see cref="ProcessNice.Default"/> so existing implementations keep compiling.
+    /// </summary>
+    /// <param name="pid">A process the app may see (its own, or any with <see cref="AppCapabilities.ProcessList"/>).</param>
+    /// <exception cref="KeyNotFoundException">No such active process.</exception>
+    /// <exception cref="AppGatewayAccessDeniedException">The process is another app's and policy denies <see cref="AppCapabilities.ProcessList"/>.</exception>
+    int GetNice(ProcessId pid) => ProcessNice.Default;
+
+    /// <summary>
+    /// Sets the niceness of one process (ADR 0127), like <c>setpriority(2)</c>: <c>renice</c> and
+    /// <c>nice</c> come here. The rules are Linux's: a process of the same user may be made nicer
+    /// (higher value) freely, with <see cref="AppCapabilities.ProcessManage"/> when it is not the
+    /// caller's own; lowering a niceness, or touching another user's process, needs root
+    /// (<c>sudo</c>).
+    /// </summary>
+    /// <param name="pid">The target process.</param>
+    /// <param name="nice">The new niceness, clamped to <see cref="ProcessNice.Min"/>..<see cref="ProcessNice.Max"/>.</param>
+    /// <returns>The niceness now in effect.</returns>
+    /// <exception cref="KeyNotFoundException">No such active process.</exception>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.ProcessManage"/> for another process.</exception>
+    /// <exception cref="UnauthorizedAccessException">Lowering the niceness, or another user's process, without root (<c>EPERM</c>).</exception>
+    /// <exception cref="NotSupportedException">This host does not offer priorities (a worker without the gateway).</exception>
+    int SetNice(ProcessId pid, int nice) => throw new NotSupportedException("Process priorities are not offered by this host.");
+
+    /// <summary>
+    /// Changes one resource limit of a process (ADR 0125, section 4, <c>setrlimit</c>/<c>prlimit</c>):
+    /// the calling app's own process, or with <see cref="AppCapabilities.ProcessManage"/> another
+    /// process of the same user, or any process when the caller is elevated (<c>sudo</c>). Only an
+    /// elevated caller raises a hard limit.
+    /// </summary>
+    /// <param name="pid">The process.</param>
+    /// <param name="kind">The resource.</param>
+    /// <param name="limit">The new soft and hard values.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The outcome, with its <c>errno</c>.</returns>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies management of another app's process.</exception>
+    /// <exception cref="NotSupportedException">This gateway does not manage limits (the default).</exception>
+    Task<ResourceLimitChangeResult> SetResourceLimitAsync(
+        ProcessId pid, ResourceLimitKind kind, ResourceLimit limit, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This process gateway does not manage resource limits.");
+}
+
+/// <summary>The descriptor handle of a gateway that does not count descriptors: disposing it does nothing.</summary>
+public sealed class NoDescriptor : IDisposable
+{
+    private NoDescriptor()
+    {
+    }
+
+    /// <summary>Gets the shared instance.</summary>
+    public static NoDescriptor Instance { get; } = new();
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+    }
 }
 
 /// <summary>Identifies the stable outcome of one <see cref="IAppIntentGateway.LaunchAsync"/> request.</summary>
@@ -312,8 +427,50 @@ public enum AppIntentOpenFileOutcome
 /// <param name="Outcome">Stable resolution outcome.</param>
 /// <param name="CandidateAppIds">Every candidate app ID considered, populated only for <see cref="AppIntentOpenFileOutcome.ChooserRequired"/>.</param>
 /// <param name="ErrorCode">Stable machine-readable error code when the outcome did not succeed.</param>
+/// <param name="FellBackToOpen">
+/// For <see cref="IAppIntentGateway.EditFileAsync"/>: no handler declares <c>edit</c>, so the file was
+/// resolved among the <c>open</c> handlers instead (ADR 0096, section 2).
+/// </param>
 public sealed record AppIntentOpenFileResult(
     AppIntentOpenFileOutcome Outcome,
+    IReadOnlyList<string>? CandidateAppIds = null,
+    string? ErrorCode = null,
+    bool FellBackToOpen = false);
+
+/// <summary>Identifies the stable outcome of one reveal, URI, app-settings or app-defined intent (ADR 0096).</summary>
+public enum AppIntentOutcome
+{
+    /// <summary>The handler was launched, or the running single instance received the intent.</summary>
+    Dispatched,
+
+    /// <summary>Several apps can handle it and none is the default: the caller asks the user, then sends again with a target.</summary>
+    ChooserRequired,
+
+    /// <summary>No installed app handles it (no folder handler, no handler for the URI scheme, nobody declares the intent).</summary>
+    NoHandler,
+
+    /// <summary>The file, folder or target app does not exist.</summary>
+    NotFound,
+
+    /// <summary>The acting user may not read what the intent points at.</summary>
+    AccessDenied,
+
+    /// <summary>The target app is uninstalled.</summary>
+    Disabled,
+
+    /// <summary>The request itself is malformed: identifier, URI or payload.</summary>
+    Invalid,
+
+    /// <summary>The handler's entry point faulted while starting.</summary>
+    Faulted
+}
+
+/// <summary>Contains the result of one reveal, URI, app-settings or app-defined intent (ADR 0096).</summary>
+/// <param name="Outcome">Stable outcome.</param>
+/// <param name="CandidateAppIds">The apps to choose from, for <see cref="AppIntentOutcome.ChooserRequired"/>.</param>
+/// <param name="ErrorCode">Stable machine-readable error code when the outcome did not succeed (e.g. <c>intent.open-uri.no-handler</c>).</param>
+public sealed record AppIntentResult(
+    AppIntentOutcome Outcome,
     IReadOnlyList<string>? CandidateAppIds = null,
     string? ErrorCode = null);
 
@@ -352,6 +509,66 @@ public interface IAppIntentGateway
     /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
     ValueTask<AppIntentOpenFileResult> OpenFileAsync(
         VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Requests that a file be edited (ADR 0096, section 2): resolved like <see cref="OpenFileAsync"/>
+    /// among the handlers declaring <c>edit</c>, or among the <c>open</c> handlers when none does
+    /// (<see cref="AppIntentOpenFileResult.FellBackToOpen"/>).
+    /// </summary>
+    /// <param name="path">Canonical virtual filesystem path to edit.</param>
+    /// <param name="mediaType">Caller-supplied media type when already known.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
+    ValueTask<AppIntentOpenFileResult> EditFileAsync(
+        VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This intents gateway does not support editing files.");
+
+    /// <summary>
+    /// Requests that the default folder handler open the parent of <paramref name="path"/> and select
+    /// it (ADR 0096, section 1; <c>org.freedesktop.FileManager1.ShowItems</c>): the handler starts with
+    /// <c>&lt;parent&gt; --select=&lt;path&gt;</c>.
+    /// </summary>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
+    ValueTask<AppIntentResult> RevealFileAsync(VirtualPath path, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This intents gateway does not support revealing files.");
+
+    /// <summary>
+    /// Requests that a URI be opened by the handler of its scheme (ADR 0096, section 3), the media
+    /// type <c>x-scheme-handler/&lt;scheme&gt;</c>; <c>file://</c> opens the file.
+    /// </summary>
+    /// <param name="uri">Absolute URI.</param>
+    /// <param name="preferredAppId">The app to use, when the caller already chose one.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
+    ValueTask<AppIntentResult> OpenUriAsync(Uri uri, string? preferredAppId = null, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This intents gateway does not support opening URIs.");
+
+    /// <summary>
+    /// Requests an app's settings (ADR 0096, section 4): the app itself with <c>--show-settings</c>
+    /// when it declares the intent, otherwise the app's page in Settings (<c>--app=&lt;id&gt;</c>).
+    /// </summary>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
+    ValueTask<AppIntentResult> ShowAppSettingsAsync(string appId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This intents gateway does not support showing app settings.");
+
+    /// <summary>
+    /// Sends an app-defined intent (ADR 0096, section 5) to the installed apps declaring
+    /// <paramref name="intentId"/>: the only one, the remembered choice, or
+    /// <see cref="AppIntentOutcome.ChooserRequired"/> with the candidates.
+    /// </summary>
+    /// <param name="intentId">Well-formed identifier, <c>domain.reversed.name.vN</c>.</param>
+    /// <param name="payloadJson">Optional JSON object of at most 64 KiB.</param>
+    /// <param name="targetAppId">The app to deliver to, when the caller already chose one.</param>
+    /// <param name="rememberChoice">With <paramref name="targetAppId"/>: "always use" this app for this intent.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.AppsLaunch"/>.</exception>
+    ValueTask<AppIntentResult> SendIntentAsync(
+        string intentId,
+        string? payloadJson,
+        string? targetAppId = null,
+        bool rememberChoice = false,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This intents gateway does not support app-defined intents.");
 }
 
 /// <summary>Identifies the stable outcome of one <see cref="IAppServiceControlGateway"/> request.</summary>
@@ -418,4 +635,26 @@ public interface IAppServiceControlGateway
     /// </exception>
     ValueTask<ServiceControlResult> SetStartModeAsync(
         string serviceAppId, ServiceStartMode mode, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the target service's activation state, last result and health (ADR 0097). Needs no
+    /// capability: like <c>systemctl status</c>, any user may read any unit's state.
+    /// </summary>
+    /// <param name="serviceAppId">Exact catalog app ID of the service.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The snapshot; <see cref="ServiceStatusSnapshot.NeverStarted"/> for an unknown or never-started service.</returns>
+    /// <exception cref="NotSupportedException">The gateway predates ADR 0097.</exception>
+    ValueTask<ServiceStatusSnapshot> GetStatusAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This service-control gateway does not report service states.");
+
+    /// <summary>
+    /// Clears the <see cref="ServiceActiveState.Failed"/> state of the target service, like
+    /// <c>systemctl reset-failed</c>. Same authorization rule as <see cref="StartAsync"/>.
+    /// </summary>
+    /// <param name="serviceAppId">Exact catalog app ID of the service.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies control of this service.</exception>
+    /// <exception cref="NotSupportedException">The gateway predates ADR 0097.</exception>
+    ValueTask<ServiceControlResult> ResetFailedAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This service-control gateway does not report service states.");
 }

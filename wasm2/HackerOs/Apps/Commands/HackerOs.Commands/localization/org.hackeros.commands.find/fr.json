@@ -1,0 +1,5 @@
+{
+  "name": "find",
+  "description": "Recherche des fichiers dans une arborescence de dossiers",
+  "terminalUsage": "find [chemin] [-name motif] [-type f|d]"
+}

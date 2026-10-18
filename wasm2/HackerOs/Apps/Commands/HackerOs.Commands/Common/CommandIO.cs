@@ -69,7 +69,7 @@ internal static class CommandIO
         {
             if (await HackDirectory.ExistsAsync(file, cancellationToken))
             {
-                await context.StandardError.WriteLineAsync($"{command}: {file}: Is a directory");
+                await context.StandardError.WriteLineAsync(CommandText.FileError(context, command, file, CommandText.Reason(context, Errno.IsDirectory)));
                 return null;
             }
 
@@ -78,7 +78,7 @@ internal static class CommandIO
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            await context.StandardError.WriteLineAsync($"{command}: {file}: {ShellErrorText.Describe(exception)}");
+            await context.StandardError.WriteLineAsync(CommandText.FileError(context, command, file, CommandText.Describe(context, exception)));
             return null;
         }
     }
@@ -104,19 +104,13 @@ internal static class CommandIO
         }
         catch (FormatException)
         {
-            await context.StandardError.WriteLineAsync($"{command}: {file}: No such file or directory");
+            await context.StandardError.WriteLineAsync(CommandText.FileError(context, command, file, CommandText.Reason(context, Errno.NotFound)));
             return null;
         }
 
         if (!result.Succeeded || result.Value is null)
         {
-            string reason = result.Error?.Code switch
-            {
-                FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied => "Permission denied",
-                FileSystemErrorCode.NotFile => "Is a directory",
-                _ => "No such file or directory"
-            };
-            await context.StandardError.WriteLineAsync($"{command}: {file}: {reason}");
+            await context.StandardError.WriteLineAsync(CommandText.FileError(context, command, file, CommandText.Reason(context, ReadErrno(result.Error))));
             return null;
         }
 
@@ -191,6 +185,18 @@ internal static class CommandIO
 
         return (options, operands);
     }
+
+    /// <summary>
+    /// The <c>errno</c> a failed <c>open(2)</c> for reading reports: <c>EACCES</c>, <c>EISDIR</c>,
+    /// <c>EMFILE</c> at the <c>nofile</c> limit (ADR 0125), otherwise <c>ENOENT</c>.
+    /// </summary>
+    internal static Errno ReadErrno(FileSystemError? error) => error?.Code switch
+    {
+        FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied => Errno.PermissionDenied,
+        FileSystemErrorCode.NotFile => Errno.IsDirectory,
+        FileSystemErrorCode.TooManyOpenFiles => Errno.TooManyOpenFiles,
+        _ => Errno.NotFound
+    };
 }
 
 /// <summary>A mutable box, so an async iterator can report a failure to its caller.</summary>

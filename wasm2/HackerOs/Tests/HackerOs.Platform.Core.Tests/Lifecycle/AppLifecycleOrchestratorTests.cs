@@ -504,7 +504,7 @@ public sealed partial class AppLifecycleOrchestratorTests
         Description = "Stats /etc, which requires a capability this manifest never declares.",
         Kind = AppKind.Terminal,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(RootProbeTerminalApp).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("root-probe", [], "root-probe")
@@ -544,7 +544,7 @@ public sealed partial class AppLifecycleOrchestratorTests
         Description = "Requires an injected service beyond the manifest.",
         Kind = AppKind.Terminal,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(InjectingTerminalApp).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("injecting", [], "injecting")
@@ -578,7 +578,7 @@ public sealed partial class AppLifecycleOrchestratorTests
         Description = "Echoes its arguments.",
         Kind = AppKind.Terminal,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(EchoTerminalApp).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("echo", [], "echo [text]")
@@ -593,7 +593,7 @@ public sealed partial class AppLifecycleOrchestratorTests
         Description = "Always throws.",
         Kind = AppKind.Terminal,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(FaultingTerminalApp).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("faulty", [], "faulty")
@@ -633,7 +633,7 @@ public sealed partial class AppLifecycleOrchestratorTests
         Description = "Waits for cancellation.",
         Kind = AppKind.Service,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", typeof(WaitingServiceApp).FullName!),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None
     };
@@ -647,7 +647,7 @@ public sealed partial class AppLifecycleOrchestratorTests
         Description = "A singleton notes window.",
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", "org.hackeros.notes.EntryPoint"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         SingleInstancePerUser = true
@@ -791,6 +791,21 @@ public sealed partial class AppLifecycleOrchestratorTests
             IServiceProvider? services,
             IElevationTicketStore? elevationTickets,
             params AppManifest[] manifests)
+            : this(services, elevationTickets, systemAppIds: [], manifests)
+        {
+        }
+
+        /// <summary>A kernel whose host declared <paramref name="systemAppIds"/> system apps (ADR 0048).</summary>
+        internal Fixture(IReadOnlyCollection<string> systemAppIds, params AppManifest[] manifests)
+            : this(services: null, elevationTickets: null, systemAppIds, manifests)
+        {
+        }
+
+        private Fixture(
+            IServiceProvider? services,
+            IElevationTicketStore? elevationTickets,
+            IReadOnlyCollection<string> systemAppIds,
+            AppManifest[] manifests)
         {
             FixedTimeProvider timeProvider = new(_now);
             InMemoryFileSystemRepository repository = new(
@@ -831,7 +846,7 @@ public sealed partial class AppLifecycleOrchestratorTests
                 Grants, fileSystem, EventBus, topicBus, notifications, diagnostics, clock, Manager,
                 machineName: () => LoginEnvironment.HostName);
 
-            AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests);
+            AppCatalogBuildResult catalogResult = AppCatalog.Build(manifests, systemAppIds);
             Assert.True(catalogResult.IsSuccess, string.Join(", ", catalogResult.Errors.Select(e => e.Message)));
             AppCatalog catalog = catalogResult.Catalog!;
 

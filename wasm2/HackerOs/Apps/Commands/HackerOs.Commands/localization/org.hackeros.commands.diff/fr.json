@@ -1,0 +1,5 @@
+{
+  "name": "diff",
+  "description": "Compare des fichiers ligne par ligne",
+  "terminalUsage": "diff [-u] <fichier1> <fichier2>"
+}

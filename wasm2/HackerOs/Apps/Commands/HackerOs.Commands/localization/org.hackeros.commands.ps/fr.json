@@ -1,0 +1,5 @@
+{
+  "name": "ps",
+  "description": "Affiche un instantané des processus en cours",
+  "terminalUsage": "ps [-a] [-u] [-l] [-o champ,...]"
+}

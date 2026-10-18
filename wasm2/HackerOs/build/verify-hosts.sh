@@ -14,8 +14,24 @@
 #   ecosystem               published PWA, default build and settings (measurements on)
 #   ecosystem-build-off     published with -p:HackerOsCpuAccounting=false -p:HackerOsMemoryAccounting=false
 #   ecosystem-settings-off  default publish, wwwroot/appsettings.json switching both measurements off
-#   test-host               test/test (Blazor Web App, InteractiveWebAssembly)
-#   server                  Server/HackerOs.Server (InteractiveServer, ADR 0027)
+#   ecosystem-limits-off    default publish, wwwroot/appsettings.json switching the process limits off (ADR 0125)
+#   ecosystem-oom           default publish, wwwroot/appsettings.json lowering the simulated MemTotal to
+#                           OOM_MEMORY_MIB (512 by default)
+#                           (HackerOs:Hardware:MemoryMiB); the smoke test turns the OOM killer on with sudo,
+#                           runs stress --vm and expects the kill in dmesg (ADR 0126)
+#   ecosystem-isolated      default publish served on 127.0.0.2: a secure context where index.html registers
+#                           the PWA service worker (it skips localhost and 127.0.0.1), which adds COOP/COEP; the
+#                           page must be cross-origin isolated, with shared pipes and synchronous calls (ADR 0131)
+#   ecosystem-isolation-off same on 127.0.0.2, appsettings.json setting HackerOs:CrossOriginIsolation to "off":
+#                           the service worker adds nothing and the page must not be isolated
+#   test-host               test/test (Blazor Web App, InteractiveWebAssembly; its middleware sends COOP/COEP)
+#   server                  Server/HackerOs.Server (serves the Ecosystem's OS in WebAssembly and its API, ADR 0130;
+#                           the OS must connect to it by itself, ADR 0134; its middleware sends COOP/COEP)
+#
+# Cross-origin isolation (ADR 0131, 0143): the runs on 127.0.0.1 behind the static server get no
+# header (no service worker there) and must report "cross-origin-isolated: no"; the two dotnet hosts
+# and ecosystem-isolated must report "yes". A run that edits appsettings.json re-hashes its entry in
+# service-worker-assets.js, otherwise the service worker's install fails its integrity check.
 #
 # The two "-off" runs need the ADR 0066 switches (build/HackerOs.ResourceAccounting.targets and the
 # HackerOs:ResourceAccounting section of appsettings.json). On a tree without them they are reported
@@ -43,7 +59,7 @@ while [[ $# -gt 0 ]]; do
         --skip-build) SKIP_BUILD=1 ;;
         --keep-artifacts) KEEP=1 ;;
         --only) ONLY="${2:-}"; shift ;;
-        -h|--help) sed -n '2,28p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,43p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "unknown option: $1 (see --help)" >&2; exit 2 ;;
     esac
     shift
@@ -117,10 +133,24 @@ wait_ready() {
     return 1
 }
 
+# expected_isolation NAME — "yes" or "no": crossOriginIsolated the run must see (ADR 0131), or ""
+# on a tree without the setting.
+expected_isolation() {
+    grep -q '"CrossOriginIsolation"' "$ROOT/OS/HackerOs.Ecosystem/wwwroot/appsettings.json" 2>/dev/null || { echo ""; return; }
+    case "$1" in
+        ecosystem-isolated|test-host|server) echo yes ;;
+        *) echo no ;;
+    esac
+}
+
 # run_smoke NAME URL [CPU_SOURCE MEM_SOURCE] — runs the Playwright suite against a running host.
+# A run whose name ends in "-limits-off" expects the ADR 0125 limits off.
 run_smoke() {
-    local name="$1" url="$2" cpu="${3:-}" mem="${4:-}" logfile="$LOGS/$1.smoke.log"
-    HACKEROS_SMOKE_URL="$url" HACKEROS_SMOKE_HOST="$name" \
+    local name="$1" url="$2" cpu="${3:-}" mem="${4:-}" logfile="$LOGS/$1.smoke.log" limits=on oom=off
+    [[ "$name" == *-limits-off ]] && limits=off
+    [[ "$name" == *-oom ]] && oom=on
+    HACKEROS_SMOKE_URL="$url" HACKEROS_SMOKE_HOST="$name" HACKEROS_SMOKE_EXPECT_LIMITS="$limits" HACKEROS_SMOKE_EXPECT_OOM="$oom" \
+    HACKEROS_SMOKE_EXPECT_ISOLATION="$(expected_isolation "$name")" \
     HACKEROS_SMOKE_EXPECT_CPU_SOURCE="$cpu" HACKEROS_SMOKE_EXPECT_MEM_SOURCE="$mem" \
     HACKEROS_SMOKE_ARTIFACTS="$OUT/screenshots" \
         dotnet test "$SMOKE_PROJECT" --no-build -c Debug --logger "console;verbosity=detailed" >"$logfile" 2>&1
@@ -148,8 +178,8 @@ verify_run() {
     log "$name: listening on $url, running the smoke test"
     if run_smoke "$name" "$url" "$cpu" "$mem"; then
         stop_host
-        # Server-side failures never reach the browser console (InteractiveServer circuits,
-        # disposal after a reload): an ASP.NET Core "fail:" entry fails the run as well.
+        # Server-side failures never reach the browser console (an API call the OS made, the
+        # automatic connection of ADR 0134): an ASP.NET Core "fail:" entry fails the run as well.
         local host_failures
         host_failures="$(grep -cE '^fail: |Unhandled exception' "$hostlog")"
         if [[ "$host_failures" -gt 0 ]]; then
@@ -169,6 +199,7 @@ STATIC_SERVER="$OUT/static_server.py"
 cat >"$STATIC_SERVER" <<'PY'
 import functools, http.server, sys
 root, port = sys.argv[1], int(sys.argv[2])
+bind = sys.argv[3] if len(sys.argv) > 3 else "127.0.0.1"
 class Handler(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
                       ".wasm": "application/wasm", ".js": "text/javascript", ".mjs": "text/javascript",
@@ -179,8 +210,30 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
     def log_message(self, fmt, *args):
         sys.stderr.write("%s\n" % (fmt % args))
-http.server.ThreadingHTTPServer(("127.0.0.1", port), functools.partial(Handler, directory=root)).serve_forever()
+http.server.ThreadingHTTPServer((bind, port), functools.partial(Handler, directory=root)).serve_forever()
 PY
+
+# rehash_settings DIR — after a run edits DIR/wwwroot/appsettings.json: drops its stale compressed
+# copies and updates its hash in service-worker-assets.js (the service worker installs every asset
+# with its integrity; a stale hash fails the install, which only matters off 127.0.0.1).
+rehash_settings() {
+    local wwwroot="$1/wwwroot"
+    rm -f "$wwwroot/appsettings.json.br" "$wwwroot/appsettings.json.gz" \
+          "$wwwroot/service-worker-assets.js.br" "$wwwroot/service-worker-assets.js.gz"
+    python3 - "$wwwroot" <<'PY'
+import base64, hashlib, re, sys
+root = sys.argv[1]
+with open(f"{root}/appsettings.json", "rb") as f:
+    digest = "sha256-" + base64.b64encode(hashlib.sha256(f.read()).digest()).decode()
+path = f"{root}/service-worker-assets.js"
+with open(path, encoding="utf-8") as f:
+    text = f.read()
+text, count = re.subn(r'"hash": "sha256-[^"]+",(\s*)"url": "appsettings\.json"', f'"hash": "{digest}",\\1"url": "appsettings.json"', text)
+if count == 1:
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+PY
+}
 
 # --------------------------------------------------------------------------------------------------
 # 1. Build
@@ -189,13 +242,11 @@ HAS_SWITCHES=0
 [[ -f "$ACCOUNTING_TARGETS" ]] && HAS_SWITCHES=1
 
 # Expected CpuSource:/MemSource: values in /proc/self/status (ADR 0066 to 0068): measured by
-# default on the WebAssembly hosts, simulated on HackerOs.Server (switched off in its
-# appsettings.json) and in both "-off" runs. Empty means "not checked" (tree without ADR 0066).
+# default on every host (HackerOs.Server serves the Ecosystem's own appsettings.json since ADR
+# 0130), simulated in both "-off" runs. Empty means "not checked" (tree without ADR 0066).
 DEFAULT_SOURCE=""
-SERVER_SOURCE=""
 if [[ $HAS_SWITCHES -eq 1 ]]; then
     DEFAULT_SOURCE=measured
-    SERVER_SOURCE=simulated
 fi
 
 build_step() { # build_step LABEL LOGFILE COMMAND...
@@ -218,7 +269,8 @@ if [[ $SKIP_BUILD -eq 0 ]]; then
     done
 fi
 
-if wanted ecosystem || wanted ecosystem-settings-off; then
+if wanted ecosystem || wanted ecosystem-settings-off || wanted ecosystem-limits-off || wanted ecosystem-oom \
+    || wanted ecosystem-isolated || wanted ecosystem-isolation-off; then
     build_step "publish ecosystem" "$LOGS/publish-ecosystem.log" \
         dotnet publish OS/HackerOs.Ecosystem -c Release -o "$OUT/publish/ecosystem" || true
 fi
@@ -234,10 +286,10 @@ else
 # --------------------------------------------------------------------------------------------------
 # 2. Runs
 # --------------------------------------------------------------------------------------------------
-    serve_published() { # serve_published NAME DIR EXPECT_CPU EXPECT_MEM
-        local port; port="$(free_port)"
-        verify_run "$1" "http://127.0.0.1:$port" "$LOGS/$1.host.log" "$3" "$4" \
-            python3 "$STATIC_SERVER" "$2/wwwroot" "$port"
+    serve_published() { # serve_published NAME DIR EXPECT_CPU EXPECT_MEM [ADDRESS]
+        local port address="${5:-127.0.0.1}"; port="$(free_port)"
+        verify_run "$1" "http://$address:$port" "$LOGS/$1.host.log" "$3" "$4" \
+            python3 "$STATIC_SERVER" "$2/wwwroot" "$port" "$address"
     }
 
     if wanted ecosystem; then
@@ -273,7 +325,79 @@ for kind in ("Cpu", "Memory"):
 with open(path, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
 PY
+            rehash_settings "$off"
             serve_published ecosystem-settings-off "$off" simulated simulated
+        fi
+    fi
+
+    if wanted ecosystem-limits-off; then
+        settings="$OUT/publish/ecosystem/wwwroot/appsettings.json"
+        if [[ ! -f "$settings" ]] || ! grep -q '"ResourceLimits"' "$settings"; then
+            record ecosystem-limits-off SKIP "no HackerOs:ResourceLimits in appsettings.json (ADR 0125 not in this tree)"
+        else
+            off="$OUT/publish/ecosystem-limits-off"
+            rm -rf "$off" && cp -r "$OUT/publish/ecosystem" "$off"
+            rm -f "$off/wwwroot/appsettings.json.br" "$off/wwwroot/appsettings.json.gz"
+            python3 - "$off/wwwroot/appsettings.json" <<'PY'
+import json, sys
+path = sys.argv[1]
+with open(path, encoding="utf-8-sig") as f:
+    data = json.load(f)
+data.setdefault("HackerOs", {}).setdefault("ResourceLimits", {})["Enabled"] = False
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+PY
+            rehash_settings "$off"
+            serve_published ecosystem-limits-off "$off" "$DEFAULT_SOURCE" "$DEFAULT_SOURCE"
+        fi
+    fi
+
+    # ADR 0126: a machine with little memory, so the OOM killer has something to do.
+    if wanted ecosystem-oom; then
+        settings="$OUT/publish/ecosystem/wwwroot/appsettings.json"
+        if [[ ! -f "$settings" ]] || ! grep -q '"ResourceAccounting"' "$settings"; then
+            record ecosystem-oom SKIP "no HackerOs:ResourceAccounting in appsettings.json (memory is not measured)"
+        else
+            oom="$OUT/publish/ecosystem-oom"
+            rm -rf "$oom" && cp -r "$OUT/publish/ecosystem" "$oom"
+            rm -f "$oom/wwwroot/appsettings.json.br" "$oom/wwwroot/appsettings.json.gz"
+            python3 - "$oom/wwwroot/appsettings.json" "${OOM_MEMORY_MIB:-512}" <<'PY'
+import json, sys
+path, mebibytes = sys.argv[1], int(sys.argv[2])
+with open(path, encoding="utf-8-sig") as f:
+    data = json.load(f)
+data.setdefault("HackerOs", {}).setdefault("Hardware", {})["MemoryMiB"] = mebibytes
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+PY
+            rehash_settings "$oom"
+            serve_published ecosystem-oom "$oom" "$DEFAULT_SOURCE" "$DEFAULT_SOURCE"
+        fi
+    fi
+
+    # ADR 0131: 127.0.0.2 is a secure context where the service worker registers and adds the headers.
+    if wanted ecosystem-isolated; then
+        serve_published ecosystem-isolated "$OUT/publish/ecosystem" "$DEFAULT_SOURCE" "$DEFAULT_SOURCE" 127.0.0.2
+    fi
+
+    if wanted ecosystem-isolation-off; then
+        settings="$OUT/publish/ecosystem/wwwroot/appsettings.json"
+        if [[ ! -f "$settings" ]] || ! grep -q '"CrossOriginIsolation"' "$settings"; then
+            record ecosystem-isolation-off SKIP "no HackerOs:CrossOriginIsolation in appsettings.json (ADR 0131 not in this tree)"
+        else
+            off="$OUT/publish/ecosystem-isolation-off"
+            rm -rf "$off" && cp -r "$OUT/publish/ecosystem" "$off"
+            python3 - "$off/wwwroot/appsettings.json" <<'PY'
+import json, sys
+path = sys.argv[1]
+with open(path, encoding="utf-8-sig") as f:
+    data = json.load(f)
+data.setdefault("HackerOs", {})["CrossOriginIsolation"] = "off"
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2)
+PY
+            rehash_settings "$off"
+            serve_published ecosystem-isolation-off "$off" "$DEFAULT_SOURCE" "$DEFAULT_SOURCE" 127.0.0.2
         fi
     fi
 
@@ -290,7 +414,7 @@ PY
     if wanted server; then
         port="$(free_port)"
         data="$OUT/server-data"; rm -rf "$data"; mkdir -p "$data"
-        verify_run server "http://127.0.0.1:$port" "$LOGS/server.host.log" "$SERVER_SOURCE" "$SERVER_SOURCE" \
+        verify_run server "http://127.0.0.1:$port" "$LOGS/server.host.log" "$DEFAULT_SOURCE" "$DEFAULT_SOURCE" \
             env ASPNETCORE_ENVIRONMENT=Development \
                 ConnectionStrings__HackerOsDb="Data Source=$data/hackeros.db" \
                 BlobStorage__Root="$data/blobs" ServerBackup__Root="$data/backups" \

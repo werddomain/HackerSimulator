@@ -32,6 +32,10 @@ namespace HackerOs.Platform.Core.FileSystem.Virtual;
 /// directory does not exist when it is missing or returns <see langword="null"/> (a host without
 /// workers, such as the server).
 /// </param>
+/// <param name="Listeners">
+/// Lazily resolves the table of listening ports (ADR 0074, section 2) behind <c>/proc/net/tcp</c>;
+/// missing, the file lists no socket.
+/// </param>
 public sealed record ProcMetricsSources(
     ICpuTimeAccounting? Cpu = null,
     IProcessIoAccounting? ProcessIo = null,
@@ -40,7 +44,44 @@ public sealed record ProcMetricsSources(
     Func<IFileSystemMountRouter>? Mounts = null,
     ICpuTimeAccountant? CpuAccountant = null,
     IMemoryAccountant? MemoryAccountant = null,
-    Func<HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus?>? Workers = null);
+    Func<HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus?>? Workers = null,
+    Func<HackerOs.Platform.Core.Network.Local.ListeningPortTable?>? Listeners = null)
+{
+    /// <summary>
+    /// Lazily resolves the resource limits (ADR 0125) behind <c>/proc/&lt;pid&gt;/limits</c>; missing,
+    /// every limit reads <c>unlimited</c>.
+    /// </summary>
+    public Func<IProcessResourceLimitTable?>? ResourceLimits { get; init; }
+
+    /// <summary>
+    /// Lazily resolves the open descriptors (ADR 0125, <c>RLIMIT_NOFILE</c>) behind
+    /// <c>/proc/&lt;pid&gt;/fd</c>; missing, the directory is empty.
+    /// </summary>
+    public Func<IProcessFileDescriptorTable?>? FileDescriptors { get; init; }
+
+    /// <summary>
+    /// Gets the background tasks of ADR 0128 behind the <c>Job</c> and <c>Host</c> lines of
+    /// <c>/proc/&lt;pid&gt;/status</c> (and the task's name in <c>Name</c>); missing, a task reads like
+    /// any process of its app.
+    /// </summary>
+    public Func<HackerOs.Platform.Core.Execution.BackgroundJobService?>? BackgroundJobs { get; init; }
+
+    /// <summary>
+    /// Lazily resolves the <c>oom_score_adj</c> table (ADR 0126) behind <c>/proc/&lt;pid&gt;/oom_score</c>
+    /// and <c>oom_score_adj</c>; missing, the in-memory process manager's own table is used, else every
+    /// process reads <c>0</c>.
+    /// </summary>
+    public Func<HackerOs.Platform.Core.Processes.InMemoryProcessOomScoreTable?>? OomScores { get; init; }
+
+    /// <summary>Gets the number of OOM kills since boot (ADR 0126), the <c>oom_kill</c> line of <c>/proc/vmstat</c>; missing, <c>0</c>.</summary>
+    public Func<long>? OomKills { get; init; }
+
+    /// <summary>
+    /// Gets the page's cross-origin isolation (ADR 0131, section 5), the first lines of
+    /// <c>/proc/hackeros/workers</c>; missing, they read <c>no</c> with the reason <c>not-browser</c>.
+    /// </summary>
+    public Func<HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus?>? CrossOriginIsolation { get; init; }
+}
 
 /// <summary>One line of <c>/proc/mounts</c>: what is mounted where, with which type and options.</summary>
 /// <param name="Source">Device or pseudo-source, e.g. <c>/dev/hda</c> or <c>proc</c>.</param>

@@ -1,0 +1,5 @@
+{
+  "name": "seq",
+  "description": "Affiche une suite de nombres",
+  "terminalUsage": "seq [-s sép] [-w] [premier [incrément]] dernier"
+}

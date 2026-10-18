@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Connections.All" xml:space="preserve">
+    <value>Connexions Internet actives (serveurs et établies)</value>
+  </data>
+  <data name="Connections.NoServers" xml:space="preserve">
+    <value>Connexions Internet actives (sans serveurs)</value>
+  </data>
+  <data name="Connections.Servers" xml:space="preserve">
+    <value>Connexions Internet actives (serveurs uniquement)</value>
+  </data>
+  <data name="HiddenOwners.Line1" xml:space="preserve">
+    <value>(Tous les processus ne peuvent être identifiés, les infos sur les processus</value>
+  </data>
+  <data name="HiddenOwners.Line2" xml:space="preserve">
+    <value> non possédés ne seront pas affichées, vous devez être root pour les voir toutes.)</value>
+  </data>
+  <data name="InterfaceTable" xml:space="preserve">
+    <value>Table d'interfaces du noyau</value>
+  </data>
+  <data name="RoutingTable" xml:space="preserve">
+    <value>Table de routage IP du noyau</value>
+  </data>
+  <data name="Stats.Delivered" xml:space="preserve">
+    <value>    {0} paquets entrants délivrés</value>
+  </data>
+  <data name="Stats.Forwarded" xml:space="preserve">
+    <value>    0 réacheminés</value>
+  </data>
+  <data name="Stats.RequestsSent" xml:space="preserve">
+    <value>    {0} requêtes envoyées</value>
+  </data>
+  <data name="Stats.SegmentsReceived" xml:space="preserve">
+    <value>    {0} segments reçus</value>
+  </data>
+  <data name="Stats.SegmentsSent" xml:space="preserve">
+    <value>    {0} segments envoyés</value>
+  </data>
+  <data name="Stats.TotalReceived" xml:space="preserve">
+    <value>    {0} paquets reçus au total</value>
+  </data>
+</root>

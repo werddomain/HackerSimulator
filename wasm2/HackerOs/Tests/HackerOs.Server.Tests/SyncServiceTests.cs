@@ -229,6 +229,39 @@ public sealed class SyncServiceTests : IDisposable
         Assert.False(result.Resolved);
     }
 
+    // ── Tombstone purge (ADR 0101 section 1) ─────────────────────────────────
+
+    [Fact]
+    public async Task PurgeExpiredTombstones_RemovesEveryRowOfARecordDeletedMoreThan90DaysAgo()
+    {
+        var deleted = Guid.NewGuid();
+        var alive = Guid.NewGuid();
+        await PushAsync(BuildEnvelope(deleted, SyncDomain.FileSystem, 1, AccountA, DeviceA, false, "{\"relativePath\":\"a\"}"));
+        await PushAsync(BuildEnvelope(deleted, SyncDomain.FileSystem, 2, AccountA, DeviceA, true, null));
+        await PushAsync(BuildEnvelope(alive, SyncDomain.FileSystem, 1, AccountA, DeviceA, false, "{\"relativePath\":\"b\"}"));
+
+        Assert.Equal(0, await _svc.PurgeExpiredTombstonesAsync(DateTimeOffset.UtcNow.AddDays(89), CancellationToken.None));
+        Assert.Equal(1, await _svc.PurgeExpiredTombstonesAsync(DateTimeOffset.UtcNow.AddDays(91), CancellationToken.None));
+
+        Assert.DoesNotContain(_db.SyncRecords, r => r.RecordId == deleted);
+        Assert.Contains(_db.SyncRecords, r => r.RecordId == alive);
+    }
+
+    [Fact]
+    public async Task PurgeExpiredTombstones_KeepsTheRowHoldingTheHighestSequence()
+    {
+        // Removing it would let the next push reuse a sequence number a device cursor already passed.
+        var deleted = Guid.NewGuid();
+        await PushAsync(BuildEnvelope(deleted, SyncDomain.FileSystem, 1, AccountA, DeviceA, false, "{\"relativePath\":\"a\"}"));
+        await PushAsync(BuildEnvelope(deleted, SyncDomain.FileSystem, 2, AccountA, DeviceA, true, null));
+
+        Assert.Equal(0, await _svc.PurgeExpiredTombstonesAsync(DateTimeOffset.UtcNow.AddDays(91), CancellationToken.None));
+        Assert.Equal(2, _db.SyncRecords.Count(r => r.RecordId == deleted));
+    }
+
+    private Task<PushResponse> PushAsync(SyncRecordEnvelope envelope) =>
+        _svc.PushAsync(AccountA, DeviceA, new PushRequest(envelope.Domain, [envelope], Guid.NewGuid()), CancellationToken.None);
+
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private static SyncRecordEnvelope BuildEnvelope(

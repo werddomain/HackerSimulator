@@ -37,26 +37,44 @@ public readonly struct MessageboxType : IEquatable<MessageboxType>, IEquatable<M
     /// <summary>Creates a wrapper instance over a <see cref="MessageBoxType"/> value.</summary>
     public MessageboxType(MessageBoxType value) => Value = value;
 
+    /// <summary>Wraps <see cref="MessageBoxType.Ok"/>: an OK button.</summary>
     public static MessageboxType Ok => new(MessageBoxType.Ok);
+    /// <summary>Wraps <see cref="MessageBoxType.OkCancel"/>: OK and Cancel buttons.</summary>
     public static MessageboxType OkCancel => new(MessageBoxType.OkCancel);
+    /// <summary>Wraps <see cref="MessageBoxType.YesNo"/>: Yes and No buttons.</summary>
     public static MessageboxType YesNo => new(MessageBoxType.YesNo);
+    /// <summary>Wraps <see cref="MessageBoxType.OkCancelRetry"/>: OK, Cancel and Retry buttons.</summary>
     public static MessageboxType OkCancelRetry => new(MessageBoxType.OkCancelRetry);
+    /// <summary>Wraps <see cref="MessageBoxType.YesNoCancel"/>: Yes, No and Cancel buttons.</summary>
     public static MessageboxType YesNoCancel => new(MessageBoxType.YesNoCancel);
+    /// <summary>Wraps <see cref="MessageBoxType.RetryCancel"/>: Retry and Cancel buttons.</summary>
     public static MessageboxType RetryCancel => new(MessageBoxType.RetryCancel);
 
+    /// <summary>Wraps an enum value, so either spelling can be passed where the other is expected.</summary>
     public static implicit operator MessageboxType(MessageBoxType v) => new(v);
+    /// <summary>Unwraps the enum value.</summary>
     public static implicit operator MessageBoxType(MessageboxType v) => v.Value;
 
+    /// <summary>True when the enum value equals the wrapped value.</summary>
     public static bool operator ==(MessageBoxType left, MessageboxType right) => left == right.Value;
+    /// <summary>True when the enum value differs from the wrapped value.</summary>
     public static bool operator !=(MessageBoxType left, MessageboxType right) => left != right.Value;
+    /// <summary>True when the wrapped value equals the enum value.</summary>
     public static bool operator ==(MessageboxType left, MessageBoxType right) => left.Value == right;
+    /// <summary>True when the wrapped value differs from the enum value.</summary>
     public static bool operator !=(MessageboxType left, MessageBoxType right) => left.Value != right;
+    /// <summary>True when both wrap the same value.</summary>
     public static bool operator ==(MessageboxType left, MessageboxType right) => left.Value == right.Value;
+    /// <summary>True when the wrapped values differ.</summary>
     public static bool operator !=(MessageboxType left, MessageboxType right) => left.Value != right.Value;
 
+    /// <inheritdoc />
     public bool Equals(MessageboxType other) => Value == other.Value;
+    /// <inheritdoc />
     public bool Equals(MessageBoxType other) => Value == other;
+    /// <summary>True for a <see cref="MessageboxType"/> or a <see cref="MessageBoxType"/> holding the same value.</summary>
     public override bool Equals(object? obj) => obj is MessageboxType m && Equals(m) || obj is MessageBoxType b && Equals(b);
+    /// <summary>Returns the hash code of the wrapped value, so both spellings hash alike.</summary>
     public override int GetHashCode() => Value.GetHashCode();
 }
 
@@ -92,25 +110,42 @@ public readonly struct MessageboxResult : IEquatable<MessageboxResult>, IEquatab
     /// <summary>Creates a wrapper instance over a <see cref="MessageBoxResult"/> value.</summary>
     public MessageboxResult(MessageBoxResult value) => Value = value;
 
+    /// <summary>Wraps <see cref="MessageBoxResult.Ok"/>: the OK button was clicked.</summary>
     public static MessageboxResult Ok => new(MessageBoxResult.Ok);
+    /// <summary>Wraps <see cref="MessageBoxResult.Cancel"/>: the Cancel button was clicked or the dialog was closed.</summary>
     public static MessageboxResult Cancel => new(MessageBoxResult.Cancel);
+    /// <summary>Wraps <see cref="MessageBoxResult.Yes"/>: the Yes button was clicked.</summary>
     public static MessageboxResult Yes => new(MessageBoxResult.Yes);
+    /// <summary>Wraps <see cref="MessageBoxResult.No"/>: the No button was clicked.</summary>
     public static MessageboxResult No => new(MessageBoxResult.No);
+    /// <summary>Wraps <see cref="MessageBoxResult.Retry"/>: the Retry button was clicked.</summary>
     public static MessageboxResult Retry => new(MessageBoxResult.Retry);
 
+    /// <summary>Wraps an enum value, so either spelling can be passed where the other is expected.</summary>
     public static implicit operator MessageboxResult(MessageBoxResult v) => new(v);
+    /// <summary>Unwraps the enum value.</summary>
     public static implicit operator MessageBoxResult(MessageboxResult v) => v.Value;
 
+    /// <summary>True when the enum value equals the wrapped value.</summary>
     public static bool operator ==(MessageBoxResult left, MessageboxResult right) => left == right.Value;
+    /// <summary>True when the enum value differs from the wrapped value.</summary>
     public static bool operator !=(MessageBoxResult left, MessageboxResult right) => left != right.Value;
+    /// <summary>True when the wrapped value equals the enum value.</summary>
     public static bool operator ==(MessageboxResult left, MessageBoxResult right) => left.Value == right;
+    /// <summary>True when the wrapped value differs from the enum value.</summary>
     public static bool operator !=(MessageboxResult left, MessageBoxResult right) => left.Value != right;
+    /// <summary>True when both wrap the same value.</summary>
     public static bool operator ==(MessageboxResult left, MessageboxResult right) => left.Value == right.Value;
+    /// <summary>True when the wrapped values differ.</summary>
     public static bool operator !=(MessageboxResult left, MessageboxResult right) => left.Value != right.Value;
 
+    /// <inheritdoc />
     public bool Equals(MessageboxResult other) => Value == other.Value;
+    /// <inheritdoc />
     public bool Equals(MessageBoxResult other) => Value == other;
+    /// <summary>True for a <see cref="MessageboxResult"/> or a <see cref="MessageBoxResult"/> holding the same value.</summary>
     public override bool Equals(object? obj) => obj is MessageboxResult m && Equals(m) || obj is MessageBoxResult b && Equals(b);
+    /// <summary>Returns the hash code of the wrapped value, so both spellings hash alike.</summary>
     public override int GetHashCode() => Value.GetHashCode();
 }
 
@@ -213,6 +248,47 @@ public sealed record CredentialPromptDialogResult(
     string? LoginName,
     string? Password);
 
+/// <summary>One app offered by the app chooser (ADR 0096, section 5).</summary>
+/// <param name="AppId">App ID returned when the user picks it.</param>
+/// <param name="Name">Display name.</param>
+/// <param name="Description">One-line description, when the app has one.</param>
+public sealed record AppChooserOption(string AppId, string Name, string? Description = null);
+
+/// <summary>
+/// Configures the app chooser, the "Open with" dialog of the OS (ADR 0096, section 5): which app
+/// handles a file, a URI or an app-defined intent when several can and none is the default.
+/// </summary>
+public sealed record AppChooserDialogRequest
+{
+    /// <summary>Gets the dialog title; "Open with" when empty.</summary>
+    public string Title { get; init; } = string.Empty;
+
+    /// <summary>Gets the sentence above the list, e.g. what is being opened.</summary>
+    public string Content { get; init; } = string.Empty;
+
+    /// <summary>Gets the apps to choose from, in display order.</summary>
+    public IReadOnlyList<AppChooserOption> Candidates { get; init; } = [];
+
+    /// <summary>Gets whether the dialog offers "Always use this app".</summary>
+    public bool OfferAlwaysUse { get; init; } = true;
+}
+
+/// <summary>Describes whether the user picked an app or cancelled the chooser.</summary>
+public enum AppChooserStatus
+{
+    /// <summary>The user picked an app.</summary>
+    Selected,
+
+    /// <summary>The user cancelled the chooser.</summary>
+    Cancelled
+}
+
+/// <summary>Contains the result of the app chooser.</summary>
+/// <param name="Status">Dialog outcome.</param>
+/// <param name="AppId">The picked app, or null if cancelled.</param>
+/// <param name="AlwaysUse">Whether the user ticked "Always use this app".</param>
+public sealed record AppChooserDialogResult(AppChooserStatus Status, string? AppId, bool AlwaysUse);
+
 /// <summary>
 /// Displays modal system dialogs (including file dialogs, message boxes, and text inputs) on behalf of a window app.
 /// </summary>
@@ -235,4 +311,14 @@ public interface IDialogService : IFileDialogService
         IAppExecutionContext context,
         CredentialPromptDialogRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Displays the app chooser scoped to the requesting app instance (ADR 0096, section 5). The
+    /// default answers "cancelled", for hosts written before the chooser existed.
+    /// </summary>
+    ValueTask<AppChooserDialogResult> ChooseAppAsync(
+        IAppExecutionContext context,
+        AppChooserDialogRequest request,
+        CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(new AppChooserDialogResult(AppChooserStatus.Cancelled, null, false));
 }

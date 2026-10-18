@@ -19,6 +19,8 @@ public sealed class HackErrorTranslationTests
         { FileSystemErrorCode.ProviderUnavailable, typeof(HackIOException) },
         { FileSystemErrorCode.ProviderFailure, typeof(HackIOException) },
         { FileSystemErrorCode.CrossMountOperation, typeof(HackIOException) },
+        { FileSystemErrorCode.NoSpace, typeof(HackIOException) },
+        { FileSystemErrorCode.FileTooLarge, typeof(HackIOException) },
         { FileSystemErrorCode.NotFile, typeof(HackUnauthorizedAccessException) },
         { FileSystemErrorCode.PermissionDenied, typeof(HackUnauthorizedAccessException) },
         { FileSystemErrorCode.CapabilityDenied, typeof(HackUnauthorizedAccessException) },
@@ -82,5 +84,21 @@ public sealed class HackErrorTranslationTests
 
         Assert.IsAssignableFrom<IOException>(missing);
         Assert.IsAssignableFrom<UnauthorizedAccessException>(new HackUnauthorizedAccessException("x"));
+    }
+
+    [Theory]
+    [InlineData(FileSystemErrorCode.NoSpace, "No space left on device")]
+    [InlineData(FileSystemErrorCode.FileTooLarge, "File too large")]
+    public async Task Storage_limits_reach_the_shell_as_their_linux_message(FileSystemErrorCode code, string message)
+    {
+        ScriptedFileSystemGateway gateway = new(new FakeAppFileSystemGateway())
+        {
+            OnRead = request => new FileSystemError(FileSystemOperation.Read, code, request.Path)
+        };
+        using IDisposable scope = HackExecutionContext.Enter(HackTestHost.CreateContext(gateway));
+
+        Exception exception = await Record.ExceptionAsync(() => HackFile.ReadAllBytesAsync("/data/file.bin"));
+
+        Assert.Equal(message, ShellErrorText.Describe(exception));
     }
 }

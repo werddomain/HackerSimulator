@@ -20,8 +20,11 @@ code des apps** :
 | Allocations | `GC.GetAllocatedBytesForCurrentThread()` lu à chaque changement de contexte | exacte | `HackAllocBytes` |
 | Résidente | tas réel réparti après chaque GC au prorata des allocations récentes, avec décroissance exponentielle | estimation | `RssAnon` |
 
-`VmRSS = RssAnon + RssFile + VmData`. **Mesure seulement** : aucune limite,
-aucun OOM killer ; dépasser `MemTotal` ne fait que saturer les graphiques.
+`VmRSS = RssAnon + RssFile + VmData`. La mesure ne limite rien par elle-même :
+la limite `rss` par processus vient de l'ADR 0125
+([`process-limits.md`](process-limits.md)) et l'OOM killer, **désactivé par
+défaut**, de l'ADR 0126 (qui remplace l'ADR 0068 §3) et de l'ADR 0142
+([`oom-killer.md`](oom-killer.md)) ; il n'agit que si la mémoire est mesurée.
 
 Mesure coupée (au build par `HackerOsMemoryAccounting=false`, ou par
 `HackerOs:ResourceAccounting:Memory:Enabled=false`) : comportement exact
@@ -37,7 +40,7 @@ lignes, `MemSource: simulated`).
 | `NullMemoryAccountant`, `NullKernelMemoryLedger` | `Platform/HackerOs.Platform.Core` (`Processes/Accounting/`) | mesure coupée : rien n'est mesuré, aucune charge ne coûte |
 | `AppImage`, `AppImageAssembly`, `BuiltInApplication.Image` | `Shared/HackerOs.App.Abstractions` | image d'une app dans `BuiltInApplications.json` |
 | `AppImageInspector` | `Tools/HackerOs.Tools.ManifestGenerator` | lit les références de l'assembly (métadonnées, sans charger de code) et mesure les fichiers |
-| `BuildKnownLazyApps.Images` | `OS/HackerOs.Ecosystem` | images du catalogue de l'hôte, par id d'app |
+| `HostAppCatalog.Images` (`BuildKnownLazyApps.Images` dans l'Ecosystem) | `OS/HackerOs.Ecosystem.Host` | images du catalogue de l'hôte, par id d'app |
 | `AllocationTracker` | `Platform/HackerOs.Platform.ResourceAccounting` (`Memory/`) | couche allocations : observateur du crochet de changement de contexte |
 | `KernelMemoryLedger` | idem | couche ressources de l'OS |
 | `MeasuredMemoryAccountant`, `MemoryAccountingConstants` | idem | les quatre couches, la répartition du tas, les constantes |
@@ -119,13 +122,17 @@ dernier GC n'a pas encore de `RssAnon`.
 
 Un processus est mesuré si le catalogue de l'hôte connaît son image (toutes
 les apps intégrées) ou s'il a exécuté du code sous son frame (le shell, une
-app installée au runtime). Les autres (contenu de jeu sans code) restent
+app installée au runtime). Les autres (processus simulés sans code) restent
 simulés, comme le veut l'ADR 0066 §4.
 
 Un processus dans un Web Worker (ADR 0070) reçoit en plus, en `RssAnon`, sa part
 de la mémoire du runtime de son worker (répartie entre les processus du
 worker) et ses allocations mesurées dans le worker ; `/proc/meminfo` compte
 le runtime de chaque worker. Voir [`worker-processes.md`](worker-processes.md).
+Quand la page est isolée (ADR 0131, 0143 §6), la mémoire du runtime d'un worker
+vient de `performance.measureUserAgentSpecificMemory()` (toutes les 20 s,
+valable trois périodes) au lieu du battement de cœur ; `MemSource` reste
+`measured`, et `/proc/hackeros/workers` dit `memory-measure: browser`.
 
 ## Constantes
 
@@ -185,11 +192,14 @@ buffer.Resize(bufferedChars * sizeof(char));   // à chaque changement
 
 ### Composition
 
-`AddHackerOsResourceAccounting` (Ecosystem) compose la mesure quand
+`AddHackerOsResourceAccounting` (`HackerOs.Ecosystem.Host`) compose la mesure quand
 `plan.MemoryActive` et `ResourceAccountingFeatures.IsMemoryAccountingSupported`
 : `AllocationTracker` inscrit sur le diffuseur, `KernelMemoryLedger`
 (`IKernelMemoryLedger`), `MeasuredMemoryAccountant` (`IMemoryAccountant`), avec
-les images de `BuildKnownLazyApps.Images`. Sinon, les implémentations nulles
+les images que l'hôte lui passe (`AddHackerOsResourceAccounting(configuration,
+images)` ; `AddHackerOsBrowserHost` passe `HostAppCatalog.Images`, le serveur et
+`test/test` passent `BuildKnownLazyApps.Images` ; sans images, aucune app n'a de
+couche image). Sinon, les implémentations nulles
 sont enregistrées. `AddHackerOsEcosystem` passe le registre au presse-papiers,
 au shell, aux passerelles de fichiers et de réseau.
 

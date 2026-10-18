@@ -13,8 +13,10 @@ namespace HackerOs.Commands.Find;
 /// </summary>
 public sealed class FindCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public FindCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)

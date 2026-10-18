@@ -9,30 +9,32 @@
 
 <div class="settings-window-container">
     <header class="settings-header">
-        <span class="settings-header-title">HackerOS System Settings</span>
+        <span class="settings-header-title">@L["Header.Title"]</span>
     </header>
 
     <div class="settings-body">
-        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="settings-tabs" TabHeaderClass="hos-tab-header">
-            <MudTabPanel Text="Appearance" Icon="@Icons.Material.Filled.Palette">
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="settings-tabs" TabHeaderClass="hos-tab-header"
+                 @bind-ActivePanelIndex="_activeTab">
+            <MudTabPanel Text="@L["Tab.Appearance"]" Icon="@Icons.Material.Filled.Palette">
                 <div class="setting-group layer-picker">
-                    <h4>Apply changes to</h4>
+                    <h4>@L["Appearance.Layer.Title"]</h4>
                     <p class="setting-desc">
-                        Your choices are saved in <code>~/.config/hackeros/appearance.config</code>.
-                        The default for every user lives in <code>/etc/hackeros/appearance.config</code> and needs administrator approval.
+                        @LocalizedMarkup.Format(L["Appearance.Layer.Description"],
+                            LocalizedMarkup.Code("~/.config/hackeros/appearance.config"),
+                            LocalizedMarkup.Code("/etc/hackeros/appearance.config"))
                     </p>
-                    <div class="layer-options" role="radiogroup" aria-label="Settings layer">
+                    <div class="layer-options" role="radiogroup" aria-label="@L["Appearance.Layer.AriaLabel"]">
                         <button type="button" role="radio" class="@LayerOptionClass(SettingLayer.User)"
-                                aria-checked="@(_targetLayer == SettingLayer.User)"
-                                @onclick="() => SelectLayer(SettingLayer.User)">Only me</button>
+                                aria-checked="@(_targetLayer == SettingLayer.User ? "true" : "false")"
+                                @onclick="() => SelectLayer(SettingLayer.User)">@L["Appearance.Layer.User"]</button>
                         <button type="button" role="radio" class="@LayerOptionClass(SettingLayer.System)"
-                                aria-checked="@(_targetLayer == SettingLayer.System)"
-                                @onclick="() => SelectLayer(SettingLayer.System)">All users (system default)</button>
+                                aria-checked="@(_targetLayer == SettingLayer.System ? "true" : "false")"
+                                @onclick="() => SelectLayer(SettingLayer.System)">@L["Appearance.Layer.System"]</button>
                     </div>
                     @if (_targetLayer == SettingLayer.System)
                     {
                         <button type="button" class="btn-secondary" disabled="@_isSavingAppearance" @onclick="ApplyCurrentAsSystemDefaultAsync">
-                            Save the current look as the system default
+                            @L["Appearance.SaveAsSystemDefault"]
                         </button>
                     }
                     @if (!string.IsNullOrEmpty(_appearanceMessage))
@@ -41,14 +43,14 @@
                     }
                 </div>
                 <div class="setting-group">
-                    <h4>Desktop theme <SettingOriginBadge Source="@SourceOf(DesktopThemeKey)" IsLocked="@IsLocked(DesktopThemeKey)" /></h4>
-                    <p class="setting-desc">Applied to the desktop, windows, taskbar, and Start menu.</p>
-                    <div class="theme-options" aria-label="Desktop themes">
+                    <h4>@L["Appearance.DesktopTheme.Title"] <SettingOriginBadge Source="@SourceOf(DesktopThemeKey)" IsLocked="@IsLocked(DesktopThemeKey)" /></h4>
+                    <p class="setting-desc">@L["Appearance.DesktopTheme.Description"]</p>
+                    <div class="theme-options" aria-label="@L["Appearance.DesktopTheme.AriaLabel"]">
                         @foreach (ThemeDefinition theme in ThemeCatalog.DesktopThemes)
                         {
                             <button type="button"
                                     class="@ThemeOptionClass(theme.Id, _appearanceSettings.DesktopThemeId)"
-                                    aria-pressed="@(theme.Id == _appearanceSettings.DesktopThemeId)"
+                                    aria-pressed="@(theme.Id == _appearanceSettings.DesktopThemeId ? "true" : "false")"
                                     disabled="@IsBlocked(DesktopThemeKey)"
                                     @onclick="() => ChangeDesktopTheme(theme.Id)">
                                 <ThemePreview ThemeId="@theme.Id"
@@ -57,17 +59,35 @@
                                 <span class="theme-option-label">@theme.DisplayName</span>
                             </button>
                         }
+                        @foreach (UserTheme theme in UserThemesFor(ThemePlatform.Desktop))
+                        {
+                            <div class="user-theme-option">
+                                <button type="button"
+                                        class="@ThemeOptionClass(theme.Id, _appearanceSettings.DesktopThemeId)"
+                                        aria-pressed="@(theme.Id == _appearanceSettings.DesktopThemeId ? "true" : "false")"
+                                        disabled="@IsBlocked(DesktopThemeKey)"
+                                        @onclick="() => ChangeDesktopTheme(theme.Id)">
+                                    <ThemePreview ThemeId="@ResolvedTheme.Resolve(theme.Id, ThemePlatform.Desktop, _userThemes.Themes).BaseThemeId"
+                                                  Tokens="@theme.Tokens"
+                                                  Title="@theme.Name"
+                                                  AccentId="@_appearanceSettings.AccentId"
+                                                  AnimationsEnabled="@_appearanceSettings.AnimationsEnabled" />
+                                    <span class="theme-option-label">@theme.Name <span class="theme-origin">@(theme.Origin == ThemeOrigin.System ? "/etc" : "~")</span></span>
+                                </button>
+                                <button type="button" class="btn-link edit-theme" @onclick="() => OpenThemeEditorAsync(theme.SourcePath)">@L["Appearance.EditTheme"]</button>
+                            </div>
+                        }
                     </div>
                 </div>
                 <div class="setting-group">
-                    <h4>Mobile theme <SettingOriginBadge Source="@SourceOf(MobileThemeKey)" IsLocked="@IsLocked(MobileThemeKey)" /></h4>
-                    <p class="setting-desc">Saved independently and applied when the mobile shell is active.</p>
-                    <div class="theme-options mobile-theme-options" aria-label="Mobile themes">
+                    <h4>@L["Appearance.MobileTheme.Title"] <SettingOriginBadge Source="@SourceOf(MobileThemeKey)" IsLocked="@IsLocked(MobileThemeKey)" /></h4>
+                    <p class="setting-desc">@L["Appearance.MobileTheme.Description"]</p>
+                    <div class="theme-options mobile-theme-options" aria-label="@L["Appearance.MobileTheme.AriaLabel"]">
                         @foreach (ThemeDefinition theme in ThemeCatalog.MobileThemes)
                         {
                             <button type="button"
                                     class="@ThemeOptionClass(theme.Id, _appearanceSettings.MobileThemeId)"
-                                    aria-pressed="@(theme.Id == _appearanceSettings.MobileThemeId)"
+                                    aria-pressed="@(theme.Id == _appearanceSettings.MobileThemeId ? "true" : "false")"
                                     disabled="@IsBlocked(MobileThemeKey)"
                                     @onclick="() => ChangeMobileTheme(theme.Id)">
                                 <ThemePreview ThemeId="@theme.Id"
@@ -76,19 +96,50 @@
                                 <span class="theme-option-label">@theme.DisplayName</span>
                             </button>
                         }
+                        @foreach (UserTheme theme in UserThemesFor(ThemePlatform.Mobile))
+                        {
+                            <div class="user-theme-option">
+                                <button type="button"
+                                        class="@ThemeOptionClass(theme.Id, _appearanceSettings.MobileThemeId)"
+                                        aria-pressed="@(theme.Id == _appearanceSettings.MobileThemeId ? "true" : "false")"
+                                        disabled="@IsBlocked(MobileThemeKey)"
+                                        @onclick="() => ChangeMobileTheme(theme.Id)">
+                                    <ThemePreview ThemeId="@ResolvedTheme.Resolve(theme.Id, ThemePlatform.Mobile, _userThemes.Themes).BaseThemeId"
+                                                  Tokens="@theme.Tokens"
+                                                  Title="@theme.Name"
+                                                  AccentId="@_appearanceSettings.AccentId"
+                                                  AnimationsEnabled="@_appearanceSettings.AnimationsEnabled" />
+                                    <span class="theme-option-label">@theme.Name <span class="theme-origin">@(theme.Origin == ThemeOrigin.System ? "/etc" : "~")</span></span>
+                                </button>
+                                <button type="button" class="btn-link edit-theme" @onclick="() => OpenThemeEditorAsync(theme.SourcePath)">@L["Appearance.EditTheme"]</button>
+                            </div>
+                        }
                     </div>
+                </div>
+                <div class="setting-group">
+                    <h4>@L["Appearance.UserThemes.Title"]</h4>
+                    <p class="setting-desc">
+                        @LocalizedMarkup.Format(L["Appearance.UserThemes.Description"],
+                            LocalizedMarkup.Code("~/.config/hackeros/themes/"),
+                            LocalizedMarkup.Code("/etc/hackeros/themes/"))
+                    </p>
+                    @if (_userThemes.Diagnostics.Count > 0)
+                    {
+                        <p class="setting-desc theme-warnings">@L["Appearance.UserThemes.Warnings", _userThemes.Diagnostics.Count]</p>
+                    }
+                    <button type="button" class="btn-secondary" id="settings-open-theme-editor" @onclick="() => OpenThemeEditorAsync(null)">@L["Appearance.OpenThemeEditor"]</button>
                 </div>
                 @if (CurrentDesktopThemeSupportsAccent)
                 {
                     <div class="setting-group">
-                        <h4>HackerOS accent <SettingOriginBadge Source="@SourceOf(AccentKey)" IsLocked="@IsLocked(AccentKey)" /></h4>
-                        <p class="setting-desc">Accent colors are intentionally available only for the HackerOS theme.</p>
-                        <div class="accent-options" aria-label="HackerOS accent colors">
+                        <h4>@L["Appearance.Accent.Title"] <SettingOriginBadge Source="@SourceOf(AccentKey)" IsLocked="@IsLocked(AccentKey)" /></h4>
+                        <p class="setting-desc">@L["Appearance.Accent.Description"]</p>
+                        <div class="accent-options" aria-label="@L["Appearance.Accent.AriaLabel"]">
                             @foreach (string accentId in ThemeCatalog.AccentIds)
                             {
                                 <button type="button"
                                         class="@AccentOptionClass(accentId)"
-                                        aria-pressed="@(accentId == _appearanceSettings.AccentId)"
+                                        aria-pressed="@(accentId == _appearanceSettings.AccentId ? "true" : "false")"
                                         disabled="@IsBlocked(AccentKey)"
                                         @onclick="() => ChangeAccent(accentId)">
                                     <span class="accent-swatch" aria-hidden="true"></span>
@@ -98,38 +149,25 @@
                         </div>
                     </div>
                 }
-                <div class="setting-group">
-                    <h4>Animations <SettingOriginBadge Source="@SourceOf(AnimationsKey)" IsLocked="@IsLocked(AnimationsKey)" /></h4>
-                    <MudSwitch T="bool" Value="@_appearanceSettings.AnimationsEnabled" ValueChanged="ToggleAnimations" Color="Color.Primary"
-                               Disabled="@IsBlocked(AnimationsKey)"
-                               Label="Enable desktop transitions and micro-animations" />
-                </div>
             </MudTabPanel>
 
-            <MudTabPanel Text="File Associations" Icon="@Icons.Material.Filled.Extension">
-                <div class="setting-group">
-                    <h4>File Association Policy</h4>
-                    <p class="setting-desc">Default applications per extension, from installed apps' declared file handlers.</p>
-                    <div class="associations-list">
-                        @if (_fileHandlers.Count == 0)
-                        {
-                            <div class="assoc-row"><span>No file handlers are currently registered.</span></div>
-                        }
-                        else
-                        {
-                            @foreach ((string extension, string appName) in _fileHandlers)
-                            {
-                                <div class="assoc-row"><span>@extension</span> <strong>@appName</strong></div>
-                            }
-                        }
-                    </div>
-                </div>
+            @* ADR 0105: high contrast, text size and "reduce animations" (which replaced the Appearance switch). *@
+            <MudTabPanel Text="@L["Tab.Accessibility"]" Icon="@Icons.Material.Filled.Accessibility">
+                <AccessibilityPanel />
             </MudTabPanel>
 
-            <MudTabPanel Text="Capability Grants" Icon="@Icons.Material.Filled.Security">
+            <MudTabPanel Text="@L["Tab.Language"]" Icon="@Icons.Material.Filled.Translate">
+                <LanguagePanel />
+            </MudTabPanel>
+
+            <MudTabPanel Text="@L["Tab.FileAssociations"]" Icon="@Icons.Material.Filled.Extension">
+                <FileAssociationsPanel />
+            </MudTabPanel>
+
+            <MudTabPanel Text="@L["Tab.CapabilityGrants"]" Icon="@Icons.Material.Filled.Security">
                 <div class="setting-group">
-                    <h4>Granted Application Capabilities</h4>
-                    <p class="setting-desc">Active security grants for current session.</p>
+                    <h4>@L["Grants.Title"]</h4>
+                    <p class="setting-desc">@L["Grants.Description"]</p>
                     <div class="grants-list">
                         @foreach (string cap in Manifest.Capabilities)
                         {
@@ -139,66 +177,64 @@
                 </div>
             </MudTabPanel>
 
-            <MudTabPanel Text="Permissions" Icon="@Icons.Material.Filled.AdminPanelSettings">
+            <MudTabPanel Text="@L["Tab.Permissions"]" Icon="@Icons.Material.Filled.AdminPanelSettings">
                 <AppPermissionsPanel />
             </MudTabPanel>
 
-            <MudTabPanel Text="Installed Apps" Icon="@Icons.Material.Filled.Apps">
+            <MudTabPanel Text="@L["Tab.InstalledApps"]" Icon="@Icons.Material.Filled.Apps">
                 <InstalledAppsPanel />
             </MudTabPanel>
 
-            <MudTabPanel Text="Server Connection" Icon="@Icons.Material.Filled.Cloud">
+            <MudTabPanel Text="@L["Tab.ServerConnection"]" Icon="@Icons.Material.Filled.Cloud">
                 <div class="setting-group">
-                    <h4>Optional Server</h4>
+                    <h4>@L["Server.Title"]</h4>
                     <p class="setting-desc">
-                        Connecting a device to an optional HackerOS server enables real network
-                        access for apps like Terminal's <code>curl</code>/<code>ping</code>. Local
-                        storage remains the source of truth either way — connecting is never
-                        required for normal use.
+                        @LocalizedMarkup.Format(L["Server.Description"], LocalizedMarkup.Code("curl"), LocalizedMarkup.Code("ping"))
                     </p>
 
                     @if (_connectionState.IsConnected)
                     {
                         <div class="server-connection-status connected">
-                            <div class="info-line"><span>Status:</span> <strong>Connected</strong></div>
-                            <div class="info-line"><span>Server:</span> <strong>@_connectionState.ServerUrl</strong></div>
-                            <div class="info-line"><span>Account:</span> <strong>@_connectionState.AccountId</strong></div>
+                            <div class="info-line"><span>@L["Server.Status"]</span> <strong>@L["Server.Connected"]</strong></div>
+                            <div class="info-line"><span>@L["Server.Server"]</span> <strong>@_connectionState.ServerUrl</strong></div>
+                            <div class="info-line"><span>@L["Server.Account"]</span> <strong>@_connectionState.AccountId</strong></div>
                             @if (!string.IsNullOrEmpty(_syncStatusMessage))
                             {
-                                <div class="info-line"><span>Sync:</span> <strong>@_syncStatusMessage</strong></div>
+                                <div class="info-line"><span>@L["Server.Sync"]</span> <strong>@_syncStatusMessage</strong></div>
                             }
                             @if (_conflictCount > 0)
                             {
                                 <div class="info-line sync-conflict-warning">
-                                    <span>Files:</span>
-                                    <strong>@_conflictCount file(s) have unresolved sync conflicts</strong>
+                                    <span>@L["Server.Files"]</span>
+                                    <strong>@L["Server.ConflictCount", _conflictCount]</strong>
                                 </div>
                             }
                         </div>
+                        <ServerRelayPolicyPanel />
                         <div class="server-connection-actions">
                             <button class="btn-secondary" disabled="@(_isConnecting || _isSyncing)" @onclick="SyncNowAsync">
-                                @(_isSyncing ? "Syncing..." : "Sync now")
+                                @(_isSyncing ? L["Sync.Syncing"] : L["Sync.Now"])
                             </button>
                             <button class="btn-danger" disabled="@_isConnecting" @onclick="DisconnectAsync">
-                                Disconnect
+                                @L["Server.Disconnect"]
                             </button>
                         </div>
                     }
                     else
                     {
                         <div class="server-connection-status disconnected">
-                            <div class="info-line"><span>Status:</span> <strong>Not connected</strong></div>
+                            <div class="info-line"><span>@L["Server.Status"]</span> <strong>@L["Server.NotConnected"]</strong></div>
                         </div>
                         <form class="server-connection-form" @onsubmit="() => ConnectAsync(createNewAccount: false)" @onsubmit:preventDefault>
-                            <label for="server-url">Server URL</label>
+                            <label for="server-url">@L["Server.Url"]</label>
                             <input id="server-url" type="url" placeholder="https://example.com" autocomplete="off"
                                    disabled="@_isConnecting" @bind="_serverUrl" @bind:event="oninput" />
 
-                            <label for="server-username">Username</label>
+                            <label for="server-username">@L["Server.Username"]</label>
                             <input id="server-username" type="text" autocomplete="username" maxlength="128"
                                    disabled="@_isConnecting" @bind="_username" @bind:event="oninput" />
 
-                            <label for="server-password">Password</label>
+                            <label for="server-password">@L["Server.Password"]</label>
                             <input id="server-password" type="password" autocomplete="current-password"
                                    disabled="@_isConnecting" @bind="_password" @bind:event="oninput" />
 
@@ -209,11 +245,11 @@
 
                             <div class="server-connection-actions">
                                 <button type="submit" class="btn-secondary" disabled="@(_isConnecting || !CanSubmitConnection)">
-                                    @(_isConnecting ? "Connecting..." : "Log In")
+                                    @(_isConnecting ? L["Server.Connecting"] : L["Server.LogIn"])
                                 </button>
                                 <button type="button" class="btn-secondary" disabled="@(_isConnecting || !CanSubmitConnection)"
                                         @onclick="() => ConnectAsync(createNewAccount: true)">
-                                    @(_isConnecting ? "Connecting..." : "Create Account")
+                                    @(_isConnecting ? L["Server.Connecting"] : L["Server.CreateAccount"])
                                 </button>
                             </div>
                         </form>
@@ -221,23 +257,102 @@
                 </div>
             </MudTabPanel>
 
-            <MudTabPanel Text="About System" Icon="@Icons.Material.Filled.Info">
-                <div class="system-info-box">
-                    <div class="info-line"><span>OS Version:</span> <strong>HackerOS 1.0 (Blazor WASM v3)</strong></div>
-                    <div class="info-line"><span>Runtime:</span> <strong>.NET 10.0 WebAssembly</strong></div>
-                    <div class="info-line"><span>Architecture:</span> <strong>C# Kernel / Scoped CSS / MudBlazor</strong></div>
-                    <div class="info-line"><span>User ID:</span> <strong>@(AppContext?.UserId ?? "guest")</strong></div>
-                    <div class="info-line"><span>Authority:</span> <strong>@(AppContext?.UserAuthority.ToString() ?? "User")</strong></div>
+            <MudTabPanel Text="@L["Tab.Synchronization"]" Icon="@Icons.Material.Filled.Sync">
+                <div class="setting-group">
+                    <h4>@L["Sync.Title"]</h4>
+                    <p class="setting-desc">@L["Sync.Description", FormatInterval(_syncStatus.Interval)]</p>
+
+                    <div class="server-connection-status @(_syncStatus.IsOnline ? "connected" : "disconnected")">
+                        <div class="info-line"><span>@L["Sync.Automatic"]</span> <strong>@SyncStateLabel</strong></div>
+                        <div class="info-line">
+                            <span>@L["Sync.Last"]</span>
+                            <strong>
+                                @(_syncStatus.LastSyncAt is { } lastSync
+                                    ? L["Sync.LastDetail", lastSync.ToLocalTime().ToString("g", Formats), _syncStatus.LastSent, _syncStatus.LastReceived].Value
+                                    : L["Sync.Never"].Value)
+                            </strong>
+                        </div>
+                        @if (!string.IsNullOrEmpty(_syncStatus.LastError))
+                        {
+                            <div class="info-line sync-conflict-warning"><span>@L["Sync.LastError"]</span> <strong>@_syncStatus.LastError</strong></div>
+                        }
+                    </div>
+
+                    <label class="sync-pause-toggle">
+                        <input id="sync-paused" type="checkbox" checked="@_syncStatus.IsPaused"
+                               disabled="@(!_syncStatus.IsActive || _isSyncing)"
+                               @onchange="args => SetSyncPausedAsync(args.Value is true)" />
+                        <span>@L["Sync.Pause"]</span>
+                    </label>
+
+                    <div class="server-connection-actions">
+                        <button class="btn-secondary" disabled="@(!_connectionState.IsConnected || _isSyncing)" @onclick="SyncNowAsync">
+                            @(_isSyncing ? L["Sync.Syncing"] : L["Sync.Now"])
+                        </button>
+                    </div>
+                    @if (!string.IsNullOrEmpty(_syncStatusMessage))
+                    {
+                        <p class="setting-desc">@_syncStatusMessage</p>
+                    }
                 </div>
 
                 <div class="setting-group">
-                    <h4>Restart</h4>
-                    <p class="setting-desc">
-                        Flush the logs, end every process and restart HackerOS, like <code>reboot</code>.
-                        An administrator must confirm with their password.
-                    </p>
+                    <h4>@L["Sync.Conflicts.Title"]</h4>
+                    @if (_conflicts.Count == 0)
+                    {
+                        <p class="setting-desc">@L["Sync.Conflicts.None"]</p>
+                    }
+                    else
+                    {
+                        <p class="setting-desc">@L["Sync.Conflicts.Description"]</p>
+                        <ul class="sync-conflict-list">
+                            @foreach (HackerOs.AppSdk.Administration.HackSyncConflict conflict in _conflicts)
+                            {
+                                <li @key="conflict.Path">
+                                    <code>~/@conflict.Path</code>
+                                    @if (conflict.DetectedAt is { } detectedAt)
+                                    {
+                                        <span class="sync-conflict-date">@L["Sync.Conflicts.Since", detectedAt.ToLocalTime().ToString("g", Formats)]</span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                        <div class="server-connection-actions">
+                            <button class="btn-secondary" @onclick="ShowConflictsAsync">@L["Sync.Conflicts.Resolve"]</button>
+                        </div>
+                    }
+                </div>
+            </MudTabPanel>
+            <MudTabPanel Text="@L["Tab.Users"]" Icon="@Icons.Material.Filled.People">
+                <UsersPanel />
+            </MudTabPanel>
+
+            @* ADR 0126: the OOM killer of /etc/hackeros/memory.config. *@
+            <MudTabPanel Text="@L["Tab.Memory"]" Icon="@Icons.Material.Filled.Memory">
+                <MemoryPanel />
+            </MudTabPanel>
+
+            @if (HackerOs.AppSdk.Administration.HackSystemBackup.IsSupportedFor(AppContext))
+            {
+                <MudTabPanel Text="@L["Tab.Backup"]" Icon="@Icons.Material.Filled.Backup">
+                    <BackupPanel />
+                </MudTabPanel>
+            }
+
+            <MudTabPanel Text="@L["Tab.About"]" Icon="@Icons.Material.Filled.Info">
+                <div class="system-info-box">
+                    <div class="info-line"><span>@L["About.OsVersion"]</span> <strong>HackerOS 1.0 (Blazor WASM v3)</strong></div>
+                    <div class="info-line"><span>@L["About.Runtime"]</span> <strong>.NET 10.0 WebAssembly</strong></div>
+                    <div class="info-line"><span>@L["About.Architecture"]</span> <strong>@L["About.ArchitectureValue"]</strong></div>
+                    <div class="info-line"><span>@L["About.UserId"]</span> <strong>@(AppContext?.UserId ?? "guest")</strong></div>
+                    <div class="info-line"><span>@L["About.Authority"]</span> <strong>@AuthorityLabel</strong></div>
+                </div>
+
+                <div class="setting-group">
+                    <h4>@L["Restart.Title"]</h4>
+                    <p class="setting-desc">@LocalizedMarkup.Format(L["Restart.Description"], LocalizedMarkup.Code("reboot"))</p>
                     <button class="btn-secondary" disabled="@_isRebooting" @onclick="RebootAsync">
-                        @(_isRebooting ? "Restarting..." : "Restart HackerOS")
+                        @(_isRebooting ? L["Restart.Restarting"] : L["Restart.Button"])
                     </button>
                     @if (!string.IsNullOrEmpty(_systemMessage))
                     {
@@ -246,18 +361,21 @@
                 </div>
 
                 <div class="setting-group danger-zone">
-                    <h4>Danger Zone</h4>
-                    <p class="setting-desc">
-                        Reset HackerOS to its factory state. This permanently clears the local database
-                        — all accounts, files, sessions, and settings — and restores your account
-                        to its default configuration. This action cannot be undone. An administrator
-                        must confirm with their password.
-                    </p>
+                    <h4>@L["Danger.Title"]</h4>
+                    <p class="setting-desc">@L["Danger.Description"]</p>
                     <button class="btn-danger" @onclick="OpenResetDialog">
-                        Reset to Factory Settings
+                        @L["Reset.Button"]
                     </button>
                 </div>
             </MudTabPanel>
+
+            @if (_appPageId is not null)
+            {
+                @* ShowAppSettingsIntent for an app without its own settings page (ADR 0096 §4): kept last so the other tabs keep their index. *@
+                <MudTabPanel Text="@L["Tab.Application"]" Icon="@Icons.Material.Filled.Info">
+                    <AppDetailsPanel AppId="@_appPageId" />
+                </MudTabPanel>
+            }
         </MudTabs>
     </div>
 
@@ -271,23 +389,21 @@
                  @onclick:stopPropagation>
                 <header class="dialog-header">
                     <div class="reset-mark" aria-hidden="true">⚠</div>
-                    <h2 id="reset-title">Reset to Factory Settings</h2>
+                    <h2 id="reset-title">@L["Reset.Button"]</h2>
                 </header>
 
                 <div class="dialog-body">
-                    <p>
-                        This will permanently delete the entire local HackerOS database, including:
-                    </p>
+                    <p>@L["Reset.Dialog.Intro"]</p>
                     <ul class="reset-affected-list">
-                        <li>All local user accounts and sessions</li>
-                        <li>All files and folders</li>
-                        <li>All application and account settings (restored to defaults)</li>
-                        <li>All capability grants and audit history</li>
+                        <li>@L["Reset.Dialog.Accounts"]</li>
+                        <li>@L["Reset.Dialog.Files"]</li>
+                        <li>@L["Reset.Dialog.Settings"]</li>
+                        <li>@L["Reset.Dialog.Grants"]</li>
                     </ul>
-                    <p>HackerOS will restart afterward as if freshly installed.</p>
+                    <p>@L["Reset.Dialog.Restart"]</p>
 
                     <label class="confirm-label" for="reset-confirm-input">
-                        Type <strong>RESET</strong> to confirm:
+                        @LocalizedMarkup.Format(L["Reset.Dialog.Confirm"], LocalizedMarkup.Strong(ResetConfirmPhrase))
                     </label>
                     <input id="reset-confirm-input"
                            class="confirm-input"
@@ -308,13 +424,13 @@
                             class="btn-secondary"
                             disabled="@_isResetting"
                             @onclick="CancelReset">
-                        Cancel
+                        @L["Common.Cancel"]
                     </button>
                     <button type="button"
                             class="btn-danger"
                             disabled="@(_isResetting || !IsConfirmed)"
                             @onclick="ConfirmResetAsync">
-                        @(_isResetting ? "Resetting..." : "Reset to Factory Settings")
+                        @(_isResetting ? L["Reset.Resetting"] : L["Reset.Button"])
                     </button>
                 </footer>
             </div>

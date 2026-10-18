@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AccessDenied" xml:space="preserve">
+    <value>localectl : impossible de changer la locale : accès refusé (essayez sudo)</value>
+  </data>
+  <data name="InvalidLocale" xml:space="preserve">
+    <value>localectl : la locale « {0} » n'est pas installée (voir « localectl list-locales »)</value>
+  </data>
+  <data name="InvalidVariable" xml:space="preserve">
+    <value>localectl : variable de locale inconnue « {0} »</value>
+  </data>
+  <data name="MissingLocale" xml:space="preserve">
+    <value>localectl : set-locale demande au moins une locale, par exemple LANG=fr_CA.UTF-8</value>
+  </data>
+  <data name="NotSet" xml:space="preserve">
+    <value>non définie</value>
+  </data>
+  <data name="ReadFailed" xml:space="preserve">
+    <value>localectl : impossible de lire /etc/locale.conf : {0}</value>
+  </data>
+  <data name="SystemLocale" xml:space="preserve">
+    <value>Locale du système</value>
+  </data>
+  <data name="UnknownVerb" xml:space="preserve">
+    <value>localectl : verbe de commande inconnu « {0} »</value>
+  </data>
+  <data name="WriteFailed" xml:space="preserve">
+    <value>localectl : impossible de changer la locale : {0}</value>
+  </data>
+</root>

@@ -57,7 +57,8 @@ public sealed class BuildKnownLazyAppDescriptorRegistry : IAppDescriptorLoader
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026",
-        Justification = "Discovery is restricted to explicit build-known manifests and assemblies retained by the WebAssembly host.")]
+        Justification = "Discovery is restricted to explicit build-known manifests, whose assemblies a trimmed host keeps whole " +
+            "(ADR 0113: generated root descriptor).")]
     private async Task<AppDescriptorLoadResult> LoadAndDiscoverAsync(string appId)
     {
         AppManifest manifest = _catalog.Manifests[appId];

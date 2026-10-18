@@ -40,7 +40,18 @@ public static class AppDefinitionInspector
     /// <summary>Inspects every type of <paramref name="assembly"/>.</summary>
     /// <param name="assembly">Compiled app assembly, typically loaded in an <see cref="AppAssemblyLoadContext"/>.</param>
     /// <returns>The manifests, or the diagnostics that must fail the build.</returns>
-    public static InspectionResult Inspect(Assembly assembly)
+    public static InspectionResult Inspect(Assembly assembly) => Inspect(assembly, [], assetRoot: null);
+
+    /// <summary>Inspects every type of <paramref name="assembly"/>, with the app's dependency list.</summary>
+    /// <param name="assembly">Compiled app assembly, typically loaded in an <see cref="AppAssemblyLoadContext"/>.</param>
+    /// <param name="dependencyPaths">The app's resolved dependencies, where the SDK version it was compiled against is read.</param>
+    /// <param name="assetRoot">
+    /// The folder declared asset paths are relative to (the app project's <c>wwwroot/</c>), whose
+    /// files are hashed into <c>assets[].sha256</c> (ADR 0098 §5); <see langword="null"/> keeps the
+    /// hashes the definition declares.
+    /// </param>
+    /// <returns>The manifests, or the diagnostics that must fail the build.</returns>
+    public static InspectionResult Inspect(Assembly assembly, IEnumerable<string> dependencyPaths, string? assetRoot)
     {
         ArgumentNullException.ThrowIfNull(assembly);
 
@@ -58,7 +69,7 @@ public static class AppDefinitionInspector
                 $"The app assembly's types could not be loaded: {details}"));
         }
 
-        return Inspect(assembly, types.Where(HasAppManifestAttribute), SdkMinimumVersionOf(assembly));
+        return Inspect(assembly, types.Where(HasAppManifestAttribute), SdkMinimumVersionOf(assembly, dependencyPaths), assetRoot);
     }
 
     /// <summary>
@@ -68,8 +79,9 @@ public static class AppDefinitionInspector
     /// <param name="assembly">The assembly the definitions are expected to live in.</param>
     /// <param name="definitionTypes">Types marked <c>[AppManifest]</c>.</param>
     /// <param name="sdkMinimumVersion">Value written to <c>sdkCompatibility.minimumVersion</c>.</param>
+    /// <param name="assetRoot">Folder of the declared assets, hashed into the manifest; <see langword="null"/> keeps the declared hashes.</param>
     /// <returns>The manifests, or the diagnostics that must fail the build.</returns>
-    public static InspectionResult Inspect(Assembly assembly, IEnumerable<Type> definitionTypes, string sdkMinimumVersion)
+    public static InspectionResult Inspect(Assembly assembly, IEnumerable<Type> definitionTypes, string sdkMinimumVersion, string? assetRoot = null)
     {
         ArgumentNullException.ThrowIfNull(assembly);
         ArgumentNullException.ThrowIfNull(definitionTypes);
@@ -87,7 +99,7 @@ public static class AppDefinitionInspector
         List<GeneratedManifest> manifests = [];
         foreach (Type type in candidates)
         {
-            GeneratedManifest? manifest = InspectType(assembly, type, sdkMinimumVersion, diagnostics);
+            GeneratedManifest? manifest = InspectType(assembly, type, sdkMinimumVersion, assetRoot, diagnostics);
             if (manifest is not null)
             {
                 manifests.Add(manifest);
@@ -113,19 +125,44 @@ public static class AppDefinitionInspector
     }
 
     /// <summary>
-    /// Computes <c>major.minor.0</c> of the App Abstractions version the assembly was compiled
-    /// against (its assembly reference), falling back to the version loaded in the tool.
+    /// Gets the App SDK version the assembly was compiled against (ADR 0098 §3), e.g.
+    /// <c>1.0.0</c>: the informational version of the <c>HackerOs.App.Abstractions.dll</c>
+    /// found first in <paramref name="candidatePaths"/> (the app's dependency list, as MSBuild
+    /// resolved it), read from its metadata without loading it. The tool shares its own copy of that
+    /// assembly with the app (one <c>AppDefinition</c> type identity), so the loaded copy can be a
+    /// different version than the one the app references, from a package for instance. Falls back to
+    /// the tool's own SDK version when no candidate is readable.
     /// </summary>
+    /// <param name="assembly">Compiled app assembly.</param>
+    /// <param name="candidatePaths">Dependency paths in priority order.</param>
+    /// <returns>The SDK minimum version string.</returns>
+    public static string SdkMinimumVersionOf(Assembly assembly, IEnumerable<string> candidatePaths)
+    {
+        ArgumentNullException.ThrowIfNull(assembly);
+        ArgumentNullException.ThrowIfNull(candidatePaths);
+        foreach (string path in candidatePaths)
+        {
+            if (string.Equals(Path.GetFileName(path), AbstractionsAssemblyName + ".dll", StringComparison.OrdinalIgnoreCase)
+                && File.Exists(path)
+                && AssemblyMetadataReader.TryReadInformationalVersion(path, out string? informational, out Version? version))
+            {
+                return HackerOsSdk.NormalizeVersion(informational, version);
+            }
+        }
+
+        return SdkMinimumVersionOf(assembly);
+    }
+
+    /// <summary>Gets the tool's own App SDK version, for an assembly inspected without a dependency list (tests).</summary>
     /// <param name="assembly">Compiled app assembly.</param>
     /// <returns>The SDK minimum version string.</returns>
     public static string SdkMinimumVersionOf(Assembly assembly)
     {
-        AssemblyName? reference = assembly.GetReferencedAssemblies()
-            .FirstOrDefault(name => string.Equals(name.Name, AbstractionsAssemblyName, StringComparison.Ordinal));
-        return AppDefinitionMapper.FormatSdkMinimumVersion(reference?.Version ?? typeof(AppDefinition).Assembly.GetName().Version);
+        ArgumentNullException.ThrowIfNull(assembly);
+        return HackerOsSdk.ReadVersion(typeof(AppDefinition).Assembly);
     }
 
-    private static GeneratedManifest? InspectType(Assembly assembly, Type type, string sdkMinimumVersion, List<GeneratorDiagnostic> diagnostics)
+    private static GeneratedManifest? InspectType(Assembly assembly, Type type, string sdkMinimumVersion, string? assetRoot, List<GeneratorDiagnostic> diagnostics)
     {
         string subject = type.FullName ?? type.Name;
         int before = diagnostics.Count;
@@ -169,6 +206,12 @@ public static class AppDefinitionInspector
             return null;
         }
 
+        if (assetRoot is not null && manifest!.Assets.Count > 0)
+        {
+            manifest = AssetHasher.Apply(manifest, assetRoot, subject, diagnostics);
+            json = AppManifestJsonSerializer.SerializeCanonical(manifest);
+        }
+
         CheckEntryPointAssembly(first!.EntryPoint, "EntryPoint", assembly, subject, diagnostics);
         if (first.MobileEntryPoint is Type mobile)
         {
@@ -182,7 +225,9 @@ public static class AppDefinitionInspector
 
         foreach (ManifestValidationError error in AppManifestValidator.Validate(manifest!).Errors)
         {
-            diagnostics.Add(new(GeneratorCodes.InvalidManifest, subject, $"{error.Path}: {error.Message} ({error.Code})"));
+            // ADR 0073, section 3: a site asking for the file system has its own code.
+            string code = error.Code == "manifest.web.filesystem" ? GeneratorCodes.WebFileSystem : GeneratorCodes.InvalidManifest;
+            diagnostics.Add(new(code, subject, $"{error.Path}: {error.Message} ({error.Code})"));
         }
 
         if (diagnostics.Count > before)
@@ -248,8 +293,12 @@ public static class AppDefinitionInspector
     /// </summary>
     private static void CheckEntryPointKinds(AppManifest manifest, Assembly assembly, string subject, List<GeneratorDiagnostic> diagnostics)
     {
-        // Dependencies are checked by the host's aggregation, where every app is known.
-        AppCatalogBuildResult catalogResult = AppCatalog.Build([manifest with { Dependencies = [] }]);
+        // Dependencies and the SDK range are checked by the host's aggregation, where every app and the
+        // host's SDK are known; here the catalog runs the app's own minimum so discovery always sees it.
+        AppCatalogBuildResult catalogResult = AppCatalog.Build(
+            [manifest with { Dependencies = [] }],
+            [],
+            SemanticVersion.TryParse(manifest.SdkCompatibility.MinimumVersion, out SemanticVersion minimum) ? minimum : HackerOsSdk.SemanticVersion);
         if (catalogResult.Catalog is not AppCatalog catalog)
         {
             foreach (AppCatalogError error in catalogResult.Errors)

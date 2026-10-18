@@ -28,7 +28,7 @@ public sealed class FakeShellSession : IShellSession
     /// <inheritdoc />
     public IReadOnlyList<string> History { get; init; } = [];
 
-    /// <summary>Gets or sets the commands <see cref="GetCommands"/> returns.</summary>
+    /// <summary>Gets or sets the commands <see cref="GetCommands()"/> returns.</summary>
     public IReadOnlyList<ShellCommandInfo> Commands { get; init; } = [];
 
     /// <summary>Gets the argument lists passed to <see cref="RunElevatedAsync"/>.</summary>

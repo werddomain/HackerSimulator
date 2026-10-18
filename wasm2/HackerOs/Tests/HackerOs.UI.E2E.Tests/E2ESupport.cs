@@ -184,11 +184,29 @@ internal static class E2ESupport
     /// <c>FileViewItem.Select</c> — there is no separate checkbox control since
     /// FileExplorerWindow was migrated onto the shared FileView component).
     /// </summary>
+    /// <remarks>
+    /// A row can be clicked while the listing is still being reloaded (a navigation typed in the
+    /// address bar just before): the reload then rebuilds the rows and drops the selection, as a
+    /// real file manager does. The row is clicked again until it is still selected after the
+    /// listing has settled, instead of assuming the reload finished first.
+    /// </remarks>
     public static async Task SelectFileExplorerEntryAsync(IPage page, string entryName, ITestOutputHelper output)
     {
         ILocator row = page.Locator("tr.entry-row", new PageLocatorOptions { HasText = entryName });
-        await row.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-        await row.ClickAsync();
+        for (int attempt = 1; ; attempt++)
+        {
+            await row.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+            await row.ClickAsync();
+            await page.WaitForTimeoutAsync(500);
+            string? classes = await row.GetAttributeAsync("class");
+            if (classes?.Split(' ').Contains("selected") == true || attempt >= 5)
+            {
+                break;
+            }
+
+            output.WriteLine($"[test] '{entryName}' lost its selection to a listing reload; clicking again.");
+        }
+
         output.WriteLine($"[test] selected '{entryName}' via its row.");
     }
 

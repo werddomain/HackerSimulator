@@ -1,9 +1,11 @@
 using HackerOs.App.Abstractions;
+using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Policy;
+using HackerOs.Platform.Core.Sessions;
 using HackerOs.Platform.Core.Shell;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -36,7 +38,13 @@ public enum AppIntentDispatchStatus
     EntryPointFault,
 
     /// <summary>The supplied elevation token was missing, expired, wrong-scope, or already consumed (`ADR 0042`).</summary>
-    ElevationDenied
+    ElevationDenied,
+
+    /// <summary>The acting user may not read what the intent points at (<see cref="RevealFileIntent"/>, ADR 0096).</summary>
+    AccessDenied,
+
+    /// <summary>The request is malformed: intent identifier, URI or payload (ADR 0096).</summary>
+    Invalid
 }
 
 /// <summary>Contains the result of dispatching one <see cref="IAppIntent"/>, per `P1-APP-007`.</summary>
@@ -52,6 +60,10 @@ public enum AppIntentDispatchStatus
 /// Filesystem permission-class errors raised while a completed Terminal launch ran (`ADR 0042`),
 /// forwarded from <see cref="AppLaunchResult.PermissionDenials"/>.
 /// </param>
+/// <param name="FellBackToOpen">
+/// An <see cref="EditFileIntent"/> found no <c>edit</c> handler and was resolved among the
+/// <c>open</c> handlers (ADR 0096, section 2).
+/// </param>
 public sealed record AppIntentDispatchResult(
     AppIntentDispatchStatus Status,
     ProcessRecord? Process = null,
@@ -61,7 +73,8 @@ public sealed record AppIntentDispatchResult(
     string? StandardError = null,
     IReadOnlyList<string>? CandidateAppIds = null,
     string? ErrorCode = null,
-    IReadOnlyList<FileSystemError>? PermissionDenials = null);
+    IReadOnlyList<FileSystemError>? PermissionDenials = null,
+    bool FellBackToOpen = false);
 
 /// <summary>Identifies the stable outcome of one service-control request (start/stop/get/set start mode).</summary>
 public enum ServiceControlDispatchStatus
@@ -163,11 +176,32 @@ public sealed class AppIntentDispatcher
             OpenFileIntent openFile => await DispatchOpenFileAsync(request, openFile, principal),
             ExecuteCommandIntent execute => await DispatchExecuteCommandAsync(
                 request, execute, principal, fullScreen, approvalPrompt, callerContext, cancellationToken),
-            RevealFileIntent => new AppIntentDispatchResult(AppIntentDispatchStatus.Dispatched),
-            ShowAppSettingsIntent showSettings => DispatchShowSettings(showSettings),
+            RevealFileIntent reveal => await DispatchRevealAsync(request, reveal, principal, cancellationToken),
+            EditFileIntent edit => await DispatchEditFileAsync(request, edit, principal),
+            OpenUriIntent openUri => await DispatchOpenUriAsync(request, openUri, principal, cancellationToken),
+            ShowAppSettingsIntent showSettings => await DispatchShowSettingsAsync(request, showSettings, principal),
+            CustomIntent custom => await DispatchCustomAsync(request, custom, principal, cancellationToken),
             _ => new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.unknown")
         };
     }
+
+    /// <summary>App id the OS records on the file operations it makes for an intent (audit, private-path rules).</summary>
+    internal const string OsAppId = "org.hackeros.intents";
+
+    /// <summary>App id of the Settings app, which shows the page of an app with no settings of its own (ADR 0096, section 4).</summary>
+    public const string SettingsAppId = "org.hackeros.settings";
+
+    /// <summary>Launch argument asking an app for its own settings page (ADR 0096, section 4).</summary>
+    public const string ShowSettingsArgument = "--show-settings";
+
+    /// <summary>Prefix of the Settings argument naming the app whose page to show, <c>--app=&lt;id&gt;</c>.</summary>
+    public const string SettingsAppArgumentPrefix = "--app=";
+
+    /// <summary>Prefix of the folder-handler argument naming the item to select, <c>--select=&lt;path&gt;</c> (ADR 0096, section 1).</summary>
+    public const string SelectArgumentPrefix = "--select=";
+
+    /// <summary>Media type of a directory, whose default handler is the file manager (ADR 0039).</summary>
+    public const string DirectoryMediaType = "inode/directory";
 
     private bool HasAppsLaunch(string callerAppId, string userId, AppAuthority actingAuthority) =>
         _grants.Evaluate(callerAppId, userId, AppCapabilities.AppsLaunch, actingAuthority, AppAuthority.User).Granted;
@@ -193,7 +227,7 @@ public sealed class AppIntentDispatcher
             return new AppIntentDispatchResult(AppIntentDispatchStatus.CapabilityDenied, ErrorCode: "intent.capability-denied");
         }
 
-        FileHandlerResolution resolution = await _associations.ResolveAsync(intent);
+        FileHandlerResolution resolution = await _associations.ResolveAsync(intent, principal);
         switch (resolution.Status)
         {
             case FileHandlerResolutionStatus.ChooserRequired:
@@ -294,9 +328,164 @@ public sealed class AppIntentDispatcher
             PermissionDenials: result.PermissionDenials);
     }
 
-    private AppIntentDispatchResult DispatchShowSettings(ShowAppSettingsIntent intent)
+    /// <summary>
+    /// Reveals a file in its folder (ADR 0096, section 1; <c>org.freedesktop.FileManager1.ShowItems</c>):
+    /// the default handler of <c>inode/directory</c> starts on the parent with <c>--select=&lt;path&gt;</c>.
+    /// Like opening the folder, it needs <c>apps.launch</c>; the acting user must be able to read the
+    /// parent, as a file manager running as them would.
+    /// </summary>
+    private async ValueTask<AppIntentDispatchResult> DispatchRevealAsync(
+        AppIntentRequest request, RevealFileIntent intent, AuthenticatedPrincipal principal, CancellationToken cancellationToken)
     {
-        if (!_catalog.Manifests.ContainsKey(intent.TargetAppId))
+        if (!HasAppsLaunch(request.CallerAppId, request.UserId, principal.Authority))
+        {
+            return new AppIntentDispatchResult(AppIntentDispatchStatus.CapabilityDenied, ErrorCode: "intent.capability-denied");
+        }
+
+        FileSystemAuthorizationContext access = PrincipalFileAccess.ForUser(principal, request.CallerAppId);
+        FileSystemResult<FileSystemEntrySnapshot> stat = await _fileSystem
+            .StatAsync(new FileSystemStatRequest(intent.Path, FileSystemLinkBehavior.NoFollow), access, cancellationToken)
+            .ConfigureAwait(false);
+        if (!stat.Succeeded)
+        {
+            return stat.Error?.Code == FileSystemErrorCode.PermissionDenied
+                ? new AppIntentDispatchResult(AppIntentDispatchStatus.AccessDenied, ErrorCode: "intent.reveal-file.denied")
+                : new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.reveal-file.not-found");
+        }
+
+        VirtualPath parent = GetParent(intent.Path);
+        FileSystemResult<FileSystemDirectorySnapshot> listing = await _fileSystem
+            .EnumerateAsync(new FileSystemEnumerateRequest(parent), access, cancellationToken)
+            .ConfigureAwait(false);
+        if (!listing.Succeeded)
+        {
+            return listing.Error?.Code == FileSystemErrorCode.PermissionDenied
+                ? new AppIntentDispatchResult(AppIntentDispatchStatus.AccessDenied, ErrorCode: "intent.reveal-file.denied")
+                : new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.reveal-file.not-found");
+        }
+
+        FileHandlerResolution resolution = await _associations.ResolveAsync(
+            new OpenFileIntent(parent, FileIntentAction.Open, DirectoryMediaType), principal, cancellationToken).ConfigureAwait(false);
+        if (resolution.Status == FileHandlerResolutionStatus.ChooserRequired)
+        {
+            return new AppIntentDispatchResult(AppIntentDispatchStatus.ChooserRequired, CandidateAppIds: resolution.CandidateAppIds, ErrorCode: "intent.reveal-file.chooser-required");
+        }
+
+        if (resolution.AppId is not { } handler)
+        {
+            return new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.reveal-file.no-handler");
+        }
+
+        string[] arguments = [parent.Value, SelectArgumentPrefix + intent.Path.Value];
+        AppLaunchResult launch = await _orchestrator.LaunchAsync(new AppLaunchRequest(
+            handler, principal, arguments,
+            Intent: new AppIntentDelivery(AppIntentIds.RevealFile, SenderAppId: request.CallerAppId) { Arguments = arguments }));
+        return ToDispatchResult(launch);
+    }
+
+    /// <summary>
+    /// Edits a file (ADR 0096, section 2): the <c>edit</c> handlers first, with the precedence of
+    /// <see cref="OpenFileIntent"/>, then the <c>open</c> handlers when no app declares <c>edit</c>.
+    /// </summary>
+    private async ValueTask<AppIntentDispatchResult> DispatchEditFileAsync(
+        AppIntentRequest request, EditFileIntent intent, AuthenticatedPrincipal principal)
+    {
+        if (!HasAppsLaunch(request.CallerAppId, request.UserId, principal.Authority))
+        {
+            return new AppIntentDispatchResult(AppIntentDispatchStatus.CapabilityDenied, ErrorCode: "intent.capability-denied");
+        }
+
+        FileHandlerResolution resolution = await _associations.ResolveAsync(
+            new OpenFileIntent(intent.Path, FileIntentAction.Edit, intent.MediaType, intent.PreferredAppId), principal);
+        bool fellBack = false;
+        if (resolution.Status == FileHandlerResolutionStatus.NoHandler)
+        {
+            resolution = await _associations.ResolveAsync(
+                new OpenFileIntent(intent.Path, FileIntentAction.Open, intent.MediaType), principal);
+            fellBack = true;
+        }
+
+        switch (resolution.Status)
+        {
+            case FileHandlerResolutionStatus.ChooserRequired:
+                return new AppIntentDispatchResult(AppIntentDispatchStatus.ChooserRequired, CandidateAppIds: resolution.CandidateAppIds, ErrorCode: "intent.edit-file.chooser-required", FellBackToOpen: fellBack);
+            case FileHandlerResolutionStatus.NoHandler:
+                return new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.edit-file.no-handler");
+            case FileHandlerResolutionStatus.TargetInvalid:
+                return new AppIntentDispatchResult(AppIntentDispatchStatus.TargetInvalid, ErrorCode: "intent.edit-file.target-invalid");
+        }
+
+        string[] arguments = [intent.Path.Value];
+        AppLaunchResult launch = await _orchestrator.LaunchAsync(new AppLaunchRequest(
+            resolution.AppId!, principal, arguments,
+            Intent: new AppIntentDelivery(AppIntentIds.EditFile, SenderAppId: request.CallerAppId) { Arguments = arguments }));
+        return ToDispatchResult(launch) with { FellBackToOpen = fellBack };
+    }
+
+    /// <summary>
+    /// Opens a URI with the handler of its scheme (ADR 0096, section 3): <c>file://</c> becomes an
+    /// <see cref="OpenFileIntent"/> on its path; any other scheme resolves the media type
+    /// <c>x-scheme-handler/&lt;scheme&gt;</c>, and the handler starts with the URI as its argument.
+    /// </summary>
+    private async ValueTask<AppIntentDispatchResult> DispatchOpenUriAsync(
+        AppIntentRequest request, OpenUriIntent intent, AuthenticatedPrincipal principal, CancellationToken cancellationToken)
+    {
+        if (!HasAppsLaunch(request.CallerAppId, request.UserId, principal.Authority))
+        {
+            return new AppIntentDispatchResult(AppIntentDispatchStatus.CapabilityDenied, ErrorCode: "intent.capability-denied");
+        }
+
+        if (intent.Uri is null || !intent.Uri.IsAbsoluteUri || string.IsNullOrEmpty(intent.Uri.Scheme))
+        {
+            return new AppIntentDispatchResult(AppIntentDispatchStatus.Invalid, ErrorCode: "intent.open-uri.invalid");
+        }
+
+        if (intent.Uri.IsFile || string.Equals(intent.Uri.Scheme, "file", StringComparison.OrdinalIgnoreCase))
+        {
+            VirtualPath path;
+            try
+            {
+                path = VirtualPath.Parse(Uri.UnescapeDataString(intent.Uri.AbsolutePath));
+            }
+            catch (Exception exception) when (exception is FormatException or ArgumentException)
+            {
+                return new AppIntentDispatchResult(AppIntentDispatchStatus.Invalid, ErrorCode: "intent.open-uri.invalid");
+            }
+
+            return await DispatchOpenFileAsync(
+                request, new OpenFileIntent(path, FileIntentAction.Open, PreferredAppId: intent.PreferredAppId), principal);
+        }
+
+        FileHandlerResolution resolution = await _associations
+            .ResolveSchemeAsync(intent.Uri.Scheme, principal, intent.PreferredAppId, cancellationToken)
+            .ConfigureAwait(false);
+        switch (resolution.Status)
+        {
+            case FileHandlerResolutionStatus.ChooserRequired:
+                return new AppIntentDispatchResult(AppIntentDispatchStatus.ChooserRequired, CandidateAppIds: resolution.CandidateAppIds, ErrorCode: "intent.open-uri.chooser-required");
+            case FileHandlerResolutionStatus.NoHandler:
+                return new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.open-uri.no-handler");
+            case FileHandlerResolutionStatus.TargetInvalid:
+                return new AppIntentDispatchResult(AppIntentDispatchStatus.TargetInvalid, ErrorCode: "intent.open-uri.target-invalid");
+        }
+
+        string[] arguments = [intent.Uri.OriginalString];
+        AppLaunchResult launch = await _orchestrator.LaunchAsync(new AppLaunchRequest(
+            resolution.AppId!, principal, arguments,
+            Intent: new AppIntentDelivery(AppIntentIds.OpenUri, SenderAppId: request.CallerAppId) { Arguments = arguments }));
+        return ToDispatchResult(launch);
+    }
+
+    /// <summary>
+    /// Shows an app's settings (ADR 0096, section 4): the app itself with <c>--show-settings</c>
+    /// when it declares the intent in its manifest, otherwise Settings on the app's page
+    /// (<c>--app=&lt;id&gt;</c>). It opens a system surface and carries no caller data, so like the
+    /// freedesktop settings panels it needs no capability.
+    /// </summary>
+    private async ValueTask<AppIntentDispatchResult> DispatchShowSettingsAsync(
+        AppIntentRequest request, ShowAppSettingsIntent intent, AuthenticatedPrincipal principal)
+    {
+        if (!_catalog.Manifests.TryGetValue(intent.TargetAppId, out AppManifest? target))
         {
             return new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.show-settings.not-found");
         }
@@ -306,9 +495,127 @@ public sealed class AppIntentDispatcher
             return new AppIntentDispatchResult(AppIntentDispatchStatus.Disabled, ErrorCode: "intent.show-settings.disabled");
         }
 
-        // Actually focusing/rendering a settings surface belongs to the future window runtime
-        // (Phase 2A); Section 8 only validates the target and acknowledges the request.
-        return new AppIntentDispatchResult(AppIntentDispatchStatus.Dispatched);
+        bool ownPage = target.Intents.Any(static declaration =>
+            string.Equals(declaration.IntentId, AppIntentIds.ShowAppSettings, StringComparison.Ordinal));
+        (string handler, string[] arguments) = ownPage
+            ? (intent.TargetAppId, [ShowSettingsArgument])
+            : (SettingsAppId, new[] { SettingsAppArgumentPrefix + intent.TargetAppId });
+        AppLaunchResult launch = await _orchestrator.LaunchAsync(new AppLaunchRequest(
+            handler, principal, arguments,
+            Intent: new AppIntentDelivery(AppIntentIds.ShowAppSettings, SenderAppId: request.CallerAppId) { Arguments = arguments }));
+        return launch.Status == AppLaunchStatus.NotFound && !ownPage
+            ? new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.show-settings.no-settings-app")
+            : ToDispatchResult(launch);
+    }
+
+    /// <summary>
+    /// Routes an app-defined intent (ADR 0096, section 5) to the installed apps declaring its id: the
+    /// caller's chosen target, the only declaring app, or the user's "always use" choice in
+    /// <c>~/.config/hackeros/intents.config</c>; otherwise the caller gets the candidates to show the
+    /// "Open with" chooser. The handler receives the id and payload as its
+    /// <see cref="IAppExecutionContext.Intent"/>, or through <see cref="IAppExecutionContext.IntentReceived"/>
+    /// when it is a running single instance.
+    /// </summary>
+    private async ValueTask<AppIntentDispatchResult> DispatchCustomAsync(
+        AppIntentRequest request, CustomIntent intent, AuthenticatedPrincipal principal, CancellationToken cancellationToken)
+    {
+        if (!AppIntentIds.IsWellFormed(intent.IntentId))
+        {
+            return new AppIntentDispatchResult(AppIntentDispatchStatus.Invalid, ErrorCode: "intent.custom.invalid-id");
+        }
+
+        if (AppIntentIds.IsBuiltIn(intent.IntentId))
+        {
+            // A built-in id has a typed record with its own rules: sending it untyped would bypass them.
+            return new AppIntentDispatchResult(AppIntentDispatchStatus.Invalid, ErrorCode: "intent.custom.reserved-id");
+        }
+
+        if (!HasAppsLaunch(request.CallerAppId, request.UserId, principal.Authority))
+        {
+            return new AppIntentDispatchResult(AppIntentDispatchStatus.CapabilityDenied, ErrorCode: "intent.capability-denied");
+        }
+
+        if (ValidatePayload(intent.PayloadJson) is { } payloadError)
+        {
+            return new AppIntentDispatchResult(AppIntentDispatchStatus.Invalid, ErrorCode: payloadError);
+        }
+
+        string[] candidates = [.. _catalog.Manifests.Values
+            .Where(manifest => _enablement.IsEnabled(manifest.Id)
+                && manifest.Intents.Any(declaration => string.Equals(declaration.IntentId, intent.IntentId, StringComparison.Ordinal)))
+            .Select(static manifest => manifest.Id)
+            .OrderBy(static id => id, StringComparer.Ordinal)];
+        if (candidates.Length == 0)
+        {
+            return new AppIntentDispatchResult(AppIntentDispatchStatus.NotFound, ErrorCode: "intent.unknown");
+        }
+
+        string? handler;
+        if (intent.TargetAppId is { } target)
+        {
+            if (!candidates.Contains(target, StringComparer.Ordinal))
+            {
+                return new AppIntentDispatchResult(AppIntentDispatchStatus.TargetInvalid, ErrorCode: "intent.custom.target-invalid");
+            }
+
+            handler = target;
+            if (intent.RememberChoice)
+            {
+                await IntentChoiceStore.WriteAsync(_fileSystem, principal, intent.IntentId, target, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        else if (candidates.Length == 1)
+        {
+            handler = candidates[0];
+        }
+        else
+        {
+            string? remembered = await IntentChoiceStore.ReadAsync(_fileSystem, principal, intent.IntentId, cancellationToken).ConfigureAwait(false);
+            handler = remembered is not null && candidates.Contains(remembered, StringComparer.Ordinal) ? remembered : null;
+            if (handler is null)
+            {
+                return new AppIntentDispatchResult(AppIntentDispatchStatus.ChooserRequired, CandidateAppIds: candidates, ErrorCode: "intent.custom.chooser-required");
+            }
+        }
+
+        AppLaunchResult launch = await _orchestrator.LaunchAsync(new AppLaunchRequest(
+            handler, principal, [],
+            Intent: new AppIntentDelivery(intent.IntentId, intent.PayloadJson, request.CallerAppId)));
+        return ToDispatchResult(launch);
+    }
+
+    /// <summary>
+    /// Checks an app-defined intent's payload (ADR 0096, section 5): a JSON object of at most 64 KiB.
+    /// No JSON Schema validation: <c>PayloadSchemaAssetPath</c> documents the contract for callers.
+    /// </summary>
+    /// <returns>The error code, or <see langword="null"/> when the payload is acceptable.</returns>
+    private static string? ValidatePayload(string? payloadJson)
+    {
+        if (payloadJson is null)
+        {
+            return null;
+        }
+
+        if (System.Text.Encoding.UTF8.GetByteCount(payloadJson) > AppIntentIds.MaxCustomPayloadBytes)
+        {
+            return "intent.custom.payload-too-large";
+        }
+
+        try
+        {
+            using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(payloadJson);
+            return document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object ? null : "intent.custom.payload-invalid";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return "intent.custom.payload-invalid";
+        }
+    }
+
+    private static VirtualPath GetParent(VirtualPath path)
+    {
+        int separator = path.Value.LastIndexOf('/');
+        return separator <= 0 ? VirtualPath.Parse("/") : VirtualPath.Parse(path.Value[..separator]);
     }
 
     /// <summary>
@@ -327,18 +634,29 @@ public sealed class AppIntentDispatcher
             return denial;
         }
 
-        ServiceStartMode effectiveMode = await ServiceStartModeStore.ReadAsync(
-            _fileSystem,
-            principal.LoginName.Value,
-            targetAppId,
-            target!.AutoStart ? ServiceStartMode.Automatic : ServiceStartMode.Manual,
-            CancellationToken.None);
+        bool system = IsBootService(target!);
+        if (system && !principal.HasAuthority(AppAuthority.Administrator))
+        {
+            return AdministratorRequired();
+        }
+
+        ServiceStartMode effectiveMode = await ReadStartModeAsync(target!, principal, system);
         if (effectiveMode == ServiceStartMode.Disabled)
         {
             return new ServiceControlDispatchResult(ServiceControlDispatchStatus.ServiceDisabled, ErrorCode: "service.start.disabled");
         }
 
-        AppLaunchResult launch = await _orchestrator.LaunchAsync(new AppLaunchRequest(targetAppId, principal, []));
+        // A system service runs as hackeros-svc in the system scope whoever starts it, like
+        // `sudo systemctl start` of a system unit: the administrator's session does not own it.
+        AppLaunchRequest request = system
+            ? new AppLaunchRequest(
+                targetAppId,
+                ServiceAccount.CreatePrincipal(principal.InstallationId, principal.DeviceId, DateTimeOffset.UtcNow),
+                [],
+                Interactive: false,
+                SystemScope: true)
+            : new AppLaunchRequest(targetAppId, principal, []);
+        AppLaunchResult launch = await _orchestrator.LaunchAsync(request);
         return launch.Status switch
         {
             AppLaunchStatus.Launched or AppLaunchStatus.FocusedExisting =>
@@ -351,10 +669,15 @@ public sealed class AppIntentDispatcher
     public async ValueTask<ServiceControlDispatchResult> StopServiceAsync(
         string callerAppId, string userId, string targetAppId, AuthenticatedPrincipal principal)
     {
-        ServiceControlDispatchResult? denial = AuthorizeServiceControl(callerAppId, userId, targetAppId, principal, out _);
+        ServiceControlDispatchResult? denial = AuthorizeServiceControl(callerAppId, userId, targetAppId, principal, out AppManifest? target);
         if (denial is not null)
         {
             return denial;
+        }
+
+        if (IsBootService(target!) && !principal.HasAuthority(AppAuthority.Administrator))
+        {
+            return AdministratorRequired();
         }
 
         await _orchestrator.StopServiceAsync(targetAppId);
@@ -371,12 +694,7 @@ public sealed class AppIntentDispatcher
             return (denial, ServiceStartMode.Manual);
         }
 
-        ServiceStartMode mode = await ServiceStartModeStore.ReadAsync(
-            _fileSystem,
-            principal.LoginName.Value,
-            targetAppId,
-            target!.AutoStart ? ServiceStartMode.Automatic : ServiceStartMode.Manual,
-            CancellationToken.None);
+        ServiceStartMode mode = await ReadStartModeAsync(target!, principal, IsBootService(target!));
         return (new ServiceControlDispatchResult(ServiceControlDispatchStatus.Succeeded), mode);
     }
 
@@ -384,13 +702,66 @@ public sealed class AppIntentDispatcher
     public async ValueTask<ServiceControlDispatchResult> SetServiceStartModeAsync(
         string callerAppId, string userId, string targetAppId, AuthenticatedPrincipal principal, ServiceStartMode mode)
     {
+        ServiceControlDispatchResult? denial = AuthorizeServiceControl(callerAppId, userId, targetAppId, principal, out AppManifest? target);
+        if (denial is not null)
+        {
+            return denial;
+        }
+
+        if (IsBootService(target!))
+        {
+            // A system service's start mode lives in /etc, for every user: `sudo systemctl enable`.
+            if (!principal.HasAuthority(AppAuthority.Administrator))
+            {
+                return AdministratorRequired();
+            }
+
+            await ServiceStartModeStore.WriteSystemAsync(_fileSystem, targetAppId, mode, CancellationToken.None);
+        }
+        else
+        {
+            await ServiceStartModeStore.WriteAsync(_fileSystem, principal.LoginName.Value, targetAppId, mode, CancellationToken.None);
+        }
+
+        return new ServiceControlDispatchResult(ServiceControlDispatchStatus.Succeeded);
+    }
+
+    /// <summary>Gets whether a service is a system service, started at boot as <c>hackeros-svc</c> (ADR 0097, section 4).</summary>
+    private bool IsBootService(AppManifest target) =>
+        _orchestrator.GetEffectiveStartup(target) == AppServiceStartup.Boot;
+
+    /// <summary>Reads a service's start mode from <c>/etc</c> (system service) or the user's <c>~/.config</c>.</summary>
+    private ValueTask<ServiceStartMode> ReadStartModeAsync(AppManifest target, AuthenticatedPrincipal principal, bool system)
+    {
+        ServiceStartMode fallback = target.AutoStart ? ServiceStartMode.Automatic : ServiceStartMode.Manual;
+        return system
+            ? ServiceStartModeStore.ReadSystemAsync(_fileSystem, target.Id, fallback, CancellationToken.None)
+            : ServiceStartModeStore.ReadAsync(_fileSystem, principal.LoginName.Value, target.Id, fallback, CancellationToken.None);
+    }
+
+    private static ServiceControlDispatchResult AdministratorRequired() =>
+        new(ServiceControlDispatchStatus.CapabilityDenied, ErrorCode: "service.system.administrator-required");
+
+    /// <summary>
+    /// Reads one <see cref="AppKind.Service"/> app's state (ADR 0097). Needs no capability, like
+    /// <c>systemctl status</c>; an unknown app or one that is not a service reads as never started.
+    /// </summary>
+    public ServiceStatusSnapshot GetServiceStatus(string targetAppId) =>
+        _catalog.Manifests.TryGetValue(targetAppId, out AppManifest? manifest) && manifest.Kind == AppKind.Service
+            ? _orchestrator.GetServiceStatus(targetAppId)
+            : ServiceStatusSnapshot.NeverStarted;
+
+    /// <summary>Clears one <see cref="AppKind.Service"/> app's failed state on behalf of a caller; see <see cref="StartServiceAsync"/> for the authorization rule.</summary>
+    public ServiceControlDispatchResult ResetFailedService(
+        string callerAppId, string userId, string targetAppId, AuthenticatedPrincipal principal)
+    {
         ServiceControlDispatchResult? denial = AuthorizeServiceControl(callerAppId, userId, targetAppId, principal, out _);
         if (denial is not null)
         {
             return denial;
         }
 
-        await ServiceStartModeStore.WriteAsync(_fileSystem, principal.LoginName.Value, targetAppId, mode, CancellationToken.None);
+        _orchestrator.ResetFailedService(targetAppId);
         return new ServiceControlDispatchResult(ServiceControlDispatchStatus.Succeeded);
     }
 

@@ -19,6 +19,9 @@ le legacy (`src/apps/file-explorer.ts`) et la dépasse :
   bureau réel de l'utilisateur (fichiers de l'hôte) ;
 - un **résumé des échecs** à la fin de chaque opération (bandeau et
   notification), avec la raison par élément ; une erreur n'arrête pas les autres.
+- depuis `web/5-static-sites`, **« Publish as a web site… »** dans le menu d'un
+  dossier (`PublishSiteContextMenuProvider`) : ouvre Web Server Manager avec ce
+  dossier comme racine d'un nouveau site ([`static-sites.md`](static-sites.md)).
 
 ## Architecture
 
@@ -65,8 +68,9 @@ file:///home/benoit/rapport.txt
 file:///home/benoit/Documents
 ```
 
-`IAppClipboardGateway.GetFileReferencesAsync` et `SetFileReferencesAsync` restent,
-marqués `[Obsolete]`, comme formes de « copier » (ADR 0056 §12).
+`IAppClipboardGateway.GetFileReferencesAsync` et `SetFileReferencesAsync`, anciennes
+formes de « copier » marquées `[Obsolete]` par l'ADR 0056 §12, sont retirées au gel
+du SDK 1.0 (ADR 0114 §3).
 
 ### Transferts (`FileTransfer`)
 
@@ -92,6 +96,24 @@ Règles :
 
 Après un collage d'éléments coupés sans échec, le presse-papiers est vidé.
 
+### Archives en arrière-plan (ADR 0140)
+
+Compresser, Extraire et « UnZip Here… » passent par des tâches
+`HackBackground` ([`background-jobs.md`](background-jobs.md)) :
+`FileExplorerZipService.CompressInBackgroundAsync` et `ExtractInBackgroundAsync`
+lancent les processus enfants `file-explorer:compress` et
+`file-explorer:extract`, qui lisent, compressent ou décompressent et écrivent
+par leurs propres passerelles (mêmes droits que l'explorateur), dans un Web
+Worker quand l'hôte en a. Une erreur revient comme clé de texte
+(`ZipFailure`) et la fenêtre la traduit. Ces tâches sont suivies comme les
+transferts : une demande d'arrêt attend leur fin.
+
+Restent dans la fenêtre, avec leur raison écrite dans le code : les copies et
+déplacements (`FileTransfer`, appels à l'OS attendus avec un point d'arrêt
+entre deux éléments, et question de conflit dans la fenêtre) et le
+téléchargement d'une sélection en `.zip` (les octets vont au navigateur depuis
+la fenêtre et dépasseraient vite les 16 Mio d'un résultat).
+
 ### `FileView`
 
 | Paramètre | Rôle |
@@ -112,6 +134,43 @@ Après un collage d'éléments coupés sans échec, le presse-papiers est vidé.
 
 Le curseur indique l'opération pendant le survol : déplacer, copier avec Ctrl ou
 pour des fichiers de l'hôte. La cible survolée est encadrée en pointillés.
+
+### Ligne de commande et « Afficher dans le dossier » (ADR 0039, ADR 0096 §1)
+
+| Arguments | Effet |
+|---|---|
+| aucun | Ouvre le dossier personnel. |
+| `<dossier>` | Ouvre ce dossier (ouverture d'un `inode/directory`, `xdg-open ~/Documents`). |
+| `<parent> --select=<chemin>` | Ouvre `<parent>`, sélectionne l'élément et le fait défiler jusqu'à lui : c'est ce qu'envoie `RevealFileIntent` (`HackApps.RevealFileAsync`), l'équivalent de `org.freedesktop.FileManager1.ShowItems`. |
+| `--select=<chemin>` seul | Ouvre le dossier parent de `<chemin>` et le sélectionne. |
+
+Un argument relatif ou mal formé est ignoré. L'explorateur n'est pas à
+instance unique : chaque demande ouvre une fenêtre, comme Nautilus lancé avec un
+chemin. `FileView.RevealAsync(path)` fait le
+travail : navigation vers le parent, sélection, puis `revealItem` de
+`FileView.razor.js` (`scrollIntoView` puis focus).
+
+## Langues (ADR 0104)
+
+Tous les textes de l'explorateur (barres d'outils, Emplacements, Corbeille,
+dialogues Ouvrir avec / Propriétés / conflit de noms, menus contextuels,
+messages d'erreur, résumés de transfert) viennent de `Resources/Strings.resx`
+(anglais) et `Resources/Strings.fr.resx` (français), lus par
+`AppContext.GetLocalizer<Strings>()` dans la langue du processus. Le nom de
+l'app est traduit par `Resources/AppManifest.fr.resx`.
+
+- Le résumé d'échec d'un transfert est construit par la fenêtre
+  (`Transfer.<Copy|Move|Trash|Upload>.One/Many`) à partir de
+  `FileTransferResult.Failures` ; la raison de chaque échec vient du SDK
+  `FileView`.
+- Dates (colonne « Supprimé le » de la Corbeille, « Modifié » des Propriétés)
+  et tailles suivent `AppContext.FormatCulture` (`LC_TIME`, `LANG`) : date et
+  heure courtes de la locale, unités `o/Ko/Mo/Go` en français.
+- Les noms de fichiers et de dossiers ne sont jamais traduits (`NewFile.txt`,
+  `Archive.zip`, `~/.local/share/Trash`) ; seul le nom proposé pour un nouveau
+  dossier l'est, comme « Dossier sans titre » sous GNOME.
+- `ZipFileContextMenuProvider` et `PublishSiteContextMenuProvider` reçoivent le
+  localiseur de la fenêtre pour le libellé de leur entrée de menu.
 
 ## Décisions clés
 
@@ -155,6 +214,7 @@ pour des fichiers de l'hôte. La cible survolée est encadrée en pointillés.
   sur le fond, remise à `DropRequested`, fichiers de l'hôte, raccourcis,
   éléments coupés, fil d'Ariane.
 - `Tests/HackerOs.AppSdk.Tests/IO/HackDirectoryTests.cs` : `HackDirectory.CopyAsync`.
+- `Tests/HackerOs.Apps.FileExplorer.Tests/FileExplorerLaunchArgumentsTests.cs` : dossier, `--select`, parent déduit, arguments ignorés (`v3/4`).
 
 ## Liste des tâches du chantier `rebuild/4-file-explorer`
 
@@ -166,3 +226,24 @@ pour des fichiers de l'hôte. La cible survolée est encadrée en pointillés.
 - [x] `FileViewBreadcrumb` et `FileViewDropZone` ; écouteurs natifs et fichiers de l'hôte dans `FileView.razor.js`.
 - [x] Explorateur : barre d'outils Cut/Copy/Paste, fil d'Ariane, dépôts sur Home, Trash et la vue Corbeille, fenêtre de conflit, notification des échecs, envoi par `FileTransfer`.
 - [x] Tests, ce document, `app-sdk.md`, `hack-file-api.md`, `trash.md`, plan et index.
+
+## Tâches du chantier `v3/4-intents`
+
+- [x] L'explorateur ouvre le dossier passé en argument (il ouvrait toujours le dossier personnel).
+- [x] `--select=<chemin>` : sélection et défilement (`FileView.RevealAsync`, `revealItem`).
+- [x] Tests et ce document.
+
+## Tâches du chantier `v3/4b` (ADR 0121)
+
+- [x] « Ouvrir avec » propose « Toujours utiliser cette app pour les fichiers
+  .ext » quand l'app choisie déclare l'extension ; le choix est écrit dans
+  `~/.config/hackeros/file-associations.json` par
+  `AppContext.Catalog.SetUserDefaultHandlerAsync`
+  ([`user-file-associations.md`](user-file-associations.md)).
+- [x] L'explorateur déclare `file-associations.read`.
+
+## Tâches du chantier `exec/5-background-jobs` (ADR 0140)
+
+- [x] Compresser, Extraire et « UnZip Here… » en tâches `file-explorer:compress` et `file-explorer:extract`.
+- [x] Copies et téléchargement gardés dans la fenêtre, raison écrite.
+- [x] Test de l'aller-retour compression puis extraction (`FileExplorerZipJobsTests`).

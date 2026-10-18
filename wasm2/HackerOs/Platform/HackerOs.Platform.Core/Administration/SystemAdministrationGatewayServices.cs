@@ -1,6 +1,8 @@
+using HackerOs.Platform.Core.Backup;
 using HackerOs.Platform.Core.Elevation;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Power;
+using HackerOs.Platform.Core.Sessions;
 using HackerOs.Platform.Core.Settings;
 
 namespace HackerOs.Platform.Core.Administration;
@@ -8,7 +10,8 @@ namespace HackerOs.Platform.Core.Administration;
 /// <summary>
 /// Platform services behind the administration gateways of ADR 0056, sections 8 to 11
 /// (<c>HackSettings.OpenSystemAsync</c>, <c>HackPermissionAdministration</c>,
-/// <c>HackServerConnection</c>, <c>HackSystem</c>, <c>HackStorageDiagnostics</c>). Every service is
+/// <c>HackServerConnection</c>, <c>HackSystem</c>, <c>HackStorageDiagnostics</c>), and the
+/// <c>HackSystemBackup</c> of ADR 0099. Every service is
 /// resolved lazily, on the app's first call: several depend, through the lifecycle orchestrator or
 /// the session, on the very factory that receives this bundle. A <see langword="null"/> member
 /// leaves its gateway unsupported (or, for the server, "not connected").
@@ -19,10 +22,20 @@ namespace HackerOs.Platform.Core.Administration;
 /// <param name="Power">Reboot and factory reset.</param>
 /// <param name="Storage">Raw storage snapshot.</param>
 /// <param name="AuthenticationAgent">OS authentication agent (ADR 0055, section 5); <see langword="null"/> refuses every administrator operation.</param>
+/// <param name="Backup">Whole-machine backup and restore (ADR 0099); <see langword="null"/> on a host without one.</param>
 public sealed record SystemAdministrationGatewayServices(
     Func<IOsSettingsService>? Settings = null,
     Func<AppPermissionAdministration>? Permissions = null,
     ServerConnectionGatewayServices? Server = null,
     Func<SystemPowerService>? Power = null,
     Func<IStorageInspector>? Storage = null,
-    Func<IAdministratorAuthenticationAgent>? AuthenticationAgent = null);
+    Func<IAdministratorAuthenticationAgent>? AuthenticationAgent = null,
+    Func<SystemBackupService>? Backup = null)
+{
+    /// <summary>
+    /// Gets the password service behind <c>HackUserAccounts</c> (ADR 0120); <see langword="null"/> on a
+    /// host without local accounts. An <c>init</c> property rather than a parameter keeps the record's
+    /// constructor of SDK 1.0 unchanged.
+    /// </summary>
+    public Func<LocalPasswordService>? Passwords { get; init; }
+}

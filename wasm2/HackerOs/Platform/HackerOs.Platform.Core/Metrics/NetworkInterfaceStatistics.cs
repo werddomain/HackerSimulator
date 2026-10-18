@@ -4,7 +4,7 @@ namespace HackerOs.Platform.Core.Metrics;
 
 /// <summary>
 /// In-memory <see cref="INetworkInterfaceStatistics"/> with the two interfaces of ADR 0057
-/// section 5: <c>lo</c> (reserved, stays at zero) and <c>eth0</c>. Traffic recorded for an
+/// section 5: <c>lo</c> (traffic between two processes of this machine, ADR 0074) and <c>eth0</c>. Traffic recorded for an
 /// unknown interface name is ignored, as a packet for a missing device would be dropped.
 /// </summary>
 public sealed class NetworkInterfaceStatistics : INetworkInterfaceStatistics

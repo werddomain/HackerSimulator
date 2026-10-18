@@ -27,6 +27,12 @@ internal static class WorkerMessageType
     /// <summary><c>SIGKILL</c> while the worker still answers (escalation step 3): drop the process.</summary>
     public const string Kill = "kill";
 
+    /// <summary>
+    /// An intent for an already running process <c>p</c> (ADR 0096, section 5): the second activation
+    /// of a single-instance service, raised as <c>IntentReceived</c>.
+    /// </summary>
+    public const string Intent = "intent";
+
     /// <summary>Run <c>OnStoppingAsync</c> of a hosted service (logout, shutdown, disable).</summary>
     public const string ServiceStop = "sstop";
 
@@ -44,6 +50,32 @@ internal static class WorkerMessageType
 
     /// <summary>Ctrl+C: cancel the process token, without a stop request.</summary>
     public const string Interrupt = "int";
+
+    /// <summary>
+    /// An HTTP request for a listening socket <c>sk</c> of the process (ADR 0074, section 2): the
+    /// exchange <c>ex</c>, answered by an <see cref="HttpResponse"/>.
+    /// </summary>
+    public const string HttpRequest = "hreq";
+
+    /// <summary>
+    /// One delivery of the subscription <c>s</c> of process <c>p</c> (ADR 0124, section 1): the payload
+    /// <c>j</c> as JSON, and for a topic message its topic <c>top</c>, publisher <c>pa</c> and time <c>at</c>.
+    /// The worker answers with an <c>ev.ack</c> note once it delivered it.
+    /// </summary>
+    public const string Event = "ev";
+
+    /// <summary>
+    /// A progress report <c>f</c>, <c>m</c> of the background task <c>j</c> that process <c>p</c> started
+    /// from its worker with a <c>bg.run</c> call (ADR 0128, section 6).
+    /// </summary>
+    public const string BackgroundJobProgress = "bgp";
+
+    /// <summary>
+    /// An input <c>d</c> (a JSON object) for the window process <c>p</c> rendered in this worker (ADR
+    /// 0129 trial, ADR 0133): a DOM event, the answer to a dialog, the window's close. Opaque to the
+    /// worker host; read by the process's <see cref="Worker.IWorkerWindowRunner"/>.
+    /// </summary>
+    public const string UiInput = "uin";
 
     // ---- worker → OS ------------------------------------------------------------------------
 
@@ -79,6 +111,15 @@ internal static class WorkerMessageType
 
     /// <summary>A diagnostic line for <c>/var/log/syslog</c>.</summary>
     public const string Log = "log";
+
+    /// <summary>The reply <c>r</c> of the process to the exchange <c>x</c> of its socket <c>sk</c>.</summary>
+    public const string HttpResponse = "hres";
+
+    /// <summary>
+    /// An output <c>d</c> (a JSON object) of the window process <c>p</c> (ADR 0129 trial): a batch of
+    /// DOM changes, a dialog request. Opaque to the worker host; read by the window's host on the page.
+    /// </summary>
+    public const string UiOutput = "ui";
 }
 
 /// <summary>Writes and reads protocol messages: compact JSON, UTF-16 strings on the pipe.</summary>
@@ -127,6 +168,9 @@ internal static class WorkerMessage
 
     /// <summary>Gets a required 32-bit integer property.</summary>
     public static int GetInt32(this JsonElement element, string name) => element.GetProperty(name).GetInt32();
+
+    /// <summary>Gets a required number property.</summary>
+    public static double GetDouble(this JsonElement element, string name) => element.GetProperty(name).GetDouble();
 
     /// <summary>Gets a required string property.</summary>
     public static string GetString(this JsonElement element, string name) =>

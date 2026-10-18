@@ -47,11 +47,19 @@ modifient avec `HackEnvironment`, calqué sur `System.Environment`.
 3. Dans les deux cas, `AppLaunchRequest.Environment` s'applique en dernier.
 
 Environnement de connexion : `HOME`, `USER`, `LOGNAME`, `SHELL=/bin/hsh`,
-`PATH=/bin:/usr/bin` (informatif), `PWD`, `LANG=en_US.UTF-8`, puis les lignes
-`NOM=valeur` de `/etc/environment` (valeur éventuellement entre guillemets
-simples ou doubles). `HOME`, `USER` et `LOGNAME` ne peuvent pas y être
-remplacés. Les lignes vides et `#` sont ignorées ; une ligne invalide ou
-protégée est ignorée avec un avertissement dans `/var/log/syslog`.
+`PATH=/bin:/usr/bin` (informatif), `PWD`, `LANG=en_US.UTF-8`, puis la locale
+du système (`/etc/locale.conf`), puis les lignes `NOM=valeur` de
+`/etc/environment` (valeur éventuellement entre guillemets simples ou doubles),
+puis la locale de l'utilisateur (`~/.config/locale.conf`). `HOME`, `USER` et
+`LOGNAME` ne peuvent pas y être remplacés ; les fichiers `locale.conf` ne
+posent que `LANG`, `LANGUAGE` et les `LC_*`. Les lignes vides et `#` sont
+ignorées ; une ligne invalide ou protégée est ignorée avec un avertissement dans
+`/var/log/syslog`.
+
+`LANG`, `LC_MESSAGES` et `LC_ALL` choisissent la langue des textes du
+processus (anglais ou français), `LC_TIME`/`LC_NUMERIC` le format des dates et
+nombres ; `LANG=fr_FR.UTF-8 help` répond en français dans une session anglaise
+(ADR 0104, [`localization.md`](localization.md)).
 
 ### `/proc`
 

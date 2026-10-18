@@ -2,6 +2,8 @@ using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Kill;
 
@@ -26,8 +28,10 @@ public sealed class KillCommand : TerminalAppBase
         "STKFLT", "CHLD", "CONT", "STOP", "TSTP", "TTIN", "TTOU", "URG", "XCPU", "XFSZ", "VTALRM", "PROF", "WINCH", "IO", "PWR", "SYS"
     ];
 
+    /// <summary>Initializes the command with its manifest.</summary>
     public KillCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)
@@ -51,7 +55,7 @@ public sealed class KillCommand : TerminalAppBase
             {
                 if (ParseSignal(args[++i]) is not { } named)
                 {
-                    context.StandardError.WriteLine($"kill: {args[i]}: invalid signal specification");
+                    context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["InvalidSignal", args[i]]);
                     return 1;
                 }
 
@@ -64,7 +68,7 @@ public sealed class KillCommand : TerminalAppBase
                 // -9, -KILL, -SIGKILL: the signal comes before the targets.
                 if (ParseSignal(a[1..]) is not { } parsed)
                 {
-                    context.StandardError.WriteLine($"kill: {a[1..]}: invalid signal specification");
+                    context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["InvalidSignal", a[1..]]);
                     return 1;
                 }
 
@@ -77,7 +81,7 @@ public sealed class KillCommand : TerminalAppBase
 
         if (targets.Count == 0)
         {
-            context.StandardError.WriteLine("kill: usage: kill [-s sigspec | -n signum | -sigspec] pid | jobspec ... or kill -l [sigspec]");
+            context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["Usage"]);
             return 1;
         }
 
@@ -93,7 +97,7 @@ public sealed class KillCommand : TerminalAppBase
 
             if (!long.TryParse(target, out long pidVal))
             {
-                context.StandardError.WriteLine($"kill: {target}: arguments must be process or job IDs");
+                context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["InvalidTarget", target]);
                 status = 1;
                 continue;
             }
@@ -121,7 +125,7 @@ public sealed class KillCommand : TerminalAppBase
             }
             catch (KeyNotFoundException)
             {
-                context.StandardError.WriteLine($"kill: ({pidVal}) - No such process");
+                context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["NoSuchProcess", pidVal]);
                 status = 1;
             }
             catch (AppGatewayAccessDeniedException exception)
@@ -139,7 +143,7 @@ public sealed class KillCommand : TerminalAppBase
     {
         if (context.Shell is not { } shell)
         {
-            context.StandardError.WriteLine($"kill: {spec}: no current job (no shell session)");
+            context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["NoShell", spec]);
             return 1;
         }
 
@@ -154,7 +158,7 @@ public sealed class KillCommand : TerminalAppBase
         };
         if (job is null || !shell.KillJob(job.Id, force))
         {
-            context.StandardError.WriteLine($"kill: {spec}: no such job");
+            context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["NoSuchJob", spec]);
             return 1;
         }
 

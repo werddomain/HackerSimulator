@@ -38,8 +38,24 @@ internal sealed class AppManagementGateway : IAppManagementGateway
     private readonly bool _isRootElevated;
     private readonly IFileSystemService _fileSystem;
     private readonly ISimulationClock _clock;
+    private readonly Func<System.Globalization.CultureInfo> _language;
+    private readonly Func<AppAssetStore>? _assets;
 
     /// <summary>Creates the gateway for one app instance.</summary>
+    /// <param name="catalog">The app catalog.</param>
+    /// <param name="installation">Lazily resolved installation service.</param>
+    /// <param name="agent">Lazily resolved authentication agent; <see langword="null"/> refuses machine changes.</param>
+    /// <param name="capabilities">The app's capability checker.</param>
+    /// <param name="caller">Manifest of the app asking.</param>
+    /// <param name="principal">Session user running the app.</param>
+    /// <param name="isRootElevated">Whether the app runs as root through <c>sudo</c>.</param>
+    /// <param name="fileSystem">Filesystem engine the OS writes <c>/etc/hackeros/apps.config</c> with.</param>
+    /// <param name="clock">Simulation clock.</param>
+    /// <param name="language">
+    /// Language of the calling process (ADR 0104) for the operation shown in the administrator
+    /// prompt; English when <see langword="null"/>.
+    /// </param>
+    /// <param name="assets">Integrity of the installed apps' assets (ADR 0098 §5), or <see langword="null"/>.</param>
     public AppManagementGateway(
         AppCatalog catalog,
         Func<IAppInstallationService> installation,
@@ -49,8 +65,11 @@ internal sealed class AppManagementGateway : IAppManagementGateway
         AuthenticatedPrincipal principal,
         bool isRootElevated,
         IFileSystemService fileSystem,
-        ISimulationClock clock)
+        ISimulationClock clock,
+        Func<System.Globalization.CultureInfo>? language = null,
+        Func<AppAssetStore>? assets = null)
     {
+        _assets = assets;
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _installation = installation ?? throw new ArgumentNullException(nameof(installation));
         _agent = agent;
@@ -60,6 +79,7 @@ internal sealed class AppManagementGateway : IAppManagementGateway
         _isRootElevated = isRootElevated;
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _language = language ?? (static () => HackerOs.AppSdk.Globalization.HackLocale.DefaultLanguage);
     }
 
     /// <inheritdoc />
@@ -68,13 +88,30 @@ internal sealed class AppManagementGateway : IAppManagementGateway
         _capabilities.Require(AppCapabilities.AppsManage);
         cancellationToken.ThrowIfCancellationRequested();
         IAppInstallationService installation = _installation();
-        IReadOnlyList<HackAppInstallInfo> all = [.. _catalog.Manifests.Values
-            .OrderBy(manifest => manifest.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(manifest => manifest.Id, StringComparer.Ordinal)
+        AppAssetStore? assets = _assets?.Invoke();
+        IEnumerable<HackAppInstallInfo> loaded = _catalog.Manifests.Values
             .Select(manifest => new HackAppInstallInfo(
                 HackAppInfo.FromManifest(manifest, _catalog.IsSystemApp(manifest.Id)),
-                ToPublic(installation.GetState(manifest.Id)),
-                installation.GetUninstallClosure(manifest.Id)))];
+                assets is not null && assets.IsDamaged(manifest.Id)
+                    ? HackAppInstallState.Damaged
+                    : ToPublic(installation.GetState(manifest.Id)),
+                installation.GetUninstallClosure(manifest.Id))
+            {
+                Problem = assets is not null && assets.Damaged.TryGetValue(manifest.Id, out AppIntegrityProblem? problem)
+                    ? $"Asset '{problem.AssetPath}' does not match its manifest: {problem.Reason}."
+                    : null
+            });
+        // ADR 0098 §3: apps the OS refused to load are listed too, as incompatible, with the reason.
+        IEnumerable<HackAppInstallInfo> refused = _catalog.Rejected.Select(rejection => new HackAppInstallInfo(
+            HackAppInfo.FromManifest(rejection.Manifest, _catalog.IsSystemApp(rejection.AppId)),
+            HackAppInstallState.Incompatible,
+            [])
+        {
+            Problem = rejection.Message
+        });
+        IReadOnlyList<HackAppInstallInfo> all = [.. loaded.Concat(refused)
+            .OrderBy(entry => entry.App.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(entry => entry.App.Id, StringComparer.Ordinal)];
         return ValueTask.FromResult(all);
     }
 
@@ -89,6 +126,29 @@ internal sealed class AppManagementGateway : IAppManagementGateway
             .ConfigureAwait(false);
         return Unwrap(result);
     }
+
+    /// <inheritdoc />
+    public async ValueTask<HackUninstallPlan> PlanUninstallAsync(string appId, CancellationToken cancellationToken = default)
+    {
+        RequireApp(appId);
+        AppUninstallPlan plan = await _installation().PlanUninstallAsync(appId, cancellationToken).ConfigureAwait(false);
+        return new HackUninstallPlan(plan.AppIds, [.. plan.RunningProcesses.Select(ToPublic)]);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<HackUninstallReport> UninstallWithReportAsync(
+        string appId, HackInstallScope scope, CancellationToken cancellationToken = default)
+    {
+        AppManifest target = RequireApp(appId);
+        IAppFileSystemGateway? writer = await AuthorizeAsync(target, scope, uninstall: true, cancellationToken).ConfigureAwait(false);
+        AppInstallationResult result = await _installation()
+            .UninstallAsync(appId, ToInternal(scope), writer, cancellationToken)
+            .ConfigureAwait(false);
+        return new HackUninstallReport(Unwrap(result), [.. (result.StoppedProcesses ?? []).Select(ToPublic)]);
+    }
+
+    private static HackRunningProcessInfo ToPublic(Lifecycle.AppProcessInfo process) =>
+        new(process.Pid, process.AppId, process.Name, process.UserName, process.Forced);
 
     /// <inheritdoc />
     public async ValueTask<IReadOnlyList<string>> ReinstallAsync(
@@ -132,11 +192,11 @@ internal sealed class AppManagementGateway : IAppManagementGateway
         IAdministratorAuthenticationAgent agent = _agent?.Invoke()
             ?? throw new HackUnauthorizedAccessException(
                 "No administrator authentication agent is available on this host.", path: AppsConfigDocument.MachinePath.Value);
-        string verb = uninstall ? "Uninstall" : "Reinstall";
+        System.Globalization.CultureInfo language = _language();
         AdministratorAuthenticationResult authentication = await agent.AuthenticateAsync(
             new AdministratorAuthenticationRequest(
                 _caller,
-                $"{verb} {target.Name} for all users",
+                Strings.For(language)[uninstall ? "Admin.App.Uninstall" : "Admin.App.Reinstall", _catalog.Localize(target, language).Name],
                 uninstall ? "apps.uninstall.machine" : "apps.reinstall.machine",
                 _principal,
                 _isRootElevated),

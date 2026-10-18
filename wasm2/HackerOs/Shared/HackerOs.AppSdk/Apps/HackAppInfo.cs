@@ -31,6 +31,18 @@ public sealed record HackAppInfo(
     bool IsHidden,
     IReadOnlyList<HackAppFileHandler> FileHandlers)
 {
+    /// <summary>
+    /// Gets the URLs a web app declares (<c>web.urls</c>, ADR 0073), main address first; empty for
+    /// every other kind. Web Server Manager lists them as read-only "external" sites (ADR 0077 §4).
+    /// </summary>
+    public IReadOnlyList<string> Urls { get; init; } = [];
+
+    /// <summary>
+    /// Gets the capabilities the app's manifest declares (ADR 0096, section 4: the app's page in
+    /// Settings). Declared is not granted: dangerous ones still need an administrator's decision.
+    /// </summary>
+    public IReadOnlyList<string> Capabilities { get; init; } = [];
+
     /// <summary>Builds the public description of a manifest. Called by the platform's catalog gateway.</summary>
     /// <param name="manifest">Validated manifest.</param>
     /// <param name="isSystemApp">Whether the host declares the app as a system app.</param>
@@ -49,7 +61,11 @@ public sealed record HackAppInfo(
             isSystemApp,
             manifest.Presentation.LaunchVisibility == AppLaunchVisibility.Hidden,
             [.. manifest.FileHandlers.Select(static handler =>
-                new HackAppFileHandler(handler.MediaType, [.. handler.Extensions], [.. handler.Actions]))]);
+                new HackAppFileHandler(handler.MediaType, [.. handler.Extensions], [.. handler.Actions]))])
+        {
+            Urls = manifest.Web is { } web ? [.. web.Urls] : [],
+            Capabilities = [.. manifest.Capabilities]
+        };
     }
 }
 
@@ -75,7 +91,36 @@ public enum HackOpenFileStatus
 /// <summary>Result of <see cref="HackApps.OpenFileAsync"/>.</summary>
 /// <param name="Status">How the request ended.</param>
 /// <param name="CandidateAppIds">With <see cref="HackOpenFileStatus.ChooserRequired"/>, the apps to choose from.</param>
-public sealed record HackOpenFileResult(HackOpenFileStatus Status, IReadOnlyList<string> CandidateAppIds);
+public sealed record HackOpenFileResult(HackOpenFileStatus Status, IReadOnlyList<string> CandidateAppIds)
+{
+    /// <summary>
+    /// Gets whether <see cref="HackApps.EditFileAsync"/> found no app declaring <c>edit</c> and used
+    /// the <c>open</c> handlers instead, like <c>xdg-open</c> (ADR 0096, section 2).
+    /// </summary>
+    public bool FellBackToOpen { get; init; }
+}
+
+/// <summary>What happened to an intent sent with <see cref="HackApps"/> (ADR 0096).</summary>
+public enum HackIntentStatus
+{
+    /// <summary>The handler was started, or the running instance received the intent.</summary>
+    Delivered = 0,
+
+    /// <summary>
+    /// Several apps can handle it and none is the default or the remembered choice: nothing
+    /// started, ask the user with <see cref="HackIntentResult.CandidateAppIds"/> and send again
+    /// with the chosen app.
+    /// </summary>
+    ChooserRequired = 1,
+
+    /// <summary>No installed app handles it.</summary>
+    NoHandler = 2
+}
+
+/// <summary>Result of <see cref="HackApps.OpenUriAsync(Uri, string?, CancellationToken)"/>, <see cref="HackApps.SendIntentAsync"/> and the other intents of ADR 0096.</summary>
+/// <param name="Status">What happened.</param>
+/// <param name="CandidateAppIds">The apps to choose from, for <see cref="HackIntentStatus.ChooserRequired"/>.</param>
+public sealed record HackIntentResult(HackIntentStatus Status, IReadOnlyList<string> CandidateAppIds);
 
 /// <summary>An app could not be started: unknown, uninstalled, or failed while starting.</summary>
 public sealed class HackAppLaunchException : InvalidOperationException

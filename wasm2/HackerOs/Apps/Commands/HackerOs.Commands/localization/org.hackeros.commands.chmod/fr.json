@@ -1,0 +1,5 @@
+{
+  "name": "chmod",
+  "description": "Change les bits de mode des permissions de fichiers",
+  "terminalUsage": "chmod [-Rvcf] <mode> <fichier...>   (mode : 755, +x, u+x, go-w, a=r, ...)"
+}

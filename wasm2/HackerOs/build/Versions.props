@@ -1,0 +1,22 @@
+<Project>
+  <!--
+    ADR 0098 §1: the single version of everything HackerOS publishes (SDK, platform, base apps,
+    HackerOs.App.Build, HackerOs.Ecosystem.Host, templates). Imported by Directory.Build.props, so
+    every project of the solution carries it; Platform/Packaging.props inherits it.
+
+    Before the SDK 1.0 freeze: 0.9.0-preview.<n>. Since the freeze (chantier v3/15, ADR 0114):
+    SemVer (ADR 0019) - patch with no API change, minor for an addition, major for a breaking
+    change of the SDK. PublicAPI.Unshipped.txt of each library says which one a release needs.
+    1.1.0 (chantier v3.1/4-sdk-1-1, ADR 0117 §5): window title, window geometry opt-out, user
+    accounts and passwd, per-user default handlers.
+    1.2.0 (chantier exec/10-final, ADR 0132 §2): process limits, niceness, OOM score adjustment,
+    HackBackground and its analyzer, HackWireContext for remote gateways, all published once at the
+    end of the exec series.
+
+    The App SDK version an app is compiled against comes from this number (HackerOsSdk.Version), and
+    the manifest generator writes it as the app's sdkCompatibility.minimumVersion (ADR 0098 §3).
+  -->
+  <PropertyGroup>
+    <HackerOsVersion>1.2.0</HackerOsVersion>
+  </PropertyGroup>
+</Project>

@@ -110,7 +110,7 @@ public interface IHackShell : IAsyncDisposable
     Task<HackShellCompletion> CompleteAsync(string commandLine, int cursor, CancellationToken cancellationToken = default);
 }
 
-/// <summary>Options of <see cref="HackShell.StartAsync"/>.</summary>
+/// <summary>Options of <see cref="HackShell.StartAsync(HackShellOptions, CancellationToken)"/>.</summary>
 public sealed record HackShellOptions
 {
     /// <summary>

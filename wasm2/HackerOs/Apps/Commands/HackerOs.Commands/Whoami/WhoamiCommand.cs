@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Whoami;
 
@@ -15,7 +17,7 @@ public sealed class WhoamiCommand(AppManifest manifest) : TerminalAppBase(manife
         ArgumentNullException.ThrowIfNull(context);
         if (context.Arguments.Count > 0 && context.Arguments[0] is not "--help")
         {
-            await context.StandardError.WriteLineAsync($"whoami: extra operand '{context.Arguments[0]}'");
+            await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["ExtraOperand", context.Arguments[0]]);
             return 1;
         }
 

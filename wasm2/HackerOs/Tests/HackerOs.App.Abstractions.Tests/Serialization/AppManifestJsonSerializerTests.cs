@@ -32,6 +32,62 @@ public sealed class AppManifestJsonSerializerTests
     }
 
     [Fact]
+    public void Window_sizes_round_trip_and_are_omitted_when_undeclared()
+    {
+        // ADR 0095 §2: a manifest without "window" keeps its exact bytes.
+        AppManifest manifest = CreateManifest() with
+        {
+            Window = new WindowOptions { DefaultWidth = 420, DefaultHeight = 600, MinWidth = 300, MinHeight = 400, MaxWidth = 640, Resizable = false }
+        };
+
+        string json = AppManifestJsonSerializer.SerializeCanonical(manifest);
+        AppManifest roundTripped = AppManifestJsonSerializer.DeserializeStrict(json);
+
+        Assert.Equal(manifest.Window, roundTripped.Window);
+        Assert.Contains("\"window\":{\"defaultWidth\":420,\"defaultHeight\":600,\"minWidth\":300,\"minHeight\":400,\"maxWidth\":640,\"resizable\":false}", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"window\":{", AppManifestJsonSerializer.SerializeCanonical(manifest with { Window = null }), StringComparison.Ordinal);
+        Assert.Equal(new WindowOptions { MinWidth = 100 }, AppManifestJsonSerializer.DeserializeStrict(
+            json.Replace("\"window\":{\"defaultWidth\":420,\"defaultHeight\":600,\"minWidth\":300,\"minHeight\":400,\"maxWidth\":640,\"resizable\":false}", "\"window\":{\"minWidth\":100}", StringComparison.Ordinal)).Window);
+        Assert.Throws<JsonException>(() => AppManifestJsonSerializer.DeserializeStrict(
+            json.Replace("\"resizable\":false", "\"resizable\":false,\"x\":1", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void RememberGeometry_is_written_only_when_an_app_opts_out()
+    {
+        // ADR 0116 §1: the default (true) leaves manifests byte-identical; false is written and read back.
+        AppManifest manifest = CreateManifest() with { Window = new WindowOptions { DefaultWidth = 420 } };
+        string remembered = AppManifestJsonSerializer.SerializeCanonical(manifest);
+        string optedOut = AppManifestJsonSerializer.SerializeCanonical(manifest with { Window = manifest.Window with { RememberGeometry = false } });
+
+        Assert.DoesNotContain("rememberGeometry", remembered, StringComparison.Ordinal);
+        Assert.Contains("\"resizable\":true,\"rememberGeometry\":false}", optedOut, StringComparison.Ordinal);
+        Assert.True(AppManifestJsonSerializer.DeserializeStrict(remembered).Window!.RememberGeometry);
+        Assert.False(AppManifestJsonSerializer.DeserializeStrict(optedOut).Window!.RememberGeometry);
+        Assert.Equal(manifest.Window with { RememberGeometry = false }, AppManifestJsonSerializer.DeserializeStrict(optedOut).Window);
+    }
+
+    [Fact]
+    public void ServiceStartup_round_trips_and_is_omitted_for_a_manifest_written_before_ADR_0097()
+    {
+        AppManifest manifest = CreateManifest() with
+        {
+            Kind = AppKind.Service,
+            FileHandlers = [],
+            Components = null,
+            ServiceStartup = AppServiceStartup.Boot
+        };
+
+        string json = AppManifestJsonSerializer.SerializeCanonical(manifest);
+        string legacy = AppManifestJsonSerializer.SerializeCanonical(manifest with { ServiceStartup = null });
+
+        Assert.Contains("\"serviceStartup\":\"boot\"", json, StringComparison.Ordinal);
+        Assert.Equal(AppServiceStartup.Boot, AppManifestJsonSerializer.DeserializeStrict(json).ServiceStartup);
+        Assert.DoesNotContain("serviceStartup", legacy, StringComparison.Ordinal);
+        Assert.Null(AppManifestJsonSerializer.DeserializeStrict(legacy).ServiceStartup);
+    }
+
+    [Fact]
     public void Components_round_trip_and_are_omitted_when_none()
     {
         AppManifest manifest = CreateManifest();
@@ -41,6 +97,48 @@ public sealed class AppManifestJsonSerializerTests
 
         Assert.Equal(manifest.Components, roundTripped.Components);
         Assert.DoesNotContain("components", withoutComponents, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Web_urls_round_trip_in_declared_order_and_are_omitted_for_other_kinds()
+    {
+        AppManifest manifest = CreateManifest() with
+        {
+            Kind = AppKind.Web,
+            Execution = AppExecutionHost.Web,
+            FileHandlers = [],
+            Components = null,
+            Web = new WebAppManifest(["http://intranet.hack:8080/admin/", "http://intranet.hack/"])
+        };
+
+        string json = AppManifestJsonSerializer.SerializeCanonical(manifest);
+        AppManifest roundTripped = AppManifestJsonSerializer.DeserializeStrict(json);
+
+        Assert.Contains("\"execution\":\"web\"", json, StringComparison.Ordinal);
+        Assert.Equal(AppKind.Web, roundTripped.Kind);
+        Assert.Equal(["http://intranet.hack:8080/admin/", "http://intranet.hack/"], roundTripped.Web!.Urls);
+        Assert.DoesNotContain("\"web\":", AppManifestJsonSerializer.SerializeCanonical(CreateManifest()), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Web_blazor_round_trips_and_rejects_unknown_properties()
+    {
+        AppManifest manifest = CreateManifest() with
+        {
+            Kind = AppKind.Web,
+            Execution = AppExecutionHost.Web,
+            FileHandlers = [],
+            Components = null,
+            Web = new WebAppManifest(["http://intranet.hack/"], new WebBlazorManifest("Intranet.dll", "Intranet.App"))
+        };
+
+        string json = AppManifestJsonSerializer.SerializeCanonical(manifest);
+        AppManifest roundTripped = AppManifestJsonSerializer.DeserializeStrict(json);
+        string extra = json.Replace("\"blazor\":{", "\"blazor\":{\"extra\":1,", StringComparison.Ordinal);
+
+        Assert.Contains("\"blazor\":{\"assembly\":\"Intranet.dll\",\"type\":\"Intranet.App\"}", json, StringComparison.Ordinal);
+        Assert.Equal(manifest.Web.Blazor, roundTripped.Web!.Blazor);
+        Assert.Throws<JsonException>(() => AppManifestJsonSerializer.DeserializeStrict(extra));
     }
 
     [Fact]

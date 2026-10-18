@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Dialog.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Dialog.Conflict.Message" xml:space="preserve">
+    <value>The file was changed by another process since it was last loaded. Use 'Save As' to write a new copy, or reload the file to accept external changes.</value>
+  </data>
+  <data name="Dialog.Conflict.Title" xml:space="preserve">
+    <value>Save Conflict</value>
+  </data>
+  <data name="Dialog.Ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Dialog.Open.Title" xml:space="preserve">
+    <value>Open Text File</value>
+  </data>
+  <data name="Dialog.Save.Title" xml:space="preserve">
+    <value>Save Text File</value>
+  </data>
+  <data name="Dialog.SaveFailed.Title" xml:space="preserve">
+    <value>Save Failed</value>
+  </data>
+  <data name="Dialog.Unsaved.Discard" xml:space="preserve">
+    <value>Discard</value>
+  </data>
+  <data name="Dialog.Unsaved.Message" xml:space="preserve">
+    <value>'{0}' has unsaved changes. Discard them and continue?</value>
+  </data>
+  <data name="Dialog.Unsaved.Title" xml:space="preserve">
+    <value>Unsaved Changes</value>
+  </data>
+  <data name="Editor.AriaLabel" xml:space="preserve">
+    <value>Document content editor</value>
+  </data>
+  <data name="Error.Binary" xml:space="preserve">
+    <value>Binary files are not supported by Text Editor.</value>
+  </data>
+  <data name="Error.DestinationNotFound" xml:space="preserve">
+    <value>Destination directory not found.</value>
+  </data>
+  <data name="Error.LoadCancelled" xml:space="preserve">
+    <value>Load cancelled.</value>
+  </data>
+  <data name="Error.NotFile" xml:space="preserve">
+    <value>Path is not a regular file.</value>
+  </data>
+  <data name="Error.NotFound" xml:space="preserve">
+    <value>File not found.</value>
+  </data>
+  <data name="Error.PermissionDenied" xml:space="preserve">
+    <value>Permission denied.</value>
+  </data>
+  <data name="Error.RevisionConflict" xml:space="preserve">
+    <value>Revision conflict.</value>
+  </data>
+  <data name="Error.TooLarge" xml:space="preserve">
+    <value>File is too large ({0} KiB). Text Editor supports up to {1} KiB.</value>
+  </data>
+  <data name="Error.Unexpected" xml:space="preserve">
+    <value>Unexpected error: {0}</value>
+  </data>
+  <data name="Error.UnknownRead" xml:space="preserve">
+    <value>Unknown read error.</value>
+  </data>
+  <data name="Error.UnsupportedType" xml:space="preserve">
+    <value>Unsupported file type '{0}'. Text Editor only opens: {1}.</value>
+  </data>
+  <data name="Error.WriteFailed" xml:space="preserve">
+    <value>Write failed.</value>
+  </data>
+  <data name="Filter.All" xml:space="preserve">
+    <value>All files</value>
+  </data>
+  <data name="Filter.Text" xml:space="preserve">
+    <value>Text files</value>
+  </data>
+  <data name="Find.AriaLabel" xml:space="preserve">
+    <value>Find in document</value>
+  </data>
+  <data name="Find.Close" xml:space="preserve">
+    <value>Close find bar</value>
+  </data>
+  <data name="Find.InputAriaLabel" xml:space="preserve">
+    <value>Search text</value>
+  </data>
+  <data name="Find.MatchCase" xml:space="preserve">
+    <value>Match case</value>
+  </data>
+  <data name="Find.MatchPosition" xml:space="preserve">
+    <value>Match {0}/{1}</value>
+  </data>
+  <data name="Find.Matches.Many" xml:space="preserve">
+    <value>{0} matches</value>
+  </data>
+  <data name="Find.Matches.One" xml:space="preserve">
+    <value>{0} match</value>
+  </data>
+  <data name="Find.Next" xml:space="preserve">
+    <value>Next match (Enter)</value>
+  </data>
+  <data name="Find.NoMatches" xml:space="preserve">
+    <value>No matches</value>
+  </data>
+  <data name="Find.Placeholder" xml:space="preserve">
+    <value>Search…</value>
+  </data>
+  <data name="Find.Previous" xml:space="preserve">
+    <value>Previous match (Shift+Enter)</value>
+  </data>
+  <data name="Find.ReplaceAriaLabel" xml:space="preserve">
+    <value>Find and replace in document</value>
+  </data>
+  <data name="Find.ToggleReplace" xml:space="preserve">
+    <value>Toggle Replace (Ctrl+H)</value>
+  </data>
+  <data name="Find.WholeWord" xml:space="preserve">
+    <value>Whole word</value>
+  </data>
+  <data name="Menu.AriaLabel" xml:space="preserve">
+    <value>Text editor menu</value>
+  </data>
+  <data name="Menu.Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Menu.File" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="Menu.Find" xml:space="preserve">
+    <value>Find (Ctrl+F)</value>
+  </data>
+  <data name="Menu.New" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="Menu.Open" xml:space="preserve">
+    <value>Open...</value>
+  </data>
+  <data name="Menu.Replace" xml:space="preserve">
+    <value>Replace (Ctrl+H)</value>
+  </data>
+  <data name="Menu.Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Menu.SaveAs" xml:space="preserve">
+    <value>Save As...</value>
+  </data>
+  <data name="Overlay.Loading" xml:space="preserve">
+    <value>Loading file…</value>
+  </data>
+  <data name="Overlay.Retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="Recovery.File" xml:space="preserve">
+    <value>Recovered unsaved changes to {0} – Save As to keep them</value>
+  </data>
+  <data name="Recovery.Untitled" xml:space="preserve">
+    <value>Recovered unsaved text from the last session – Save As to keep it</value>
+  </data>
+  <data name="Replace.AllButton" xml:space="preserve">
+    <value>Replace All</value>
+  </data>
+  <data name="Replace.AllTooltip" xml:space="preserve">
+    <value>Replace All (Ctrl+Alt+Enter)</value>
+  </data>
+  <data name="Replace.AriaLabel" xml:space="preserve">
+    <value>Replace with</value>
+  </data>
+  <data name="Replace.Button" xml:space="preserve">
+    <value>Replace</value>
+  </data>
+  <data name="Replace.Count.Many" xml:space="preserve">
+    <value>{0} replacements</value>
+  </data>
+  <data name="Replace.Count.One" xml:space="preserve">
+    <value>{0} replacement</value>
+  </data>
+  <data name="Replace.Placeholder" xml:space="preserve">
+    <value>Replace with…</value>
+  </data>
+  <data name="Replace.Tooltip" xml:space="preserve">
+    <value>Replace (Enter)</value>
+  </data>
+  <data name="Status.AriaLabel" xml:space="preserve">
+    <value>Editor status bar</value>
+  </data>
+  <data name="Status.Conflict" xml:space="preserve">
+    <value>⚡ Conflict detected – please Save As</value>
+  </data>
+  <data name="Status.NewDocument" xml:space="preserve">
+    <value>New document</value>
+  </data>
+  <data name="Title.Recovered" xml:space="preserve">
+    <value>{0} (recovered)</value>
+  </data>
+  <data name="Title.RecoveredUntitled" xml:space="preserve">
+    <value>Untitled (recovered)</value>
+  </data>
+  <data name="Title.Untitled" xml:space="preserve">
+    <value>Untitled</value>
+  </data>
+</root>

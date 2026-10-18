@@ -1,17 +1,21 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.ServiceProcess;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Systemctl;
 
 /// <summary>
-/// <c>systemctl [list-units|status|start|stop|restart|enable|disable|mask|is-active|is-enabled] [UNIT...]</c>
-/// (ADR 0064): the HackerOS services (the catalog's <c>Service</c> apps, through
+/// <c>systemctl [list-units|status|start|stop|restart|enable|disable|mask|is-active|is-enabled|is-failed|reset-failed] [UNIT...]</c>
+/// (ADR 0064, ADR 0097): the HackerOS services (the catalog's <c>Service</c> apps, through
 /// <see cref="HackServiceController"/>) shown and driven as systemd units. A unit is named by its
 /// app id or short name, with or without <c>.service</c> (<c>sync</c>, <c>sync.service</c>,
 /// <c>org.hackeros.sync</c>). Start types map to systemd states: automatic = <c>enabled</c>,
 /// manual = <c>disabled</c>, disabled = <c>masked</c>. Changing another app's service needs
-/// <c>services.manage</c>. Also answers as <c>service NAME start</c>.
+/// <c>services.manage</c>. Also answers as <c>service NAME start</c>. The active state is the
+/// service manager's (ADR 0097): a service that crashed reads as <c>failed (Result: exit-code)</c>
+/// until it is started again or <c>systemctl reset-failed</c> clears it.
 /// </summary>
 public sealed class SystemctlCommand(AppManifest manifest) : TerminalAppBase(manifest)
 {
@@ -19,6 +23,8 @@ public sealed class SystemctlCommand(AppManifest manifest) : TerminalAppBase(man
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        // Messages follow the process language; tables, states and the status block stay English, as systemd's (ADR 0104, section 5).
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         List<string> args = [.. context.Arguments.Where(a => a is not ("--no-pager" or "--user" or "--system" or "-q" or "--quiet" or "--now" or "--all" or "-a"))];
         IReadOnlyList<string> argv = context.App.Environment.GetCommandLineArgs();
         if (argv.Count > 0 && argv[0] == "service" && args.Count >= 2)
@@ -36,18 +42,28 @@ public sealed class SystemctlCommand(AppManifest manifest) : TerminalAppBase(man
         }
         catch (Exception exception) when (exception is UnauthorizedAccessException or NotSupportedException or IOException)
         {
-            await context.StandardError.WriteLineAsync($"Failed to connect to bus: {exception.Message}");
+            await context.StandardError.WriteLineAsync(text["BusFailed", exception.Message]);
             return 1;
         }
 
         if (verb is "list-units" or "list-unit-files" or "list")
         {
-            return await ListAsync(context, services, verb == "list-unit-files");
+            return await ListAsync(context, text, services, verb == "list-unit-files");
+        }
+
+        if (units.Count == 0 && verb == "reset-failed")
+        {
+            // Without a unit, systemd resets every failed unit.
+            units = [.. services.Where(static s => s.ActiveState == HackServiceActiveState.Failed).Select(static s => s.ServiceName)];
+            if (units.Count == 0)
+            {
+                return 0;
+            }
         }
 
         if (units.Count == 0)
         {
-            await context.StandardError.WriteLineAsync($"Too few arguments.");
+            await context.StandardError.WriteLineAsync(text["TooFewArguments"]);
             return 1;
         }
 
@@ -57,26 +73,34 @@ public sealed class SystemctlCommand(AppManifest manifest) : TerminalAppBase(man
             HackServiceController? service = Find(services, unit);
             if (service is null)
             {
-                await context.StandardError.WriteLineAsync(verb is "status" or "is-active" or "is-enabled"
-                    ? $"Unit {UnitName(unit)} could not be found."
-                    : $"Failed to {verb} {UnitName(unit)}: Unit {UnitName(unit)} not found.");
-                status = verb == "is-active" ? 3 : verb is "status" ? 4 : 5;
+                if (verb is "is-active" or "is-failed")
+                {
+                    // systemd prints the state of an unknown unit rather than an error.
+                    await context.StandardOutput.WriteLineAsync("inactive");
+                    status = Math.Max(status, verb == "is-active" ? 3 : 1);
+                    continue;
+                }
+
+                await context.StandardError.WriteLineAsync(verb is "status" or "is-enabled"
+                    ? text["UnitNotFound", UnitName(unit)]
+                    : text["VerbUnitNotFound", verb, UnitName(unit)]);
+                status = verb is "status" ? 4 : 5;
                 continue;
             }
 
             try
             {
-                status = Math.Max(status, await RunAsync(context, verb, service, cancellationToken));
+                status = Math.Max(status, await RunAsync(context, text, verb, service, cancellationToken));
             }
             catch (UnauthorizedAccessException)
             {
-                await context.StandardError.WriteLineAsync($"Failed to {verb} {UnitName(service)}: Access denied");
-                await context.StandardError.WriteLineAsync("See system logs and 'systemctl status' for details. (Needs the services.manage capability; try sudo.)");
+                await context.StandardError.WriteLineAsync(text["AccessDenied", verb, UnitName(service)]);
+                await context.StandardError.WriteLineAsync(text["AccessDeniedHint"]);
                 status = Math.Max(status, 4);
             }
             catch (InvalidOperationException exception)
             {
-                await context.StandardError.WriteLineAsync($"Failed to {verb} {UnitName(service)}: {exception.Message}");
+                await context.StandardError.WriteLineAsync(text["VerbFailed", verb, UnitName(service), exception.Message]);
                 status = Math.Max(status, 1);
             }
         }
@@ -84,7 +108,7 @@ public sealed class SystemctlCommand(AppManifest manifest) : TerminalAppBase(man
         return status;
     }
 
-    private static async Task<int> RunAsync(TerminalExecutionContext context, string verb, HackServiceController service, CancellationToken cancellationToken)
+    private static async Task<int> RunAsync(TerminalExecutionContext context, IStringLocalizer<Strings> text, string verb, HackServiceController service, CancellationToken cancellationToken)
     {
         switch (verb)
         {
@@ -100,46 +124,106 @@ public sealed class SystemctlCommand(AppManifest manifest) : TerminalAppBase(man
                 return 0;
             case "enable":
                 await service.SetStartTypeAsync(ServiceStartMode.Automatic, cancellationToken);
-                await context.StandardOutput.WriteLineAsync($"Created symlink /etc/systemd/system/multi-user.target.wants/{UnitName(service)} → /usr/lib/systemd/system/{UnitName(service)}.");
+                await context.StandardOutput.WriteLineAsync(text["CreatedSymlink", $"/etc/systemd/system/multi-user.target.wants/{UnitName(service)}", $"/usr/lib/systemd/system/{UnitName(service)}"]);
                 return 0;
             case "disable":
                 await service.SetStartTypeAsync(ServiceStartMode.Manual, cancellationToken);
-                await context.StandardOutput.WriteLineAsync($"Removed \"/etc/systemd/system/multi-user.target.wants/{UnitName(service)}\".");
+                await context.StandardOutput.WriteLineAsync(text["Removed", $"/etc/systemd/system/multi-user.target.wants/{UnitName(service)}"]);
                 return 0;
             case "mask":
                 await service.SetStartTypeAsync(ServiceStartMode.Disabled, cancellationToken);
-                await context.StandardOutput.WriteLineAsync($"Created symlink /etc/systemd/system/{UnitName(service)} → /dev/null.");
+                await context.StandardOutput.WriteLineAsync(text["CreatedSymlink", $"/etc/systemd/system/{UnitName(service)}", "/dev/null"]);
                 return 0;
             case "unmask":
                 await service.SetStartTypeAsync(ServiceStartMode.Manual, cancellationToken);
-                await context.StandardOutput.WriteLineAsync($"Removed \"/etc/systemd/system/{UnitName(service)}\".");
+                await context.StandardOutput.WriteLineAsync(text["Removed", $"/etc/systemd/system/{UnitName(service)}"]);
                 return 0;
             case "is-active":
-                await context.StandardOutput.WriteLineAsync(Active(service).Sub);
-                return service.Status == HackServiceControllerStatus.Running ? 0 : 3;
+                // systemd prints the ActiveState and exits 0 only for active (3 for failed too).
+                await context.StandardOutput.WriteLineAsync(Active(service).Active);
+                return service.ActiveState == HackServiceActiveState.Active ? 0 : 3;
+            case "is-failed":
+                await context.StandardOutput.WriteLineAsync(Active(service).Active);
+                return service.ActiveState == HackServiceActiveState.Failed ? 0 : 1;
+            case "reset-failed":
+                await service.ResetFailedAsync(cancellationToken);
+                return 0;
             case "is-enabled":
                 await context.StandardOutput.WriteLineAsync(Enabled(service));
                 return service.StartType == ServiceStartMode.Automatic ? 0 : 1;
             case "status":
-                (string active, string sub) = Active(service);
-                string dot = service.Status == HackServiceControllerStatus.Running ? "\u001b[32m●\u001b[0m" : "○";
-                await context.StandardOutput.WriteLineAsync($"{dot} {UnitName(service)} - {service.DisplayName}");
-                await context.StandardOutput.WriteLineAsync($"     Loaded: loaded (/usr/lib/systemd/system/{UnitName(service)}; {Enabled(service)}; preset: enabled)");
-                await context.StandardOutput.WriteLineAsync($"     Active: {active} ({sub})");
-                if (service.ProcessId is { } pid)
-                {
-                    await context.StandardOutput.WriteLineAsync($"   Main PID: {pid} ({ShortName(service.ServiceName)})");
-                }
-
-                await context.StandardOutput.WriteLineAsync($"       Docs: {service.Description}");
-                return service.Status == HackServiceControllerStatus.Running ? 0 : 3;
+                await WriteStatusAsync(context, service);
+                return service.ActiveState == HackServiceActiveState.Active ? 0 : 3;
             default:
-                await context.StandardError.WriteLineAsync($"Unknown command verb '{verb}'.");
+                await context.StandardError.WriteLineAsync(text["UnknownVerb", verb]);
                 return 1;
         }
     }
 
-    private static async Task<int> ListAsync(TerminalExecutionContext context, HackServiceController[] services, bool files)
+    /// <summary>
+    /// Prints a unit like <c>systemctl status</c> (ADR 0097, section 3): the dot (green ● active,
+    /// red × failed, ○ otherwise), the active state with its sub-state or result and since when,
+    /// the main PID, and the service's own status line and health when it reported them.
+    /// </summary>
+    private static async Task WriteStatusAsync(TerminalExecutionContext context, HackServiceController service)
+    {
+        TextWriter output = context.StandardOutput;
+        (string active, string sub) = Active(service);
+        string dot = service.ActiveState switch
+        {
+            HackServiceActiveState.Active => "\u001b[32m●\u001b[0m",
+            HackServiceActiveState.Failed => "\u001b[31m×\u001b[0m",
+            HackServiceActiveState.Activating or HackServiceActiveState.Deactivating => "\u001b[1m●\u001b[0m",
+            _ => "○"
+        };
+        string activeText = service.ActiveState == HackServiceActiveState.Failed
+            ? $"\u001b[31m{active}\u001b[0m ({sub})"
+            : service.ActiveState == HackServiceActiveState.Active ? $"\u001b[32m{active} ({sub})\u001b[0m" : $"{active} ({sub})";
+        if (service.ActiveStateChangedAt is { } since)
+        {
+            activeText += $" since {since:ddd yyyy-MM-dd HH:mm:ss} UTC; {Ago(context.App.Clock.UtcNow - since)} ago";
+        }
+
+        await output.WriteLineAsync($"{dot} {UnitName(service)} - {service.DisplayName}");
+        await output.WriteLineAsync($"     Loaded: loaded (/usr/lib/systemd/system/{UnitName(service)}; {Enabled(service)}; preset: enabled)");
+        await output.WriteLineAsync($"     Active: {activeText}");
+        if (service.ProcessId is { } pid)
+        {
+            await output.WriteLineAsync($"   Main PID: {pid} ({ShortName(service.ServiceName)})");
+        }
+        else if (service.ActiveState == HackServiceActiveState.Failed && service.ExitCode is { } exitCode)
+        {
+            await output.WriteLineAsync($"    Process: (code=exited, status={exitCode})");
+        }
+
+        if (service.StatusText is { Length: > 0 } text)
+        {
+            await output.WriteLineAsync($"     Status: \"{text}\"");
+        }
+
+        if (service.Health is HackServiceHealth.Degraded or HackServiceHealth.Unhealthy)
+        {
+            await output.WriteLineAsync($"     Health: {service.Health.ToString().ToLowerInvariant()}");
+        }
+
+        await output.WriteLineAsync($"       Docs: {service.Description}");
+    }
+
+    /// <summary>Formats a duration the way systemd does after "since …;" (<c>3min 12s</c>, <c>2h 5min</c>).</summary>
+    private static string Ago(TimeSpan elapsed)
+    {
+        if (elapsed < TimeSpan.Zero)
+        {
+            elapsed = TimeSpan.Zero;
+        }
+
+        return elapsed.TotalSeconds < 60 ? $"{(int)elapsed.TotalSeconds}s"
+            : elapsed.TotalMinutes < 60 ? $"{(int)elapsed.TotalMinutes}min {elapsed.Seconds}s"
+            : elapsed.TotalHours < 24 ? $"{(int)elapsed.TotalHours}h {elapsed.Minutes}min"
+            : $"{(int)elapsed.TotalDays} days";
+    }
+
+    private static async Task<int> ListAsync(TerminalExecutionContext context, IStringLocalizer<Strings> text, HackServiceController[] services, bool files)
     {
         if (files)
         {
@@ -150,7 +234,7 @@ public sealed class SystemctlCommand(AppManifest manifest) : TerminalAppBase(man
             }
 
             await context.StandardOutput.WriteLineAsync();
-            await context.StandardOutput.WriteLineAsync($"{services.Length} unit files listed.");
+            await context.StandardOutput.WriteLineAsync(text["UnitFilesListed", services.Length]);
             return 0;
         }
 
@@ -158,22 +242,26 @@ public sealed class SystemctlCommand(AppManifest manifest) : TerminalAppBase(man
         foreach (HackServiceController service in services)
         {
             (string active, string sub) = Active(service);
-            await context.StandardOutput.WriteLineAsync($"  {UnitName(service),-40} {"loaded",-6} {active,-8} {sub,-8} {service.DisplayName}");
+            string marker = service.ActiveState == HackServiceActiveState.Failed ? "●" : " ";
+            sub = service.ActiveState == HackServiceActiveState.Failed ? "failed" : sub;
+            await context.StandardOutput.WriteLineAsync($"{marker} {UnitName(service),-40} {"loaded",-6} {active,-8} {sub,-8} {service.DisplayName}");
         }
 
         await context.StandardOutput.WriteLineAsync();
-        await context.StandardOutput.WriteLineAsync("LOAD   = Reflects whether the unit definition was properly loaded.");
-        await context.StandardOutput.WriteLineAsync("ACTIVE = The high-level unit activation state, i.e. generalization of SUB.");
-        await context.StandardOutput.WriteLineAsync("SUB    = The low-level unit activation state, values depend on unit type.");
-        await context.StandardOutput.WriteLineAsync($"{services.Length} loaded units listed.");
+        await context.StandardOutput.WriteLineAsync(text["Legend.Load"]);
+        await context.StandardOutput.WriteLineAsync(text["Legend.Active"]);
+        await context.StandardOutput.WriteLineAsync(text["Legend.Sub"]);
+        await context.StandardOutput.WriteLineAsync(text["UnitsListed", services.Length]);
         return 0;
     }
 
-    private static (string Active, string Sub) Active(HackServiceController service) => service.Status switch
+    /// <summary>The ACTIVE and SUB columns; for a failed unit, SUB is <c>Result: …</c> in <c>status</c> and <c>failed</c> in lists.</summary>
+    private static (string Active, string Sub) Active(HackServiceController service) => service.ActiveState switch
     {
-        HackServiceControllerStatus.Running => ("active", "running"),
-        HackServiceControllerStatus.StartPending => ("activating", "start"),
-        HackServiceControllerStatus.StopPending => ("deactivating", "stop"),
+        HackServiceActiveState.Active => ("active", "running"),
+        HackServiceActiveState.Activating => ("activating", "start"),
+        HackServiceActiveState.Deactivating => ("deactivating", "stop-sigterm"),
+        HackServiceActiveState.Failed => ("failed", $"Result: {HackServiceStates.ToSystemdName(service.Result)}"),
         _ => ("inactive", "dead")
     };
 

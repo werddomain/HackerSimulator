@@ -39,8 +39,10 @@ public sealed class FileAssociationIndex
 
     /// <summary>
     /// Parses the file-association document's JSON content into a lookup index. The first entry
-    /// for a given normalized extension or media type wins; later duplicates are ignored so the
-    /// index stays deterministic regardless of how the document was hand-edited.
+    /// for a given normalized extension or media type and action wins; later duplicates are ignored
+    /// so the index stays deterministic regardless of how the document was hand-edited. Keying by
+    /// action lets two entries name different apps for <c>open</c> and <c>edit</c> of one type
+    /// (ADR 0121, section 1).
     /// </summary>
     /// <param name="content">Complete, already schema-valid document content.</param>
     public static FileAssociationIndex Build(string content)
@@ -66,14 +68,17 @@ public sealed class FileAssociationIndex
             FileAssociationEntry entry = new(extension, mediaType, appId, actions);
             entries.Add(entry);
 
-            if (extension is not null)
+            foreach (string action in actions)
             {
-                byExtension.TryAdd(extension, entry);
-            }
+                if (extension is not null)
+                {
+                    byExtension.TryAdd(Key(extension, action), entry);
+                }
 
-            if (mediaType is not null)
-            {
-                byMediaType.TryAdd(mediaType, entry);
+                if (mediaType is not null)
+                {
+                    byMediaType.TryAdd(Key(mediaType, action), entry);
+                }
             }
         }
 
@@ -91,16 +96,14 @@ public sealed class FileAssociationIndex
     public bool TryGetDefault(string? extension, string? mediaType, string action, out FileAssociationEntry entry)
     {
         if (extension is not null
-            && _byExtension.TryGetValue(extension.ToLowerInvariant(), out FileAssociationEntry? byExtensionEntry)
-            && byExtensionEntry.Actions.Contains(action, StringComparer.Ordinal))
+            && _byExtension.TryGetValue(Key(extension.ToLowerInvariant(), action), out FileAssociationEntry? byExtensionEntry))
         {
             entry = byExtensionEntry;
             return true;
         }
 
         if (mediaType is not null
-            && _byMediaType.TryGetValue(mediaType.ToLowerInvariant(), out FileAssociationEntry? byMediaTypeEntry)
-            && byMediaTypeEntry.Actions.Contains(action, StringComparer.Ordinal))
+            && _byMediaType.TryGetValue(Key(mediaType.ToLowerInvariant(), action), out FileAssociationEntry? byMediaTypeEntry))
         {
             entry = byMediaTypeEntry;
             return true;
@@ -109,6 +112,8 @@ public sealed class FileAssociationIndex
         entry = null!;
         return false;
     }
+
+    private static string Key(string target, string action) => target + "\n" + action;
 
     /// <summary>Serializes a candidate entry list back into canonical document content.</summary>
     /// <param name="entries">Entries to serialize, in the desired document order.</param>

@@ -1,0 +1,5 @@
+{
+  "name": "ip",
+  "description": "Affiche les interfaces, adresses et routes réseau",
+  "terminalUsage": "ip [-4] [-br] {addr|link|route|neigh} [show]"
+}

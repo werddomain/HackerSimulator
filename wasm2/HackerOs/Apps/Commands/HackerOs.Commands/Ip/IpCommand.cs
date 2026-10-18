@@ -2,6 +2,8 @@ using System.Globalization;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Ip;
 
@@ -80,12 +82,12 @@ public sealed class IpCommand(AppManifest manifest) : TerminalAppBase(manifest)
                 await context.StandardOutput.WriteLineAsync($"{NetworkInfo.Gateway} dev eth0 lladdr 02:42:c0:a8:01:01 REACHABLE");
                 return 0;
             case "":
-                await context.StandardError.WriteLineAsync("Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }");
+                await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["Usage"]);
                 await context.StandardError.WriteLineAsync("where  OBJECT := { address | link | route | neigh }");
                 await context.StandardError.WriteLineAsync("       OPTIONS := { -s[tatistics] | -br[ief] | -4 }");
                 return 255;
             default:
-                await context.StandardError.WriteLineAsync($"Object \"{objectName}\" is unknown, try \"ip help\".");
+                await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["UnknownObject", objectName]);
                 return 1;
         }
     }

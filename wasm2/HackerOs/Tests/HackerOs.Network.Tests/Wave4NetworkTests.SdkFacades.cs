@@ -71,6 +71,38 @@ public sealed partial class Wave4NetworkTests
     }
 
     [Fact]
+    public async Task HackHttpClient_sends_an_explicit_cookie_header_to_a_simulated_site_without_storing_it()
+    {
+        EnterApp(new GrantAllCapabilityChecker());
+        using HackHttpClient client = new();
+        client.DefaultRequestHeaders["Cookie"] = "hackmail_session=user=agent";
+
+        HackHttpResponse inbox = await client.GetAsync("https://hackmail.com/inbox");
+
+        // The value keeps its own '=': only the first one splits name from value.
+        Assert.Equal("HackMail — Inbox", inbox.Page?.Title);
+        Assert.Equal(0, inbox.RedirectCount);
+        Assert.Empty(inbox.SetCookies);
+        Assert.Empty(client.Cookies.GetAllCookies());
+    }
+
+    [Fact]
+    public async Task HackHttpClient_resolves_relative_uris_against_its_base_address()
+    {
+        EnterApp(new GrantAllCapabilityChecker());
+        using HackHttpClient client = new() { BaseAddress = new Uri("https://hackmail.com/") };
+
+        HackHttpResponse relative = await client.GetAsync("login");
+        HackHttpResponse absolute = await client.GetAsync("https://hackmail.com/login");
+        ArgumentException missingBase = await Assert.ThrowsAsync<ArgumentException>(() => new HackHttpClient().GetAsync("login"));
+
+        Assert.Equal(new Uri("https://hackmail.com/login"), relative.RequestUri);
+        Assert.Equal(absolute.StatusCode, relative.StatusCode);
+        Assert.Equal(absolute.ReadAsString(), relative.ReadAsString());
+        Assert.NotNull(missingBase);
+    }
+
+    [Fact]
     public async Task HackHttpClient_unknown_host_throws_name_resolution_error_with_browser_code()
     {
         EnterApp(new GrantAllCapabilityChecker());

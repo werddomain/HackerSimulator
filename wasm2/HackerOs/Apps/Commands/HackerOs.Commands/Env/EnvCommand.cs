@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Env;
 
@@ -23,7 +25,7 @@ public sealed class EnvCommand : TerminalAppBase
 
         if (context.Arguments.Count > 0)
         {
-            await context.StandardError.WriteLineAsync("env: running a command is not supported");
+            await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["CommandNotSupported"]);
             return 125;
         }
 

@@ -1,0 +1,5 @@
+{
+  "name": "prlimit",
+  "description": "Obtient et définit les limites de ressources d’un processus",
+  "terminalUsage": "prlimit [--pid <pid>] [--cpu[=souple:stricte]] [--rss[=]] [--nofile[=]] [--nproc[=]] [--noheadings]"
+}

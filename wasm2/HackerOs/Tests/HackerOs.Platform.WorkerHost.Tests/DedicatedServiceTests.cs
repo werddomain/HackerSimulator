@@ -41,4 +41,53 @@ public sealed class DedicatedServiceTests
         Assert.Contains("ticker started in RemoteAppExecutionContext", log, StringComparison.Ordinal);
         Assert.Contains("ticker stopping", log, StringComparison.Ordinal);
     }
+    /// <summary>
+    /// ADR 0097 through the worker protocol: the service's ready notification crosses svc.notify,
+    /// <c>kill -9</c> leaves the unit <c>failed (Result: killed)</c>, <c>is-failed</c> says so, and
+    /// <c>reset-failed</c> brings it back to <c>inactive</c>.
+    /// </summary>
+    [Fact]
+    public async Task A_killed_service_reads_as_failed_in_systemctl_until_reset_failed()
+    {
+        await using OsFixture os = await WorkerPoolTests.StartedAsync();
+
+        await os.RunAsync("systemctl start org.test.ticker").WaitAsync(TimeSpan.FromSeconds(10));
+        await OsFixture.WaitUntilAsync(() => os.FindPid("org.test.ticker") is not null);
+        long pid = os.FindPid("org.test.ticker")!.Value;
+        ShellRun running = await WaitForStatusAsync(os, "active (running)");
+
+        await os.RunAsync(os.OpenShell(), $"kill -9 {pid}").WaitAsync(TimeSpan.FromSeconds(10));
+        ShellRun failed = await WaitForStatusAsync(os, "(Result: killed)");
+        ShellRun isFailed = await os.RunAsync("systemctl is-failed org.test.ticker").WaitAsync(TimeSpan.FromSeconds(10));
+        ShellRun isActive = await os.RunAsync("systemctl is-active org.test.ticker").WaitAsync(TimeSpan.FromSeconds(10));
+        ShellRun reset = await os.RunAsync("systemctl reset-failed org.test.ticker").WaitAsync(TimeSpan.FromSeconds(10));
+        ShellRun afterReset = await os.RunAsync("systemctl is-failed org.test.ticker").WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Contains($"Main PID: {pid}", running.Stdout, StringComparison.Ordinal);
+        Assert.Contains("failed", failed.Stdout, StringComparison.Ordinal);
+        Assert.Equal(0, isFailed.ExitCode);
+        Assert.Equal("failed", isFailed.Stdout.Trim());
+        Assert.Equal(3, isActive.ExitCode);
+        Assert.Equal(0, reset.ExitCode);
+        Assert.NotEqual(0, afterReset.ExitCode);
+        Assert.Equal("inactive", afterReset.Stdout.Trim());
+    }
+
+    private static async Task<ShellRun> WaitForStatusAsync(OsFixture os, string expected)
+    {
+        ShellRun status = new(0, string.Empty, string.Empty);
+        for (int attempt = 0; attempt < 100; attempt++)
+        {
+            status = await os.RunAsync("systemctl status org.test.ticker").WaitAsync(TimeSpan.FromSeconds(10));
+            if (status.Stdout.Contains(expected, StringComparison.Ordinal))
+            {
+                return status;
+            }
+
+            await Task.Delay(50);
+        }
+
+        Assert.Fail($"systemctl status never showed '{expected}':\n{status.Stdout}");
+        return status;
+    }
 }

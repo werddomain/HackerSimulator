@@ -1,0 +1,14 @@
+.counter {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.site-button {
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--site-accent, #0b7a75);
+    color: #ffffff;
+    cursor: pointer;
+}

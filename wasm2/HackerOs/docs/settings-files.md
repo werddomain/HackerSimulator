@@ -20,11 +20,17 @@ migration, en lecture seule.
 | Réglages de l'OS (apparence, interface, menu Démarrer) | `/etc/hackeros/<document>.config` | `~/.config/hackeros/<document>.config` |
 | Politique (`policy.config`) | `/etc/hackeros/policy.config` | aucune (document `SystemOnly`) |
 | Politique des capacités dangereuses (`security.config`, ADR 0049) | `/etc/hackeros/security.config` | aucune (document `SystemOnly`) |
+| OOM killer (`[oom-killer]` : `enabled=false`, `min-free-percent=5`, ADR 0126, voir [`oom-killer.md`](oom-killer.md)) | `/etc/hackeros/memory.config` | aucune (couche système seulement) |
 | Décisions sur les capacités dangereuses (ADR 0049) | `/etc/hackeros/app-permissions.config` (`allow`/`deny`) | `~/.config/hackeros/app-permissions.config` (`deny` seulement) |
-| Associations de fichiers | `/etc/hackeros/file-associations.json` | `~/.config/hackeros/file-associations.json` |
-| Géométrie des fenêtres | aucune | `~/.local/state/hackeros/windows/<appId>.config` |
+| Accessibilité (`highContrast`, `textScale`, `reducedMotion`, ADR 0105, voir [`accessibility.md`](accessibility.md)) | `/etc/hackeros/accessibility.config` (aussi lu par l'écran de connexion) | `~/.config/hackeros/accessibility.config` |
+| Associations de fichiers | `/etc/hackeros/file-associations.json` | `~/.config/hackeros/file-associations.json` (même schéma, lu avant le fichier de la machine, ADR 0121, [`user-file-associations.md`](user-file-associations.md)) |
+| Raccourcis du gestionnaire de fenêtres (`[linux]`, `[fallback]`, ADR 0095, voir [`window-model.md`](window-model.md)) | `/etc/hackeros/keybindings.config` | `~/.config/hackeros/keybindings.config` |
+| Boîte « ne répond pas » (`[unresponsive] dialog`, ADR 0127 §3, voir [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md)) | `/etc/hackeros/window-manager.config` | `~/.config/hackeros/window-manager.config` |
+| Taille des fenêtres (`width`, `height`, `maximized`, ADR 0116 et 0122, voir [`window-geometry.md`](window-geometry.md)) | aucune | `~/.local/state/hackeros/windows/<appId>.config` |
 | Apps désinstallées (ADR 0048, voir [`app-installation.md`](app-installation.md)) | `/etc/hackeros/apps.config` | `~/.config/hackeros/apps.config` |
 | Partage du presse-papiers avec l'hôte (clé `sharing`, ADR 0065, voir [`clipboard.md`](clipboard.md)) | `/etc/hackeros/clipboard.config` | `~/.config/hackeros/clipboard.config` |
+| Synchro périodique (ADR 0101 §4, voir [`synchronization.md`](synchronization.md)) | `/etc/hackeros/sync.config` (`intervalMinutes`, lu seulement ici) | `~/.config/hackeros/sync.config` (`paused`) |
+| Conflits de synchro en attente (ADR 0101 §2) | aucune | `~/.local/state/hackeros/sync-conflicts.json` |
 
 `~/.local/state/` contient l'état propre à l'appareil : la synchronisation du
 système de fichiers l'ignore (`IFileSystemSyncService.IsDeviceLocal`).
@@ -33,6 +39,16 @@ Au premier démarrage, `/etc/hackeros/` reçoit des fichiers par défaut
 commentés (mode `0644`, propriétaire `root`). Comme ces fichiers listent toutes
 les clés, l'origine affichée d'une valeur de l'OS est « système » et non
 « intégrée » tant que personne n'a rien changé.
+
+### Clés sensibles (ADR 0100)
+
+Un document qui déclare des clés non publiques (`SettingSensitivity` `Private`,
+`SecretReference` ou `Restricted`) range ces clés dans un fichier compagnon
+`<doc>.private.config` en mode `0600`, à côté de `<doc>.config`, dans chaque
+couche. Quand l'appelant ne peut pas lire le fichier privé, la clé est rendue
+« masquée » au lieu de faire échouer la lecture. Les secrets vont dans le
+trousseau de connexion. Les documents de l'OS n'acceptent que des clés
+publiques. Détails : [`sensitive-settings.md`](sensitive-settings.md).
 
 ## Architecture
 
@@ -47,7 +63,7 @@ les clés, l'origine affichée d'une valeur de l'OS est « système » et non
 | Platform.Core | `IOsSettingsService`, `OsSettingsService` | Documents de l'OS (`OsSettingsDocument`) et fichiers entiers (`OsSettingsFile`), pour la session courante. |
 | Platform.Core | `SettingsStoreToFilesMigration` | Migration unique depuis IndexedDB, puis fichiers par défaut. |
 | Infrastructure.Browser | `IndexedDbLegacySettingsStore` | Lecture `getAll` du magasin `settings`, sans changer la version du schéma. |
-| Platform.Blazor | `WindowGeometryPersistence` | Restaure et enregistre la géométrie des fenêtres. |
+| Platform.Blazor | `WindowGeometryPersistence`, `WindowGeometryRecorder` | Lit et écrit la taille et l'état agrandi des fenêtres (ADR 0116, ADR 0122) : écrite par le recorder sur les faits de `WindowRuntime`, relue par `WindowLaunchCoordinator` à l'ouverture. |
 
 ### Ordre des couches
 
@@ -124,9 +140,13 @@ await appearance.SetAsync("accent", "cyan");                       // ~/.config/
 await appearance.SetManyAsync(values, SettingLayer.System);        // /etc/hackeros : sudo ou approbation
 ```
 
-- Documents ouverts : `appearance`, `ui-platform-preference`, `security`,
+- Documents ouverts : `appearance`, `accessibility` (ADR 0105), `ui-platform-preference`, `security`,
   `policy`, `clipboard` (ADR 0065) (`OsSettingsDocumentRegistry`, Platform Core). Un autre id lève
   `ArgumentException`.
+- Dans `appearance`, `desktopThemeId` et `mobileThemeId` sont des chaînes
+  libres depuis `v3/11` (ADR 0103) : l'id d'un thème intégré ou d'un fichier
+  `.theme` de `/etc/hackeros/themes/` ou `~/.config/hackeros/themes/` ; un id
+  inconnu donne le thème par défaut (voir [`theme-editor.md`](theme-editor.md)).
 - Aucune capacité : les droits des fichiers décident (D16). La couche
   utilisateur est écrite par l'OS au nom de l'utilisateur de la session ; la
   couche système avec les droits de fichiers de l'app appelante, donc `sudo`
@@ -158,8 +178,26 @@ système demande l'approbation administrateur ; un refus affiche un message au
 lieu d'une erreur. L'apparence passe par `HackSettings.OpenSystemAsync`
 (chantier `4-sdk-system-admin`). « Synchroniser » pousse et tire le système de
 fichiers, tire les permissions, pousse et tire les associations, puis relit
-l'apparence. L'onglet « Installed Apps » écrit les fichiers `apps.config`
+l'apparence. L'onglet « Synchronization » (ADR 0101) montre l'état de la
+synchro périodique, la suspend pour l'utilisateur (`paused` dans
+`~/.config/hackeros/sync.config`), lance un passage et liste les conflits en
+attente avec un bouton qui ouvre le dialogue de conflit. L'onglet « Installed Apps » écrit les fichiers `apps.config`
 (voir [`app-installation.md`](app-installation.md)).
+
+L'onglet « Langue » (ADR 0104, `LanguagePanel`) n'utilise pas `HackSettings` :
+la locale est un fichier systemd. Il montre la langue, `LANG`, les
+surcharges `LC_MESSAGES`/`LC_ALL` et un exemple de formats de la session (lus
+dans l'environnement du processus Paramètres), puis propose « Suivre la langue
+du système » ou une des `HackLocale.AvailableLocales`. Choisir une locale écrit
+`LANG=<locale>` dans `~/.config/locale.conf` (`HackLocale.FormatLocaleConf`,
+`~/.config` créé au besoin) ; « Suivre la langue du système » retire `LANG` et
+supprime le fichier s'il ne contient rien d'autre (un `LC_TIME` est gardé).
+Le changement s'applique à la prochaine connexion, ce que le panneau affiche.
+`/etc/locale.conf` est montré en lecture seule avec l'indication
+`sudo localectl set-locale`. L'app déclare pour cela
+`filesystem.user-home.read` et `filesystem.user-home.write`. Il n'y a pas de
+bouton « Se déconnecter » : le SDK n'expose pas la déconnexion aux apps.
+Tests : `Tests/HackerOs.Apps.Settings.Tests/LanguagePanelTests.cs`.
 
 ## Migration
 
@@ -191,6 +229,11 @@ ni la connexion. Le schéma IndexedDB ne change pas.
 - La synchronisation des paramètres (`ISettingsSyncService`) disparaît : les
   fichiers sont synchronisés avec le reste du système de fichiers (l'ADR 0044
   remplace l'ADR 0029).
+- Coût d'une écriture : les réglages passent par le système de fichiers comme
+  tout fichier. Depuis l'ADR 0090, chaque chemin est recherché en une requête à
+  IndexedDB ; enregistrer le choix Mobile/Desktop coûte 51 transactions
+  (235 ms) au lieu de 604 (845 ms). Voir
+  [`filesystem-path-lookup.md`](filesystem-path-lookup.md).
 
 ## Tests de contrat
 
@@ -204,6 +247,8 @@ Dans `Tests/HackerOs.Platform.Core.Tests/Settings/` :
   isolement entre apps, notification de changement ;
 - `SettingsStoreToFilesMigrationTests` : fichiers par défaut, copie unique,
   copie par utilisateur, magasin illisible.
+- `SensitiveSettingsTests` : fichiers privés, masquage, clés mal placées,
+  `Restricted`, secrets dans le trousseau (ADR 0100).
 
 ## Liste des tâches
 

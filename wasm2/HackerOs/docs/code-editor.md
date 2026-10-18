@@ -73,6 +73,16 @@ dossier appellent `HackProcess.CheckpointAsync` entre deux fichiers ou
 dossiers : la page reste fluide et la recherche s'arrête sur une demande
 d'arrêt.
 
+Depuis `exec/5` (ADR 0140), la vue Recherche lance la recherche comme **tâche
+en arrière-plan** (`CodeEditorWorkspaceSearch.SearchInBackgroundAsync`,
+[`background-jobs.md`](background-jobs.md)) : la fenêtre liste le dossier,
+puis le processus enfant `code-editor:search` lit chaque fichier et applique le
+motif, dans un Web Worker quand l'hôte en a. Les onglets non enregistrés
+passent dans l'entrée de la tâche ; un motif invalide est signalé tout de suite,
+sans processus. Une nouvelle frappe annule la tâche précédente (code 130).
+`SearchAsync` reste la recherche en ligne, partagée avec la tâche
+(`SearchFilesAsync`) et utilisée par les tests.
+
 Entrée dans la boîte Ctrl+P et dans la zone de création de l'explorateur
 agit au relâchement de la touche : l'éditeur reprend le focus quand la boîte
 se ferme, et un traitement à l'appui laisserait la fin de la frappe insérer
@@ -114,6 +124,7 @@ versionner `wwwroot/monaco/`. Le build .NET n'exécute pas npm.
 - [x] `CodeEditorWorkspace` : liste des fichiers, création, chemins relatifs.
 - [x] Recherche dans le dossier (casse, mot entier, regex, globs, contenu non
   enregistré) et ouverture rapide floue.
+- [x] Recherche dans le dossier en tâche `HackBackground` (`exec/5`, ADR 0140).
 - [x] Vues Explorateur (création en place, menu contextuel, corbeille) et
   Recherche ; boîte Ctrl+P.
 - [x] Atelier : menus, barre d'activité, barre latérale et terminal
@@ -139,3 +150,30 @@ Lenteur et dock (ADR 0063) :
   Ctrl+J, Status, Problems.
 - [x] Une écriture annulée (récupération remplacée par une frappe plus
   récente, fenêtre fermée) n'est plus affichée comme une erreur.
+
+## Points revérifiés (v3/11, ADR 0103 §3)
+
+Les deux points encore ouverts dans l'ancien suivi (P4-W3-002, P4-W3-007) ont
+été revus dans le code le 2026-10-17 :
+
+- **Ressources hors ligne.** Monaco, ses workers (`editor`, `json`, `css`,
+  `html`, `ts`) et sa police `codicon.ttf` sont livrés dans
+  `wwwroot/monaco/` ; aucun CDN. Les workers sont résolus par
+  `new URL(…, import.meta.url)`, donc sous `_content/…` comme le module.
+  **Corrigé :** le service worker publié ne mettait pas les polices en
+  cache (`.ttf` absent de `offlineAssetsInclude`), ce qui faisait
+  disparaître les icônes de Monaco hors ligne. `.ttf`, `.woff2`, `.svg` et
+  `.webp` y sont ajoutés.
+- **Gros fichiers.** Un document est limité à 1 MiB
+  (`CodeEditorDocument.MaxDocumentBytes`) à l'ouverture, à l'écriture et
+  dans la recherche (les fichiers plus gros sont ignorés) ; la récupération
+  est limitée à 8 MiB et l'espace de travail à 5 000 fichiers. Le refus
+  donne un message clair au lieu de figer l'onglet.
+- **Nettoyage des workers.** `DisposeAsync` appelle `destroy` (abonnements,
+  éditeur, tous les modèles, observateur ARIA) puis `dispose` de l'atelier
+  (écouteurs clavier, séparateurs) et libère le module. Sans modèle ouvert,
+  Monaco arrête lui-même ses workers de langage après sa période d'inactivité ;
+  ils sont partagés entre fenêtres, donc on ne les termine pas de force.
+- Reste vrai : la preuve de bout en bout dans une sortie publiée, hors ligne
+  et chargée à la demande n'est pas automatisée (les tests E2E tournent sur
+  l'hôte de développement).

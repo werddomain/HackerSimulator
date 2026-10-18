@@ -78,11 +78,34 @@ public abstract class AppDefinition
     /// <summary>Gets whether a second launch focuses the running instance (window apps only).</summary>
     public virtual bool SingleInstancePerUser => false;
 
-    /// <summary>Gets whether a service app starts at session login.</summary>
+    /// <summary>
+    /// Gets the <c>oom_score_adj</c> the app's processes start with (ADR 0126, section 4), from
+    /// <c>-1000</c> to <c>1000</c>, or <see langword="null"/> for the OS default (<c>0</c>, <c>-500</c>
+    /// for a system service). A higher value makes the app the OOM killer's first choice. A negative
+    /// value shields it and is reserved to system apps: the build of a host that references a
+    /// non-system app declaring one fails with <c>HOSAPP0024</c>. Added in App SDK 1.2.
+    /// </summary>
+    public virtual int? OomScoreAdjust => null;
+
+    /// <summary>Gets whether a service app starts on its own (at login, or at boot with <see cref="ServiceStartup"/>).</summary>
     public virtual bool AutoStart => false;
+
+    /// <summary>
+    /// Gets when an automatic service app starts (ADR 0097, section 4): <see langword="null"/> or
+    /// <see cref="AppServiceStartup.Login"/> after a login, <see cref="AppServiceStartup.Boot"/> at boot
+    /// (honored for system apps only). Service apps only.
+    /// </summary>
+    public virtual AppServiceStartup? ServiceStartup => null;
 
     /// <summary>Gets whether the app participates in platform Back navigation (window apps only).</summary>
     public virtual bool SupportsBack => false;
+
+    /// <summary>
+    /// Gets the window sizes of a window app (ADR 0095 §2): initial, minimum and maximum size and
+    /// whether the user can resize it. <see langword="null"/> (the default) keeps the OS defaults,
+    /// <see cref="WindowOptions.Default"/>. Window apps only.
+    /// </summary>
+    public virtual WindowOptions? Window => null;
 
     /// <summary>Gets the estimated simulation resource weights. Defaults to the zero profile.</summary>
     public virtual AppResourceProfileManifest Resources => AppResourceProfileManifest.None;
@@ -92,6 +115,13 @@ public abstract class AppDefinition
     /// <c>~/.config/&lt;appId&gt;/</c> (ADR 0044), or <see langword="null"/> when it persists none.
     /// </summary>
     public virtual AppSettingsSchemaManifest? Settings => null;
+
+    /// <summary>
+    /// Gets the App SDK range the app supports, or <see langword="null"/> (the default) to let the
+    /// manifest generator write the SDK version the app is compiled against as the minimum, with no
+    /// maximum (ADR 0098 §3). Declare a range only to narrow it, e.g. a maximum for a known break.
+    /// </summary>
+    public virtual AppSdkCompatibilityManifest? SdkCompatibility => null;
 
     /// <summary>Gets dependencies on other application packages.</summary>
     public virtual IReadOnlyList<AppDependencyManifest> Dependencies => [];
@@ -107,6 +137,21 @@ public abstract class AppDefinition
 
     /// <summary>Gets static package assets with integrity hashes.</summary>
     public virtual IReadOnlyList<AssetManifest> Assets => [];
+
+    /// <summary>
+    /// Gets the URLs a <see cref="AppKind.Web"/> app answers on, e.g. <c>http://intranet.hack/</c>
+    /// (ADR 0073, section 1): written to <c>web.urls</c>, published by the OS resolver and listened on
+    /// without <c>network.listen</c>. Required for a web app, empty for every other kind.
+    /// </summary>
+    public virtual IReadOnlyList<string> Urls => [];
+
+    /// <summary>
+    /// Gets the root component of a <see cref="AppKind.Web"/> app's interactive Blazor part
+    /// (ADR 0073, section 4; ADR 0084), or <see langword="null"/> when the site has none. Written to
+    /// <c>web.blazor</c>; the OS browser draws it in its page area. It must live in the entry-point
+    /// assembly (the one lazy loading fetches).
+    /// </summary>
+    public virtual Type? BlazorRoot => null;
 }
 
 /// <summary>

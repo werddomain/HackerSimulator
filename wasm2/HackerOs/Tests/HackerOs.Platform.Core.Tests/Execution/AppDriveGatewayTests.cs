@@ -81,7 +81,7 @@ public sealed class AppDriveGatewayTests
             Description = "HackDriveInfo test application.",
             Kind = AppKind.Terminal,
             EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", "DrivesApp"),
-            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
             Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
             Resources = AppResourceProfileManifest.None
         };

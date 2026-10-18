@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Jobs;
 
@@ -17,7 +19,7 @@ public sealed class JobsCommand(AppManifest manifest) : TerminalAppBase(manifest
         ArgumentNullException.ThrowIfNull(context);
         if (context.Shell is not { } shell)
         {
-            await context.StandardError.WriteLineAsync("jobs: no shell session");
+            await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["NoShell"]);
             return 1;
         }
 
@@ -33,8 +35,8 @@ public sealed class JobsCommand(AppManifest manifest) : TerminalAppBase(manifest
                     case 'r': runningOnly = true; break;
                     case 's': stoppedOnly = true; break;
                     default:
-                        await context.StandardError.WriteLineAsync($"jobs: -{flag}: invalid option");
-                        await context.StandardError.WriteLineAsync("jobs: usage: jobs [-lprs]");
+                        await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["InvalidOption", flag]);
+                        await context.StandardError.WriteLineAsync(context.App.GetLocalizer<Strings>()["Usage"]);
                         return 2;
                 }
             }

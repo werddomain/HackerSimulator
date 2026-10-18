@@ -5,7 +5,7 @@
     background-color: var(--hos-window-content-background, var(--hos-bg-base, #0b0e14));
     color: var(--hos-text-primary, #e6edf3);
     font-family: var(--hos-font-mono, 'Cascadia Mono', Consolas, monospace);
-    font-size: 13px;
+    font-size: 0.8125rem;
     box-sizing: border-box;
     overflow: hidden;
 }
@@ -26,7 +26,7 @@
 }
 
 .diag-title {
-    font-size: 16px;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--hos-accent, #58a6ff);
     letter-spacing: 0.5px;
@@ -35,7 +35,7 @@
 .diag-badge {
     padding: 2px 8px;
     border-radius: var(--hos-radius-pill, 12px);
-    font-size: 11px;
+    font-size: 0.6875rem;
     font-weight: 600;
     background-color: var(--hos-success, #238636);
     color: var(--hos-text-inverse, #ffffff);
@@ -43,6 +43,18 @@
 
 .diag-badge-info {
     background-color: var(--hos-info, #1f6feb);
+}
+
+/* Cross-origin isolation (ADR 0131): accent when isolated, muted with its reason when not. */
+.diag-badge-isolated {
+    background-color: var(--hos-accent, #2ea043);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--hos-accent, #2ea043) 60%, transparent);
+}
+
+.diag-badge-muted {
+    background-color: var(--hos-surface-raised, #30363d);
+    color: var(--hos-text-secondary, #c9d1d9);
+    border: 1px solid var(--hos-border, #484f58);
 }
 
 .diag-actions {
@@ -60,7 +72,7 @@
     box-shadow: var(--hos-btn-shadow, none);
     background-color: var(--hos-btn-bg, #21262d);
     color: var(--hos-btn-color, var(--hos-text-primary, #c9d1d9));
-    font-size: 12px;
+    font-size: 0.75rem;
     font-family: inherit;
     font-weight: var(--hos-btn-font-weight, 600);
     cursor: pointer;
@@ -109,7 +121,7 @@
     padding: 10px 16px;
     background-color: var(--hos-bg-surface, #161b22);
     border-bottom: 1px solid var(--hos-border-subtle, #30363d);
-    font-size: 12px;
+    font-size: 0.75rem;
     line-height: 1.5;
     color: var(--hos-text-secondary, #8b949e);
 }
@@ -143,7 +155,7 @@
     border: none;
     border-bottom: 1px solid var(--hos-border-subtle, #21262d);
     color: var(--hos-text-secondary, #8b949e);
-    font-size: 12px;
+    font-size: 0.75rem;
     font-family: inherit;
     text-align: left;
     cursor: pointer;
@@ -166,7 +178,7 @@
     padding: 2px 6px;
     border-radius: var(--hos-radius-pill, 10px);
     background-color: var(--hos-badge-bg, var(--hos-bg-elevated, #21262d));
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--hos-badge-color, var(--hos-text-secondary, #8b949e));
 }
 
@@ -183,13 +195,13 @@
 }
 
 .diag-store-name {
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 700;
     color: var(--hos-text-primary, #f0f6fc);
 }
 
 .diag-store-purpose {
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-text-secondary, #8b949e);
     margin-top: 4px;
 }
@@ -209,7 +221,7 @@
     box-shadow: var(--hos-input-shadow, none);
     color: var(--hos-input-color, var(--hos-text-primary, #f0f6fc));
     font-family: inherit;
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .diag-search-input:focus {
@@ -229,7 +241,7 @@
 .diag-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 0.75rem;
     text-align: left;
 }
 
@@ -265,7 +277,7 @@
 
 .diag-json-preview {
     font-family: var(--hos-font-mono, Consolas, monospace);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-info, #a5d6ff);
 }
 
@@ -280,7 +292,7 @@
     word-break: break-all;
     color: var(--hos-info, #79c0ff);
     font-family: var(--hos-font-mono, Consolas, monospace);
-    font-size: 11px;
+    font-size: 0.6875rem;
 }
 
 .diag-toast {
@@ -299,4 +311,51 @@
 .diag-error {
     color: #ff5577;
     font-family: 'Fira Code', 'Consolas', monospace;
+}
+
+/* Website databases (ADR 0088): a second group in the sidebar, under the OS stores. */
+.diag-sidebar-heading {
+    padding: 14px 14px 6px;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--hos-text-muted, #8b949e);
+    border-top: 1px solid var(--hos-border-subtle, #30363d);
+}
+
+.diag-sidebar-empty {
+    padding: 6px 14px 12px;
+    font-size: 0.6875rem;
+    color: var(--hos-text-muted, #8b949e);
+}
+
+.diag-site-item span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 6px;
+}
+
+.diag-site-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-top: 1px solid var(--hos-border-subtle, #30363d);
+}
+
+.diag-site-warning {
+    font-size: 0.75rem;
+    color: var(--hos-warning, #d29922);
+}
+
+.diag-btn-danger {
+    border-color: var(--hos-danger, #f85149);
+    color: var(--hos-danger, #f85149);
+}
+
+.diag-btn-danger:hover:not(:disabled) {
+    background-color: rgba(248, 81, 73, 0.15);
 }

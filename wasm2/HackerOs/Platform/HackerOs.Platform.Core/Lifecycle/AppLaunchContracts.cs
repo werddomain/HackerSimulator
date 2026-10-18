@@ -62,6 +62,15 @@ namespace HackerOs.Platform.Core.Lifecycle;
 /// Called with the new process as soon as it exists, before the app runs (ADR 0064): the shell
 /// records the process ids of a background job (<c>$!</c>, <c>jobs -l</c>, <c>kill %n</c>).
 /// </param>
+/// <param name="SystemScope">
+/// Whether the process belongs to the system rather than to the login session (ADR 0097, section 4):
+/// a service started at boot under the service account, which a logout does not stop.
+/// </param>
+/// <param name="Intent">
+/// The intent this launch carries (ADR 0096, section 5): the new process reads it as
+/// <see cref="IAppExecutionContext.Intent"/>; a running single instance receives it through
+/// <see cref="IAppExecutionContext.IntentReceived"/> instead of a second process.
+/// </param>
 public sealed record AppLaunchRequest(
     string AppId,
     AuthenticatedPrincipal Principal,
@@ -78,7 +87,16 @@ public sealed record AppLaunchRequest(
     TextWriter? StandardError = null,
     IShellSession? Shell = null,
     string? CommandName = null,
-    Action<ProcessRecord>? ProcessStarted = null);
+    Action<ProcessRecord>? ProcessStarted = null,
+    bool SystemScope = false,
+    AppIntentDelivery? Intent = null)
+{
+    /// <summary>
+    /// Gets the niceness the new process starts with (ADR 0127): <c>nice -n 5 make</c> sets it;
+    /// <see langword="null"/> inherits the parent's (<see cref="ProcessStartRequest.Nice"/>).
+    /// </summary>
+    public int? Nice { get; init; }
+}
 
 /// <summary>Identifies the stable outcome of one launch attempt.</summary>
 public enum AppLaunchStatus

@@ -51,3 +51,39 @@
         inset: 0;
     }
 }
+
+/* The window itself takes the keyboard focus only as a fallback (no focusable content); its
+   focused border already shows it, so no extra outline around the whole window. */
+.window-host:focus {
+    outline: none;
+}
+
+/* ADR 0127 §3: a window whose app does not answer its inputs is greyed out, like a hung window. The
+   grey fades in, except under reduced motion (ADR 0105) where it applies at once. */
+.window-host.is-not-responding .window-content {
+    filter: grayscale(1) brightness(0.7);
+    transition: filter 400ms ease;
+}
+
+/* A window-attached layer (ADR 0127 §3) shares the content's grid cell: it covers this window's
+   content only, so the title bar and its close button stay usable. */
+.window-overlay {
+    position: relative;
+    z-index: 2;
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+    min-height: 0;
+    /* Empty most of the time: what the overlay draws sets pointer-events: auto on itself. */
+    pointer-events: none;
+}
+
+.window-overlay.is-chromeless {
+    grid-row: 1 / -1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .window-host.is-not-responding .window-content {
+        transition: none;
+    }
+}

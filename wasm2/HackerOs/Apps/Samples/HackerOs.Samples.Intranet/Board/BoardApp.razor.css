@@ -1,0 +1,8 @@
+.board-empty {
+    padding: 24px;
+    color: #d5e8dc;
+}
+
+.board-empty a {
+    color: #39ff88;
+}

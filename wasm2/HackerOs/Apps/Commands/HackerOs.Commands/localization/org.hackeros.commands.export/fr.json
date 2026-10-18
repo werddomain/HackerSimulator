@@ -1,0 +1,5 @@
+{
+  "name": "export",
+  "description": "Définit les variables d'environnement du shell",
+  "terminalUsage": "export [NOM=valeur...]"
+}

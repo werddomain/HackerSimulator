@@ -27,8 +27,8 @@ place aux bugs d'intégration.
 
 Le périmètre est l'écosystème : système de fichiers, modèle d'app, services de
 l'OS et apps de base (explorateur de fichiers, console, gestionnaire de
-tâches, éditeur de texte). Les autres apps, le serveur, le mobile et le contenu
-de jeu sont hors périmètre.
+tâches, éditeur de texte). Les autres apps, le serveur et le mobile sont hors périmètre.
+**Aucun jeu sur ce repository** ([ADR 0135](adr/0135-no-game-in-this-repository.md)).
 
 ## 2. Constat de départ
 
@@ -377,7 +377,7 @@ Au minimum la parité avec le legacy (`src/apps/`), plus ces ajouts.
   0070, 2026-10-16).
 - Magasin d'apps et installation d'apps tierces au runtime. Le format
   `manifest.json` généré est déjà pensé pour lui.
-- Serveur, synchronisation, mobile, contenu de jeu et réseau simulé : non
+- Serveur, synchronisation, mobile et réseau simulé : non
   modifiés par ce plan, sauf adaptation aux nouvelles API.
 
 ## 10. ADR à écrire

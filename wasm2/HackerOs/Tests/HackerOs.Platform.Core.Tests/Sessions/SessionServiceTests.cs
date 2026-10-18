@@ -279,7 +279,7 @@ public sealed class LocalSessionServiceTests
             Description = "Test Editor",
             Kind = AppKind.Window,
             EntryPoint = new AppEntryPointManifest("HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.TextEditorWindow"),
-            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
             Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Visible, []),
             Resources = AppResourceProfileManifest.None,
             Capabilities = [AppCapabilities.DialogFileSave, AppCapabilities.FileSystemUserHomeRead]

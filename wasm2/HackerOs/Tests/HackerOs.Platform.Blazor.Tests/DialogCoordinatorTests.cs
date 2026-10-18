@@ -87,6 +87,52 @@ public sealed class DialogCoordinatorTests
         Assert.Equal(FileDialogStatus.Cancelled, result.Status);
     }
 
+    [Fact]
+    public async Task App_chooser_flow_returns_the_picked_app_and_always_use()
+    {
+        FakeFileDialogService fileDialogs = new();
+        using DialogCoordinator coordinator = new(fileDialogs);
+        TestExecutionContext context = new(TestSessionId);
+
+        Task<AppChooserDialogResult> chooserTask = coordinator.ChooseAppAsync(
+            context,
+            new AppChooserDialogRequest
+            {
+                Content = "Share with",
+                Candidates = [new("org.test.a", "A"), new("org.test.b", "B")]
+            }).AsTask();
+
+        AppChooserPresentation active = Assert.IsType<AppChooserPresentation>(coordinator.ActiveRequest);
+        Assert.Equal(2, active.Request.Candidates.Count);
+        // ADR 0096: only an offered app can be picked.
+        Assert.False(coordinator.SelectApp(active.Id, "org.test.other", alwaysUse: false));
+        Assert.True(coordinator.SelectApp(active.Id, "org.test.b", alwaysUse: true));
+
+        AppChooserDialogResult result = await chooserTask;
+        Assert.Equal(AppChooserStatus.Selected, result.Status);
+        Assert.Equal("org.test.b", result.AppId);
+        Assert.True(result.AlwaysUse);
+        Assert.Null(coordinator.ActiveRequest);
+    }
+
+    [Fact]
+    public async Task Cancelling_the_app_chooser_picks_nothing()
+    {
+        FakeFileDialogService fileDialogs = new();
+        using DialogCoordinator coordinator = new(fileDialogs);
+        TestExecutionContext context = new(TestSessionId);
+
+        Task<AppChooserDialogResult> chooserTask = coordinator.ChooseAppAsync(
+            context, new AppChooserDialogRequest { Candidates = [new("org.test.a", "A")] }).AsTask();
+        AppChooserPresentation active = Assert.IsType<AppChooserPresentation>(coordinator.ActiveRequest);
+
+        Assert.True(coordinator.Cancel(active.Id));
+
+        AppChooserDialogResult result = await chooserTask;
+        Assert.Equal(AppChooserStatus.Cancelled, result.Status);
+        Assert.Null(result.AppId);
+    }
+
     private sealed class FakeFileDialogService : IFileDialogService
     {
         public IAppExecutionContext? LastContext { get; private set; }
@@ -126,7 +172,7 @@ public sealed class DialogCoordinatorTests
             Description = "Test app",
             Kind = AppKind.Window,
             EntryPoint = new AppEntryPointManifest("Test", "Test"),
-            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
             Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
             Resources = AppResourceProfileManifest.None
         };

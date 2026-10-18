@@ -64,6 +64,33 @@ public sealed record NotificationAction
 
     /// <summary>Gets the human-readable label for the action.</summary>
     public string Label { get; }
+
+    /// <summary>Prefix of an action the shell handles itself by launching the named app.</summary>
+    public const string LaunchAppPrefix = "launch:";
+
+    /// <summary>
+    /// Creates an action the shell handles itself: choosing it launches <paramref name="appId"/>
+    /// and dismisses the notification. Used by OS notifications, such as the low-storage warning
+    /// that opens Diagnostic (ADR 0099, section 2).
+    /// </summary>
+    /// <param name="appId">App launched when the action is chosen.</param>
+    /// <param name="label">Label of the action.</param>
+    public static NotificationAction LaunchApp(string appId, string label)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        return new NotificationAction(LaunchAppPrefix + appId, label);
+    }
+
+    /// <summary>Gets the app this action launches, when it was made by <see cref="LaunchApp"/>.</summary>
+    /// <param name="appId">The app id, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> for a launch action.</returns>
+    public bool TryGetLaunchedApp([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? appId)
+    {
+        appId = Id.StartsWith(LaunchAppPrefix, StringComparison.Ordinal) && Id.Length > LaunchAppPrefix.Length
+            ? Id[LaunchAppPrefix.Length..]
+            : null;
+        return appId is not null;
+    }
 }
 
 /// <summary>

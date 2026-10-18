@@ -44,6 +44,7 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
     private readonly ISimulationClock _clock;
     private readonly ITopicMessageBus? _topicBus;
     private readonly ILogger _logger;
+    private readonly WebData.IWebSiteDatabaseStore? _webDatabases;
     private readonly IDisposable[] _sessionSubscriptions;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly HashSet<string> _loggedWarnings = new(StringComparer.Ordinal);
@@ -66,6 +67,10 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
     /// <param name="topicBus">Optional topic bus enabling the file watchers.</param>
     /// <param name="eventBus">Optional kernel event bus; login and logout then reload the user layer.</param>
     /// <param name="logger">Optional logger; its lines reach <c>/var/log/syslog</c> (ADR 0045).</param>
+    /// <param name="webDatabases">
+    /// Browser databases of web sites: <see cref="UninstallAsync"/> deletes the one of each uninstalled
+    /// web app (ADR 0088, section 4); <see langword="null"/> deletes nothing.
+    /// </param>
     public AppInstallationService(
         AppCatalog catalog,
         AppEnablementRegistry enablement,
@@ -75,7 +80,8 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
         ISimulationClock clock,
         ITopicMessageBus? topicBus = null,
         IEventBus? eventBus = null,
-        ILogger<AppInstallationService>? logger = null)
+        ILogger<AppInstallationService>? logger = null,
+        WebData.IWebSiteDatabaseStore? webDatabases = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _enablement = enablement ?? throw new ArgumentNullException(nameof(enablement));
@@ -85,6 +91,7 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _topicBus = topicBus;
         _logger = (ILogger?)logger ?? NullLogger.Instance;
+        _webDatabases = webDatabases;
         _sessionSubscriptions = eventBus is null
             ? []
             :
@@ -131,6 +138,14 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
     }
 
     /// <inheritdoc />
+    public ValueTask<AppUninstallPlan> PlanUninstallAsync(string appId, CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<string> closure = GetUninstallClosure(appId);
+        cancellationToken.ThrowIfCancellationRequested();
+        return ValueTask.FromResult(new AppUninstallPlan(closure, _orchestrator.GetRunningProcesses(closure)));
+    }
+
+    /// <inheritdoc />
     public async ValueTask<AppInstallationResult> UninstallAsync(
         string appId,
         AppInstallationScope scope,
@@ -157,6 +172,9 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
             return AppInstallationResult.Failed("apps.session.required");
         }
 
+        // Taken before the edit: the file watcher may apply the new file (and stop them) before
+        // the reload below, which then has nothing left to stop (ADR 0097, section 5).
+        IReadOnlyList<AppProcessInfo> runningBefore = _orchestrator.GetRunningProcesses(closure);
         await EditAsync(gateway, path, content => AppsConfigDocument.MarkUninstalled(content, closure, defaultContent), createIfMissing: true, cancellationToken)
             .ConfigureAwait(false);
         foreach (string uninstalled in closure)
@@ -164,8 +182,55 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
             _logger.LogInformation("apps: {AppId} uninstalled (scope={Scope}, by={User})", uninstalled, ScopeName(scope), ActorName());
         }
 
-        await ReloadAsync(cancellationToken).ConfigureAwait(false);
-        return new AppInstallationResult(true, closure, []);
+        IReadOnlyList<AppProcessInfo> reloaded = await ReloadCoreAsync(cancellationToken).ConfigureAwait(false);
+        HashSet<long> reported = [.. reloaded.Select(process => process.Pid)];
+        IReadOnlyList<AppProcessInfo> stopped =
+        [
+            .. reloaded,
+            .. runningBefore.Where(process => !reported.Contains(process.Pid)
+                && !_orchestrator.TryGetRunningInstance(ProcessId.FromInt64(process.Pid), out _, out _))
+        ];
+        foreach (AppProcessInfo process in stopped)
+        {
+            _logger.LogInformation(
+                "apps: process {Pid} ({Name}, user {User}) stopped by the uninstall{Forced}",
+                process.Pid, process.Name, process.UserName, process.Forced ? ", forced after its grace period" : string.Empty);
+        }
+
+        await DeleteWebSiteDatabasesAsync(closure, cancellationToken).ConfigureAwait(false);
+        return new AppInstallationResult(true, closure, [], stopped);
+    }
+
+    /// <summary>
+    /// Deletes the browser database of every web app just uninstalled (ADR 0088, section 4): the only data
+    /// an uninstall removes, since the user cannot reach it in the files. A failure is logged, not thrown:
+    /// the uninstall itself is done.
+    /// </summary>
+    private async ValueTask DeleteWebSiteDatabasesAsync(IReadOnlyList<string> uninstalled, CancellationToken cancellationToken)
+    {
+        if (_webDatabases is null)
+        {
+            return;
+        }
+
+        foreach (string appId in uninstalled)
+        {
+            if (!_catalog.Manifests.TryGetValue(appId, out AppManifest? manifest) || manifest.Kind != AppKind.Web)
+            {
+                continue;
+            }
+
+            string name = AppSdk.WebData.HackWebDbNames.ForApp(appId);
+            try
+            {
+                await _webDatabases.DeleteAsync(name, cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation("apps: {AppId} browser database {Database} deleted", appId, name);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogWarning("apps: {AppId} browser database {Database} could not be deleted: {Error}", appId, name, exception.Message);
+            }
+        }
     }
 
     /// <inheritdoc />
@@ -220,8 +285,13 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
     /// disabled, reinstalled ones enabled again. A missing or unreadable file means "nothing uninstalled".
     /// </summary>
     /// <param name="cancellationToken">Cancels the reads.</param>
-    public async ValueTask ReloadAsync(CancellationToken cancellationToken = default)
+    public async ValueTask ReloadAsync(CancellationToken cancellationToken = default) =>
+        await ReloadCoreAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <summary><see cref="ReloadAsync"/>, returning the processes the newly uninstalled apps had running.</summary>
+    private async ValueTask<IReadOnlyList<AppProcessInfo>> ReloadCoreAsync(CancellationToken cancellationToken)
     {
+        IReadOnlyList<AppProcessInfo> stopped;
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -246,7 +316,7 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
                 _effective = effective;
             }
 
-            await ApplyAsync(effective).ConfigureAwait(false);
+            stopped = await ApplyAsync(effective).ConfigureAwait(false);
         }
         finally
         {
@@ -254,6 +324,7 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
+        return stopped;
     }
 
     /// <inheritdoc />
@@ -296,14 +367,16 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
         return AppsConfigDocument.ExpandDependents(_catalog, accepted);
     }
 
-    private async ValueTask ApplyAsync(IReadOnlySet<string> effective)
+    private async ValueTask<IReadOnlyList<AppProcessInfo>> ApplyAsync(IReadOnlySet<string> effective)
     {
+        List<AppProcessInfo> stopped = [];
         // Dependents first, so each DisableAsync only has its own app left to stop.
         foreach (string appId in _catalog.DeactivationOrder)
         {
             if (effective.Contains(appId) && _enablement.IsEnabled(appId))
             {
-                await _orchestrator.DisableAsync(appId, ProcessExitReason.Disabled).ConfigureAwait(false);
+                AppDisableResult disabled = await _orchestrator.DisableAsync(appId, ProcessExitReason.Disabled).ConfigureAwait(false);
+                stopped.AddRange(disabled.StoppedProcesses ?? []);
             }
         }
 
@@ -315,6 +388,8 @@ public sealed class AppInstallationService : IAppInstallationService, IAsyncDisp
                 await _orchestrator.EnableAsync(appId).ConfigureAwait(false);
             }
         }
+
+        return stopped;
     }
 
     private async ValueTask<AppsConfigReadResult> ReadFileAsync(IAppFileSystemGateway gateway, VirtualPath path, CancellationToken cancellationToken)

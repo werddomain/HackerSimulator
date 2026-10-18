@@ -16,7 +16,7 @@
 }
 
 .setting-desc {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-secondary, #a8bac4);
     margin-bottom: 12px;
 }
@@ -101,6 +101,25 @@
 
 .app-badge-locked {
     border-style: dashed;
+}
+
+/* ADR 0098 §3 and §5: refused (wrong SDK) or altered apps. */
+.app-row.is-incompatible,
+.app-row.is-damaged {
+    border-left-color: var(--hos-error, #ff6b70);
+}
+
+.app-badge-incompatible,
+.app-badge-damaged {
+    border-color: var(--hos-error, #ff6b70);
+    color: var(--hos-error, #ff9a91);
+}
+
+.app-problem {
+    font-family: var(--hos-font-mono, ui-monospace, monospace);
+    font-size: 0.72rem;
+    color: var(--hos-error, #ff9a91);
+    white-space: normal;
 }
 
 .commands-group {
@@ -213,6 +232,26 @@
     color: var(--hos-warning, #e0ad50);
 }
 
+.process-list {
+    margin: 0 0 0.75rem;
+    padding: 6px 10px 6px 1.75rem;
+    font-size: 0.82rem;
+    font-family: var(--hos-font-mono, ui-monospace, monospace);
+    color: var(--hos-error, #ff7b72);
+    border-left: 3px solid var(--hos-error, #ff7b72);
+    background: rgba(255, 123, 114, 0.06);
+}
+
+.process-pid {
+    display: inline-block;
+    min-width: 3.5em;
+    color: var(--hos-text-muted, #8b949e);
+}
+
+.process-user {
+    color: var(--hos-text-muted, #8b949e);
+}
+
 .scope-options {
     display: inline-flex;
     border: 1px solid var(--hos-border, #3a4b53);
@@ -249,4 +288,16 @@
         flex-direction: column;
         align-items: flex-start;
     }
+}
+
+/* ADR 0088: the one thing an uninstall deletes, a web site's browser database. */
+.apps-site-data {
+    padding: 8px 10px;
+    border-left: 3px solid var(--hos-warning, #d29922);
+    background: rgba(210, 153, 34, 0.08);
+}
+
+/* On an app's own page (ADR 0096 §4) the tab's introduction is left out. */
+.setting-desc.is-hidden {
+    display: none;
 }

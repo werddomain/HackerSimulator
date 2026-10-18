@@ -6,8 +6,9 @@ using HackerOs.Simulation.Abstractions.Processes;
 namespace HackerOs.Platform.Core.Network;
 
 /// <summary>
-/// Charges the traffic of one app instance to <c>eth0</c> (<c>/proc/net/dev</c>) and to its
-/// process (<c>rchar</c>/<c>wchar</c> of <c>/proc/&lt;pid&gt;/io</c>), per ADR 0057 sections 3 and 5.
+/// Charges the traffic of one app instance to <c>eth0</c>, or to <c>lo</c> for traffic that stays on
+/// this machine (ADR 0074), in <c>/proc/net/dev</c>, and to its process (<c>rchar</c>/<c>wchar</c>
+/// of <c>/proc/&lt;pid&gt;/io</c>), per ADR 0057 sections 3 and 5.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -39,7 +40,7 @@ internal sealed class NetworkTrafficMeter(
     public bool IsEnabled => statistics is not null || (processIo is not null && pid is not null);
 
     /// <summary>Records one DNS query and its answer (or a receive error when it failed).</summary>
-    public void Dns(string name, int answers, bool succeeded)
+    public void Dns(string name, int answers, bool succeeded, bool local = false)
     {
         if (!IsEnabled)
         {
@@ -48,19 +49,19 @@ internal sealed class NetworkTrafficMeter(
 
         // Question: QNAME (length-prefixed labels, ~name + 2) + QTYPE + QCLASS.
         int question = DnsHeader + name.Length + 2 + 4;
-        Transmit(IpHeader + UdpHeader + question);
+        Transmit(IpHeader + UdpHeader + question, local);
         if (succeeded)
         {
-            Receive(IpHeader + UdpHeader + question + (answers * (DnsAnswerFixed + 4)));
+            Receive(IpHeader + UdpHeader + question + (answers * (DnsAnswerFixed + 4)), local);
         }
         else
         {
-            ReceiveError();
+            ReceiveError(local);
         }
     }
 
     /// <summary>Records one ICMP echo request and its reply.</summary>
-    public void Echo(bool replied)
+    public void Echo(bool replied, bool local = false)
     {
         if (!IsEnabled)
         {
@@ -68,19 +69,19 @@ internal sealed class NetworkTrafficMeter(
         }
 
         const int packet = IpHeader + IcmpHeader + PingPayload;
-        Transmit(packet);
+        Transmit(packet, local);
         if (replied)
         {
-            Receive(packet);
+            Receive(packet, local);
         }
         else
         {
-            ReceiveError();
+            ReceiveError(local);
         }
     }
 
     /// <summary>Records one HTTP exchange, every redirect hop included.</summary>
-    public void Http(HackHttpRequest request, HackNetworkResult<HackHttpResponse> result)
+    public void Http(HackHttpRequest request, HackNetworkResult<HackHttpResponse> result, bool local = false)
     {
         if (!IsEnabled)
         {
@@ -90,8 +91,8 @@ internal sealed class NetworkTrafficMeter(
         int requestSize = RequestSize(request);
         if (!result.Succeeded)
         {
-            Transmit(requestSize);
-            ReceiveError();
+            Transmit(requestSize, local);
+            ReceiveError(local);
             return;
         }
 
@@ -99,16 +100,16 @@ internal sealed class NetworkTrafficMeter(
         // Each redirect is a full round trip: the same request, and a header-only 3xx answer.
         for (int hop = 0; hop < response.RedirectCount; hop++)
         {
-            Transmit(requestSize);
-            Receive(IpHeader + TcpHeader + 64);
+            Transmit(requestSize, local);
+            Receive(IpHeader + TcpHeader + 64, local);
         }
 
-        Transmit(requestSize);
-        Receive(ResponseSize(response));
+        Transmit(requestSize, local);
+        Receive(ResponseSize(response), local);
     }
 
     /// <summary>Records a TCP probe: one SYN per port, one SYN-ACK or RST per port that answered.</summary>
-    public void Probe(HackNetworkResult<IReadOnlyList<HackPortProbeResult>> result, int portCount)
+    public void Probe(HackNetworkResult<IReadOnlyList<HackPortProbeResult>> result, int portCount, bool local = false)
     {
         if (!IsEnabled)
         {
@@ -118,29 +119,29 @@ internal sealed class NetworkTrafficMeter(
         const int segment = IpHeader + TcpHeader;
         if (!result.Succeeded)
         {
-            Transmit(segment);
-            ReceiveError();
+            Transmit(segment, local);
+            ReceiveError(local);
             return;
         }
 
         foreach (HackPortProbeResult port in result.Value!)
         {
-            Transmit(segment);
+            Transmit(segment, local);
             if (port.State != HackPortState.Filtered)
             {
-                Receive(segment);
+                Receive(segment, local);
             }
         }
 
         // Ports the probe did not report (none today) still cost their SYN.
         for (int missing = result.Value!.Count; missing < portCount; missing++)
         {
-            Transmit(segment);
+            Transmit(segment, local);
         }
     }
 
     /// <summary>Records OS detection: the sixteen TCP/UDP/ICMP probes of <c>nmap -O</c>, answered when the host is up.</summary>
-    public void Fingerprint(bool answered)
+    public void Fingerprint(bool answered, bool local = false)
     {
         if (!IsEnabled)
         {
@@ -151,17 +152,55 @@ internal sealed class NetworkTrafficMeter(
         const int segment = IpHeader + TcpHeader;
         for (int probe = 0; probe < probes; probe++)
         {
-            Transmit(segment);
+            Transmit(segment, local);
             if (answered)
             {
-                Receive(segment);
+                Receive(segment, local);
             }
         }
 
         if (!answered)
         {
-            ReceiveError();
+            ReceiveError(local);
         }
+    }
+
+    /// <summary>
+    /// Records one TCP segment or UDP datagram of an open socket (ADR 0102): the payload plus the
+    /// IPv4 and transport headers.
+    /// </summary>
+    /// <param name="payload">Payload bytes.</param>
+    /// <param name="outbound">Sent (<see langword="true"/>) or received.</param>
+    /// <param name="udp">UDP (8-byte header) rather than TCP (20 bytes).</param>
+    public void Segment(int payload, bool outbound, bool udp)
+    {
+        if (!IsEnabled)
+        {
+            return;
+        }
+
+        int size = IpHeader + (udp ? UdpHeader : TcpHeader) + payload;
+        if (outbound)
+        {
+            Transmit(size, local: false);
+        }
+        else
+        {
+            Receive(size, local: false);
+        }
+    }
+
+    /// <summary>Records a connect that failed: the SYN (or first datagram) sent and one receive error.</summary>
+    /// <param name="udp">UDP rather than TCP.</param>
+    public void ConnectFailed(bool udp)
+    {
+        if (!IsEnabled)
+        {
+            return;
+        }
+
+        Transmit(IpHeader + (udp ? UdpHeader : TcpHeader), local: false);
+        ReceiveError(local: false);
     }
 
     private static int RequestSize(HackHttpRequest request)
@@ -175,10 +214,12 @@ internal sealed class NetworkTrafficMeter(
         }
 
         int body = 0;
-        if (request.Form is { Count: > 0 } form)
+        if (request.Content is { } content)
         {
-            body = form.Sum(static pair => Uri.EscapeDataString(pair.Key).Length + 1 + Uri.EscapeDataString(pair.Value).Length)
-                + form.Count - 1;
+            // ADR 0074 section 1: the body travels as is, announced by its two headers.
+            head.Append("Content-Type: ").Append(content.ContentType).Append("\r\n");
+            head.Append("Content-Length: ").Append(content.Length).Append("\r\n");
+            body = content.Length;
         }
 
         if (request.Cookies.Count > 0)
@@ -200,26 +241,29 @@ internal sealed class NetworkTrafficMeter(
         }
 
         head.Append("\r\n");
-        return IpHeader + TcpHeader + Encoding.UTF8.GetByteCount(head.ToString()) + response.Content.Length;
+        return IpHeader + TcpHeader + Encoding.UTF8.GetByteCount(head.ToString()) + response.ContentBytes.Length;
     }
 
-    private void Transmit(int bytes)
+    /// <summary>The interface a packet crosses: <c>lo</c> when both ends are this machine.</summary>
+    private static string Device(bool local) => local ? NetworkInterfaceNames.Loopback : NetworkInterfaceNames.Ethernet;
+
+    private void Transmit(int bytes, bool local)
     {
-        statistics?.RecordTransmit(NetworkInterfaceNames.Ethernet, bytes);
+        statistics?.RecordTransmit(Device(local), bytes);
         if (processIo is not null && pid is { } owner)
         {
             processIo.RecordWrite(owner, bytes, toStorage: false);
         }
     }
 
-    private void Receive(int bytes)
+    private void Receive(int bytes, bool local)
     {
-        statistics?.RecordReceive(NetworkInterfaceNames.Ethernet, bytes);
+        statistics?.RecordReceive(Device(local), bytes);
         if (processIo is not null && pid is { } owner)
         {
             processIo.RecordRead(owner, bytes, fromStorage: false);
         }
     }
 
-    private void ReceiveError() => statistics?.RecordReceiveError(NetworkInterfaceNames.Ethernet);
+    private void ReceiveError(bool local) => statistics?.RecordReceiveError(Device(local));
 }

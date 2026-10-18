@@ -1,6 +1,8 @@
 using System.Globalization;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Sleep;
 
@@ -14,9 +16,10 @@ public sealed class SleepCommand(AppManifest manifest) : TerminalAppBase(manifes
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         if (context.Arguments.Count == 0)
         {
-            await context.StandardError.WriteLineAsync("sleep: missing operand");
+            await context.StandardError.WriteLineAsync(text["MissingOperand"]);
             return 1;
         }
 
@@ -25,7 +28,7 @@ public sealed class SleepCommand(AppManifest manifest) : TerminalAppBase(manifes
         {
             if (!TryParseDuration(argument, out double value))
             {
-                await context.StandardError.WriteLineAsync($"sleep: invalid time interval '{argument}'");
+                await context.StandardError.WriteLineAsync(text["InvalidInterval", argument]);
                 return 1;
             }
 

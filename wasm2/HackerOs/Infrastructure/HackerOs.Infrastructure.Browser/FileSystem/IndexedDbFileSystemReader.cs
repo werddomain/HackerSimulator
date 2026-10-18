@@ -59,43 +59,68 @@ internal sealed class IndexedDbFileSystemReader : IAsyncDisposable
     }
 
     /// <summary>Resolves a canonical path to its persisted entry, or null when a link is absent.</summary>
+    /// <remarks>
+    /// The root is one entry read. Any deeper path is walked inside a single read-only
+    /// transaction (see <see cref="ResolveComponentsAsync"/>).
+    /// </remarks>
     internal async ValueTask<IndexedDbFileSystemEntryRecord?> ResolveAsync(
         VirtualPath path,
         CancellationToken cancellationToken = default)
     {
         await _adapter.OpenAsync(IndexedDbMigrationPlan.CreateCurrent(), cancellationToken).ConfigureAwait(false);
-        string currentId = IndexedDbFileSystemBootstrapper.RootEntryId.ToString();
-        IndexedDbFileSystemEntryRecord? current = await GetEntryAsync(currentId, cancellationToken).ConfigureAwait(false);
-        if (current is null || path.Value == "/")
+        if (path.Value == "/")
         {
-            return current;
+            return await GetEntryAsync(IndexedDbFileSystemBootstrapper.RootEntryId.ToString(), cancellationToken)
+                .ConfigureAwait(false);
         }
 
-        foreach (string segment in path.Value.Split('/', StringSplitOptions.RemoveEmptyEntries))
-        {
-            IReadOnlyList<JsonElement> linkResults = await _adapter.ExecuteAsync(
-                Boundary,
-                IndexedDbTransactionMode.ReadOnly,
-                [new IndexedDbOperation(
-                    "get",
-                    HackerOsIndexedDbSchema.FileSystemLinkStoreName,
-                    Key: new object[] { currentId, segment })],
-                cancellationToken).ConfigureAwait(false);
-            JsonElement link = linkResults.Single();
-            if (IsMissing(link))
-            {
-                return null;
-            }
+        IReadOnlyList<IndexedDbFileSystemEntryRecord> components =
+            await ResolveComponentsAsync(path, cancellationToken).ConfigureAwait(false);
+        return components.Count == CountNames(path) ? components[^1] : null;
+    }
 
-            currentId = RequiredString(link, "entryId");
-            current = await GetEntryAsync(currentId, cancellationToken).ConfigureAwait(false);
-            if (current is null)
-            {
-                throw new InvalidDataException($"Filesystem link '{segment}' references missing entry '{currentId}'.");
-            }
+    /// <summary>
+    /// Reads the entry of each component of a path other than <c>/</c>, in order, stopping before
+    /// the first missing name. The whole walk is one read-only transaction (the
+    /// <c>resolvePath</c> operation of <c>indexedDb.js</c>): one browser round trip and one
+    /// consistent snapshot instead of two round trips per component.
+    /// </summary>
+    /// <exception cref="InvalidDataException">A link references a missing entry.</exception>
+    internal async ValueTask<IReadOnlyList<IndexedDbFileSystemEntryRecord>> ResolveComponentsAsync(
+        VirtualPath path,
+        CancellationToken cancellationToken = default)
+    {
+        await _adapter.OpenAsync(IndexedDbMigrationPlan.CreateCurrent(), cancellationToken).ConfigureAwait(false);
+        string[] names = path.Value.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        IReadOnlyList<JsonElement> results = await _adapter.ExecuteAsync(
+            Boundary,
+            IndexedDbTransactionMode.ReadOnly,
+            [new IndexedDbOperation(
+                "resolvePath",
+                HackerOsIndexedDbSchema.FileSystemEntryStoreName,
+                Key: IndexedDbFileSystemBootstrapper.RootEntryId.ToString(),
+                Query: names,
+                ReferenceObjectStoreName: HackerOsIndexedDbSchema.FileSystemLinkStoreName)],
+            cancellationToken).ConfigureAwait(false);
+        JsonElement chain = results.Single();
+        if (chain.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidDataException("Persisted filesystem path walk result is malformed.");
         }
 
-        return current;
+        List<IndexedDbFileSystemEntryRecord> components = [];
+        foreach (JsonElement element in chain.EnumerateArray())
+        {
+            if (element.TryGetProperty("danglingLink", out JsonElement danglingLink))
+            {
+                throw new InvalidDataException(
+                    $"Filesystem link '{danglingLink.GetString()}' references missing entry '{RequiredString(element, "entryId")}'.");
+            }
+
+            components.Add(IndexedDbFileSystemEntryRecord.FromJson(element));
+        }
+
+        return components;
     }
 
     /// <summary>Returns immediate child records in ordinal name order, or null when the path is absent.</summary>
@@ -198,6 +223,9 @@ internal sealed class IndexedDbFileSystemReader : IAsyncDisposable
         RequiredString(element, "parentId"),
         RequiredString(element, "name"),
         RequiredString(element, "entryId"));
+
+    private static int CountNames(VirtualPath path) =>
+        path.Value.Split('/', StringSplitOptions.RemoveEmptyEntries).Length;
 
     private static bool IsMissing(JsonElement element) =>
         element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined;

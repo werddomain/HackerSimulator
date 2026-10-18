@@ -1,11 +1,14 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Help;
 
 /// <summary>
 /// Implements <c>help [command]</c> / <c>man</c> (ADR 0051, section 4): lists the commands
-/// installed right now, read from the shell (<see cref="IShellSession.GetCommands"/>), or prints
+/// installed right now, read from the shell in the language of the command's process
+/// (<see cref="IShellSession.GetCommands(System.Globalization.CultureInfo)"/>), or prints
 /// one command's usage. Nothing is hard-coded: a third-party command appears as soon as it is
 /// installed and disappears when it is uninstalled.
 /// </summary>
@@ -23,13 +26,14 @@ public sealed class HelpCommand : TerminalAppBase
         cancellationToken.ThrowIfCancellationRequested();
 
         TextWriter output = context.StandardOutput;
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         if (context.Shell is not { } shell)
         {
-            await context.StandardError.WriteLineAsync("help: no shell session");
+            await context.StandardError.WriteLineAsync(text["NoShell"]);
             return 1;
         }
 
-        IReadOnlyList<ShellCommandInfo> commands = shell.GetCommands();
+        IReadOnlyList<ShellCommandInfo> commands = shell.GetCommands(context.App.Culture);
         if (context.Arguments.Count > 0)
         {
             int status = 0;
@@ -40,23 +44,23 @@ public sealed class HelpCommand : TerminalAppBase
                     || c.Aliases.Any(alias => string.Equals(alias, name, StringComparison.OrdinalIgnoreCase)));
                 if (command is null)
                 {
-                    await context.StandardError.WriteLineAsync($"help: no help topics match '{name}'");
+                    await context.StandardError.WriteLineAsync(text["NoMatch", name]);
                     status = 1;
                     continue;
                 }
 
                 await output.WriteLineAsync($"{command.Name} - {command.Description}");
-                await output.WriteLineAsync($"usage: {command.Usage}");
+                await output.WriteLineAsync(text["Usage", command.Usage]);
                 if (command.Aliases.Count > 0)
                 {
-                    await output.WriteLineAsync($"aliases: {string.Join(", ", command.Aliases)}");
+                    await output.WriteLineAsync(text["Aliases", string.Join(", ", command.Aliases)]);
                 }
             }
 
             return status;
         }
 
-        await output.WriteLineAsync("HackerOS shell (hsh). Installed commands:");
+        await output.WriteLineAsync(text["Header"]);
         int width = commands.Count == 0 ? 0 : commands.Max(c => c.Name.Length);
         foreach (ShellCommandInfo command in commands)
         {
@@ -64,8 +68,8 @@ public sealed class HelpCommand : TerminalAppBase
         }
 
         await output.WriteLineAsync();
-        await output.WriteLineAsync("Operators: cmd | cmd, cmd > file, cmd >> file, cmd && cmd, $VAR, ${VAR}, $?, ~");
-        await output.WriteLineAsync("Type 'help <command>' for its usage.");
+        await output.WriteLineAsync(text["Operators", Array.Empty<object>()]);
+        await output.WriteLineAsync(text["Footer"]);
         return 0;
     }
 }

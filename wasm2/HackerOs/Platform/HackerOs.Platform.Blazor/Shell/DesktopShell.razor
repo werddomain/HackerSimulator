@@ -17,13 +17,20 @@
 @inject AppLifecycleOrchestrator Orchestrator
 @inject IProcessManager ProcessManager
 @inject WindowCloseCoordinator CloseCoordinator
+@inject WindowResponsivenessMonitor Responsiveness
 @inject WindowCloseGuardRegistry CloseGuards
 @inject AppBackHandlerRegistry BackHandlers
+@inject WindowAppEventDispatcher WindowEvents
+@inject AppWindowGatewayFactory WindowGateways
+@inject WindowKeyboardCommands KeyboardCommands
 @inject ISessionService SessionService
 @inject ISimulationClock SimulationClock
 @inject IEventBus EventBus
 @inject FileDialogWindowAdapter FileDialogAdapter
 @inject TestDemoFixtureSeeder TestDemoSeeder
+@inject IStringLocalizer<Strings> L
+@inject HackerOs.Platform.Core.AppCatalog Catalog
+@inject HackerOs.Platform.Core.Globalization.SessionLocaleService SessionLocale
 
 <div class="desktop-shell" @onkeydown="HandleShellKeyDown">
     <div class="desktop-workspace">
@@ -34,7 +41,9 @@
                      OnToggleMaximize="HandleToggleMaximize"
                      OnClose="HandleClose"
                      OnBack="HandleBack"
-                     OnGesture="HandleGesture">
+                     OnWindowMenu="HandleWindowMenu"
+                     OnGesture="HandleGesture"
+                     WindowOverlay="UnresponsiveWindowOverlay.ForWindow">
             <WindowContent Context="window">
                 @if (window.Content is not null)
                 {
@@ -46,7 +55,9 @@
                                        Descriptor="descriptor"
                                        AppContext="context"
                                        CloseGuards="CloseGuards"
-                                       BackHandlers="BackHandlers" />
+                                       BackHandlers="BackHandlers"
+                                       WindowEvents="WindowEvents"
+                                       WindowGateways="WindowGateways" />
                 }
                 else
                 {
@@ -77,6 +88,7 @@
                                       StatusSource="_taskbarStatus"
                                       ClockPanelSource="_clockPanel"
                                       ClockPanelContent="@ClockPanelFragment"
+                                      NotificationAreaContent="@NotificationAreaFragment"
                                       SessionCommands="_taskbarSessionCommands" />
 
     @if (TestDemoEnabled)
@@ -92,7 +104,15 @@
         </div>
     }
 
+    @* ADR 0127 §2: samples which windows stop answering their inputs. *@
+    <WindowResponsivenessHost />
+
+    @* ADR 0095 §3: window switcher, keyboard move/resize and window menu. *@
+    <WindowManagerOverlays Commands="KeyboardCommands" />
+
     @* ADR 0049: secure-desktop approval, above every window and the taskbar. *@
+    @* ADR 0101: synchronization conflicts and the session's periodic sync. *@
+    <HackerOs.Platform.Blazor.Sync.SyncConflictOverlay />
     <DangerousCapabilityApprovalOverlay />
     <AdministratorAuthenticationOverlay />
 </div>
@@ -113,6 +133,22 @@
         builder.AddAttribute(1, nameof(ClockPanel.OnClose), EventCallback.Factory.Create(this, CloseClockPanel));
         builder.CloseComponent();
     };
+
+    // ADR 0134 §2: the server connection icon; "Server settings" opens the Settings app.
+    private RenderFragment NotificationAreaFragment => builder =>
+    {
+        builder.OpenComponent<ServerStatusIndicator>(0);
+        builder.AddAttribute(1, nameof(ServerStatusIndicator.OnOpenSettings), EventCallback.Factory.Create(this, OpenServerSettingsAsync));
+        builder.CloseComponent();
+    };
+
+    private Task OpenServerSettingsAsync() =>
+        Catalog.Manifests.TryGetValue(SettingsAppId, out AppManifest? settings)
+            ? HandleAppSelected(settings)
+            : Task.CompletedTask;
+
+    /// <summary>The Settings app, opened from the server icon's panel.</summary>
+    private const string SettingsAppId = "org.hackeros.settings";
 
     [Parameter]
     public EventCallback OnLoggedOut { get; set; }
@@ -180,11 +216,11 @@
             new AppLaunchRequest(manifest.Id, principal, []));
         if (result.IsSuccess)
         {
-            LaunchCoordinator.Present(manifest, result);
+            await LaunchCoordinator.PresentAsync(manifest, result);
         }
         _launchError = result.IsSuccess
             ? null
-            : result.ErrorMessage ?? result.ErrorCode ?? "The optional app could not be loaded.";
+            : result.ErrorMessage ?? result.ErrorCode ?? L["Shell.LaunchFailed"];
         StateHasChanged();
     }
 
@@ -208,6 +244,13 @@
 
     private async Task HandleClose(WindowId id)
     {
+        // ADR 0127 §3: the close button of a window that does not answer opens "Attendre |
+        // Terminer l'application" instead of a close the frozen app could not answer.
+        if (Responsiveness.InterceptClose(id))
+        {
+            return;
+        }
+
         WindowRuntimeState? window = WindowRuntime.Windows.FirstOrDefault(w => w.Id == id);
         if (window?.OnRequestClose is { } onRequestClose)
         {
@@ -229,6 +272,9 @@
         // here; a NotHandled/no-handler result is a valid no-op for this slice.
         await BackHandlers.NavigateBackAsync(id, new AppBackRequest(AppBackSource.DesktopChromeButton));
     }
+
+    private void HandleWindowMenu(WindowMenuRequest request) =>
+        KeyboardCommands.OpenMenu(request.WindowId, request.ClientX, request.ClientY);
 
     private void HandleGesture(WindowCommand command)
     {
@@ -279,11 +325,15 @@
     }
 
     private IDisposable? _processSubscription;
+    private Func<WindowId, Task>? _closeWindow;
+
 
     protected override void OnInitialized()
     {
         WindowRuntime.StateChanged += Rerender;
         FileDialogAdapter.Changed += Rerender;
+        _closeWindow = HandleClose;
+        KeyboardCommands.CloseWindow = _closeWindow;
         _processSubscription = EventBus.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
 
         _taskbarWindowSource = new TaskbarWindowSourceAdapter(WindowRuntime);
@@ -292,7 +342,7 @@
         _launcher.Changed += Rerender;
         _clockPanel = new TaskbarClockPanelSourceAdapter();
         _clockPanel.Changed += Rerender;
-        _taskbarStatus = new TaskbarStatusSourceAdapter(SimulationClock);
+        _taskbarStatus = new TaskbarStatusSourceAdapter(SimulationClock, SessionLocale);
         _taskbarSessionCommands = new TaskbarSessionCommandsAdapter(OpenLogout);
     }
 
@@ -321,13 +371,20 @@
             // AppLifecycleOrchestrator.LaunchAsync -- not just this shell's own app launcher
             // (e.g. another app opening a file through IAppIntentGateway.OpenFileAsync). The
             // orchestrator only owns process state, not window presentation, so this shell
-            // presents any such process itself; Present() is a no-op if it was already
+            // presents any such process itself; PresentAsync() is a no-op if it was already
             // presented directly (e.g. by HandleAppSelected).
             if (Orchestrator.TryGetRunningInstance(e.Pid, out AppDescriptor? descriptor, out _)
                 && descriptor.Manifest.Kind == AppKind.Window
                 && ProcessManager.TryGetActive(e.Pid, out ProcessRecord process))
             {
-                LaunchCoordinator.Present(descriptor.Manifest, process);
+                // Reads the app's saved geometry first (ADR 0116), so present on the renderer's
+                // context and re-render once the window exists.
+                AppManifest manifest = descriptor.Manifest;
+                _ = InvokeAsync(async () =>
+                {
+                    await LaunchCoordinator.PresentAsync(manifest, process);
+                    StateHasChanged();
+                });
             }
         }
 
@@ -372,6 +429,11 @@
     {
         WindowRuntime.StateChanged -= Rerender;
         FileDialogAdapter.Changed -= Rerender;
+        if (ReferenceEquals(KeyboardCommands.CloseWindow, _closeWindow))
+        {
+            KeyboardCommands.CloseWindow = null;
+        }
+
         _processSubscription?.Dispose();
         _launcher.Changed -= Rerender;
         _clockPanel.Changed -= Rerender;

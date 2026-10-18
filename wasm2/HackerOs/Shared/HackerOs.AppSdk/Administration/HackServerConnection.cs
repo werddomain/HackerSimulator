@@ -14,7 +14,7 @@ namespace HackerOs.AppSdk.Administration;
 /// raises <see cref="HackUnauthorizedAccessException"/>.
 /// </para>
 /// <para>
-/// The server is optional (<c>AGENTS.md</c>): without one, <see cref="GetStateAsync()"/> reports
+/// The server is optional (<c>AGENTS.md</c>): without one, <see cref="GetStateAsync(CancellationToken)"/> reports
 /// <see cref="HackServerConnectionState.NotConnected"/> and <see cref="SyncAsync(HackSyncDomain, HackSyncDirection, CancellationToken)"/>
 /// does nothing. Only a request the user made (connect, create an account, synchronize) raises
 /// <see cref="HackServerConnectionException"/> when the server refuses it or cannot be reached.
@@ -135,7 +135,7 @@ public static class HackServerConnection
         });
     }
 
-    /// <summary>Gets the records the last synchronization could not merge.</summary>
+    /// <summary>Gets the pending synchronization conflicts of the session user (ADR 0101).</summary>
     /// <param name="cancellationToken">Cancels the read.</param>
     /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>server.connection.manage</c>.</exception>
     public static Task<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(CancellationToken cancellationToken = default) =>
@@ -146,6 +146,83 @@ public static class HackServerConnection
     /// <param name="cancellationToken">Cancels the read.</param>
     public static Task<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(IAppExecutionContext context, CancellationToken cancellationToken = default) =>
         Call(context, gateway => gateway.GetConflictsAsync(cancellationToken));
+
+    /// <summary>
+    /// Gets the network relay policy of the connected server (ADR 0102 §5): which ports and
+    /// networks apps holding <c>network.real.access</c> can reach through it, and its quotas.
+    /// </summary>
+    /// <returns>The policy, or <see langword="null"/> when the device is not connected.</returns>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <exception cref="HackServerConnectionException">The server could not be reached.</exception>
+    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>server.connection.manage</c>.</exception>
+    public static Task<HackServerRelayPolicy?> GetRelayPolicyAsync(CancellationToken cancellationToken = default) =>
+        GetRelayPolicyAsync(HackExecutionContext.Current, cancellationToken);
+
+    /// <summary>Gets the relay policy through an explicit context.</summary>
+    /// <param name="context">The calling app's execution context.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    public static Task<HackServerRelayPolicy?> GetRelayPolicyAsync(IAppExecutionContext context, CancellationToken cancellationToken = default) =>
+        Call(context, gateway => gateway.GetRelayPolicyAsync(cancellationToken));
+
+    /// <summary>Opens the OS conflict dialog, where the user picks a version for each conflict (ADR 0101).</summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>server.connection.manage</c>.</exception>
+    public static Task ShowConflictsAsync(CancellationToken cancellationToken = default) =>
+        ShowConflictsAsync(HackExecutionContext.Current, cancellationToken);
+
+    /// <summary>Opens the OS conflict dialog through an explicit context.</summary>
+    /// <param name="context">The calling app's execution context.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    public static Task ShowConflictsAsync(IAppExecutionContext context, CancellationToken cancellationToken = default) =>
+        Call(context, async gateway =>
+        {
+            await gateway.ShowConflictsAsync(cancellationToken).ConfigureAwait(false);
+            return true;
+        });
+
+    /// <summary>Gets the state of the periodic synchronization (ADR 0101 section 4).</summary>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>server.connection.manage</c>.</exception>
+    public static Task<HackSyncStatus> GetSyncStatusAsync(CancellationToken cancellationToken = default) =>
+        GetSyncStatusAsync(HackExecutionContext.Current, cancellationToken);
+
+    /// <summary>Gets the state of the periodic synchronization through an explicit context.</summary>
+    /// <param name="context">The calling app's execution context.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    public static Task<HackSyncStatus> GetSyncStatusAsync(IAppExecutionContext context, CancellationToken cancellationToken = default) =>
+        Call(context, gateway => gateway.GetSyncStatusAsync(cancellationToken));
+
+    /// <summary>Pauses or resumes the session user's periodic synchronization (<c>~/.config/hackeros/sync.config</c>).</summary>
+    /// <param name="paused">Whether to pause.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>server.connection.manage</c>.</exception>
+    public static Task SetSyncPausedAsync(bool paused, CancellationToken cancellationToken = default) =>
+        SetSyncPausedAsync(HackExecutionContext.Current, paused, cancellationToken);
+
+    /// <summary>Pauses or resumes the periodic synchronization through an explicit context.</summary>
+    /// <param name="context">The calling app's execution context.</param>
+    /// <param name="paused">Whether to pause.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    public static Task SetSyncPausedAsync(IAppExecutionContext context, bool paused, CancellationToken cancellationToken = default) =>
+        Call(context, async gateway =>
+        {
+            await gateway.SetSyncPausedAsync(paused, cancellationToken).ConfigureAwait(false);
+            return true;
+        });
+
+    /// <summary>Runs one complete synchronization pass, every domain in order; does nothing when not connected.</summary>
+    /// <param name="cancellationToken">Cancels the pass.</param>
+    /// <returns>The status after the pass.</returns>
+    /// <exception cref="HackServerConnectionException">The server refused the pass or could not be reached.</exception>
+    /// <exception cref="HackUnauthorizedAccessException">This app lacks <c>server.connection.manage</c>.</exception>
+    public static Task<HackSyncStatus> SyncNowAsync(CancellationToken cancellationToken = default) =>
+        SyncNowAsync(HackExecutionContext.Current, cancellationToken);
+
+    /// <summary>Runs one complete synchronization pass through an explicit context.</summary>
+    /// <param name="context">The calling app's execution context.</param>
+    /// <param name="cancellationToken">Cancels the pass.</param>
+    public static Task<HackSyncStatus> SyncNowAsync(IAppExecutionContext context, CancellationToken cancellationToken = default) =>
+        Call(context, gateway => gateway.SyncNowAsync(cancellationToken));
 
     private static void ValidateCredentials(Uri serverUrl, string login, string password)
     {

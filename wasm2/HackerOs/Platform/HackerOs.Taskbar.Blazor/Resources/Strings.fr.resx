@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Taskbar.Clock" xml:space="preserve">
+    <value>Horloge système, notifications et calendrier</value>
+  </data>
+  <data name="Taskbar.Item.Background" xml:space="preserve">
+    <value>{0} (en arrière-plan)</value>
+  </data>
+  <data name="Taskbar.Item.Focused" xml:space="preserve">
+    <value>{0} (au premier plan)</value>
+  </data>
+  <data name="Taskbar.Item.Minimized" xml:space="preserve">
+    <value>{0} (réduite)</value>
+  </data>
+  <data name="Taskbar.Label" xml:space="preserve">
+    <value>Barre des tâches du bureau</value>
+  </data>
+  <data name="Taskbar.Launcher" xml:space="preserve">
+    <value>Lanceur d'applications</value>
+  </data>
+  <data name="Taskbar.LauncherLabel" xml:space="preserve">
+    <value>Applications</value>
+  </data>
+  <data name="Taskbar.NotificationArea" xml:space="preserve">
+    <value>Zone de notification</value>
+  </data>
+  <data name="Taskbar.RunningApps" xml:space="preserve">
+    <value>Applications en cours d'exécution</value>
+  </data>
+  <data name="Taskbar.Session" xml:space="preserve">
+    <value>Session utilisateur et déconnexion</value>
+  </data>
+</root>

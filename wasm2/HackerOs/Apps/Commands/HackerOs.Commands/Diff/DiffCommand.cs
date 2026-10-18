@@ -1,6 +1,9 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Commands.Common;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Diff;
 
@@ -10,8 +13,10 @@ namespace HackerOs.Commands.Diff;
 /// </summary>
 public sealed class DiffCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public DiffCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)
@@ -30,7 +35,7 @@ public sealed class DiffCommand : TerminalAppBase
 
         if (files.Count < 2)
         {
-            context.StandardError.WriteLine("diff: missing operand after '" + (files.FirstOrDefault() ?? "") + "'");
+            context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["MissingOperandAfter", files.FirstOrDefault() ?? ""]);
             return 2;
         }
 
@@ -42,12 +47,12 @@ public sealed class DiffCommand : TerminalAppBase
 
         if (!res1.Succeeded || res1.Value is null)
         {
-            context.StandardError.WriteLine($"diff: {files[0]}: No such file or directory");
+            context.StandardError.WriteLine(CommandText.FileError(context, "diff", files[0], CommandText.Reason(context, Errno.NotFound)));
             return 2;
         }
         if (!res2.Succeeded || res2.Value is null)
         {
-            context.StandardError.WriteLine($"diff: {files[1]}: No such file or directory");
+            context.StandardError.WriteLine(CommandText.FileError(context, "diff", files[1], CommandText.Reason(context, Errno.NotFound)));
             return 2;
         }
 

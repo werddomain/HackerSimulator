@@ -6,11 +6,13 @@
 <article class="@HostClass"
          @ref="_hostElement"
          role="dialog"
+         tabindex="-1"
          aria-modal="@(Window.Modality == WindowModality.OwnerModal ? "true" : "false")"
          aria-hidden="@(IsInteractionBlocked ? "true" : "false")"
          aria-labelledby="@(ShowChrome ? TitleId : null)"
          aria-label="@(ShowChrome ? null : Window.Title)"
          inert="@(IsInteractionBlocked ? true : null)"
+         aria-busy="@(Window.IsResponding ? null : "true")"
          data-window-id="@Window.Id"
          data-window-x="@Window.Bounds.X"
          data-window-y="@Window.Bounds.Y"
@@ -29,11 +31,20 @@
                       OnToggleMaximize="OnToggleMaximize"
                       OnClose="OnClose"
                       OnBack="OnBack"
+                      OnWindowMenu="OnWindowMenu"
                       OnGesture="OnGesture" />
     }
     <div class="window-content">
         @ChildContent
     </div>
+    @if (Overlay is not null)
+    {
+        @* Window-attached layer above the content and below the chrome's z-order neighbours, e.g. the
+           "not responding" dialog of ADR 0127 §3: it belongs to this window only. *@
+        <div class="@(ShowChrome ? "window-overlay" : "window-overlay is-chromeless")">
+            @Overlay
+        </div>
+    }
 </article>
 
 @code {
@@ -44,6 +55,13 @@
     /// <summary>Gets or sets the app content rendered inside the chrome.</summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Gets or sets content layered over this window's content area only, such as the platform's
+    /// "not responding" dialog (ADR 0127 §3). Nothing is rendered when it is <see langword="null"/>.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Overlay { get; set; }
 
     /// <summary>
     /// Gets or sets whether the floating-window chrome (title bar, drag/resize handles, chrome
@@ -75,6 +93,10 @@
     [Parameter]
     public EventCallback<WindowId> OnBack { get; set; }
 
+    /// <summary>Gets or sets the window menu request callback (ADR 0095 §3).</summary>
+    [Parameter]
+    public EventCallback<WindowMenuRequest> OnWindowMenu { get; set; }
+
     /// <summary>Gets or sets the pointer gesture command callback.</summary>
     [Parameter]
     public EventCallback<WindowCommand> OnGesture { get; set; }
@@ -87,11 +109,15 @@
     private ElementReference _hostElement;
     private IJSObjectReference? _module;
 
+    /// <summary>Whether the window was the focused one at the previous render, to move the keyboard focus on the transition only.</summary>
+    private bool _wasFocused;
+
     private string HostClass => string.Join(
         ' ',
         "window-host",
         Window.IsFocused ? "is-focused" : "is-background",
-        Window.VisualState == WindowVisualState.Maximized ? "is-maximized" : "is-normal");
+        Window.VisualState == WindowVisualState.Maximized ? "is-maximized" : "is-normal",
+        Window.IsResponding ? string.Empty : "is-not-responding").TrimEnd();
 
     private Task FocusAsync(PointerEventArgs _) =>
         IsInteractionBlocked ? Task.CompletedTask : OnFocus.InvokeAsync(Window.Id);
@@ -104,6 +130,7 @@
             _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
                 "import",
                 "./_content/HackerOs.Windowing.Blazor/WindowHost.razor.js");
+            await _module.InvokeVoidAsync("trackFocus", _hostElement);
         }
 
         if (_module is not null)
@@ -122,6 +149,23 @@
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[WindowHost] Failed to project window geometry: {ex.Message}");
+            }
+
+            // A window that becomes the focused one (Alt+`, Alt+Q on the window above it, the
+            // taskbar) takes the keyboard focus too, or keyboard users are left on <body> with
+            // a window that only looks focused (ADR 0105 §4).
+            bool becameFocused = Window.IsFocused && !_wasFocused && !IsInteractionBlocked;
+            _wasFocused = Window.IsFocused;
+            if (becameFocused)
+            {
+                try
+                {
+                    await _module.InvokeVoidAsync("focusWindow", _hostElement);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[WindowHost] Failed to move the keyboard focus: {ex.Message}");
+                }
             }
         }
     }

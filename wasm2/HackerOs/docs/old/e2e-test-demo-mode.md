@@ -67,6 +67,11 @@ a sandboxed app call) to create, under the signed-in user's
 | `editable.txt`                     | Seeded with known "before" content; the Text Editor E2E test opens it via the Open... dialog, rewrites it, and saves |
 | `notes/beta.md`                    | Nested file, used to assert folder-download zip structure    |
 
+Next to it, `Documents/e2e-site` holds a small static HTML site (`index.html`,
+`style.css`, `app.js`, `about.html`) that the Browser E2E test opens as
+`file://` (ADR 0075, `docs/browser-html-rendering.md`). It is a sibling of
+`e2e-fixtures`, not a child, so the folder-download zip keeps its exact content.
+
 The exact paths and contents are exposed as `public const` fields on
 `TestDemoFixtureSeeder` so tests reference the same constants instead of
 duplicating literal strings.

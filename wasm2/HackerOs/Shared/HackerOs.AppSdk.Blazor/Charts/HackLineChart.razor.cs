@@ -1,4 +1,5 @@
 using System.Globalization;
+using HackerOs.AppSdk.Globalization;
 using Microsoft.AspNetCore.Components;
 
 namespace HackerOs.AppSdk.Blazor.Charts;
@@ -42,6 +43,15 @@ public partial class HackLineChart
     private static readonly string PlotWidth = Invariant(HackChartGeometry.Width);
 
     private static readonly string PlotHeight = Invariant(HackChartGeometry.Height);
+
+    /// <summary>The app the chart belongs to, cascaded by the window host: its language and formats apply (ADR 0104).</summary>
+    [CascadingParameter]
+    private IAppExecutionContext? AppContext { get; set; }
+
+    /// <summary>Gets the chart's texts in the app's language, or the ambient app's without a cascaded one.</summary>
+    private Microsoft.Extensions.Localization.IStringLocalizer<Strings> L => AppContext is { } context
+        ? context.GetLocalizer<Strings>()
+        : HackLocalization.GetLocalizer<Strings>();
 
     /// <summary>Gets or sets the lines to draw, in legend order.</summary>
     [Parameter]
@@ -121,14 +131,21 @@ public partial class HackLineChart
         _ => "hos-chart-medium"
     };
 
-    private string AccessibleLabel =>
-        $"{Title}: " + string.Join(", ", Series.Select(line =>
-            $"{line.Name} {(line.Values.Count > 0 ? FormatValue(line.Values[^1]) : "no data")}"));
+    private string AccessibleLabel
+    {
+        get
+        {
+            Microsoft.Extensions.Localization.IStringLocalizer<Strings> text = L;
+            return text["Chart.AccessibleLabel", Title ?? string.Empty, string.Join(", ", Series.Select(line =>
+                $"{line.Name} {(line.Values.Count > 0 ? FormatValue(line.Values[^1]) : text["Chart.NoData"])}"))];
+        }
+    }
 
     private static string Invariant(double value) => Math.Round(value, 2).ToString("0.##", CultureInfo.InvariantCulture);
 
     private static string SeriesClass(int index) => $"series-{(index % ColorSlots).ToString(CultureInfo.InvariantCulture)}";
 
+    /// <summary>Formats a value with the host's formatter, or in the app's number format (<c>25,5</c> in French).</summary>
     private string FormatValue(double value) =>
-        ValueFormatter?.Invoke(value) ?? value.ToString("0.#", CultureInfo.InvariantCulture);
+        ValueFormatter?.Invoke(value) ?? value.ToString("0.#", AppContext?.FormatCulture ?? CultureInfo.InvariantCulture);
 }

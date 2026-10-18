@@ -94,9 +94,16 @@ public static class AppCapabilities
     public const string NetworkSimulatedWrite = "network.simulated.write";
 
     /// <summary>
-    /// Access the Game Domain engine, missions, hardware upgrades, and simulated security state.
+    /// Listen on a TCP port of this machine with <c>HackHttpListener</c> (ADR 0074, section 2), from
+    /// 1024 up. A web app may always listen on the URLs of its own manifest without it (ADR 0073).
     /// </summary>
-    public const string GameplayDomainAccess = "gameplay.domain.access";
+    public const string NetworkListen = "network.listen";
+
+    /// <summary>
+    /// Listen on a port below 1024, like Linux's <c>CAP_NET_BIND_SERVICE</c> (ADR 0074, section 2).
+    /// Dangerous: a privileged port is where users expect the machine's real services.
+    /// </summary>
+    public const string NetworkListenPrivileged = "network.listen.privileged";
 
     /// <summary>
     /// Reach real hosts outside the simulated network, via the optional server's proxy (ADR 0028),
@@ -138,12 +145,34 @@ public static class AppCapabilities
     public const string SystemStorageInspect = "system.storage.inspect";
 
     /// <summary>
+    /// Back up the whole machine to the host computer, or restore it from a backup, through
+    /// <c>HackSystemBackup</c> (ADR 0099, section 1). Dangerous: an archive holds every user's
+    /// files, the accounts and their password hashes, and a restore overwrites them; every call
+    /// also needs an administrator.
+    /// </summary>
+    public const string SystemBackup = "system.backup";
+
+    /// <summary>
     /// Host interactive shells, as a terminal emulator does (ADR 0056, section 7): start an
     /// <c>hsh</c> process and run any line the user types in it. Dangerous: each command runs with
     /// <b>its own</b> capabilities and no window, so an app holding only harmless capabilities
     /// could otherwise read all of <c>~</c> through <c>cat</c>.
     /// </summary>
     public const string ShellHost = "shell.host";
+
+    /// <summary>
+    /// Read every app's entries of the session user's keyring through <c>HackKeyring</c>
+    /// (ADR 0100, section 2), as a password manager does. Dangerous; an app always reaches its own
+    /// entries without any capability.
+    /// </summary>
+    public const string KeyringReadAll = "keyring.read-all";
+
+    /// <summary>
+    /// Reset or remove another account's password through <c>HackUserAccounts</c> (ADR 0120), as
+    /// <c>sudo passwd NAME</c> does. Dangerous: whoever resets a password can log in as that user,
+    /// and the user's keyring is set aside; every call also needs an administrator.
+    /// </summary>
+    public const string UsersManage = "users.manage";
 
     /// <summary>
     /// Exact classification of every catalog capability (ADR 0049 section 1). The catalog is the
@@ -200,7 +229,11 @@ public static class AppCapabilities
             NetworkRealAccess,
             "Accéder au vrai réseau",
             "Joindre de vrais serveurs sur Internet par le serveur relais."),
-        Normal(GameplayDomainAccess, "Accéder au moteur de jeu"),
+        Normal(NetworkListen, "Écouter un port réseau"),
+        Dangerous(
+            NetworkListenPrivileged,
+            "Écouter un port privilégié",
+            "Ouvrir un port inférieur à 1024, où l'on attend les vrais services de la machine (web, SSH...)."),
         Normal(ShellControl, "Agir sur le shell qui a lancé la commande"),
         Dangerous(
             PermissionsManage,
@@ -219,9 +252,21 @@ public static class AppCapabilities
             "Inspecter le stockage brut",
             "Lire le stockage brut de la machine, y compris les fichiers de tous les utilisateurs."),
         Dangerous(
+            SystemBackup,
+            "Sauvegarder et restaurer la machine",
+            "Copier sur l'ordinateur hôte tous les fichiers et comptes de la machine, ou les remplacer par une sauvegarde."),
+        Dangerous(
             ShellHost,
             "Héberger un shell",
-            "Exécuter des commandes en votre nom, avec les droits de ces commandes.")
+            "Exécuter des commandes en votre nom, avec les droits de ces commandes."),
+        Dangerous(
+            KeyringReadAll,
+            "Lire tout le trousseau",
+            "Lire les mots de passe, jetons et clés que toutes vos applications ont enregistrés."),
+        Dangerous(
+            UsersManage,
+            "Gérer les mots de passe des comptes",
+            "Réinitialiser ou retirer le mot de passe d'un autre compte, et donc ouvrir sa session.")
     }.ToFrozenDictionary(description => description.Capability, StringComparer.Ordinal);
 
     private static readonly FrozenSet<string> KnownIdentifiers = Descriptions.Keys.ToFrozenSet(StringComparer.Ordinal);

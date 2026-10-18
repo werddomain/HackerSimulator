@@ -8,7 +8,7 @@ namespace HackerOs.AppSdk.IO;
 /// </summary>
 /// <remarks>
 /// A HackerOS file records a content descriptor (text or binary) from its last write, but an empty
-/// file made by "New File", or a text file copied with <see cref="HackFile.WriteAllBytesAsync"/>,
+/// file made by "New File", or a text file copied with <see cref="HackFile.WriteAllBytesAsync(string, byte[], CancellationToken)"/>,
 /// carries a binary descriptor. Editors call <see cref="TryDecode"/> on the bytes instead.
 /// </remarks>
 public static class HackTextContent

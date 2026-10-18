@@ -1,0 +1,5 @@
+{
+  "name": "nano",
+  "description": "Éditeur de texte interactif du terminal",
+  "terminalUsage": "nano [fichier]"
+}

@@ -288,6 +288,36 @@ async function executeOperation(transaction, operation) {
             }
             return { deleted: keys.length, referenced: false };
         }
+        case "resolvePath": {
+            // Path lookup (namei) in one transaction: start at the entry `key`, then for each
+            // name in `query` read the (parentId, name) link and the entry it points to. Done in
+            // C# it cost two round trips per component; here the whole walk is one request batch
+            // and one consistent snapshot. Returns the entries found, one per name, stopping
+            // before the first missing name. A link that points to no entry (corruption) ends
+            // the list with { danglingLink, entryId }, reported by the caller.
+            if (!operation.referenceObjectStoreName || !Array.isArray(operation.query)) {
+                throw new Error("resolvePath requires a link store and an array of names.");
+            }
+
+            const links = transaction.objectStore(operation.referenceObjectStoreName);
+            const chain = [];
+            let current = await requestResult(store.get(operation.key));
+            for (const name of operation.query) {
+                if (current === undefined) {
+                    break;
+                }
+
+                const link = await requestResult(links.get([current.id, name]));
+                if (link === undefined) {
+                    break;
+                }
+
+                current = await requestResult(store.get(link.entryId));
+                chain.push(current ?? { danglingLink: name, entryId: link.entryId });
+            }
+
+            return chain;
+        }
         case "clear":
             return requestResult(store.clear());
         default:

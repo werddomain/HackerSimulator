@@ -67,11 +67,42 @@ public static class GeneratorCodes
     /// </summary>
     public const string ForbiddenInjection = "HOSAPP0031";
 
+    /// <summary>
+    /// A web app (ADR 0073, section 3) requests a <c>filesystem.*</c> capability: a site's data lives
+    /// in the host browser's IndexedDB, never in the OS file system.
+    /// </summary>
+    public const string WebFileSystem = "HOSAPP0050";
+
+    /// <summary>
+    /// A <c>Resources/AppManifest.&lt;culture&gt;.resx</c> file is malformed, names an unknown culture,
+    /// app or key, or a referenced <c>localization/*.json</c> file cannot be read (ADR 0104, section 4).
+    /// </summary>
+    public const string InvalidLocalization = "HOSAPP0040";
+
     /// <summary>A manifest file read back during aggregation is missing or not strict schema-v1 JSON.</summary>
     public const string UnreadableManifest = "HOSAPP0020";
 
     /// <summary>The aggregated catalog is invalid (duplicate id, missing or cyclic dependency...).</summary>
     public const string InvalidCatalog = "HOSAPP0021";
+
+    /// <summary>
+    /// Aggregation (ADR 0098 §4): two apps of the host declare the same terminal command name or
+    /// alias, or an app declares a name the shell runs itself (special built-ins, <c>sh</c>/<c>bash</c>/<c>hsh</c>).
+    /// </summary>
+    public const string DuplicateCommand = "HOSAPP0022";
+
+    /// <summary>
+    /// An asset the app declares (<c>AppDefinition.Assets</c>) has no file under the project's
+    /// <c>wwwroot/</c>, so its SHA-256 cannot be computed (ADR 0098 §5).
+    /// </summary>
+    public const string AssetMissing = "HOSAPP0023";
+
+    /// <summary>
+    /// Aggregation (ADR 0126, section 4): a non-system app declares a negative <c>oomScoreAdj</c>.
+    /// Only a system app (<c>IsSystemApp</c> on the host's <c>ProjectReference</c>) may shield itself
+    /// from the OOM killer, like <c>CAP_SYS_RESOURCE</c> on Linux.
+    /// </summary>
+    public const string NegativeOomScoreAdjust = "HOSAPP0024";
 
     /// <summary>The tool was called with invalid arguments.</summary>
     public const string InvalidArguments = "HOSAPP0090";

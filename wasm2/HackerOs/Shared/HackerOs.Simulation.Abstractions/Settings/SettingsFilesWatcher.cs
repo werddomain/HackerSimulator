@@ -27,6 +27,7 @@ public sealed class SettingsFilesWatcher : IAsyncDisposable
 {
     private readonly IAppFileSystemWatchGateway _watch;
     private readonly HashSet<string> _files;
+    private readonly HashSet<string> _directories = new(StringComparer.Ordinal);
     private readonly Func<ValueTask> _onChanged;
     private readonly CancellationTokenSource _stopping = new();
     private readonly List<ArmedWatch> _armed = [];
@@ -44,11 +45,35 @@ public sealed class SettingsFilesWatcher : IAsyncDisposable
         _onChanged = onChanged ?? throw new ArgumentNullException(nameof(onChanged));
     }
 
-    /// <summary>Subscribes to the directories of every watched file.</summary>
+    /// <summary>
+    /// Creates a watcher reporting any change to the files directly inside <paramref name="directories"/>
+    /// (a folder of drop-in files, such as the theme folders of ADR 0103), with the same fallback to
+    /// the nearest existing ancestor while a folder does not exist yet.
+    /// </summary>
+    /// <param name="watch">Authorized watch gateway of the reader.</param>
+    /// <param name="directories">Folders whose immediate children are watched.</param>
+    /// <param name="onChanged">Invoked after any change inside one of <paramref name="directories"/>.</param>
+    public static SettingsFilesWatcher ForDirectories(
+        IAppFileSystemWatchGateway watch, IEnumerable<VirtualPath> directories, Func<ValueTask> onChanged)
+    {
+        ArgumentNullException.ThrowIfNull(directories);
+        SettingsFilesWatcher watcher = new(watch, [], onChanged);
+        foreach (VirtualPath directory in directories)
+        {
+            watcher._directories.Add(directory.Value);
+        }
+
+        return watcher;
+    }
+
+    /// <summary>Subscribes to the directories of every watched file (and to every watched directory).</summary>
     /// <param name="cancellationToken">Cancels the subscription attempts.</param>
     public async ValueTask StartAsync(CancellationToken cancellationToken = default)
     {
-        foreach (string directory in _files.Select(static file => SettingsTextFile.GetParent(VirtualPath.Parse(file)).Value).Distinct(StringComparer.Ordinal))
+        foreach (string directory in _files
+            .Select(static file => SettingsTextFile.GetParent(VirtualPath.Parse(file)).Value)
+            .Concat(_directories)
+            .Distinct(StringComparer.Ordinal))
         {
             await ArmAsync(VirtualPath.Parse(directory), cancellationToken).ConfigureAwait(false);
         }
@@ -151,7 +176,9 @@ public sealed class SettingsFilesWatcher : IAsyncDisposable
                     continue;
                 }
 
-                if (_files.Contains(change.Path.Value) || (change.MovedToPath is { } movedTo && _files.Contains(movedTo.Value)))
+                if (_files.Contains(change.Path.Value)
+                    || (change.MovedToPath is { } movedTo && _files.Contains(movedTo.Value))
+                    || _directories.Contains(armed.Target.Value))
                 {
                     await _onChanged().ConfigureAwait(false);
                 }

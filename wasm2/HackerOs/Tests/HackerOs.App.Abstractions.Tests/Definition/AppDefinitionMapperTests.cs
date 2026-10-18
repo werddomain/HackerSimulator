@@ -28,6 +28,7 @@ public sealed class AppDefinitionMapperTests
         Assert.False(manifest.SingleInstancePerUser);
         Assert.False(manifest.AutoStart);
         Assert.False(manifest.SupportsBack);
+        Assert.Null(manifest.Window);
         Assert.Equal(AppExecutionHost.MainThread, manifest.Execution);
         Assert.Equal(AppResourceProfileManifest.None, manifest.Resources);
         Assert.Null(manifest.Settings);
@@ -63,6 +64,19 @@ public sealed class AppDefinitionMapperTests
         AppComponentManifest component = Assert.Single(manifest.Components!);
         Assert.Equal(new AppComponentManifest("hackeros.tests-view", "HackerOs.App.Abstractions.Tests.dll", typeof(FakeEmbed).FullName!), component);
         Assert.True(AppManifestValidator.Validate(manifest).IsValid);
+    }
+
+    [Fact]
+    public void ToManifest_BlazorRoot_MapsToWebBlazor()
+    {
+        AppManifest manifest = AppDefinitionMapper.ToManifest(new BlazorSiteApp(), "1.0.0");
+        AppManifest mvcOnly = AppDefinitionMapper.ToManifest(new MvcSiteApp(), "1.0.0");
+
+        Assert.Equal(new WebBlazorManifest("HackerOs.App.Abstractions.Tests.dll", typeof(FakeEmbed).FullName!), manifest.Web!.Blazor);
+        Assert.Equal(["http://blazor.hack/"], manifest.Web.Urls);
+        Assert.True(AppManifestValidator.Validate(manifest).IsValid);
+        Assert.Null(mvcOnly.Web!.Blazor);
+        Assert.DoesNotContain("\"blazor\":", AppManifestJsonSerializer.SerializeCanonical(mvcOnly), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -151,12 +165,15 @@ public sealed class AppDefinitionMapperTests
         Assert.Equal(first, second);
     }
 
-    [Theory]
-    [InlineData(1, 0, 0, 0, "1.0.0")]
-    [InlineData(1, 4, 7, 0, "1.4.0")]
-    [InlineData(2, 3, 0, 9, "2.3.0")]
-    public void FormatSdkMinimumVersion_DropsPatchAndRevision(int major, int minor, int build, int revision, string expected) =>
-        Assert.Equal(expected, AppDefinitionMapper.FormatSdkMinimumVersion(new Version(major, minor, build, revision)));
+    [Fact]
+    public void ToManifest_WithoutExplicitVersion_UsesTheProcessSdkVersion() =>
+        Assert.Equal(new AppSdkCompatibilityManifest(HackerOsSdk.Version), AppDefinitionMapper.ToManifest(new MinimalWindowApp()).SdkCompatibility);
+
+    [Fact]
+    public void ToManifest_KeepsARangeTheDefinitionDeclares() =>
+        Assert.Equal(
+            new AppSdkCompatibilityManifest("0.9.0-preview.1", "0.9.0"),
+            AppDefinitionMapper.ToManifest(new RangedApp(), "0.9.0-preview.4").SdkCompatibility);
 
     [Fact]
     public void AppManifestAttribute_IsSingleUseAndNotInherited()
@@ -166,6 +183,24 @@ public sealed class AppDefinitionMapperTests
         Assert.Equal(AttributeTargets.Class, usage.ValidOn);
         Assert.False(usage.AllowMultiple);
         Assert.False(usage.Inherited);
+    }
+
+    [Fact]
+    public void ToManifest_copies_the_declared_window_sizes()
+    {
+        AppManifest manifest = AppDefinitionMapper.ToManifest(new SizedWindowApp(), "1.0.0");
+
+        Assert.Equal(new WindowOptions { DefaultWidth = 360, DefaultHeight = 520, MinWidth = 360, MinHeight = 520, Resizable = false }, manifest.Window);
+        Assert.True(AppManifestValidator.Validate(manifest).IsValid);
+    }
+
+    private sealed class SizedWindowApp : AppDefinition
+    {
+        public override string Id => "org.hackeros.tests.sized";
+        public override string Name => "Sized";
+        public override AppKind Kind => AppKind.Window;
+        public override Type EntryPoint => typeof(FakeWindow);
+        public override WindowOptions Window => new() { DefaultWidth = 360, DefaultHeight = 520, MinWidth = 360, MinHeight = 520, Resizable = false };
     }
 
     private sealed class FakeWindow;
@@ -183,6 +218,20 @@ public sealed class AppDefinitionMapperTests
         public override AppKind Kind => AppKind.Window;
         public override Type EntryPoint => typeof(FakeWindow);
         public override IReadOnlyList<AppComponent> Components => [new("hackeros.tests-view", typeof(FakeEmbed))];
+    }
+
+    private class MvcSiteApp : AppDefinition
+    {
+        public override string Id => "org.hackeros.tests.site";
+        public override string Name => "Site";
+        public override AppKind Kind => AppKind.Web;
+        public override Type EntryPoint => typeof(FakeCommand);
+        public override IReadOnlyList<string> Urls => ["http://blazor.hack/"];
+    }
+
+    private sealed class BlazorSiteApp : MvcSiteApp
+    {
+        public override Type? BlazorRoot => typeof(FakeEmbed);
     }
 
     [AppManifest]
@@ -230,6 +279,15 @@ public sealed class AppDefinitionMapperTests
         public override string Name => "Minimal";
         public override AppKind Kind => AppKind.Window;
         public override Type EntryPoint => typeof(FakeWindow);
+    }
+
+    private sealed class RangedApp : AppDefinition
+    {
+        public override string Id => "org.hackeros.tests.ranged";
+        public override string Name => "Ranged";
+        public override AppKind Kind => AppKind.Window;
+        public override Type EntryPoint => typeof(FakeWindow);
+        public override AppSdkCompatibilityManifest? SdkCompatibility => new("0.9.0-preview.1", "0.9.0");
     }
 
     private sealed class SharedMobileApp : AppDefinition

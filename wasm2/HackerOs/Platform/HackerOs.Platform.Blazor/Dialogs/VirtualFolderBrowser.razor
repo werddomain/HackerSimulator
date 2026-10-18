@@ -4,10 +4,11 @@
 @using HackerOs.Simulation.Abstractions.Gateways
 @using Microsoft.AspNetCore.Components.Web
 @using MudBlazor
+@inject IStringLocalizer<Strings> L
 @implements IAsyncDisposable
 
-<section class="folder-browser" aria-label="Virtual filesystem browser" aria-busy="@_loading">
-    <nav class="breadcrumbs" aria-label="Current folder">
+<section class="folder-browser" aria-label="@L["FolderBrowser.Label"]" aria-busy="@(_loading ? "true" : "false")">
+    <nav class="breadcrumbs" aria-label="@L["FolderBrowser.CurrentFolder"]">
         @foreach (Breadcrumb breadcrumb in GetBreadcrumbs())
         {
             <button type="button"
@@ -21,26 +22,26 @@
     {
         <div class="browser-status" role="status">
             <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-            <span>Loading folder</span>
+            <span>@L["FolderBrowser.Loading"]</span>
         </div>
     }
     else if (_errorCode is FileSystemErrorCode errorCode)
     {
         <div class="browser-status error" role="alert">
             <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" />
-            <span>Unable to open this folder (@errorCode).</span>
-            <button type="button" @onclick="ReloadAsync">Retry</button>
+            <span>@L["FolderBrowser.OpenFailed", errorCode.ToString()]</span>
+            <button type="button" @onclick="ReloadAsync">@L["Common.Retry"]</button>
         </div>
     }
     else if (VisibleEntries.Count == 0)
     {
-        <div class="browser-status" role="status">This folder is empty.</div>
+        <div class="browser-status" role="status">@L["FolderBrowser.Empty"]</div>
     }
     else
     {
         <div class="entry-list"
              role="listbox"
-             aria-label="Folder entries"
+             aria-label="@L["FolderBrowser.Entries"]"
              aria-activedescendant="@ActiveDescendantId"
              tabindex="0"
              @onkeydown="HandleKeyDownAsync">
@@ -60,7 +61,7 @@
                     @ondblclick="() => ActivateAsync(entryIndex)">
                     <MudIcon Icon="@(entry.Metadata.Kind == FileSystemEntryKind.Directory ? Icons.Material.Filled.Folder : Icons.Material.Filled.Description)" />
                     <span class="entry-name">@entry.Name.Value</span>
-                    <span class="entry-kind">@entry.Metadata.Kind</span>
+                    <span class="entry-kind">@KindLabel(entry.Metadata.Kind)</span>
                 </button>
             }
         </div>
@@ -273,6 +274,13 @@
     }
 
     private string EntryId(int index) => $"folder-browser-{_id}-entry-{index}";
+
+    /// <summary>The kind column in the session language (<c>FolderBrowser.Kind.Directory</c>…), the enum name for an unknown kind.</summary>
+    private string KindLabel(FileSystemEntryKind kind)
+    {
+        LocalizedString text = L[$"FolderBrowser.Kind.{kind}"];
+        return text.ResourceNotFound ? kind.ToString() : text.Value;
+    }
 
     private string EntryClass(int index)
     {

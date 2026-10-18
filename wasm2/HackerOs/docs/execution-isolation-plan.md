@@ -231,8 +231,8 @@ RESULT: PASS
   mis à jour) ; les décomptes (32 capacités, 75 apps dont 63 commandes) sont exacts.
 - Restent hors de cette phase, notés dans
   [`building-and-testing.md`](building-and-testing.md#état-connu) : deux échecs de
-  `HackerOs.UI.E2E.Tests` dus à l'app (accessibilité, bouton « Back » mobile) et la
-  suite PWA qui demande IPv6.
+  `HackerOs.UI.E2E.Tests` dus à l'app (accessibilité, bouton « Back » mobile), corrigés
+  ensuite par `rebuild/5-ui-a11y-mkdir`, et la suite PWA qui demande IPv6.
 
 ## 7. Hors périmètre
 
@@ -240,6 +240,9 @@ RESULT: PASS
 - Isolation cross-origin (COOP/COEP), threads WASM, `SharedArrayBuffer`.
 - Apps à fenêtre dans un worker.
 - Workers et mesures sur `HackerOs.Server`.
+
+Ces points sont repris par [`execution-followups-plan.md`](execution-followups-plan.md)
+(plan validé le 2026-10-17, exécuté après la migration wasm v3).
 
 ## 8. Références
 

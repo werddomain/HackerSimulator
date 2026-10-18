@@ -2,7 +2,10 @@ using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Net;
+using HackerOs.Commands.Common;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Cat;
 
@@ -31,7 +34,7 @@ public sealed class CatCommand : TerminalAppBase
 
         if (context.Arguments.Count == 0)
         {
-            context.StandardError.WriteLine("cat: missing file argument");
+            context.StandardError.WriteLine(context.App.GetLocalizer<Strings>()["MissingFile"]);
             return 1;
         }
 
@@ -56,14 +59,7 @@ public sealed class CatCommand : TerminalAppBase
 
             if (!readResult.Succeeded || readResult.Value is null)
             {
-                if (readResult.Error?.Code == FileSystemErrorCode.PermissionDenied || readResult.Error?.Code == FileSystemErrorCode.CapabilityDenied)
-                {
-                    context.StandardError.WriteLine($"cat: {fileArg}: Permission denied");
-                }
-                else
-                {
-                    context.StandardError.WriteLine($"cat: {fileArg}: No such file or directory");
-                }
+                context.StandardError.WriteLine(CommandText.FileError(context, "cat", fileArg, CommandText.Reason(context, CommandIO.ReadErrno(readResult.Error))));
                 exitCode = 1;
             }
             else
@@ -89,6 +85,7 @@ public sealed class CatCommand : TerminalAppBase
     /// <summary>Reads <paramref name="url"/> as content and prints its body.</summary>
     private async ValueTask<int> CatUrlAsync(TerminalExecutionContext context, string url, CancellationToken cancellationToken)
     {
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         HackHttpResponse response;
         try
         {
@@ -98,13 +95,13 @@ public sealed class CatCommand : TerminalAppBase
         catch (HackHttpRequestException exception)
         {
             context.StandardError.WriteLine(exception.NetworkError == HackNetworkError.HostNotFound
-                ? $"cat: {url}: Could not resolve host"
+                ? text["ResolveFailed", url]
                 : $"cat: {url}: {exception.Message}");
             return 1;
         }
         catch (ArgumentException)
         {
-            context.StandardError.WriteLine($"cat: {url}: Invalid URL");
+            context.StandardError.WriteLine(text["InvalidUrl", url]);
             return 1;
         }
 
@@ -114,9 +111,9 @@ public sealed class CatCommand : TerminalAppBase
             return 1;
         }
 
-        string text = response.ReadAsString();
-        context.StandardOutput.Write(text);
-        if (text.Length > 0 && !text.EndsWith('\n'))
+        string body = response.ReadAsString();
+        context.StandardOutput.Write(body);
+        if (body.Length > 0 && !body.EndsWith('\n'))
         {
             context.StandardOutput.WriteLine();
         }

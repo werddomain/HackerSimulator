@@ -60,8 +60,8 @@ public static class Program
 
         // The app's own output directory first, so sibling project references copied there win.
         string outputDirectory = Path.GetDirectoryName(assemblyPath)!;
-        IEnumerable<string> candidates = dependencies
-            .Concat(Directory.Exists(outputDirectory) ? Directory.EnumerateFiles(outputDirectory, "*.dll") : []);
+        string[] candidates = [.. dependencies
+            .Concat(Directory.Exists(outputDirectory) ? Directory.EnumerateFiles(outputDirectory, "*.dll") : [])];
 
         AppAssemblyLoadContext context = new(candidates);
         try
@@ -76,7 +76,8 @@ public static class Program
                 return Fail(project, new GeneratorDiagnostic(GeneratorCodes.AssemblyLoadFailed, assemblyPath, exception.Message));
             }
 
-            InspectionResult result = AppDefinitionInspector.Inspect(assembly);
+            // ADR 0098 §5: declared asset paths are relative to the project's wwwroot/ (served as _content/<assembly>/).
+            InspectionResult result = AppDefinitionInspector.Inspect(assembly, candidates, Path.Combine(Path.GetDirectoryName(project)!, "wwwroot"));
             if (!result.IsSuccess)
             {
                 return Fail(project, [.. result.Diagnostics]);
@@ -92,9 +93,16 @@ public static class Program
                 return Fail(project, [.. boundary]);
             }
 
-            IReadOnlyList<string> files = ManifestWriter.Write(Path.GetDirectoryName(project)!, result.Manifests);
+            // ADR 0104 section 4: Resources/AppManifest.<culture>.resx -> localization/<culture>.json.
+            ManifestLocalizationGenerator.Result localized = ManifestLocalizationGenerator.Apply(Path.GetDirectoryName(project)!, result.Manifests);
+            if (localized.Diagnostics.Count > 0)
+            {
+                return Fail(project, [.. localized.Diagnostics]);
+            }
+
+            IReadOnlyList<string> files = ManifestWriter.Write(Path.GetDirectoryName(project)!, localized.Manifests);
             ManifestWriter.WriteIfChanged(stamp, string.Join('\n', files) + "\n");
-            foreach (GeneratedManifest manifest in result.Manifests)
+            foreach (GeneratedManifest manifest in localized.Manifests)
             {
                 Console.WriteLine($"HackerOS manifest: {manifest.Manifest.Id} <- {manifest.DefinitionType}");
             }
@@ -108,8 +116,8 @@ public static class Program
     }
 
     /// <summary>
-    /// <c>aggregate --project &lt;host csproj&gt; --apps &lt;list file&gt; --output &lt;json&gt;</c>. The output is
-    /// rewritten only when its bytes change, so the host does not recompile needlessly.
+    /// <c>aggregate --project &lt;host csproj&gt; --apps &lt;list file&gt; --output &lt;json&gt; [--trimmer-roots &lt;xml&gt;]</c>.
+    /// The outputs are rewritten only when their bytes change, so the host does not recompile needlessly.
     /// </summary>
     private static int Aggregate(IReadOnlyDictionary<string, string> options)
     {
@@ -127,6 +135,12 @@ public static class Program
         }
 
         ManifestWriter.WriteIfChanged(output, result.Json);
+        // ADR 0106 §2: the trimmer roots of the same apps, for a trimmed publish of the host.
+        if (options.TryGetValue("trimmer-roots", out string? trimmerRoots) && !string.IsNullOrWhiteSpace(trimmerRoots))
+        {
+            ManifestWriter.WriteIfChanged(Path.GetFullPath(trimmerRoots), result.TrimmerRoots!);
+        }
+
         Console.WriteLine($"HackerOS built-in applications: {inputs.Count} app(s) -> {output}");
         return 0;
     }
@@ -183,7 +197,7 @@ public static class Program
     {
         Console.WriteLine("HackerOS manifest generator (ADR 0047)");
         Console.WriteLine("  generate --assembly <app.dll> --project <app.csproj> --stamp <file> [--dependencies <list file>]");
-        Console.WriteLine("  aggregate --project <host.csproj> --apps <list file> --output <BuiltInApplications.json>");
+        Console.WriteLine("  aggregate --project <host.csproj> --apps <list file> --output <BuiltInApplications.json> [--trimmer-roots <roots.xml>]");
         Console.WriteLine("  validate <manifest.json>");
     }
 }

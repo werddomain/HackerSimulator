@@ -1,5 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <Import Project="../../../Platform/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.Apps.Settings</PackageId>
+    <Description>The base HackerOS Settings app, to include in an OS host (ProjectReference or PackageReference, optionally IsSystemApp).</Description>
+    <PackageTags>hackeros;app</PackageTags>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -18,6 +26,10 @@
     <ProjectReference Include="..\..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Platform\HackerOs.Theming.Blazor\HackerOs.Theming.Blazor.csproj" />
     <ProjectReference Include="..\..\..\Shared\HackerOs.Theming.Abstractions\HackerOs.Theming.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="HackerOs.Apps.Settings.Tests" />
   </ItemGroup>
 
 </Project>

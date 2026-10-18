@@ -48,8 +48,20 @@ public sealed class AppExecutionContextFactory
     private readonly SystemMetricsServices? _metrics;
     private readonly SystemAdministrationGatewayServices? _administration;
     private readonly Clipboard.SystemClipboard _clipboard;
+    private readonly Network.Local.LocalNetworkServices? _localNetwork;
+    private readonly WebData.IWebSiteDatabaseStore? _webDatabases;
+    private readonly Keyring.UserKeyringService? _keyring;
+    private readonly Appearance.AccessibilityPreferenceService? _accessibility;
 
     /// <summary>Initializes the factory with every platform singleton gateways delegate to.</summary>
+    /// <param name="grantRepository">Capability grants; each context's capability checker reads the app's grants for its user from it.</param>
+    /// <param name="fileSystem">The OS filesystem behind the filesystem and directory-watch gateways, authorized per context.</param>
+    /// <param name="eventBus">The system event bus behind <see cref="IAppExecutionContext.Events"/>.</param>
+    /// <param name="topicBus">Topic messaging, shared by the event gateway and filesystem change notifications.</param>
+    /// <param name="notifications">The desktop notification queue behind <see cref="IAppExecutionContext.Notifications"/>.</param>
+    /// <param name="diagnostics">The diagnostic sink app log entries are forwarded to.</param>
+    /// <param name="clock">The simulation clock: timestamps of every gateway and <see cref="IAppExecutionContext.Clock"/>.</param>
+    /// <param name="processManager">The process table; supplies each process's cancellation token and backs <see cref="IAppExecutionContext.Processes"/>.</param>
     /// <param name="intentDispatcherProvider">
     /// Lazily resolves the app-intent dispatcher for the <see cref="IAppExecutionContext.Intents"/>
     /// gateway. Resolved lazily (not injected eagerly) because <see cref="AppIntentDispatcher"/>
@@ -98,8 +110,25 @@ public sealed class AppExecutionContextFactory
     /// <param name="administration">
     /// Services behind the administration gateways (ADR 0056, sections 8 to 11):
     /// <see cref="IAppExecutionContext.SystemSettings"/>, <see cref="IAppExecutionContext.PermissionAdministration"/>,
-    /// <see cref="IAppExecutionContext.ServerConnection"/>, <see cref="IAppExecutionContext.SystemPower"/> and
-    /// <see cref="IAppExecutionContext.StorageDiagnostics"/>; <see langword="null"/> leaves them unsupported.
+    /// <see cref="IAppExecutionContext.ServerConnection"/>, <see cref="IAppExecutionContext.SystemPower"/>,
+    /// <see cref="IAppExecutionContext.StorageDiagnostics"/> and <see cref="IAppExecutionContext.SystemBackup"/>
+    /// (ADR 0099); <see langword="null"/> leaves them unsupported.
+    /// </param>
+    /// <param name="localNetwork">
+    /// The local network stack (ADR 0074): listening ports, <c>hackdns</c> and web app activation, used by
+    /// the network gateway to reach services on this machine; <see langword="null"/> leaves it out.
+    /// </param>
+    /// <param name="webDatabases">
+    /// The browser databases of web sites behind <see cref="IAppExecutionContext.WebDatabase"/> and the
+    /// storage diagnostics (ADR 0088); <see langword="null"/> leaves sites without a database.
+    /// </param>
+    /// <param name="keyring">
+    /// The session user's keyring behind <see cref="IAppExecutionContext.Keyring"/> (ADR 0100 section 2);
+    /// <see langword="null"/> leaves every app with a locked keyring.
+    /// </param>
+    /// <param name="accessibility">
+    /// The session's accessibility preferences behind <see cref="IAppExecutionContext.Accessibility"/>
+    /// (ADR 0105 section 3); <see langword="null"/> gives every app the defaults.
     /// </param>
     public AppExecutionContextFactory(
         ICapabilityGrantRepository grantRepository,
@@ -121,7 +150,11 @@ public sealed class AppExecutionContextFactory
         Func<Shell.ShellHostService>? shellHostProvider = null,
         SystemMetricsServices? metrics = null,
         Clipboard.SystemClipboard? clipboard = null,
-        SystemAdministrationGatewayServices? administration = null)
+        SystemAdministrationGatewayServices? administration = null,
+        Network.Local.LocalNetworkServices? localNetwork = null,
+        WebData.IWebSiteDatabaseStore? webDatabases = null,
+        Keyring.UserKeyringService? keyring = null,
+        Appearance.AccessibilityPreferenceService? accessibility = null)
     {
         _grantRepository = grantRepository ?? throw new ArgumentNullException(nameof(grantRepository));
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
@@ -143,7 +176,19 @@ public sealed class AppExecutionContextFactory
         _metrics = metrics;
         _administration = administration;
         _clipboard = clipboard ?? new Clipboard.SystemClipboard();
+        _localNetwork = localNetwork;
+        _webDatabases = webDatabases;
+        _keyring = keyring;
+        _accessibility = accessibility;
     }
+
+    /// <summary>
+    /// Gets the service behind <see cref="IAppExecutionContext.Background"/> (ADR 0128): each task
+    /// becomes a child process of the app. Lazy because the service reaches the orchestrator (the app's
+    /// descriptor) and the remote host, which depend on this factory. <see langword="null"/> keeps the
+    /// SDK's default, which runs the task at once on the calling thread.
+    /// </summary>
+    public Func<BackgroundJobService>? BackgroundJobs { get; init; }
 
     /// <summary>
     /// Creates a new trusted context for one running app instance, wiring every scoped gateway to
@@ -207,12 +252,20 @@ public sealed class AppExecutionContextFactory
             ? new AppServiceControlGateway(_intentDispatcherProvider, manifest.Id, userId, principal)
             : UnsupportedServiceControlGateway.Instance;
 
+        IAppEnvironmentGateway environment = _environments is null
+            ? new DetachedAppEnvironmentGateway(manifest.Id, principal.HomePath, userName, _machineName)
+            : new AppEnvironmentGateway(_environments, process.Pid, userName, _machineName, principal.HomePath);
+
+        // The process's language (ADR 0104), read at each use: the OS texts it asks for (the
+        // operation shown in an administrator prompt) follow its LANG, as its own texts do.
+        Func<System.Globalization.CultureInfo> language = () => HackerOs.AppSdk.Globalization.HackLocale.ResolveLanguage(environment.GetVariable);
         AppPermissionErrorGateway permissionErrors = new();
         AppEventGateway events = new(_eventBus, _topicBus, manifest.Id, userId, process.Pid.ToString());
         AppClockGateway clock = new(_clock);
         AppCatalogGateway? catalogGateway = _appCatalog is null
             ? null
-            : new AppCatalogGateway(_appCatalog.Catalog, _appCatalog.Enablement, _appCatalog.FileAssociations, _appCatalog.Installation);
+            : new AppCatalogGateway(
+                _appCatalog.Catalog, _appCatalog.Enablement, _appCatalog.FileAssociations, _appCatalog.Installation, principal, capabilities);
         AppManagementGateway? managementGateway = _appCatalog?.Installation is null
             ? null
             : new AppManagementGateway(
@@ -224,13 +277,20 @@ public sealed class AppExecutionContextFactory
                 principal,
                 isRootElevated,
                 _fileSystem,
-                _clock);
+                _clock,
+                language,
+                _appCatalog.Assets);
         AppClipboardGateway clipboardGateway = new(_clipboard, capabilities, process.SessionId, process.Pid);
 
         AppFileSystemGateway fileSystem = new(
-            _fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise, kernelMemory: _metrics?.KernelMemory);
-        AdministrationGateways administration = CreateAdministrationGateways(manifest, principal, isRootElevated, capabilities, fileSystem);
+            _fileSystem, _clock, operationContext, groupIds, notifyPermissionError: permissionErrors.Raise, kernelMemory: _metrics?.KernelMemory)
+        {
+            // ADR 0125: every open of the app counts toward its process's nofile limit.
+            Descriptors = (_processManager as Processes.InMemoryProcessManager)?.FileDescriptors
+        };
+        AdministrationGateways administration = CreateAdministrationGateways(manifest, principal, isRootElevated, capabilities, fileSystem, language);
 
+        AppAccessibilityGateway? accessibilityGateway = _accessibility is null ? null : new AppAccessibilityGateway(_accessibility);
         AppExecutionContext context = new(
             manifest,
             instanceId ?? process.AppInstanceId.Value,
@@ -244,18 +304,24 @@ public sealed class AppExecutionContextFactory
             fileSystem,
             events,
             new AppNotificationGateway(_notifications, _clock, capabilities, manifest.Id, principal.UserId),
-            new AppLoggingGateway(_diagnostics, _clock, manifest.Id, _logWriter, process.Pid.Value),
+            new AppLoggingGateway(
+                _diagnostics, _clock, manifest.Id, _logWriter, process.Pid.Value,
+                isSystemApp: _appCatalog?.Catalog.IsSystemApp(manifest.Id) == true,
+                isWebApp: manifest.Kind == AppKind.Web),
             clock,
-            new AppProcessGateway(_processManager, capabilities, process.Pid),
+            new AppProcessGateway(_processManager, capabilities, process.Pid)
+            {
+                // ADR 0125 section 4: setrlimit/prlimit, under the caller's identity and elevation.
+                ResourceLimits = (_processManager as Processes.InMemoryProcessManager)?.ResourceLimits,
+                IsRootElevated = isRootElevated
+            },
             intents,
             new AppFileSystemWatchGateway(_fileSystem, _topicBus, _clock, operationContext, groupIds, process.Pid.ToString()),
             permissionErrors,
             services,
             operationContext.OneShotElevation,
             principal.HomePath,
-            _environments is null
-                ? new DetachedAppEnvironmentGateway(manifest.Id, principal.HomePath, userName, _machineName)
-                : new AppEnvironmentGateway(_environments, process.Pid, userName, _machineName, principal.HomePath),
+            environment,
             isRootElevated,
             userName,
             principal.DisplayName,
@@ -272,7 +338,8 @@ public sealed class AppExecutionContextFactory
                     _metrics?.Network,
                     _metrics?.ProcessIo,
                     process.Pid,
-                    _metrics?.KernelMemory),
+                    _metrics?.KernelMemory,
+                    _localNetwork is null ? null : new Network.Local.LocalNetworkCaller(_localNetwork, manifest, principal, isRootElevated)),
             _metrics?.Drives,
             clipboardGateway,
             administration.SystemSettings,
@@ -281,13 +348,36 @@ public sealed class AppExecutionContextFactory
             administration.SystemPower,
             administration.StorageDiagnostics,
             // ADR 0069: the process manager's block carries the stop request and the kill to the context.
-            (_processManager as Processes.InMemoryProcessManager)?.GetControlBlock(process.Pid));
+            (_processManager as Processes.InMemoryProcessManager)?.GetControlBlock(process.Pid),
+            // ADR 0088: hackweb.<app id>, for web apps only.
+            new WebData.AppWebDatabaseGateway(_webDatabases, manifest),
+            // ADR 0100 section 2: the session user's keyring, confined to this app's entries.
+            _keyring is null ? null : new Keyring.AppKeyringGateway(_keyring, principal.UserId, manifest.Id, capabilities),
+            // ADR 0105 section 3: the session's accessibility preferences, no capability needed.
+            accessibilityGateway);
 
         // ADR 0043: callbacks these gateways invoke on the app's behalf re-enter its ambient context.
         events.BindAmbientContext(context);
         clock.BindAmbientContext(context);
         catalogGateway?.BindAmbientContext(context);
+        accessibilityGateway?.BindAmbientContext(context);
         administration.SystemSettings?.BindAmbientContext(context);
+        if (administration.SystemBackup is not null)
+        {
+            context.SystemBackup = administration.SystemBackup;
+        }
+
+        if (_metrics?.CrossOriginIsolation is { } isolation)
+        {
+            // ADR 0146: the page's isolation, no capability, set after construction like the backup gateway.
+            context.CrossOriginIsolation = isolation;
+        }
+
+        if (administration.UserAccounts is not null)
+        {
+            // ADR 0120: accounts and passwords, set after construction like the backup gateway.
+            context.UserAccounts = administration.UserAccounts;
+        }
 
         if (_shellHostProvider is not null)
         {
@@ -302,6 +392,18 @@ public sealed class AppExecutionContextFactory
                     Shell.ShellHostService.ShellManifest, principal, shellProcess, grantedCapabilities,
                     shellProcess.AppInstanceId.Value, isRootElevated));
         }
+
+        if (BackgroundJobs is { } backgroundJobs)
+        {
+            // ADR 0128 section 3: a task is a child process of this one, with this instance's identity,
+            // capabilities and root elevation, like a helper the app would fork.
+            context.Background = new AppBackgroundGateway(
+                backgroundJobs,
+                () => context,
+                jobProcess => Create(
+                    manifest, principal, jobProcess, grantedCapabilities, jobProcess.AppInstanceId.Value, isRootElevated));
+        }
+
         clipboardGateway.BindAmbientContext(context);
         return context;
     }
@@ -312,20 +414,23 @@ public sealed class AppExecutionContextFactory
         AuthenticatedPrincipal principal,
         bool isRootElevated,
         ICapabilityChecker capabilities,
-        AppFileSystemGateway fileSystem)
+        AppFileSystemGateway fileSystem,
+        Func<System.Globalization.CultureInfo> language)
     {
         if (_administration is null)
         {
-            return new AdministrationGateways(null, null, null, null, null);
+            return new AdministrationGateways(null, null, null, null, null, null, null);
         }
 
-        AdministratorGate gate = new(_administration.AuthenticationAgent, manifest, principal, isRootElevated);
+        AdministratorGate gate = new(_administration.AuthenticationAgent, manifest, principal, isRootElevated, language);
         return new AdministrationGateways(
             _administration.Settings is { } settings ? new AppSystemSettingsGateway(settings, fileSystem) : null,
             _administration.Permissions is { } permissions ? new AppPermissionAdministrationGateway(permissions, capabilities, gate) : null,
-            new AppServerConnectionGateway(_administration.Server, capabilities),
+            new AppServerConnectionGateway(_administration.Server, capabilities, language),
             new AppSystemPowerGateway(_administration.Power, capabilities, gate),
-            new AppStorageDiagnosticsGateway(_administration.Storage, capabilities));
+            new AppStorageDiagnosticsGateway(_administration.Storage, capabilities, _webDatabases),
+            new AppSystemBackupGateway(_administration.Backup, capabilities, gate),
+            new AppUserAccountsGateway(_administration.Passwords, capabilities, gate));
     }
 
     private sealed record AdministrationGateways(
@@ -333,7 +438,9 @@ public sealed class AppExecutionContextFactory
         AppPermissionAdministrationGateway? Permissions,
         AppServerConnectionGateway? ServerConnection,
         AppSystemPowerGateway? SystemPower,
-        AppStorageDiagnosticsGateway? StorageDiagnostics);
+        AppStorageDiagnosticsGateway? StorageDiagnostics,
+        AppSystemBackupGateway? SystemBackup,
+        AppUserAccountsGateway? UserAccounts);
 
     private sealed class UnsupportedIntentGateway : IAppIntentGateway
     {
@@ -384,12 +491,14 @@ public sealed class AppExecutionContextFactory
 /// <param name="FileAssociations">Resolves "Open with" candidates; <see langword="null"/> leaves <c>GetHandlersAsync</c> unsupported.</param>
 /// <param name="Installation">Uninstall/reinstall service; <see langword="null"/> leaves <c>AppManagement</c> unsupported and <c>Changed</c> silent.</param>
 /// <param name="AuthenticationAgent">OS authentication agent (ADR 0055, section 5); <see langword="null"/> refuses every machine-scope change.</param>
+/// <param name="Assets">Asset integrity checks (ADR 0098 §5): Settings lists the apps it found damaged; <see langword="null"/> reports none.</param>
 public sealed record AppCatalogGatewayServices(
     AppCatalog Catalog,
     Lifecycle.IAppEnablementRegistry Enablement,
     Func<Intents.FileAssociationResolver>? FileAssociations = null,
     Func<Apps.IAppInstallationService>? Installation = null,
-    Func<Elevation.IAdministratorAuthenticationAgent>? AuthenticationAgent = null);
+    Func<Elevation.IAdministratorAuthenticationAgent>? AuthenticationAgent = null,
+    Func<Apps.AppAssetStore>? Assets = null);
 
 /// <summary>
 /// Services behind the measurements of ADR 0057 that the factory hands to each context.
@@ -405,4 +514,11 @@ public sealed record SystemMetricsServices(
     INetworkInterfaceStatistics? Network = null,
     IProcessIoAccounting? ProcessIo = null,
     HackerOs.AppSdk.IO.IAppDriveGateway? Drives = null,
-    IKernelMemoryLedger? KernelMemory = null);
+    IKernelMemoryLedger? KernelMemory = null)
+{
+    /// <summary>
+    /// Gets the page's cross-origin isolation behind <see cref="IAppExecutionContext.CrossOriginIsolation"/>
+    /// (ADR 0146); shared by every context. <see langword="null"/> leaves it unsupported.
+    /// </summary>
+    public HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway? CrossOriginIsolation { get; init; }
+}

@@ -1,4 +1,6 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.ServiceProcess;
+using HackerOs.Simulation.Abstractions.Gateways;
 
 namespace HackerOs.AppSdk;
 
@@ -42,6 +44,17 @@ public abstract class ServiceAppBase : AppBase
     }
 
     /// <summary>
+    /// Initializes a service-like app of another kind: a web site (<see cref="AppKind.Web"/>,
+    /// <see cref="WebServerAppBase"/>) has the same lifecycle as a service (ADR 0073).
+    /// </summary>
+    /// <param name="manifest">Application manifest.</param>
+    /// <param name="kind">The kind the manifest must declare.</param>
+    private protected ServiceAppBase(AppManifest manifest, AppKind kind)
+        : base(manifest, kind)
+    {
+    }
+
+    /// <summary>
     /// Runs the service until it completes, faults, or receives session cancellation.
     /// </summary>
     /// <param name="context">Scoped application execution context.</param>
@@ -65,6 +78,7 @@ public abstract class ServiceAppBase : AppBase
         // ADR 0069: the OS's stop request (kill, End task, logout...) runs OnStoppingAsync right
         // away, before the token is cancelled, and the OS waits for it within the grace period.
         context.StopRequested += OnStopRequested;
+        context.IntentReceived += OnIntentReceived;
         return RunInScopeAsync(context, sessionCancellationToken);
     }
 
@@ -123,13 +137,61 @@ public abstract class ServiceAppBase : AppBase
         using IDisposable scope = HackExecutionContext.Enter(context);
         try
         {
+            // ADR 0097: "activating" until the start code returns, "active" from then on (READY=1).
+            await OnStartAsync(context, sessionCancellationToken);
+            context.ServiceNotify.Notify(new ServiceNotification(Ready: true));
             await RunCoreAsync(context, sessionCancellationToken);
         }
         finally
         {
             context.StopRequested -= OnStopRequested;
+            context.IntentReceived -= OnIntentReceived;
         }
     }
+
+    /// <summary>
+    /// Runs <see cref="OnIntentReceivedAsync"/> for an intent the OS handed to the running service
+    /// (ADR 0096, section 5). The OS raises the event inside the service's ambient context; a fault is
+    /// logged, never thrown at the sender.
+    /// </summary>
+    private async void OnIntentReceived(object? sender, AppIntentDelivery intent)
+    {
+        try
+        {
+            await OnIntentReceivedAsync(intent, _context?.CancellationToken ?? CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            _context?.Logging.Log(
+                HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Error,
+                $"OnIntentReceivedAsync threw {exception.GetType().Name}: {exception.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Prepares the service before its loop (ADR 0097, section 1): the service reads as
+    /// <c>activating</c> until this returns, then <c>active</c> with health
+    /// <see cref="HackServiceHealth.Healthy"/>. A start longer than the OS's start timeout (30 s) is
+    /// killed and the service reads as <c>failed (Result: timeout)</c>; an exception here fails it
+    /// with <c>exception</c>. The default does nothing, so the service is active at once.
+    /// </summary>
+    /// <param name="context">Scoped application execution context.</param>
+    /// <param name="sessionCancellationToken">Signals the end of the run.</param>
+    /// <returns>A task completing when the service is ready to serve.</returns>
+    protected virtual Task OnStartAsync(IAppExecutionContext context, CancellationToken sessionCancellationToken) =>
+        Task.CompletedTask;
+
+    /// <summary>
+    /// Reports the service's own health without stopping it (ADR 0097, section 2), like
+    /// <c>sd_notify("STATUS=…")</c>: a site that can no longer reach its database reports
+    /// <see cref="HackServiceHealth.Degraded"/> with a short reason. <c>systemctl status</c> and the
+    /// task manager show both.
+    /// </summary>
+    /// <param name="health">The current health.</param>
+    /// <param name="status">A short human-readable status, or <see langword="null"/> to clear it.</param>
+    /// <remarks>Does nothing before <see cref="RunAsync"/> or when the OS does not track this process as a service.</remarks>
+    protected void ReportHealth(HackServiceHealth health, string? status = null) =>
+        _context?.ServiceNotify.Notify(new ServiceNotification(Health: HackServiceStates.ToInternal(health), StatusText: status ?? string.Empty));
 
     /// <summary>Implements the active service loop.</summary>
     /// <param name="context">Scoped application execution context.</param>
@@ -150,4 +212,16 @@ public abstract class ServiceAppBase : AppBase
     protected virtual ValueTask OnStoppingAsync(
         ServiceStopReason reason,
         CancellationToken cancellationToken) => ValueTask.CompletedTask;
+
+    /// <summary>
+    /// Handles an intent the OS hands to the running service instead of starting a second one
+    /// (ADR 0096, section 5): an app-defined intent it declares (<c>Intents</c> of the manifest), with
+    /// its payload, or a launch with arguments. The intent that started the service is
+    /// <see cref="IAppExecutionContext.Intent"/>, read in <see cref="RunCoreAsync"/>.
+    /// </summary>
+    /// <param name="intent">Identifier, payload, sender and arguments.</param>
+    /// <param name="cancellationToken">The service's process token.</param>
+    /// <returns>A task representing the handling.</returns>
+    protected virtual Task OnIntentReceivedAsync(AppIntentDelivery intent, CancellationToken cancellationToken) =>
+        Task.CompletedTask;
 }

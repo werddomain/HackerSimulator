@@ -1,6 +1,9 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Commands.Common;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Chmod;
 
@@ -18,14 +21,17 @@ public sealed class ChmodCommand : TerminalAppBase
     /// <summary>The default file creation mask, applied to symbolic modes without a "who" letter.</summary>
     private const ushort Umask = 0b000_010_010;
 
+    /// <summary>Initializes the command with its manifest.</summary>
     public ChmodCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
         bool recursive = false, verbose = false, changesOnly = false, quiet = false;
         List<string> positional = [];
@@ -55,14 +61,14 @@ public sealed class ChmodCommand : TerminalAppBase
 
         if (positional.Count < 2)
         {
-            context.StandardError.WriteLine(positional.Count == 0 ? "chmod: missing operand" : $"chmod: missing operand after '{positional[0]}'");
+            context.StandardError.WriteLine(positional.Count == 0 ? text["MissingOperand"] : text["MissingOperandAfter", positional[0]]);
             return 1;
         }
 
         string modeText = positional[0];
         if (ParseMode(modeText, 0) is null)
         {
-            context.StandardError.WriteLine($"chmod: invalid mode: '{modeText}'");
+            context.StandardError.WriteLine(text["InvalidMode", modeText]);
             return 1;
         }
 
@@ -88,13 +94,14 @@ public sealed class ChmodCommand : TerminalAppBase
         bool quiet,
         CancellationToken cancellationToken)
     {
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         FileSystemResult<FileSystemEntrySnapshot> entryStat = await context.App.FileSystem.StatAsync(
             new FileSystemStatRequest(VirtualPath.Parse(path)), cancellationToken);
         if (!entryStat.Succeeded || entryStat.Value is null)
         {
             if (!quiet)
             {
-                context.StandardError.WriteLine($"chmod: cannot access '{display}': No such file or directory");
+                context.StandardError.WriteLine(text["CannotAccess", display, CommandText.Reason(context, Errno.NotFound)]);
             }
 
             return 1;
@@ -116,7 +123,7 @@ public sealed class ChmodCommand : TerminalAppBase
             {
                 if (!quiet)
                 {
-                    context.StandardError.WriteLine($"chmod: changing permissions of '{display}': {Describe(result.Transaction.Error?.Code)}");
+                    context.StandardError.WriteLine(text["ChangeFailed", display, Describe(context, text, result.Transaction.Error?.Code)]);
                 }
 
                 return 1;
@@ -126,8 +133,8 @@ public sealed class ChmodCommand : TerminalAppBase
         if (verbose || (changesOnly && updated != current))
         {
             context.StandardOutput.WriteLine(updated == current
-                ? $"mode of '{display}' retained as {Octal(current)} ({Symbolic(current, isDirectory)})"
-                : $"mode of '{display}' changed from {Octal(current)} ({Symbolic(current, isDirectory)}) to {Octal(updated)} ({Symbolic(updated, isDirectory)})");
+                ? text["Retained", display, Octal(current), Symbolic(current, isDirectory)]
+                : text["Changed", display, Octal(current), Symbolic(current, isDirectory), Octal(updated), Symbolic(updated, isDirectory)]);
         }
 
         if (recursive && isDirectory)
@@ -136,7 +143,7 @@ public sealed class ChmodCommand : TerminalAppBase
                 new FileSystemEnumerateRequest(VirtualPath.Parse(path)), cancellationToken);
             if (!listing.Succeeded || listing.Value is null)
             {
-                context.StandardError.WriteLine($"chmod: cannot read directory '{display}': Permission denied");
+                context.StandardError.WriteLine(text["CannotReadDirectory", display, CommandText.Reason(context, Errno.PermissionDenied)]);
                 return 1;
             }
 
@@ -273,11 +280,12 @@ public sealed class ChmodCommand : TerminalAppBase
         return new string(text);
     }
 
-    private static string Describe(FileSystemErrorCode? code) => code switch
+    private static string Describe(TerminalExecutionContext context, IStringLocalizer<Strings> text, FileSystemErrorCode? code) => code switch
     {
-        FileSystemErrorCode.PermissionDenied => "Operation not permitted",
-        FileSystemErrorCode.NotFound => "No such file or directory",
-        null => "Operation failed",
+        FileSystemErrorCode.PermissionDenied => CommandText.Reason(context, Errno.NotPermitted),
+        FileSystemErrorCode.NotFound => CommandText.Reason(context, Errno.NotFound),
+        FileSystemErrorCode.NoSpace => CommandText.Reason(context, Errno.NoSpace),
+        null => text["OperationFailed"],
         _ => code.Value.ToString()
     };
 

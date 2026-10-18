@@ -8,21 +8,21 @@ namespace HackerOs.App.Abstractions;
 public static class AppDefinitionMapper
 {
     /// <summary>
-    /// Maps <paramref name="definition"/> using the <c>major.minor.0</c> version of the
-    /// <c>HackerOs.App.Abstractions</c> assembly loaded in the current process as
-    /// <c>sdkCompatibility.minimumVersion</c>.
+    /// Maps <paramref name="definition"/> using the App SDK version of the current process
+    /// (<see cref="HackerOsSdk.Version"/>) as <c>sdkCompatibility.minimumVersion</c>.
     /// </summary>
     /// <param name="definition">Definition to map.</param>
     /// <returns>The equivalent manifest. Not validated: call <see cref="AppManifestValidator.Validate"/>.</returns>
     public static AppManifest ToManifest(AppDefinition definition) =>
-        ToManifest(definition, CurrentSdkMinimumVersion);
+        ToManifest(definition, HackerOsSdk.Version);
 
     /// <summary>
     /// Maps <paramref name="definition"/> with an explicit SDK minimum version. The manifest generator
-    /// uses this overload with the App Abstractions version the app was <i>compiled</i> against.
+    /// uses this overload with the App SDK version the app was <i>compiled</i> against (ADR 0098 §3).
+    /// A definition that declares its own <see cref="AppDefinition.SdkCompatibility"/> keeps it.
     /// </summary>
     /// <param name="definition">Definition to map.</param>
-    /// <param name="sdkMinimumVersion">Value written to <c>sdkCompatibility.minimumVersion</c>.</param>
+    /// <param name="sdkMinimumVersion">Value written to <c>sdkCompatibility.minimumVersion</c> when the definition declares no range.</param>
     /// <returns>The equivalent manifest. Not validated: call <see cref="AppManifestValidator.Validate"/>.</returns>
     public static AppManifest ToManifest(AppDefinition definition, string sdkMinimumVersion)
     {
@@ -34,6 +34,8 @@ public static class AppDefinitionMapper
         Type? mobileEntryPoint = definition.MobileEntryPoint;
         TerminalCommand? terminal = definition.Terminal;
         IReadOnlyList<AppComponent> components = definition.Components;
+        IReadOnlyList<string> urls = definition.Urls;
+        Type? blazorRoot = definition.BlazorRoot;
 
         return new AppManifest
         {
@@ -46,7 +48,7 @@ public static class AppDefinitionMapper
             Kind = definition.Kind,
             EntryPoint = mobileEntryPoint is null ? ToEntryPoint(entryPoint) : null,
             Platform = mobileEntryPoint is null ? null : ToPlatform(entryPoint, mobileEntryPoint),
-            SdkCompatibility = new AppSdkCompatibilityManifest(sdkMinimumVersion),
+            SdkCompatibility = definition.SdkCompatibility ?? new AppSdkCompatibilityManifest(sdkMinimumVersion),
             Presentation = new PresentationManifest(definition.Category, definition.LaunchVisibility, [.. definition.Icons]),
             Localizations = [.. definition.Localizations],
             Capabilities = [.. definition.Capabilities],
@@ -68,9 +70,21 @@ public static class AppDefinitionMapper
                     component.Contract, AssemblyFileName(component.Type), TypeName(component.Type)))],
             SingleInstancePerUser = definition.SingleInstancePerUser,
             AutoStart = definition.AutoStart,
+            ServiceStartup = definition.ServiceStartup,
             SupportsBack = definition.SupportsBack,
+            // ADR 0095 §2: omitted when undeclared, so manifests of apps using the defaults keep their bytes.
+            Window = definition.Window,
             // ADR 0070, section 1: always written resolved, so the host never guesses a default.
-            Execution = AppExecutionHosts.Resolve(definition.Kind, DeclaredExecution(definition))
+            Execution = AppExecutionHosts.Resolve(definition.Kind, DeclaredExecution(definition)),
+            // ADR 0073: only a web app has a web part; omitted otherwise so other manifests keep their bytes.
+            Web = definition.Kind == AppKind.Web || urls.Count > 0 || blazorRoot is not null
+                ? new WebAppManifest(
+                    [.. urls.Select(WebAppUrls.Normalize)],
+                    // ADR 0084: omitted without a Blazor root, so MVC-only sites keep their bytes.
+                    blazorRoot is null ? null : new WebBlazorManifest(AssemblyFileName(blazorRoot), TypeName(blazorRoot)))
+                : null,
+            // ADR 0126: omitted when undeclared, so manifests of apps using the default keep their bytes.
+            OomScoreAdj = definition.OomScoreAdjust
         };
     }
 
@@ -82,18 +96,6 @@ public static class AppDefinitionMapper
         Attribute.GetCustomAttribute(definition.GetType(), typeof(AppManifestAttribute), inherit: false) is AppManifestAttribute attribute
             ? attribute.Execution
             : null;
-
-    /// <summary>
-    /// Formats an App Abstractions assembly version as the <c>major.minor.0</c> SDK minimum version
-    /// (ADR 0047 §1: patch releases never raise an app's minimum).
-    /// </summary>
-    /// <param name="version">Assembly version, or <see langword="null"/> for <c>1.0.0</c>.</param>
-    /// <returns>The semantic version string.</returns>
-    public static string FormatSdkMinimumVersion(Version? version) =>
-        version is null ? "1.0.0" : $"{version.Major}.{Math.Max(version.Minor, 0)}.0";
-
-    private static string CurrentSdkMinimumVersion =>
-        FormatSdkMinimumVersion(typeof(AppDefinition).Assembly.GetName().Version);
 
     private static AppEntryPointManifest ToEntryPoint(Type type) =>
         new(AssemblyFileName(type), TypeName(type));

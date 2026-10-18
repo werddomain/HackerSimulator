@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Errno.FileExists" xml:space="preserve">
+    <value>Le fichier existe</value>
+  </data>
+  <data name="Errno.FileTooLarge" xml:space="preserve">
+    <value>Fichier trop volumineux</value>
+  </data>
+  <data name="Errno.InvalidArgument" xml:space="preserve">
+    <value>Argument invalide</value>
+  </data>
+  <data name="Errno.InvalidPath" xml:space="preserve">
+    <value>Chemin non valide</value>
+  </data>
+  <data name="Errno.IsDirectory" xml:space="preserve">
+    <value>Est un dossier</value>
+  </data>
+  <data name="Errno.TooManyOpenFiles" xml:space="preserve">
+    <value>Trop de fichiers ouverts</value>
+  </data>
+  <data name="Errno.NoSpace" xml:space="preserve">
+    <value>Aucun espace disponible sur le périphérique</value>
+  </data>
+  <data name="Errno.NotDirectory" xml:space="preserve">
+    <value>N'est pas un dossier</value>
+  </data>
+  <data name="Errno.NotEmpty" xml:space="preserve">
+    <value>Le dossier n'est pas vide</value>
+  </data>
+  <data name="Errno.NotFound" xml:space="preserve">
+    <value>Aucun fichier ou dossier de ce nom</value>
+  </data>
+  <data name="Errno.NotPermitted" xml:space="preserve">
+    <value>Opération non permise</value>
+  </data>
+  <data name="Errno.NotSupported" xml:space="preserve">
+    <value>Opération non supportée</value>
+  </data>
+  <data name="Errno.PermissionDenied" xml:space="preserve">
+    <value>Permission non accordée</value>
+  </data>
+  <data name="FileError" xml:space="preserve">
+    <value>{0} : {1} : {2}</value>
+  </data>
+</root>

@@ -1,3 +1,4 @@
+using HackerOs.AppSdk.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
@@ -425,12 +426,118 @@ internal static class WireCodec
         writer.WriteString("h", entry.HostName);
         WriteStrings(writer, "ad", entry.AddressList.Select(static address => address.ToString()));
         WriteStrings(writer, "al", entry.Aliases);
+        writer.WriteNumber("so", (int)entry.Source);
+        if (entry.SourceDetail is { } detail)
+        {
+            writer.WriteString("sd", detail);
+        }
     }
 
     public static HackHostEntry ReadHostEntry(JsonElement element) => new(
         element.GetString("h"),
         [.. ReadStrings(element, "ad").Select(IPAddress.Parse)],
-        ReadStrings(element, "al"));
+        ReadStrings(element, "al"))
+    {
+        Source = element.TryGetProperty("so", out JsonElement source) ? (HackDnsSource)source.GetInt32() : HackDnsSource.Unknown,
+        SourceDetail = element.GetOptionalString("sd")
+    };
+
+    // ---- Listening sockets (ADR 0074, section 2) ------------------------------------------------
+
+    public static void WriteListenerExchange(Utf8JsonWriter writer, string name, HackHttpListenerExchange exchange)
+    {
+        writer.WriteStartObject(name);
+        writer.WriteNumber("x", exchange.Id);
+        writer.WriteString("me", exchange.Method);
+        writer.WriteString("u", exchange.Url.OriginalString);
+        WritePairs(writer, "hd", exchange.Headers);
+        if (exchange.ContentType is { } contentType)
+        {
+            writer.WriteString("ct", contentType);
+        }
+
+        writer.WriteBase64String("bd", exchange.Body);
+        writer.WriteString("ra", exchange.RemoteEndPoint.ToString());
+        writer.WriteString("la", exchange.LocalEndPoint.ToString());
+        writer.WriteEndObject();
+    }
+
+    public static HackHttpListenerExchange ReadListenerExchange(JsonElement element) => new(
+        element.GetInt64("x"),
+        element.GetString("me"),
+        new Uri(element.GetString("u"), UriKind.Absolute),
+        ReadPairs(element.GetProperty("hd")),
+        element.GetOptionalString("ct"),
+        element.GetProperty("bd").GetBytesFromBase64(),
+        IPEndPoint.Parse(element.GetString("ra")),
+        IPEndPoint.Parse(element.GetString("la")));
+
+    public static void WriteListenerReply(Utf8JsonWriter writer, string name, HackHttpListenerReply reply)
+    {
+        writer.WriteStartObject(name);
+        writer.WriteNumber("sc", reply.StatusCode);
+        if (reply.ReasonPhrase is { } reason)
+        {
+            writer.WriteString("rp", reason);
+        }
+
+        WritePairs(writer, "hd", reply.Headers);
+        if (reply.ContentType is { } contentType)
+        {
+            writer.WriteString("ct", contentType);
+        }
+
+        writer.WriteBase64String("b", reply.Body);
+        writer.WriteEndObject();
+    }
+
+    public static HackHttpListenerReply ReadListenerReply(JsonElement element) => new(
+        element.GetInt32("sc"),
+        element.GetOptionalString("rp"),
+        ReadPairs(element.GetProperty("hd")),
+        element.GetOptionalString("ct"),
+        element.GetProperty("b").GetBytesFromBase64());
+
+    public static void WriteListeners(Utf8JsonWriter writer, IReadOnlyList<HackTcpListenerInfo> listeners)
+    {
+        writer.WriteStartArray("ls");
+        foreach (HackTcpListenerInfo listener in listeners)
+        {
+            writer.WriteStartObject();
+            writer.WriteString("ad", listener.Address.ToString());
+            writer.WriteNumber("po", listener.Port);
+            if (listener.ProcessId is { } pid)
+            {
+                writer.WriteNumber("p", pid);
+            }
+
+            if (listener.ProgramName is { } program)
+            {
+                writer.WriteString("pg", program);
+            }
+
+            if (listener.Owner is { } owner)
+            {
+                writer.WriteString("ow", owner);
+            }
+
+            WriteStrings(writer, "px", listener.Prefixes);
+            writer.WriteEndObject();
+        }
+
+        writer.WriteEndArray();
+    }
+
+    public static IReadOnlyList<HackTcpListenerInfo> ReadListeners(JsonElement element) =>
+    [
+        .. element.GetProperty("ls").EnumerateArray().Select(static item => new HackTcpListenerInfo(
+            IPAddress.Parse(item.GetString("ad")),
+            item.GetInt32("po"),
+            item.GetOptional("p")?.GetInt64(),
+            item.GetOptionalString("pg"),
+            item.GetOptionalString("ow"),
+            ReadStrings(item, "px")))
+    ];
 
     public static void WritePingReply(Utf8JsonWriter writer, HackPingReply reply)
     {
@@ -473,9 +580,11 @@ internal static class WireCodec
         writer.WriteString("me", request.Method);
         writer.WriteString("u", request.RequestUri.OriginalString);
         WritePairs(writer, "hd", request.Headers);
-        if (request.Form is { } form)
+        if (request.Content is { } content)
         {
-            WritePairs(writer, "fm", form);
+            // ADR 0074 section 1: the body crosses the worker boundary as its type and bytes.
+            writer.WriteString("ct", content.ContentType);
+            writer.WriteBase64String("bd", content.Bytes.Span);
         }
 
         WriteCookies(writer, "ck", request.Cookies);
@@ -485,7 +594,9 @@ internal static class WireCodec
         element.GetString("me"),
         new Uri(element.GetString("u"), UriKind.Absolute),
         ReadPairs(element.GetProperty("hd")),
-        element.GetOptional("fm") is { } form ? ReadPairs(form) : null,
+        element.GetOptional("bd") is { } body
+            ? new HackHttpContent(body.GetBytesFromBase64(), element.GetString("ct"))
+            : null,
         ReadCookies(element.GetProperty("ck")));
 
     /// <summary>
@@ -498,7 +609,7 @@ internal static class WireCodec
         writer.WriteString("rp", response.ReasonPhrase);
         writer.WriteString("u", response.RequestUri.OriginalString);
         WritePairs(writer, "hd", response.Headers);
-        writer.WriteBase64String("b", response.Content);
+        writer.WriteBase64String("b", response.ContentBytes);
         writer.WriteNumber("rc", response.RedirectCount);
         WriteCookies(writer, "sk", response.SetCookies);
     }
@@ -595,6 +706,8 @@ internal static class WireCodec
             }
 
             writer.WriteEndArray();
+            WriteStrings(writer, "u", app.Urls);
+            WriteStrings(writer, "cp", app.Capabilities);
             writer.WriteEndObject();
         }
 
@@ -614,7 +727,33 @@ internal static class WireCodec
             app.GetFlag("sys"),
             app.GetFlag("hid"),
             [.. app.GetProperty("fh").EnumerateArray().Select(static handler => new HackAppFileHandler(
-                handler.GetOptionalString("mt"), ReadStrings(handler, "ex"), ReadStrings(handler, "ac")))]))];
+                handler.GetOptionalString("mt"), ReadStrings(handler, "ex"), ReadStrings(handler, "ac")))])
+        {
+            Urls = app.TryGetProperty("u", out _) ? ReadStrings(app, "u") : [],
+            Capabilities = app.TryGetProperty("cp", out _) ? ReadStrings(app, "cp") : []
+        })];
+
+    /// <summary>Writes the default handlers of <c>cat.defaults</c> (ADR 0121).</summary>
+    public static void WriteAssociations(Utf8JsonWriter writer, IReadOnlyList<HackFileAssociation> associations)
+    {
+        writer.WriteStartArray("fa");
+        foreach (HackFileAssociation association in associations)
+        {
+            writer.WriteStartObject();
+            writer.WriteString("t", association.Target);
+            writer.WriteString("a", association.Action);
+            writer.WriteString("id", association.AppId);
+            writer.WriteNumber("l", (int)association.Layer);
+            writer.WriteEndObject();
+        }
+
+        writer.WriteEndArray();
+    }
+
+    /// <summary>Reads what <see cref="WriteAssociations"/> wrote.</summary>
+    public static IReadOnlyList<HackFileAssociation> ReadAssociations(JsonElement element) =>
+        [.. element.GetProperty("fa").EnumerateArray().Select(static row => new HackFileAssociation(
+            row.GetString("t"), row.GetString("a"), row.GetString("id"), (HackFileAssociationLayer)row.GetInt32("l")))];
 
     public static void WriteServiceResult(Utf8JsonWriter writer, ServiceControlResult result)
     {
@@ -627,6 +766,62 @@ internal static class WireCodec
 
     public static ServiceControlResult ReadServiceResult(JsonElement element) =>
         new((ServiceControlOutcome)element.GetInt32("oc"), element.GetOptionalString("ec"));
+
+    /// <summary>Writes a service's state (ADR 0097) for <c>systemctl status</c> in a worker.</summary>
+    public static void WriteServiceStatus(Utf8JsonWriter writer, ServiceStatusSnapshot status)
+    {
+        writer.WriteNumber("as", (int)status.ActiveState);
+        writer.WriteNumber("rs", (int)status.Result);
+        writer.WriteNumber("h", (int)status.Health);
+        if (status.StatusText is { } text)
+        {
+            writer.WriteString("st", text);
+        }
+
+        if (status.StateChangedAtUtc is { } since)
+        {
+            writer.WriteNumber("ts", since.ToUnixTimeMilliseconds());
+        }
+
+        if (status.MainPid is { } pid)
+        {
+            writer.WriteNumber("pid", pid);
+        }
+
+        if (status.ExitCode is { } exitCode)
+        {
+            writer.WriteNumber("xc", exitCode);
+        }
+    }
+
+    public static ServiceStatusSnapshot ReadServiceStatus(JsonElement element) => new(
+        (ServiceActiveState)element.GetInt32("as"),
+        (ServiceRunResult)element.GetInt32("rs"),
+        (ServiceHealth)element.GetInt32("h"),
+        element.GetOptionalString("st"),
+        element.GetOptional("ts") is { } since ? DateTimeOffset.FromUnixTimeMilliseconds(since.GetInt64()) : null,
+        element.GetOptional("pid") is { } pid ? pid.GetInt64() : null,
+        element.GetOptional("xc") is { } exitCode ? exitCode.GetInt32() : null);
+
+    /// <summary>Writes one <c>sd_notify</c>-like message of a service in a worker (ADR 0097, section 2).</summary>
+    public static void WriteServiceNotification(Utf8JsonWriter writer, ServiceNotification notification)
+    {
+        writer.WriteBoolean("r", notification.Ready);
+        if (notification.Health is { } health)
+        {
+            writer.WriteNumber("h", (int)health);
+        }
+
+        if (notification.StatusText is { } text)
+        {
+            writer.WriteString("st", text);
+        }
+    }
+
+    public static ServiceNotification ReadServiceNotification(JsonElement element) => new(
+        element.GetProperty("r").GetBoolean(),
+        element.GetOptional("h") is { } health ? (ServiceHealth)health.GetInt32() : null,
+        element.GetOptionalString("st"));
 
     public static void WriteDrives(Utf8JsonWriter writer, IReadOnlyList<HackDriveSnapshot> drives)
     {
@@ -648,6 +843,32 @@ internal static class WireCodec
     public static IReadOnlyList<HackDriveSnapshot> ReadDrives(JsonElement element) =>
         [.. element.GetProperty("dr").EnumerateArray().Select(static drive => new HackDriveSnapshot(
             drive.GetString("n"), drive.GetString("f"), drive.GetString("l"), drive.GetInt64("t"), drive.GetInt64("a")))];
+
+    public static void WriteCrossOriginIsolation(Utf8JsonWriter writer, HackCrossOriginIsolationStatus status)
+    {
+        writer.WriteBoolean("i", status.IsIsolated);
+        writer.WriteNumber("r", (int)status.Reason);
+        writer.WriteNumber("s", (int)status.Setting);
+        if (status.EmbedderPolicy is not null)
+        {
+            writer.WriteString("e", status.EmbedderPolicy);
+        }
+
+        writer.WriteBoolean("sp", status.SharedPipes);
+        writer.WriteBoolean("sc", status.SynchronousWorkerCalls);
+        writer.WriteBoolean("mm", status.BrowserMemoryMeasurement);
+        writer.WriteNumber("tr", status.TimerResolution.Ticks);
+    }
+
+    public static HackCrossOriginIsolationStatus ReadCrossOriginIsolation(JsonElement element) => new(
+        element.GetProperty("i").GetBoolean(),
+        (HackCrossOriginIsolationReason)element.GetInt32("r"),
+        (HackCrossOriginIsolationSetting)element.GetInt32("s"),
+        element.GetOptionalString("e"),
+        element.GetProperty("sp").GetBoolean(),
+        element.GetProperty("sc").GetBoolean(),
+        element.GetProperty("mm").GetBoolean(),
+        TimeSpan.FromTicks(element.GetInt64("tr")));
 
     public static void WriteLaunchResult(Utf8JsonWriter writer, AppIntentLaunchResult result)
     {
@@ -673,12 +894,62 @@ internal static class WireCodec
         {
             writer.WriteString("ec", code);
         }
+
+        if (result.FellBackToOpen)
+        {
+            writer.WriteBoolean("fb", true);
+        }
     }
 
     public static AppIntentOpenFileResult ReadOpenFileResult(JsonElement element) => new(
         (AppIntentOpenFileOutcome)element.GetInt32("oc"),
         element.TryGetProperty("ca", out _) ? ReadStrings(element, "ca") : null,
+        element.GetOptionalString("ec"),
+        element.TryGetProperty("fb", out _) && element.GetFlag("fb"));
+
+    public static void WriteIntentResult(Utf8JsonWriter writer, AppIntentResult result)
+    {
+        writer.WriteNumber("oc", (int)result.Outcome);
+        if (result.CandidateAppIds is { } candidates)
+        {
+            WriteStrings(writer, "ca", candidates);
+        }
+
+        if (result.ErrorCode is { } code)
+        {
+            writer.WriteString("ec", code);
+        }
+    }
+
+    public static AppIntentResult ReadIntentResult(JsonElement element) => new(
+        (AppIntentOutcome)element.GetInt32("oc"),
+        element.TryGetProperty("ca", out _) ? ReadStrings(element, "ca") : null,
         element.GetOptionalString("ec"));
+
+    /// <summary>Writes one intent delivered to a process (ADR 0096, section 5) as the object <paramref name="name"/>.</summary>
+    public static void WriteIntentDelivery(Utf8JsonWriter writer, string name, AppIntentDelivery delivery)
+    {
+        writer.WriteStartObject(name);
+        writer.WriteString("id", delivery.IntentId);
+        if (delivery.PayloadJson is { } payload)
+        {
+            writer.WriteString("pl", payload);
+        }
+
+        if (delivery.SenderAppId is { } sender)
+        {
+            writer.WriteString("snd", sender);
+        }
+
+        WriteStrings(writer, "ar", delivery.Arguments);
+        writer.WriteEndObject();
+    }
+
+    public static AppIntentDelivery ReadIntentDelivery(JsonElement element) =>
+        new(element.GetString("id"), element.GetOptionalString("pl"), element.GetOptionalString("snd"))
+        {
+            Arguments = ReadStrings(element, "ar")
+        };
 
     public static void WriteClipboardFiles(Utf8JsonWriter writer, HackClipboardFileList? files)
     {
@@ -702,7 +973,28 @@ internal static class WireCodec
 
     public static void WriteProcess(Utf8JsonWriter writer, string name, ProcessRecord process)
     {
-        writer.WriteStartObject(name);
+        writer.WritePropertyName(name);
+        WriteProcessValue(writer, process);
+    }
+
+    /// <summary>The process table, for the synchronous <c>ListProcesses</c> of a worker (ADR 0131, section 4).</summary>
+    public static void WriteProcesses(Utf8JsonWriter writer, string name, IReadOnlyList<ProcessRecord> processes)
+    {
+        writer.WriteStartArray(name);
+        foreach (ProcessRecord process in processes)
+        {
+            WriteProcessValue(writer, process);
+        }
+
+        writer.WriteEndArray();
+    }
+
+    public static IReadOnlyList<ProcessRecord> ReadProcesses(JsonElement element, string name) =>
+        [.. element.GetProperty(name).EnumerateArray().Select(ReadProcess)];
+
+    private static void WriteProcessValue(Utf8JsonWriter writer, ProcessRecord process)
+    {
+        writer.WriteStartObject();
         writer.WriteNumber("pid", process.Pid.Value);
         if (process.ParentPid is { } parent)
         {

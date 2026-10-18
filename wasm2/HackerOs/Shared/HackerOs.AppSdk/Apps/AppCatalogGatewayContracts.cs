@@ -1,11 +1,12 @@
 using HackerOs.App.Abstractions;
+using HackerOs.Simulation.Abstractions.Gateways;
 
 namespace HackerOs.AppSdk.Apps;
 
 /// <summary>
 /// Read access to the app catalog for one app instance (ADR 0056, section 2), behind
 /// <see cref="HackApps"/>. Needs no capability: the list of installed apps is public, like
-/// <c>/usr/share/applications</c>.
+/// <c>/usr/share/applications</c>. The default handlers (ADR 0121) are the exception.
 /// </summary>
 public interface IAppCatalogGateway
 {
@@ -21,14 +22,42 @@ public interface IAppCatalogGateway
 
     /// <summary>
     /// Gets the installed window apps that declare they can open <paramref name="path"/> ("Open
-    /// with"): the default configured in <c>/etc/hackeros/file-associations.json</c> first, then the
-    /// others by name.
+    /// with"): the default first (the user's own in <c>~/.config/hackeros/file-associations.json</c>,
+    /// else the one of <c>/etc/hackeros/file-associations.json</c>, ADR 0121), then the others by name.
     /// </summary>
     /// <param name="path">File to open.</param>
     /// <param name="mediaType">MIME type when known, matched besides the extension.</param>
     /// <param name="cancellationToken">Cancels the read of the associations file.</param>
     ValueTask<IReadOnlyList<HackAppInfo>> GetHandlersAsync(
         VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets every configured default handler of the user (ADR 0121, section 3): the entries of
+    /// <c>~/.config/hackeros/file-associations.json</c> first, then those of
+    /// <c>/etc/hackeros/file-associations.json</c>. A user entry hides the system entry with the
+    /// same target and action, so the first row of a pair is the one used. Needs
+    /// <c>file-associations.read</c>.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the reads.</param>
+    /// <exception cref="AppGatewayAccessDeniedException">The app lacks <c>file-associations.read</c>.</exception>
+    /// <exception cref="NotSupportedException">The gateway predates ADR 0121.</exception>
+    ValueTask<IReadOnlyList<HackFileAssociation>> GetDefaultHandlersAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This catalog gateway cannot read the default handlers.");
+
+    /// <summary>
+    /// Sets or removes the user's own default handler of one file type or URI scheme (ADR 0121,
+    /// section 3), in <c>~/.config/hackeros/file-associations.json</c>; the machine-wide file is
+    /// never written here. Needs <c>file-associations.read</c> and <c>filesystem.user-home.write</c>.
+    /// </summary>
+    /// <param name="target">Extension with its dot (<c>.md</c>) or media type (<c>x-scheme-handler/https</c>).</param>
+    /// <param name="action"><c>open</c> or <c>edit</c>.</param>
+    /// <param name="appId">New default, which must declare the target and action; <see langword="null"/> removes the user's choice.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <exception cref="AppGatewayAccessDeniedException">The app lacks one of the two capabilities.</exception>
+    /// <exception cref="NotSupportedException">The gateway predates ADR 0121.</exception>
+    ValueTask<HackDefaultHandlerStatus> SetUserDefaultHandlerAsync(
+        string target, string action, string? appId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This catalog gateway cannot change the default handlers.");
 }
 
 /// <summary>Installation state of an app for the session user (ADR 0048, section 4).</summary>
@@ -41,7 +70,19 @@ public enum HackAppInstallState
     UninstalledForUser = 1,
 
     /// <summary>Uninstalled in <c>/etc/hackeros/apps.config</c> for every user: only an administrator reinstalls it.</summary>
-    UninstalledForMachine = 2
+    UninstalledForMachine = 2,
+
+    /// <summary>
+    /// Shipped by the host but refused by the OS (ADR 0098 §3): built for an App SDK range that does not
+    /// contain the running SDK, or requiring such an app. It never launches; <see cref="HackAppInstallInfo.Problem"/> says why.
+    /// </summary>
+    Incompatible = 3,
+
+    /// <summary>
+    /// An asset of the app did not match the hash of its manifest when first read (ADR 0098 §5); the
+    /// asset was refused. <see cref="HackAppInstallInfo.Problem"/> names it.
+    /// </summary>
+    Damaged = 4
 }
 
 /// <summary>Which <c>apps.config</c> file an uninstall or reinstall writes (ADR 0048, section 3).</summary>
@@ -61,7 +102,15 @@ public enum HackInstallScope
 /// Every app an uninstall would remove: the apps that need it through non-optional dependencies,
 /// dependents first, then the app itself. A confirmation dialog lists them.
 /// </param>
-public sealed record HackAppInstallInfo(HackAppInfo App, HackAppInstallState State, IReadOnlyList<string> UninstallClosure);
+public sealed record HackAppInstallInfo(HackAppInfo App, HackAppInstallState State, IReadOnlyList<string> UninstallClosure)
+{
+    /// <summary>
+    /// Gets why the app is <see cref="HackAppInstallState.Incompatible"/> (the SDK range it asked for
+    /// and the one the system runs) or <see cref="HackAppInstallState.Damaged"/> (the altered asset),
+    /// or <see langword="null"/> for any other state (ADR 0098 §3, §5).
+    /// </summary>
+    public string? Problem { get; init; }
+}
 
 /// <summary>
 /// Uninstall and reinstall for one app instance (ADR 0056, section 3), behind
@@ -88,4 +137,47 @@ public interface IAppManagementGateway
     /// <param name="cancellationToken">Cancels the authentication and the write.</param>
     ValueTask<IReadOnlyList<string>> ReinstallAsync(
         string appId, HackInstallScope scope, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Tells, without changing anything, what an uninstall of <paramref name="appId"/> would do
+    /// (ADR 0097, section 5): every app it removes and the running processes of those apps.
+    /// </summary>
+    /// <param name="appId">Exact catalog app ID.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <exception cref="NotSupportedException">The gateway predates ADR 0097.</exception>
+    ValueTask<HackUninstallPlan> PlanUninstallAsync(string appId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This app-management gateway cannot plan an uninstall.");
+
+    /// <summary>
+    /// Uninstalls like <see cref="UninstallAsync"/> and reports the processes it stopped, each
+    /// marked when it had to be forced after its grace period (ADR 0097, section 5).
+    /// </summary>
+    /// <param name="appId">Exact catalog app ID.</param>
+    /// <param name="scope">File to write.</param>
+    /// <param name="cancellationToken">Cancels the authentication and the write.</param>
+    async ValueTask<HackUninstallReport> UninstallWithReportAsync(
+        string appId, HackInstallScope scope, CancellationToken cancellationToken = default) =>
+        new(await UninstallAsync(appId, scope, cancellationToken).ConfigureAwait(false), []);
+}
+
+/// <summary>One running process of an app, as an uninstall lists it (ADR 0097, section 5).</summary>
+/// <param name="Pid">Process ID.</param>
+/// <param name="AppId">App the process runs.</param>
+/// <param name="Name">The app's name.</param>
+/// <param name="UserName">Login name of the user it runs as.</param>
+/// <param name="Forced">In a report: it did not finish its stop work within its grace period and was cut off.</param>
+public sealed record HackRunningProcessInfo(long Pid, string AppId, string Name, string UserName, bool Forced = false);
+
+/// <summary>What an uninstall would do (ADR 0097, section 5), for its confirmation dialog.</summary>
+/// <param name="AppIds">Every app it removes, dependents first, then the app itself.</param>
+/// <param name="RunningProcesses">The running processes of those apps, which the uninstall stops.</param>
+public sealed record HackUninstallPlan(IReadOnlyList<string> AppIds, IReadOnlyList<HackRunningProcessInfo> RunningProcesses);
+
+/// <summary>What an uninstall did (ADR 0097, section 5).</summary>
+/// <param name="AppIds">Every app uninstalled, dependents first.</param>
+/// <param name="StoppedProcesses">Every process it stopped; <see cref="HackRunningProcessInfo.Forced"/> marks the ones cut off.</param>
+public sealed record HackUninstallReport(IReadOnlyList<string> AppIds, IReadOnlyList<HackRunningProcessInfo> StoppedProcesses)
+{
+    /// <summary>Gets the stopped processes that had to be forced after their grace period.</summary>
+    public IReadOnlyList<HackRunningProcessInfo> ForcedProcesses => [.. StoppedProcesses.Where(static process => process.Forced)];
 }

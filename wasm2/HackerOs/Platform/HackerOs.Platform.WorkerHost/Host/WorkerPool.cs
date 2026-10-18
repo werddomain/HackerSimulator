@@ -22,7 +22,7 @@ namespace HackerOs.Platform.WorkerHost.Host;
 /// <para><b>Escalation step 4.</b> A worker that does not confirm a kill is terminated: its other
 /// processes end as killed, each with a syslog line, and the ready worker takes its core.</para>
 /// </remarks>
-public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
+public sealed class WorkerPool : IWorkerPoolStatus, HackerOs.Platform.Core.Processes.IWorkerMemoryReclaimer, IAsyncDisposable
 {
     private readonly IWebWorkerRuntime _runtime;
     private readonly ISimulationClock _clock;
@@ -32,12 +32,14 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
     private readonly Lock _gate = new();
     private readonly List<WorkerConnection> _workers = [];
     private readonly Dictionary<Guid, PlacementGroup> _groups = [];
+    private readonly WorkerRunQueue _runQueue = new();
     private readonly CancellationTokenSource _lifetime = new();
     private TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _nextId;
     private bool _started;
     private bool _saturationLogged;
     private Task? _watchdog;
+    private Task? _memoryMeter;
 
     /// <summary>Initializes the pool; nothing starts before <see cref="StartAsync"/> or the first request.</summary>
     /// <param name="runtime">Starts the Web Workers.</param>
@@ -101,7 +103,10 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
         {
             return [.. _workers.OrderBy(static worker => worker.Id).Select(static worker => new WorkerSnapshot(
                 worker.Id, worker.Role, worker.State, worker.Core, worker.ProcessIds,
-                worker.RuntimeMemoryBytes, worker.StartedAtUtc, worker.HeartbeatAge, worker.BusyTime + worker.StalledTime))];
+                worker.RuntimeMemoryBytes, worker.StartedAtUtc, worker.HeartbeatAge, worker.BusyTime + worker.StalledTime)
+            {
+                RuntimeHeapBytes = worker.RuntimeHeapBytes
+            })];
         }
     }
 
@@ -131,6 +136,11 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
         }
 
         _watchdog ??= WatchAsync(_lifetime.Token);
+        if (_runtime is IWebWorkerMemoryMeter meter)
+        {
+            _memoryMeter ??= MeasureMemoryAsync(meter, _lifetime.Token);
+        }
+
         EnsureReadyWorker();
         while (!_lifetime.IsCancellationRequested)
         {
@@ -159,77 +169,139 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
     }
 
     /// <summary>
-    /// Finds the worker a command (or a pipeline stage) runs on (ADR 0070, section 2; ADR 0071, section 3).
+    /// Finds the worker a command (or a pipeline stage) runs on (ADR 0070, section 2; ADR 0071,
+    /// section 3), in the order of the run queue (ADR 0127, section 1).
     /// </summary>
+    /// <remarks>
+    /// <para><b>Run queue.</b> Every request waits in one queue ordered by niceness, then by
+    /// arrival: when a core frees up, the lowest niceness takes it, like the kernel picking the
+    /// next task of its run queue. A request never jumps ahead of an earlier one of the same
+    /// niceness, so the order is fair.</para>
+    /// <para><b>The ready worker.</b> A process with a positive niceness does not take the ready
+    /// worker while a pool worker is still warming up for it: the ready worker stays for the
+    /// processes that cannot wait (the next dedicated process, a niceness of zero or less).</para>
+    /// </remarks>
     /// <param name="group">The pipeline it belongs to, if any.</param>
+    /// <param name="nice">The niceness of the process to place.</param>
     /// <param name="cancellationToken">Abandons the wait (Ctrl+C).</param>
     /// <returns>A warmed-up worker; the caller then places the process on it.</returns>
-    internal async Task<WorkerConnection> AcquireForCommandAsync(Guid? group, CancellationToken cancellationToken)
+    internal async Task<WorkerConnection> AcquireForCommandAsync(Guid? group, int nice, CancellationToken cancellationToken)
     {
         _watchdog ??= WatchAsync(_lifetime.Token);
-        while (true)
+        WorkerRunQueue.Entry entry;
+        lock (_gate)
         {
-            Task changed;
-            WorkerConnection? starting = null;
+            entry = _runQueue.Enqueue(nice);
+        }
+
+        try
+        {
+            while (true)
+            {
+                Task changed;
+                WorkerConnection? starting = null;
+                lock (_gate)
+                {
+                    if (group is { } id && _groups.TryGetValue(id, out PlacementGroup? placement) && !placement.Worker.IsTerminated)
+                    {
+                        // A later stage of a pipeline joins its first stage: it does not queue for a core.
+                        placement.Count++;
+                        return placement.Worker;
+                    }
+
+                    bool headOfQueue = _runQueue.IsHead(entry);
+                    WorkerConnection? chosen = headOfQueue
+                        ? _workers
+                            .Where(static worker => worker.Role is WorkerRole.Pool or WorkerRole.Overflow && worker.IsFree)
+                            .OrderBy(static worker => worker.ProcessCount)
+                            .ThenBy(static worker => worker.BusyTime)
+                            .ThenBy(static worker => worker.Id)
+                            .FirstOrDefault()
+                        : null;
+                    WorkerConnection? warming = _workers.FirstOrDefault(static worker =>
+                        worker.Role is WorkerRole.Pool or WorkerRole.Overflow && !worker.IsTerminated && !worker.IsReady);
+                    bool mayTakeReady = WorkerRunQueue.MayTakeReadyWorker(entry.Nice, warming is not null);
+                    if (headOfQueue && chosen is null && mayTakeReady && TakeReadyWorker() is { } ready)
+                    {
+                        // ADR 0071, section 3: no core is free, the ready worker joins the pool for this process.
+                        int pool = _workers.Count(static worker => worker.Role == WorkerRole.Pool && !worker.IsTerminated);
+                        if (pool < PoolSize)
+                        {
+                            ready.Role = WorkerRole.Pool;
+                            ready.Core = NextFreeCore();
+                        }
+                        else
+                        {
+                            ready.Role = WorkerRole.Overflow;
+                            ready.Core = null;
+                        }
+
+                        chosen = ready;
+                    }
+
+                    if (chosen is not null)
+                    {
+                        Track(group, chosen);
+                        _ = Task.Run(EnsureReadyWorker, CancellationToken.None);
+                        return chosen;
+                    }
+
+                    // A pool worker or the ready worker still warming up will be free soonest.
+                    starting = warming ?? _workers.FirstOrDefault(static worker =>
+                        worker.Role == WorkerRole.Ready && !worker.IsTerminated && !worker.IsReady);
+                    if (headOfQueue && starting is null && LiveCount() < Capacity)
+                    {
+                        // Before the system is started (or while the pool fills up), a request starts its own worker.
+                        int pool = _workers.Count(static worker => worker.Role == WorkerRole.Pool && !worker.IsTerminated);
+                        starting = pool < PoolSize ? Create(WorkerRole.Pool, NextFreeCore()) : Create(WorkerRole.Overflow, null);
+                        _ = LaunchQuietlyAsync(starting);
+                    }
+                    else if (headOfQueue && starting is null)
+                    {
+                        NoteSaturated();
+                    }
+
+                    changed = _changed.Task;
+                }
+
+                Task wait = starting is null ? changed : Task.WhenAny(starting.Ready, changed);
+                await wait.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
             lock (_gate)
             {
-                if (group is { } id && _groups.TryGetValue(id, out PlacementGroup? placement) && !placement.Worker.IsTerminated)
-                {
-                    placement.Count++;
-                    return placement.Worker;
-                }
-
-                WorkerConnection? chosen = _workers
-                    .Where(static worker => worker.Role is WorkerRole.Pool or WorkerRole.Overflow && worker.IsFree)
-                    .OrderBy(static worker => worker.ProcessCount)
-                    .ThenBy(static worker => worker.BusyTime)
-                    .ThenBy(static worker => worker.Id)
-                    .FirstOrDefault();
-                if (chosen is null && TakeReadyWorker() is { } ready)
-                {
-                    // ADR 0071, section 3: no core is free, the ready worker joins the pool for this process.
-                    int pool = _workers.Count(static worker => worker.Role == WorkerRole.Pool && !worker.IsTerminated);
-                    if (pool < PoolSize)
-                    {
-                        ready.Role = WorkerRole.Pool;
-                        ready.Core = NextFreeCore();
-                    }
-                    else
-                    {
-                        ready.Role = WorkerRole.Overflow;
-                        ready.Core = null;
-                    }
-
-                    chosen = ready;
-                }
-
-                if (chosen is not null)
-                {
-                    Track(group, chosen);
-                    _ = Task.Run(EnsureReadyWorker, CancellationToken.None);
-                    return chosen;
-                }
-
-                // A pool worker or the ready worker still warming up will be free soonest.
-                starting = _workers.FirstOrDefault(static worker =>
-                    worker.Role is WorkerRole.Pool or WorkerRole.Overflow or WorkerRole.Ready && !worker.IsTerminated && !worker.IsReady);
-                if (starting is null && LiveCount() < Capacity)
-                {
-                    // Before the system is started (or while the pool fills up), a request starts its own worker.
-                    int pool = _workers.Count(static worker => worker.Role == WorkerRole.Pool && !worker.IsTerminated);
-                    starting = pool < PoolSize ? Create(WorkerRole.Pool, NextFreeCore()) : Create(WorkerRole.Overflow, null);
-                    _ = LaunchQuietlyAsync(starting);
-                }
-                else if (starting is null)
-                {
-                    NoteSaturated();
-                }
-
-                changed = _changed.Task;
+                _runQueue.Remove(entry);
             }
 
-            Task wait = starting is null ? changed : Task.WhenAny(starting.Ready, changed);
-            await wait.WaitAsync(cancellationToken).ConfigureAwait(false);
+            // The next request in the queue may now take a core.
+            Signal();
+        }
+    }
+
+    /// <summary>Gets the niceness of a process about to be placed (ADR 0127); <c>0</c> without a process table.</summary>
+    internal int NiceOf(ProcessId pid)
+    {
+        try
+        {
+            return _processes()?.GetNice(pid) ?? ProcessNice.Default;
+        }
+        catch (KeyNotFoundException)
+        {
+            return ProcessNice.Default;
+        }
+    }
+
+    /// <summary>Gets the number of commands waiting for a core (diagnostics and tests).</summary>
+    internal int RunQueueLength
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _runQueue.Count;
+            }
         }
     }
 
@@ -258,6 +330,51 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
                 if (starting is null && LiveCount() < Capacity)
                 {
                     starting = Create(WorkerRole.Ready, null);
+                    _ = LaunchQuietlyAsync(starting);
+                }
+                else if (starting is null)
+                {
+                    NoteSaturated();
+                }
+
+                changed = _changed.Task;
+            }
+
+            Task wait = starting is null ? changed : Task.WhenAny(starting.Ready, changed);
+            await wait.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Finds the web worker (ADR 0074): the one worker every web app runs in, like an IIS
+    /// application pool. The first site takes the ready worker (replaced at once); the next ones join it.
+    /// </summary>
+    internal async Task<WorkerConnection> AcquireWebAsync(CancellationToken cancellationToken)
+    {
+        _watchdog ??= WatchAsync(_lifetime.Token);
+        while (true)
+        {
+            Task changed;
+            WorkerConnection? starting;
+            lock (_gate)
+            {
+                starting = _workers.FirstOrDefault(static worker => worker.Role == WorkerRole.Web && !worker.IsTerminated);
+                if (starting is { IsReady: true })
+                {
+                    return starting;
+                }
+
+                if (starting is null && TakeReadyWorker() is { } ready)
+                {
+                    ready.Role = WorkerRole.Web;
+                    ready.Core = null;
+                    _ = Task.Run(EnsureReadyWorker, CancellationToken.None);
+                    return ready;
+                }
+
+                if (starting is null && LiveCount() < Capacity)
+                {
+                    starting = Create(WorkerRole.Web, null);
                     _ = LaunchQuietlyAsync(starting);
                 }
                 else if (starting is null)
@@ -329,12 +446,33 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
 
     internal void OnWorkerReady(WorkerConnection worker) => Signal();
 
+    /// <inheritdoc />
+    public bool RecycleAfterOomKill(long pid)
+    {
+        if (FindHost(pid) is not { } worker)
+        {
+            return false;
+        }
+
+        worker.RecycleWhenIdle = true;
+        Log($"worker {worker.Id}: hosts OOM victim pid {pid}, replaced once idle to give its memory back", pid);
+        return true;
+    }
+
     /// <summary>A process placed on <paramref name="worker"/> ended.</summary>
     internal void OnProcessEnded(WorkerConnection worker)
     {
-        if (worker.Role == WorkerRole.Dedicated && worker.ProcessCount == 0)
+        if (worker.RecycleWhenIdle && worker.Role is WorkerRole.Pool or WorkerRole.Overflow && worker.ProcessCount == 0 && !worker.IsTerminated)
         {
-            // ADR 0070, section 3: a dedicated process that ends frees its worker.
+            // ADR 0142: the OOM victim is gone; a new worker gives its memory back to the browser.
+            Retire(worker, $"killed: worker {worker.Id} recycled after an OOM kill", triggerPid: null);
+            return;
+        }
+
+        if (worker.Role is WorkerRole.Dedicated or WorkerRole.Web && worker.ProcessCount == 0)
+        {
+            // ADR 0070, section 3: a dedicated process that ends frees its worker; the web worker
+            // ends with its last site (ADR 0074).
             lock (_gate)
             {
                 _workers.Remove(worker);
@@ -527,6 +665,51 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// ADR 0131, section 4: on a cross-origin isolated page the browser measures each worker
+    /// (<c>performance.measureUserAgentSpecificMemory()</c>); its figure replaces the heartbeat's in
+    /// <c>/proc</c> and for the OOM killer (ADR 0126, section 6). Stops for good when the browser
+    /// does not offer the meter.
+    /// </summary>
+    private async Task MeasureMemoryAsync(IWebWorkerMemoryMeter meter, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                IReadOnlyDictionary<int, long>? measured = await meter.MeasureWorkersAsync(cancellationToken).ConfigureAwait(false);
+                if (measured is null)
+                {
+                    return;
+                }
+
+                List<WorkerConnection> workers;
+                lock (_gate)
+                {
+                    workers = [.. _workers];
+                }
+
+                foreach (WorkerConnection worker in workers)
+                {
+                    if (worker.WorkerId is { } id && measured.TryGetValue(id, out long bytes))
+                    {
+                        worker.ApplyBrowserMemory(bytes);
+                    }
+                }
+
+                await Task.Delay(Options.MemoryMeasurePeriod, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The pool is disposed.
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            Log($"memory measurement stopped: {exception.Message}");
+        }
+    }
+
     private WorkerConnection? TakeReadyWorker() =>
         _workers.FirstOrDefault(static worker => worker.Role == WorkerRole.Ready && worker.IsReady && worker.ProcessCount == 0);
 
@@ -625,6 +808,8 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
 
         previous.TrySetResult();
     }
+
+    /// <summary>One command waiting for a core (ADR 0127): its niceness and its place in the arrival order.</summary>
 
     private sealed class PlacementGroup(WorkerConnection worker)
     {

@@ -1,5 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.TextEditor;
 
@@ -32,16 +34,25 @@ public sealed class TextEditorDocument
     // The last-known filesystem revision, or null if this is a new (unsaved) buffer.
     private long? _loadedRevision;
 
-    public TextEditorDocument()
+    // The editor's texts, for the "Untitled" and "(recovered)" titles (ADR 0104).
+    private readonly IStringLocalizer _text;
+
+    /// <summary>Creates an empty, unsaved "Untitled" buffer in the <see cref="TextEditorLoadState.New"/> state.</summary>
+    /// <param name="text">
+    /// The editor's texts in the window's language; <see langword="null"/> reads them in the language of
+    /// the process running the code (English outside any app, as in unit tests).
+    /// </param>
+    public TextEditorDocument(IStringLocalizer? text = null)
     {
-        Title = "Untitled";
+        _text = text ?? HackLocalization.GetLocalizer<Strings>();
+        Title = _text["Title.Untitled"];
         Content = string.Empty;
         LoadState = TextEditorLoadState.New;
     }
 
     // ──────────────────────────────────── Observed state ──────────────────────────
 
-    /// <summary>Gets the display title for this document (file name or "Untitled").</summary>
+    /// <summary>Gets the display title for this document (file name or "Untitled", in the editor's language).</summary>
     public string Title { get; private set; }
 
     /// <summary>Gets the canonical virtual path, or <c>null</c> for an unsaved buffer.</summary>
@@ -75,7 +86,7 @@ public sealed class TextEditorDocument
     public void ResetToNew()
     {
         Path = null;
-        Title = "Untitled";
+        Title = _text["Title.Untitled"];
         Content = string.Empty;
         MediaType = "text/plain";
         LoadState = TextEditorLoadState.New;
@@ -141,7 +152,9 @@ public sealed class TextEditorDocument
     public void RestoreDraft(string content, string? originalPath)
     {
         ResetToNew();
-        Title = originalPath is null ? "Untitled (recovered)" : $"{ExtractFileName(originalPath)} (recovered)";
+        Title = originalPath is null
+            ? _text["Title.RecoveredUntitled"]
+            : _text["Title.Recovered", ExtractFileName(originalPath)];
         Content = content;
         IsDirty = true;
     }

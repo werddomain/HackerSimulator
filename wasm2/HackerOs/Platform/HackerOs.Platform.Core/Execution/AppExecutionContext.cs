@@ -58,7 +58,10 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         IAppServerConnectionGateway? serverConnection = null,
         IAppSystemPowerGateway? systemPower = null,
         IAppStorageDiagnosticsGateway? storageDiagnostics = null,
-        Processes.ProcessControlBlock? control = null)
+        Processes.ProcessControlBlock? control = null,
+        HackerOs.AppSdk.WebData.IAppWebDatabaseGateway? webDatabase = null,
+        HackerOs.AppSdk.Keyring.IAppKeyringGateway? keyring = null,
+        HackerOs.AppSdk.Accessibility.IAppAccessibilityGateway? accessibility = null)
     {
         // ADR 0069: a context built without the process manager's block (tests) is never stopped or killed.
         Control = control ?? new Processes.ProcessControlBlock(processId);
@@ -100,7 +103,19 @@ internal sealed class AppExecutionContext : IAppExecutionContext
         SystemPower = systemPower ?? UnsupportedAdministrationGateways.SystemPower;
         StorageDiagnostics = storageDiagnostics ?? UnsupportedAdministrationGateways.StorageDiagnostics;
         Clipboard = clipboard ?? new AppClipboardGateway(new Clipboard.SystemClipboard(), capabilities, sessionId);
+        WebDatabase = webDatabase ?? new WebData.AppWebDatabaseGateway(null, manifest);
+        Keyring = keyring ?? HackerOs.AppSdk.Keyring.UnsupportedAppKeyringGateway.Instance;
+        Accessibility = accessibility ?? HackerOs.AppSdk.Accessibility.DefaultAppAccessibilityGateway.Instance;
     }
+
+    /// <inheritdoc />
+    public HackerOs.AppSdk.Accessibility.IAppAccessibilityGateway Accessibility { get => Guarded(field); }
+
+    /// <inheritdoc />
+    public HackerOs.AppSdk.Keyring.IAppKeyringGateway Keyring { get => Guarded(field); }
+
+    /// <inheritdoc />
+    public HackerOs.AppSdk.WebData.IAppWebDatabaseGateway WebDatabase { get => Guarded(field); }
 
     /// <inheritdoc />
     public IAppSystemSettingsGateway SystemSettings { get => Guarded(field); }
@@ -116,6 +131,12 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public IAppStorageDiagnosticsGateway StorageDiagnostics { get => Guarded(field); }
+
+    /// <inheritdoc />
+    public IAppSystemBackupGateway SystemBackup { get => Guarded(field); internal set; } = UnsupportedAdministrationGateways.SystemBackup;
+
+    /// <inheritdoc />
+    public IAppUserAccountsGateway UserAccounts { get => Guarded(field); internal set; } = UnsupportedAdministrationGateways.UserAccounts;
 
     /// <inheritdoc />
     public string UserLoginName { get; }
@@ -134,6 +155,9 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public IAppDriveGateway Drives { get => Guarded(field); }
+
+    /// <inheritdoc />
+    public HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway CrossOriginIsolation { get => Guarded(field); internal set; } = UnsupportedCrossOriginIsolationGateway.Instance;
 
     /// <inheritdoc />
     public IAppClipboardGateway Clipboard { get => Guarded(field); }
@@ -222,6 +246,21 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     /// </remarks>
     public IAppConsoleGateway Console { get => Guarded(field); internal set; } = DetachedAppConsoleGateway.Instance;
 
+    /// <inheritdoc />
+    public HackerOs.AppSdk.Threading.IAppBackgroundGateway Background
+    {
+        get => Guarded(field ??= new HackerOs.AppSdk.Threading.InlineAppBackgroundGateway(this));
+        internal set;
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Bound by <c>AppLifecycleOrchestrator</c> when it starts a service (ADR 0097, section 2): the
+    /// messages reach the service's state table under this process's PID. Every other process keeps
+    /// the gateway that drops them.
+    /// </remarks>
+    public IAppServiceNotifyGateway ServiceNotify { get => Guarded(field); internal set; } = NullAppServiceNotifyGateway.Instance;
+
     /// <summary>
     /// Gets the kernel-side block of this instance's process (ADR 0069): stop request, killed flag and
     /// scheduler. It outlives the process, so leftover code of a killed process still finds it.
@@ -236,6 +275,46 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
     /// <inheritdoc />
     public HackStopRequestedEventArgs? StopRequest { get; private set; }
+
+    /// <inheritdoc />
+    /// <remarks>Set by <c>AppLifecycleOrchestrator</c> from the launch request (ADR 0096, section 5).</remarks>
+    public AppIntentDelivery? Intent { get; internal set; }
+
+    /// <inheritdoc />
+    public event EventHandler<AppIntentDelivery>? IntentReceived;
+
+    /// <summary>Gets whether some code of the app listens for <see cref="IntentReceived"/> (a worker session forwards it).</summary>
+    internal bool HasIntentListeners => IntentReceived is not null;
+
+    /// <summary>
+    /// Hands an intent to this running instance (ADR 0096, section 5): the second activation of a
+    /// single-instance app. Runs the handlers inside the app's ambient context, like the stop
+    /// request; a handler that throws is logged and does not keep the others from running.
+    /// </summary>
+    /// <param name="delivery">The intent and its activation arguments.</param>
+    internal void DeliverIntent(AppIntentDelivery delivery)
+    {
+        ArgumentNullException.ThrowIfNull(delivery);
+        if (Control.IsKilled || IntentReceived is not { } handlers)
+        {
+            return;
+        }
+
+        using IDisposable scope = HackExecutionContext.Enter(this);
+        foreach (EventHandler<AppIntentDelivery> handler in handlers.GetInvocationList().Cast<EventHandler<AppIntentDelivery>>())
+        {
+            try
+            {
+                handler(this, delivery);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                Logging.Log(
+                    HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Error,
+                    $"An IntentReceived handler threw {exception.GetType().Name}: {exception.Message}");
+            }
+        }
+    }
 
     /// <summary>
     /// Every OS gateway refuses a killed process (ADR 0069, section 3): its leftover code is cut off,
@@ -294,6 +373,15 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
         public ValueTask<IReadOnlyList<HackDriveSnapshot>> GetDrivesAsync(CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("This execution context has no drive information.");
+    }
+
+    /// <summary>Isolation gateway of a context built without the page's status (tests).</summary>
+    private sealed class UnsupportedCrossOriginIsolationGateway : HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway
+    {
+        public static readonly UnsupportedCrossOriginIsolationGateway Instance = new();
+
+        public ValueTask<HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus> GetStatusAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("This execution context has no cross-origin isolation information.");
     }
 
     /// <summary>Network gateway of a context built without a simulated network (tests).</summary>

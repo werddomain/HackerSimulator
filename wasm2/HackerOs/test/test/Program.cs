@@ -29,13 +29,38 @@ builder.Services.AddSingleton(provider => new BuildKnownLazyAppDescriptorRegistr
 // ADR 0066: optional measured CPU/memory, decided once from HackerOs:ResourceAccounting in
 // appsettings.json and what the build compiled in. Must precede AddHackerOsEcosystem, and runs before
 // any app code so the context-switch hook can be installed.
-builder.Services.AddHackerOsResourceAccounting(builder.Configuration);
+builder.Services.AddHackerOsResourceAccounting(builder.Configuration, BuildKnownLazyApps.Images);
+// ADR 0125: process limits (ulimit, limits.conf), on unless HackerOs:ResourceLimits:Enabled is false.
+builder.Services.AddHackerOsResourceLimits(builder.Configuration);
+builder.Services.AddHackerOsHardware(builder.Configuration);
 builder.Services.AddHackerOsEcosystem(
     BuildKnownLazyApps.Catalog,
     provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>().Descriptors,
     provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>());
 
 var app = builder.Build();
+
+// ADR 0131, section 2: COOP/COEP on every response, so the OS's page and its Web Workers are
+// cross-origin isolated (HackerOs:CrossOriginIsolation: auto, on or off). The PWA's service worker
+// adds the same headers once it is installed; this covers the first load and a host without it.
+IReadOnlyList<KeyValuePair<string, string>> isolationHeaders = HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.ServerHeaders(
+    HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.Parse(app.Configuration[HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.SettingKey]));
+if (isolationHeaders.Count > 0)
+{
+    app.Use((context, next) =>
+    {
+        context.Response.OnStarting(() =>
+        {
+            foreach ((string name, string value) in isolationHeaders)
+            {
+                context.Response.Headers[name] = value;
+            }
+
+            return Task.CompletedTask;
+        });
+        return next(context);
+    });
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

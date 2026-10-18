@@ -1,6 +1,8 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Commands.Common;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Head;
 
@@ -13,14 +15,17 @@ namespace HackerOs.Commands.Head;
 /// </summary>
 public sealed class HeadCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public HeadCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> messages = context.App.GetLocalizer<Strings>();
 
         long count = 10;
         bool bytes = false, allButLast = false, quiet = false, verbose = false;
@@ -63,7 +68,7 @@ public sealed class HeadCommand : TerminalAppBase
             allButLast = value.StartsWith('-');
             if (!long.TryParse(value.TrimStart('-', '+'), out count))
             {
-                context.StandardError.WriteLine($"head: invalid number of {(bytes ? "bytes" : "lines")}: '{value}'");
+                context.StandardError.WriteLine(messages[bytes ? "InvalidByteCount" : "InvalidLineCount", value]);
                 return 1;
             }
         }
@@ -83,7 +88,7 @@ public sealed class HeadCommand : TerminalAppBase
                 // Stream standard input and stop early: the writer upstream then gets "Broken pipe".
                 if (headers)
                 {
-                    await context.StandardOutput.WriteLineAsync($"{(index > 0 ? "\n" : string.Empty)}==> standard input <==");
+                    await context.StandardOutput.WriteLineAsync($"{(index > 0 ? "\n" : string.Empty)}==> {messages["StandardInput"]} <==");
                 }
 
                 long written = 0;
@@ -105,7 +110,7 @@ public sealed class HeadCommand : TerminalAppBase
 
             if (headers)
             {
-                await context.StandardOutput.WriteLineAsync($"{(index > 0 ? "\n" : string.Empty)}==> {(file == "-" ? "standard input" : file)} <==");
+                await context.StandardOutput.WriteLineAsync($"{(index > 0 ? "\n" : string.Empty)}==> {(file == "-" ? messages["StandardInput"] : file)} <==");
             }
 
             if (bytes)

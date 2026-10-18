@@ -56,6 +56,31 @@ public sealed class WebCryptoPasswordHasher : IAsyncDisposable
     }
 
     /// <inheritdoc />
+    /// <summary>Seals bytes with AES-256-GCM through Web Crypto (ADR 0100, user keyring).</summary>
+    /// <param name="key">32-byte key.</param>
+    /// <param name="nonce">12-byte nonce.</param>
+    /// <param name="plaintext">Bytes to seal.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <returns>Ciphertext followed by the 16-byte tag.</returns>
+    public async ValueTask<byte[]> EncryptAesGcmAsync(byte[] key, byte[] nonce, byte[] plaintext, CancellationToken cancellationToken = default)
+    {
+        IJSObjectReference module = await GetModuleAsync(cancellationToken).ConfigureAwait(false);
+        return await module.InvokeAsync<byte[]>("aesGcmEncrypt", cancellationToken, key, nonce, plaintext).ConfigureAwait(false);
+    }
+
+    /// <summary>Opens bytes sealed by <see cref="EncryptAesGcmAsync"/>; <see langword="null"/> on a wrong key or altered data.</summary>
+    /// <param name="key">32-byte key.</param>
+    /// <param name="nonce">12-byte nonce.</param>
+    /// <param name="sealedData">Ciphertext followed by the tag.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    public async ValueTask<byte[]?> DecryptAesGcmAsync(byte[] key, byte[] nonce, byte[] sealedData, CancellationToken cancellationToken = default)
+    {
+        IJSObjectReference module = await GetModuleAsync(cancellationToken).ConfigureAwait(false);
+        return await module.InvokeAsync<byte[]?>("aesGcmDecrypt", cancellationToken, key, nonce, sealedData).ConfigureAwait(false);
+    }
+
+    /// <summary>Disposes the imported crypto module once; later calls do nothing.</summary>
+    /// <returns>A task that completes when the module is released.</returns>
     public async ValueTask DisposeAsync()
     {
         if (_disposed)

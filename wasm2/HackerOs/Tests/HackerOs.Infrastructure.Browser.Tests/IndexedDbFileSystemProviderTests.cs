@@ -35,7 +35,7 @@ public sealed class IndexedDbFileSystemProviderTests
     [Fact]
     public async Task StatAsync_MissingPathReturnsNotFound()
     {
-        ScriptedModule module = new(One(Entry(RootId, FileSystemEntryKind.Directory)), One("null"));
+        ScriptedModule module = new(Walk());
         await using IndexedDbFileSystemProvider provider = new(new FakeJsRuntime(module));
 
         FileSystemResult<FileSystemEntrySnapshot> result = await provider.StatAsync(
@@ -73,9 +73,7 @@ public sealed class IndexedDbFileSystemProviderTests
     {
         const string contentHash = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
         ScriptedModule module = new(
-            One(Entry(RootId, FileSystemEntryKind.Directory)),
-            One(Link("file.txt", ChildId)),
-            One(Entry(
+            Walk(Entry(
                 ChildId,
                 FileSystemEntryKind.File,
                 revision: 4,
@@ -107,9 +105,7 @@ public sealed class IndexedDbFileSystemProviderTests
         // defaults: ContentKind=Binary, ContentHash=null). ReadAsync must succeed with zero bytes,
         // matching how InMemoryFileSystemRepository already treats an unwritten file's content.
         ScriptedModule module = new(
-            One(Entry(RootId, FileSystemEntryKind.Directory)),
-            One(Link("empty.txt", ChildId)),
-            One(Entry(ChildId, FileSystemEntryKind.File, revision: 1, length: 0)));
+            Walk(Entry(ChildId, FileSystemEntryKind.File, revision: 1, length: 0)));
         await using IndexedDbFileSystemProvider provider = new(new FakeJsRuntime(module));
 
         FileSystemResult<FileSystemContentReadHandle> result = await provider.ReadAsync(
@@ -128,9 +124,7 @@ public sealed class IndexedDbFileSystemProviderTests
     {
         const string expectedHash = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
         ScriptedModule module = new(
-            One(Entry(RootId, FileSystemEntryKind.Directory)),
-            One(Link("file.txt", ChildId)),
-            One(Entry(ChildId, FileSystemEntryKind.File, revision: 4)),
+            Walk(Entry(ChildId, FileSystemEntryKind.File, revision: 4)),
             One("{\"added\":true}"),
             [Parse("4"), Parse("null")]);
         await using IndexedDbFileSystemProvider provider = new(
@@ -147,14 +141,14 @@ public sealed class IndexedDbFileSystemProviderTests
         Assert.True(result.Succeeded);
         Assert.Equal(5, result.Entry!.Metadata.Revision);
         Assert.Equal(5, Assert.IsType<FileMetadata>(result.Entry.Metadata).Length);
-        Assert.Equal(5, module.ExecuteArguments.Count);
+        Assert.Equal(3, module.ExecuteArguments.Count);
         IReadOnlyList<HackerOs.Infrastructure.Browser.Interop.IndexedDbOperation> chunkOperations =
             Assert.IsAssignableFrom<IReadOnlyList<HackerOs.Infrastructure.Browser.Interop.IndexedDbOperation>>(
-                module.ExecuteArguments[3][4]);
+                module.ExecuteArguments[1][4]);
         Assert.Equal(expectedHash, Assert.IsType<object[]>(Assert.Single(chunkOperations).Key)[0]);
         IReadOnlyList<HackerOs.Infrastructure.Browser.Interop.IndexedDbOperation> metadataOperations =
             Assert.IsAssignableFrom<IReadOnlyList<HackerOs.Infrastructure.Browser.Interop.IndexedDbOperation>>(
-                module.ExecuteArguments[4][4]);
+                module.ExecuteArguments[2][4]);
         IndexedDbFileSystemEntryRecord updated =
             Assert.IsType<IndexedDbFileSystemEntryRecord>(metadataOperations[1].Value);
         Assert.Equal(expectedHash, updated.ContentHash);
@@ -162,11 +156,45 @@ public sealed class IndexedDbFileSystemProviderTests
     }
 
     [Fact]
+    public async Task WriteAsync_QuotaExceededReturnsNoSpaceAndCommitsNothing()
+    {
+        // The chunk transaction fails with QuotaExceededError (ADR 0099 section 2): no metadata
+        // transaction follows, so the file keeps its previous content.
+        ScriptedModule module = new(
+            Walk(Entry(ChildId, FileSystemEntryKind.File, revision: 4)),
+            ScriptedModule.QuotaExceeded);
+        await using IndexedDbFileSystemProvider provider = new(new FakeJsRuntime(module));
+
+        FileSystemMutationResult result = await provider.WriteAsync(
+            new FileSystemWriteRequest(VirtualPath.Parse("/file.txt"), 4),
+            new TextSource("hello"),
+            Context());
+
+        Assert.Equal(FileSystemTransactionStatus.Rejected, result.Transaction.Status);
+        Assert.Equal(FileSystemErrorCode.NoSpace, result.Transaction.Error?.Code);
+        Assert.Equal(2, module.ExecuteArguments.Count);
+    }
+
+    [Fact]
+    public async Task WriteAsync_ContentOverSixteenMebibytesReturnsFileTooLargeBeforeAnyWrite()
+    {
+        ScriptedModule module = new(Walk(Entry(ChildId, FileSystemEntryKind.File, revision: 4)));
+        await using IndexedDbFileSystemProvider provider = new(new FakeJsRuntime(module));
+
+        FileSystemMutationResult result = await provider.WriteAsync(
+            new FileSystemWriteRequest(VirtualPath.Parse("/big.bin"), 4),
+            new TextSource(new string('x', (16 * 1024 * 1024) + 1)),
+            Context());
+
+        Assert.Equal(FileSystemErrorCode.FileTooLarge, result.Transaction.Error?.Code);
+        Assert.Single(module.ExecuteArguments);
+    }
+
+    [Fact]
     public async Task CreateAsync_CommitsAtomicBatchAndInheritsParentGroup()
     {
         ScriptedModule module = new(
-            One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3, groupId: "operators")),
-            One("null"),
+            Walk(),
             One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3, groupId: "operators")),
             [Parse("null"), Parse("null"), Parse("null"), Parse("null")]);
         await using IndexedDbFileSystemProvider provider = new(
@@ -193,8 +221,7 @@ public sealed class IndexedDbFileSystemProviderTests
     public async Task CreateAsync_StaleParentRevisionRejectsBeforeWrite()
     {
         ScriptedModule module = new(
-            One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3)),
-            One("null"),
+            Walk(),
             One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3)));
         await using IndexedDbFileSystemProvider provider = new(new FakeJsRuntime(module));
 
@@ -208,7 +235,7 @@ public sealed class IndexedDbFileSystemProviderTests
 
         Assert.False(result.Succeeded);
         Assert.Equal(FileSystemErrorCode.RevisionConflict, result.Transaction.Error?.Code);
-        Assert.Equal(3, module.ExecuteArguments.Count);
+        Assert.Equal(2, module.ExecuteArguments.Count);
     }
 
     [Fact]
@@ -261,11 +288,8 @@ public sealed class IndexedDbFileSystemProviderTests
     public async Task MoveAsync_RenamesLinkAndReturnsDestinationSnapshot()
     {
         ScriptedModule module = new(
-            One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3)),
-            One(Link("old.txt", ChildId)),
-            One(Entry(ChildId, FileSystemEntryKind.File, revision: 2)),
-            One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3)),
-            One("null"),
+            Walk(Entry(ChildId, FileSystemEntryKind.File, revision: 2)),
+            Walk(),
             One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3)),
             [Parse("null"), Parse("null"), Parse("null"), Parse("null"), Parse("null"), Parse("null")]);
         await using IndexedDbFileSystemProvider provider = new(
@@ -298,9 +322,7 @@ public sealed class IndexedDbFileSystemProviderTests
     public async Task DeleteAsync_NonEmptyDirectoryWithoutRecursiveIsRejected()
     {
         ScriptedModule module = new(
-            One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3)),
-            One(Link("folder", ChildId)),
-            One(Entry(ChildId, FileSystemEntryKind.Directory, revision: 2)),
+            Walk(Entry(ChildId, FileSystemEntryKind.Directory, revision: 2)),
             One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3)),
             One($"[{Link("child.txt", CreatedId.ToString(), ChildId)}]"),
             One(Entry(CreatedId.ToString(), FileSystemEntryKind.File)));
@@ -312,16 +334,14 @@ public sealed class IndexedDbFileSystemProviderTests
 
         Assert.False(result.Succeeded);
         Assert.Equal(FileSystemErrorCode.DirectoryNotEmpty, result.Transaction.Error?.Code);
-        Assert.Equal(6, module.ExecuteArguments.Count);
+        Assert.Equal(4, module.ExecuteArguments.Count);
     }
 
     [Fact]
     public async Task DeleteAsync_RecursiveDeletesCompleteObservedSubtree()
     {
         ScriptedModule module = new(
-            One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3)),
-            One(Link("folder", ChildId)),
-            One(Entry(ChildId, FileSystemEntryKind.Directory, revision: 2)),
+            Walk(Entry(ChildId, FileSystemEntryKind.Directory, revision: 2)),
             One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3)),
             One($"[{Link("child.txt", CreatedId.ToString(), ChildId)}]"),
             One(Entry(CreatedId.ToString(), FileSystemEntryKind.File)),
@@ -349,11 +369,8 @@ public sealed class IndexedDbFileSystemProviderTests
     {
         Queue<FileSystemEntryId> ids = new([CreatedId, SecondCreatedId]);
         ScriptedModule module = new(
-            One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3)),
-            One(Link("folder", ChildId)),
-            One(Entry(ChildId, FileSystemEntryKind.Directory, revision: 2)),
-            One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3)),
-            One("null"),
+            Walk(Entry(ChildId, FileSystemEntryKind.Directory, revision: 2)),
+            Walk(),
             One(Entry(RootId, FileSystemEntryKind.Directory, revision: 3)),
             One($"[{Link("child.txt", SecondCreatedId.ToString(), ChildId)}]"),
             One(Entry(SecondCreatedId.ToString(), FileSystemEntryKind.File, revision: 5)),
@@ -404,6 +421,9 @@ public sealed class IndexedDbFileSystemProviderTests
 
     private static JsonElement[] One(string json) => [JsonDocument.Parse(json).RootElement.Clone()];
 
+    /// <summary>Result of one <c>resolvePath</c> walk: the entries found below the root, in order.</summary>
+    private static JsonElement[] Walk(params string[] entries) => One($"[{string.Join(',', entries)}]");
+
     private static JsonElement Parse(string json) => JsonDocument.Parse(json).RootElement.Clone();
 
     private static string Link(string name, string entryId, string parentId = RootId) =>
@@ -449,9 +469,12 @@ public sealed class IndexedDbFileSystemProviderTests
             object?[]? args) => ValueTask.FromResult((TValue)module);
     }
 
-    private sealed class ScriptedModule(params JsonElement[][] results) : IJSObjectReference
+    private sealed class ScriptedModule(params JsonElement[]?[] results) : IJSObjectReference
     {
-        private readonly Queue<JsonElement[]> _results = new(results);
+        /// <summary>A scripted result that makes the transaction fail like a full browser storage.</summary>
+        public static readonly JsonElement[]? QuotaExceeded = null;
+
+        private readonly Queue<JsonElement[]?> _results = new(results);
 
         public List<object?[]> ExecuteArguments { get; } = [];
 
@@ -468,7 +491,9 @@ public sealed class IndexedDbFileSystemProviderTests
             if (identifier == "executeTransaction")
             {
                 ExecuteArguments.Add(args ?? []);
-                return ValueTask.FromResult((TValue)(object)_results.Dequeue());
+                JsonElement[] result = _results.Dequeue()
+                    ?? throw new JSException("QuotaExceededError: The quota has been exceeded.");
+                return ValueTask.FromResult((TValue)(object)result);
             }
 
             return ValueTask.FromResult(default(TValue)!);

@@ -67,7 +67,7 @@ public partial class HackEmbeddedComponent<TController> : IAsyncDisposable
         // Optional service: a host without the platform (a unit test) shows the fallback.
         if (Services.GetService(typeof(IHackComponentHost)) is not IHackComponentHost host)
         {
-            _resolution = HackComponentResolution.Unavailable(Contract, "Embedded components are not available in this host.");
+            _resolution = HackComponentResolution.Unavailable(Contract, L["Embedded.Unavailable"]);
             return;
         }
 
@@ -81,11 +81,16 @@ public partial class HackEmbeddedComponent<TController> : IAsyncDisposable
         }
     }
 
+    /// <summary>Gets the SDK's texts in the app's language (the cascaded context, or the ambient app).</summary>
+    private Microsoft.Extensions.Localization.IStringLocalizer<Strings> L => AppContext is { } context
+        ? HackerOs.AppSdk.Globalization.HackLocalization.GetLocalizer<Strings>(context)
+        : HackerOs.AppSdk.Globalization.HackLocalization.GetLocalizer<Strings>();
+
     /// <summary>Renders the provider's component with the contract's parameters, as <c>DynamicComponent</c> does.</summary>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2072",
-        Justification = "Component types come from build-known manifests whose assemblies the host retains (PublishTrimmed is off).")]
+        Justification = "Component types come from build-known manifests whose assemblies a trimmed host keeps whole (ADR 0113: generated root descriptor).")]
     private void BuildProvider(RenderTreeBuilder builder)
     {
         if (_resolution?.ComponentType is not { } componentType)
@@ -111,7 +116,7 @@ public partial class HackEmbeddedComponent<TController> : IAsyncDisposable
             // handing the host an object it cannot use.
             _resolution = HackComponentResolution.Unavailable(
                 Contract,
-                $"'{_resolution?.ProviderAppId}' does not implement {typeof(TController).Name}.",
+                L["Embedded.NotImplemented", _resolution?.ProviderAppId ?? string.Empty, typeof(TController).Name],
                 _resolution?.ProviderAppId);
             return ControllerChanged.InvokeAsync(null);
         }

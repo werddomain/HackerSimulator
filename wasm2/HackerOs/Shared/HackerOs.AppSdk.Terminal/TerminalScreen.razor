@@ -1,5 +1,6 @@
 @namespace HackerOs.AppSdk.Terminal
 @using HackerOs.AppSdk
+@using HackerOs.AppSdk.Globalization
 @using Microsoft.AspNetCore.Components.Web
 
 <div class="terminal-full-screen"
@@ -8,7 +9,7 @@
      tabindex="0"
      role="textbox"
      aria-multiline="true"
-     aria-label="@(Frame?.AccessibleLabel ?? "Full-screen terminal command")"
+     aria-label="@(Frame?.AccessibleLabel ?? L["Screen.Label"])"
      @onkeydown="HandleKeyDownAsync"
      @onkeydown:preventDefault="true"
      @onkeydown:stopPropagation="true">
@@ -42,6 +43,15 @@
 
 @code {
     private ElementReference _root;
+
+    /// <summary>Gets or sets the app the screen belongs to, cascaded by the window host (its language labels the screen).</summary>
+    [CascadingParameter]
+    public IAppExecutionContext? AppContext { get; set; }
+
+    /// <summary>Gets the screen's label texts in the app's language, or the ambient app's without a cascaded one.</summary>
+    private Microsoft.Extensions.Localization.IStringLocalizer<Strings> L => AppContext is { } context
+        ? context.GetLocalizer<Strings>()
+        : HackLocalization.GetLocalizer<Strings>();
 
     /// <summary>Gets or sets the immutable frame currently owned by the command.</summary>
     [Parameter]

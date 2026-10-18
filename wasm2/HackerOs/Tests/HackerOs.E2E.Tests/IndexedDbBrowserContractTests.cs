@@ -8,7 +8,7 @@ using Microsoft.Playwright;
 namespace HackerOs.E2E.Tests;
 
 /// <summary>Runs browser persistence contracts against native Chromium IndexedDB.</summary>
-public sealed class IndexedDbBrowserContractTests
+public sealed partial class IndexedDbBrowserContractTests
 {
     /// <summary>Verifies save overwrite, folder creation, and filesystem denial dialog branches.</summary>
     [Fact]

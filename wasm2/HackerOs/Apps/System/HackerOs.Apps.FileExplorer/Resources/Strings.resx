@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Address.AriaLabel" xml:space="preserve">
+    <value>Current path address</value>
+  </data>
+  <data name="Breadcrumb.Root" xml:space="preserve">
+    <value>Computer</value>
+  </data>
+  <data name="Conflict.ApplyToAll" xml:space="preserve">
+    <value>Apply to all</value>
+  </data>
+  <data name="Conflict.FileExists" xml:space="preserve">
+    <value>A file named {0} already exists here.</value>
+  </data>
+  <data name="Conflict.FolderExists" xml:space="preserve">
+    <value>A folder named {0} already exists here.</value>
+  </data>
+  <data name="Conflict.KeepBoth" xml:space="preserve">
+    <value>Keep both</value>
+  </data>
+  <data name="Conflict.Moving" xml:space="preserve">
+    <value>Moving {0}</value>
+  </data>
+  <data name="Conflict.Replace" xml:space="preserve">
+    <value>Replace</value>
+  </data>
+  <data name="Conflict.ReplaceWarning" xml:space="preserve">
+    <value>Replacing deletes the existing folder and everything in it.</value>
+  </data>
+  <data name="Conflict.Skip" xml:space="preserve">
+    <value>Skip</value>
+  </data>
+  <data name="Dialog.Compress.Placeholder" xml:space="preserve">
+    <value>Archive name...</value>
+  </data>
+  <data name="Dialog.Compress.Prompt" xml:space="preserve">
+    <value>Enter the name of the zip archive:</value>
+  </data>
+  <data name="Dialog.Compress.Title" xml:space="preserve">
+    <value>Compress to Zip</value>
+  </data>
+  <data name="Dialog.Conflict.Title" xml:space="preserve">
+    <value>Name conflict</value>
+  </data>
+  <data name="Dialog.DeletePermanently.Many" xml:space="preserve">
+    <value>Permanently delete these {0} items? This cannot be undone.</value>
+  </data>
+  <data name="Dialog.DeletePermanently.One" xml:space="preserve">
+    <value>Permanently delete '{0}'? This cannot be undone.</value>
+  </data>
+  <data name="Dialog.DeletePermanently.Title" xml:space="preserve">
+    <value>Delete permanently</value>
+  </data>
+  <data name="Dialog.NewFile.Placeholder" xml:space="preserve">
+    <value>File name...</value>
+  </data>
+  <data name="Dialog.NewFile.Prompt" xml:space="preserve">
+    <value>Enter the name of the new file:</value>
+  </data>
+  <data name="Dialog.NewFile.Title" xml:space="preserve">
+    <value>New File</value>
+  </data>
+  <data name="Dialog.NewFolder.Default" xml:space="preserve">
+    <value>New Folder</value>
+  </data>
+  <data name="Dialog.NewFolder.Placeholder" xml:space="preserve">
+    <value>Folder name...</value>
+  </data>
+  <data name="Dialog.NewFolder.Prompt" xml:space="preserve">
+    <value>Enter the name of the new folder:</value>
+  </data>
+  <data name="Dialog.NewFolder.Title" xml:space="preserve">
+    <value>New Folder</value>
+  </data>
+  <data name="Dialog.OpenWith.Title" xml:space="preserve">
+    <value>Open With</value>
+  </data>
+  <data name="Dialog.Properties.Title" xml:space="preserve">
+    <value>Properties</value>
+  </data>
+  <data name="Empty" xml:space="preserve">
+    <value>This directory is empty.</value>
+  </data>
+  <data name="Error.AlreadyExists" xml:space="preserve">
+    <value>'{0}' already exists.</value>
+  </data>
+  <data name="Error.Clipboard" xml:space="preserve">
+    <value>You don't have permission to use the clipboard.</value>
+  </data>
+  <data name="Error.CreateArchive" xml:space="preserve">
+    <value>Could not create the archive.</value>
+  </data>
+  <data name="Error.CreateDestination" xml:space="preserve">
+    <value>Could not create destination folder.</value>
+  </data>
+  <data name="Error.CreateFile" xml:space="preserve">
+    <value>Could not create the file.</value>
+  </data>
+  <data name="Error.CreateFolder" xml:space="preserve">
+    <value>Could not create the folder.</value>
+  </data>
+  <data name="Error.Delete" xml:space="preserve">
+    <value>Could not delete {0}</value>
+  </data>
+  <data name="Error.InvalidZip" xml:space="preserve">
+    <value>The archive is not a valid zip file.</value>
+  </data>
+  <data name="Error.Item" xml:space="preserve">
+    <value>'{0}': {1}</value>
+  </data>
+  <data name="Error.ItemPermissionDenied" xml:space="preserve">
+    <value>'{0}': permission denied</value>
+  </data>
+  <data name="Error.LaunchDenied" xml:space="preserve">
+    <value>You don't have permission to launch applications.</value>
+  </data>
+  <data name="Error.NoHandler" xml:space="preserve">
+    <value>No application is registered to open this file.</value>
+  </data>
+  <data name="Error.NoLongerHere" xml:space="preserve">
+    <value>'{0}' is no longer in this folder.</value>
+  </data>
+  <data name="Error.OpenDenied" xml:space="preserve">
+    <value>You don't have permission to open files.</value>
+  </data>
+  <data name="Error.OpenFailed" xml:space="preserve">
+    <value>Could not open file: {0}</value>
+  </data>
+  <data name="Error.ReadArchive" xml:space="preserve">
+    <value>Could not read the archive.</value>
+  </data>
+  <data name="Error.WriteArchive" xml:space="preserve">
+    <value>Failed to write the archive.</value>
+  </data>
+  <data name="Kind.Directory" xml:space="preserve">
+    <value>Directory</value>
+  </data>
+  <data name="Kind.File" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="Kind.SymbolicLink" xml:space="preserve">
+    <value>SymbolicLink</value>
+  </data>
+  <data name="Menu.PublishSite" xml:space="preserve">
+    <value>Publish as a web site…</value>
+  </data>
+  <data name="Menu.UnzipHere" xml:space="preserve">
+    <value>UnZip Here…</value>
+  </data>
+  <data name="Nav.Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Nav.Forward" xml:space="preserve">
+    <value>Forward</value>
+  </data>
+  <data name="Nav.Home" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Nav.Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Nav.Up" xml:space="preserve">
+    <value>Up</value>
+  </data>
+  <data name="Notification.Title" xml:space="preserve">
+    <value>File Explorer</value>
+  </data>
+  <data name="OpenWith.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="OpenWith.Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="OpenWith.Prompt" xml:space="preserve">
+    <value>Select an installed app to open {0}:</value>
+  </data>
+  <data name="Places.Heading" xml:space="preserve">
+    <value>Places</value>
+  </data>
+  <data name="Places.Home" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Places.Trash" xml:space="preserve">
+    <value>Trash</value>
+  </data>
+  <data name="Places.TrashTooltip" xml:space="preserve">
+    <value>Trash (drop here to delete)</value>
+  </data>
+  <data name="Properties.Bytes" xml:space="preserve">
+    <value>{0} bytes</value>
+  </data>
+  <data name="Properties.Kind" xml:space="preserve">
+    <value>Kind:</value>
+  </data>
+  <data name="Properties.Modified" xml:space="preserve">
+    <value>Modified:</value>
+  </data>
+  <data name="Properties.Name" xml:space="preserve">
+    <value>Name:</value>
+  </data>
+  <data name="Properties.Ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Properties.Owner" xml:space="preserve">
+    <value>Owner:</value>
+  </data>
+  <data name="Properties.Path" xml:space="preserve">
+    <value>Path:</value>
+  </data>
+  <data name="Properties.Permissions" xml:space="preserve">
+    <value>Permissions:</value>
+  </data>
+  <data name="Properties.Size" xml:space="preserve">
+    <value>Size:</value>
+  </data>
+  <data name="Search.AriaLabel" xml:space="preserve">
+    <value>Search directory</value>
+  </data>
+  <data name="Search.Placeholder" xml:space="preserve">
+    <value>Search...</value>
+  </data>
+  <data name="Size.Bytes" xml:space="preserve">
+    <value>B</value>
+  </data>
+  <data name="Size.Gigabytes" xml:space="preserve">
+    <value>GB</value>
+  </data>
+  <data name="Size.Kilobytes" xml:space="preserve">
+    <value>KB</value>
+  </data>
+  <data name="Size.Megabytes" xml:space="preserve">
+    <value>MB</value>
+  </data>
+  <data name="Status.Items.Many" xml:space="preserve">
+    <value>{0} item(s)</value>
+  </data>
+  <data name="Status.Items.One" xml:space="preserve">
+    <value>{0} item(s)</value>
+  </data>
+  <data name="Status.Selected.Many" xml:space="preserve">
+    <value>{0} selected</value>
+  </data>
+  <data name="Status.Selected.One" xml:space="preserve">
+    <value>{0} selected</value>
+  </data>
+  <data name="Toolbar.Compress" xml:space="preserve">
+    <value>Compress</value>
+  </data>
+  <data name="Toolbar.CompressTooltip" xml:space="preserve">
+    <value>Compress to Zip</value>
+  </data>
+  <data name="Toolbar.Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Toolbar.CopyTooltip" xml:space="preserve">
+    <value>Copy (Ctrl+C)</value>
+  </data>
+  <data name="Toolbar.Cut" xml:space="preserve">
+    <value>Cut</value>
+  </data>
+  <data name="Toolbar.CutTooltip" xml:space="preserve">
+    <value>Cut (Ctrl+X)</value>
+  </data>
+  <data name="Toolbar.Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Toolbar.DeleteTooltip" xml:space="preserve">
+    <value>Move to Trash (Del)</value>
+  </data>
+  <data name="Toolbar.Download" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="Toolbar.Extract" xml:space="preserve">
+    <value>Extract</value>
+  </data>
+  <data name="Toolbar.ExtractTooltip" xml:space="preserve">
+    <value>Extract Zip</value>
+  </data>
+  <data name="Toolbar.NewFile" xml:space="preserve">
+    <value>New File</value>
+  </data>
+  <data name="Toolbar.NewFolder" xml:space="preserve">
+    <value>New Folder</value>
+  </data>
+  <data name="Toolbar.OpenWith" xml:space="preserve">
+    <value>Open With...</value>
+  </data>
+  <data name="Toolbar.Paste" xml:space="preserve">
+    <value>Paste</value>
+  </data>
+  <data name="Toolbar.PasteTooltip" xml:space="preserve">
+    <value>Paste (Ctrl+V)</value>
+  </data>
+  <data name="Toolbar.Properties" xml:space="preserve">
+    <value>Properties</value>
+  </data>
+  <data name="Toolbar.Rename" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="Toolbar.Upload" xml:space="preserve">
+    <value>Upload</value>
+  </data>
+  <data name="Transfer.Copy.Many" xml:space="preserve">
+    <value>Could not copy {0} items: {1}.</value>
+  </data>
+  <data name="Transfer.Copy.One" xml:space="preserve">
+    <value>Could not copy {0}.</value>
+  </data>
+  <data name="Transfer.Move.Many" xml:space="preserve">
+    <value>Could not move {0} items: {1}.</value>
+  </data>
+  <data name="Transfer.Move.One" xml:space="preserve">
+    <value>Could not move {0}.</value>
+  </data>
+  <data name="Transfer.Trash.Many" xml:space="preserve">
+    <value>Could not move to the trash {0} items: {1}.</value>
+  </data>
+  <data name="Transfer.Trash.One" xml:space="preserve">
+    <value>Could not move to the trash {0}.</value>
+  </data>
+  <data name="Transfer.Upload.Many" xml:space="preserve">
+    <value>Could not upload {0} items: {1}.</value>
+  </data>
+  <data name="Transfer.Upload.One" xml:space="preserve">
+    <value>Could not upload {0}.</value>
+  </data>
+  <data name="Trash.Column.Deleted" xml:space="preserve">
+    <value>Deleted</value>
+  </data>
+  <data name="Trash.Column.Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Trash.Column.Origin" xml:space="preserve">
+    <value>Original location</value>
+  </data>
+  <data name="Trash.Column.Size" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="Trash.DeletePermanently" xml:space="preserve">
+    <value>Delete permanently</value>
+  </data>
+  <data name="Trash.Empty" xml:space="preserve">
+    <value>Empty trash</value>
+  </data>
+  <data name="Trash.EmptyConfirm" xml:space="preserve">
+    <value>Permanently delete all {0} item(s) in the trash? This cannot be undone.</value>
+  </data>
+  <data name="Trash.IsEmpty" xml:space="preserve">
+    <value>The trash is empty.</value>
+  </data>
+  <data name="Trash.ReadError" xml:space="preserve">
+    <value>Cannot read the trash: {0}</value>
+  </data>
+  <data name="Trash.Restore" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="Trash.Stopped" xml:space="preserve">
+    <value>Stopped: the remaining items were left untouched.</value>
+  </data>
+  <data name="Trash.TableAriaLabel" xml:space="preserve">
+    <value>Trash</value>
+  </data>
+  <data name="Trash.Title" xml:space="preserve">
+    <value>Trash</value>
+  </data>
+  <data name="Trash.UnknownOrigin" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="View.Details" xml:space="preserve">
+    <value>Details View</value>
+  </data>
+  <data name="View.Icons" xml:space="preserve">
+    <value>Icons View</value>
+  </data>
+  <data name="View.Tree" xml:space="preserve">
+    <value>Tree View</value>
+  </data>
+  <data name="OpenWith.AlwaysUse" xml:space="preserve">
+    <value>Always use this app for {0} files</value>
+  </data>
+  <data name="Error.RememberFailed" xml:space="preserve">
+    <value>The app was not saved as your default for {0} files.</value>
+  </data>
+</root>

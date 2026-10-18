@@ -31,7 +31,7 @@ public sealed partial class Wave4NetworkTests
 
     public Wave4NetworkTests()
     {
-        var hosts = DefaultSimulatedHostCatalog.Build();
+        SimulatedHost[] hosts = [.. DefaultSimulatedHostCatalog.Build(), BodyEchoController.Host];
 
         var registry = new InMemorySimulatedWebsiteRegistry();
         registry.Register(new HackerSearchController());
@@ -39,6 +39,7 @@ public sealed partial class Wave4NetworkTests
         registry.Register(new CryptoBankController());
         registry.Register(new DarknetMarketController());
         registry.Register(new HackerForumController());
+        registry.Register(new BodyEchoController());
 
         _network = new InMemorySimulatedNetworkService(hosts, registry);
     }
@@ -79,7 +80,8 @@ public sealed partial class Wave4NetworkTests
         var ports = _network.ScanPorts("localhost", 20, 100);
         Assert.NotEmpty(ports);
         Assert.Contains(ports, p => p.PortNumber == 22 && p.State == SimulatedPortState.Open);
-        Assert.Contains(ports, p => p.PortNumber == 80 && p.State == SimulatedPortState.Open);
+        // ADR 0074: localhost's simulated ports are its system daemons; HTTP belongs to the apps that listen.
+        Assert.DoesNotContain(ports, p => p.PortNumber == 80);
         Assert.DoesNotContain(ports, p => p.PortNumber == 3306);
     }
 
@@ -195,7 +197,8 @@ public sealed partial class Wave4NetworkTests
         var output = stdoutWriter.ToString();
         Assert.Contains("Nmap scan report for localhost (127.0.0.1)", output);
         Assert.Contains("22/tcp    open      ssh", output);
-        Assert.Contains("80/tcp    open      http", output);
+        // ADR 0074: nothing listens on localhost:80 until a web app opens it.
+        Assert.DoesNotContain("80/tcp", output);
     }
 
     // ── ADR 0035: nmap single-port real-network fallback ────────────────────
@@ -363,14 +366,14 @@ public sealed partial class Wave4NetworkTests
     }
 
     [Fact]
-    public async Task CurlCommand_FullBody_UnknownHost_ServerError_ReportsFailureWithoutPrintingBody()
+    public async Task CurlCommand_Fail_UnknownHost_ServerError_ReportsFailureWithoutPrintingBody()
     {
         UseServer(new ConnectedServerConnectionService(), new SuccessBodyProxyClient(404, "Not Found"));
         var cmd = new CurlCommand(AppDefinitionMapper.ToManifest(new CurlApp()));
 
         using var stdoutWriter = new StringWriter();
         using var stderrWriter = new StringWriter();
-        var context = CreateContext(["https://real-external-site.example"], stdoutWriter, stderrWriter);
+        var context = CreateContext(["-f", "https://real-external-site.example"], stdoutWriter, stderrWriter);
 
         int exitCode = await cmd.ExecuteAsync(context, CancellationToken.None);
 
@@ -390,7 +393,7 @@ public sealed partial class Wave4NetworkTests
         Description = "Concatenate files and print on the standard output",
         Kind = AppKind.Terminal,
         EntryPoint = new AppEntryPointManifest("HackerOs.Commands.dll", "HackerOs.Commands.Cat.CatCommand"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
         Resources = AppResourceProfileManifest.None,
         Terminal = new TerminalCommandManifest("cat", [], "cat [file ...]")

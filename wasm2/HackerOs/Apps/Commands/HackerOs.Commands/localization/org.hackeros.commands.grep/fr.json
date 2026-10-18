@@ -1,0 +1,5 @@
+{
+  "name": "grep",
+  "description": "Affiche les lignes correspondant à un motif dans l'entrée standard ou des fichiers virtuels",
+  "terminalUsage": "grep [-i] [-n] [-v] [-r] <motif> [fichier...]"
+}

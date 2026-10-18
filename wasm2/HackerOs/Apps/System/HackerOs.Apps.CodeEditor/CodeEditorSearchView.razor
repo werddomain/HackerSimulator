@@ -10,15 +10,15 @@
 *@
 <div class="search-view">
     <div class="view-title">
-        <span>Search</span>
+        <span>@L["Search.Title"]</span>
         <span class="title-actions">
-            <button type="button" class="icon-button" title="Refresh" aria-label="Refresh search" @onclick="RunNowAsync" disabled="@(Workspace is null)">
+            <button type="button" class="icon-button" title="@L["Search.Refresh"]" aria-label="@L["Search.Refresh.Label"]" @onclick="RunNowAsync" disabled="@(Workspace is null)">
                 <HackerIcon Library="IconLibrary.Lucide" Name="refresh-cw" Size="15" />
             </button>
-            <button type="button" class="icon-button" title="Clear Search Results" aria-label="Clear search results" @onclick="Clear">
+            <button type="button" class="icon-button" title="@L["Search.Clear"]" aria-label="@L["Search.Clear"]" @onclick="Clear">
                 <HackerIcon Library="IconLibrary.Lucide" Name="x" Size="15" />
             </button>
-            <button type="button" class="icon-button" title="Collapse All" aria-label="Collapse all results" @onclick="CollapseAll">
+            <button type="button" class="icon-button" title="@L["Search.CollapseAll"]" aria-label="@L["Search.CollapseAll.Label"]" @onclick="CollapseAll">
                 <HackerIcon Library="IconLibrary.Lucide" Name="chevrons-down-up" Size="15" />
             </button>
         </span>
@@ -27,8 +27,8 @@
     @if (Workspace is null)
     {
         <div class="search-empty">
-            <p>Open a folder to search across its files.</p>
-            <button type="button" class="primary-button" @onclick="OnOpenFolder">Open Folder</button>
+            <p>@L["Search.NoFolder"]</p>
+            <button type="button" class="primary-button" @onclick="OnOpenFolder">@L["Explorer.OpenFolder"]</button>
         </div>
     }
     else
@@ -39,38 +39,38 @@
                        id="code-search-input"
                        class="search-input"
                        type="text"
-                       placeholder="Search"
-                       aria-label="Search in folder"
+                       placeholder="@L["Search.Placeholder"]"
+                       aria-label="@L["Search.InFolder"]"
                        spellcheck="false"
                        value="@_text"
                        @oninput="OnTextInput"
                        @onkeydown="OnSearchKeyDownAsync" />
                 <span class="search-toggles">
-                    <button type="button" class="toggle @(_matchCase ? "is-on" : null)" title="Match Case" aria-label="Match Case" aria-pressed="@_matchCase" @onclick="ToggleMatchCase">
+                    <button type="button" class="toggle @(_matchCase ? "is-on" : null)" title="@L["Search.MatchCase"]" aria-label="@L["Search.MatchCase"]" aria-pressed="@(_matchCase ? "true" : "false")" @onclick="ToggleMatchCase">
                         <HackerIcon Library="IconLibrary.Lucide" Name="case-sensitive" Size="15" />
                     </button>
-                    <button type="button" class="toggle @(_wholeWord ? "is-on" : null)" title="Match Whole Word" aria-label="Match Whole Word" aria-pressed="@_wholeWord" @onclick="ToggleWholeWord">
+                    <button type="button" class="toggle @(_wholeWord ? "is-on" : null)" title="@L["Search.WholeWord"]" aria-label="@L["Search.WholeWord"]" aria-pressed="@(_wholeWord ? "true" : "false")" @onclick="ToggleWholeWord">
                         <HackerIcon Library="IconLibrary.Lucide" Name="whole-word" Size="15" />
                     </button>
-                    <button type="button" class="toggle @(_useRegex ? "is-on" : null)" title="Use Regular Expression" aria-label="Use Regular Expression" aria-pressed="@_useRegex" @onclick="ToggleRegex">
+                    <button type="button" class="toggle @(_useRegex ? "is-on" : null)" title="@L["Search.Regex"]" aria-label="@L["Search.Regex"]" aria-pressed="@(_useRegex ? "true" : "false")" @onclick="ToggleRegex">
                         <HackerIcon Library="IconLibrary.Lucide" Name="regex" Size="15" />
                     </button>
                 </span>
             </div>
 
-            <button type="button" class="details-toggle" aria-expanded="@_showDetails" @onclick="ToggleDetails">
-                @(_showDetails ? "Hide search details" : "Toggle search details")
+            <button type="button" class="details-toggle" aria-expanded="@(_showDetails ? "true" : "false")" @onclick="ToggleDetails">
+                @(_showDetails ? L["Search.HideDetails"] : L["Search.ToggleDetails"])
             </button>
             @if (_showDetails)
             {
                 <label class="glob-label">
-                    files to include
-                    <input id="code-search-include" class="glob-input" type="text" placeholder="e.g. *.cs, src/**" spellcheck="false"
+                    @L["Search.Include"]
+                    <input id="code-search-include" class="glob-input" type="text" placeholder="@L["Search.Include.Placeholder"]" spellcheck="false"
                            value="@_include" @oninput="OnIncludeInput" @onkeydown="OnSearchKeyDownAsync" />
                 </label>
                 <label class="glob-label">
-                    files to exclude
-                    <input id="code-search-exclude" class="glob-input" type="text" placeholder="e.g. **/*.min.js" spellcheck="false"
+                    @L["Search.Exclude"]
+                    <input id="code-search-exclude" class="glob-input" type="text" placeholder="@L["Search.Exclude.Placeholder"]" spellcheck="false"
                            value="@_exclude" @oninput="OnExcludeInput" @onkeydown="OnSearchKeyDownAsync" />
                 </label>
             }
@@ -83,12 +83,12 @@
             <div class="search-error" role="alert">@_result.Error</div>
         }
 
-        <div class="search-results" aria-label="Search results">
+        <div class="search-results" aria-label="@L["Search.Results"]">
             @foreach (CodeEditorSearchFileResult file in _result.Files)
             {
                 bool collapsed = _collapsed.Contains(file.File.RelativePath);
                 <div class="result-file" @key="file.File.RelativePath">
-                    <button type="button" class="file-row" title="@file.File.Path.Value" aria-expanded="@(!collapsed)" @onclick="() => ToggleFile(file.File.RelativePath)">
+                    <button type="button" class="file-row" title="@file.File.Path.Value" aria-expanded="@(!collapsed ? "true" : "false")" @onclick="() => ToggleFile(file.File.RelativePath)">
                         <HackerIcon Library="IconLibrary.Lucide" Name="@(collapsed ? "chevron-right" : "chevron-down")" Size="14" />
                         <HackerIcon Library="IconLibrary.Lucide" Name="file-text" Size="14" />
                         <span class="file-name">@file.File.Name</span>
@@ -99,7 +99,7 @@
                     {
                         @foreach (CodeEditorSearchMatch match in file.Matches)
                         {
-                            <button type="button" class="match-row" title="Line @match.Line, column @match.Column"
+                            <button type="button" class="match-row" title="@L["Search.MatchPosition", match.Line, match.Column]"
                                     @onclick="() => OpenMatchAsync(file.File, match)">
                                 <span class="match-before">@Before(match)</span><mark class="match-text">@Matched(match)</mark><span class="match-after">@After(match)</span>
                             </button>

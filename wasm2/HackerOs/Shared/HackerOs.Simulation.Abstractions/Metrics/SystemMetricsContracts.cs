@@ -215,7 +215,10 @@ public interface ICpuTimeAccounting
 }
 
 /// <summary>Space of the OS disk, what <c>statfs</c> reports for <c>/</c> (ADR 0057 section 7).</summary>
-/// <param name="UsedBytes">Bytes of the content blocks the deduplicated persistence stores.</param>
+/// <param name="UsedBytes">
+/// Bytes used: the browser origin's real usage when it reports a quota (ADR 0099 section 2), else
+/// the content blocks the deduplicated persistence stores.
+/// </param>
 /// <param name="QuotaBytes">Browser storage quota for the origin, when the browser tells it.</param>
 public readonly record struct StorageUsage(long UsedBytes, long? QuotaBytes);
 

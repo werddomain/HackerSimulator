@@ -1,0 +1,5 @@
+{
+  "name": "exit",
+  "description": "Quitte le shell",
+  "terminalUsage": "exit [n]"
+}

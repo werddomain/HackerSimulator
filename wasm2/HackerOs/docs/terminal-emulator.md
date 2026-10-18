@@ -41,9 +41,16 @@ commande ─▶ TerminalOutputWriter ─▶ TerminalPanel.Write ("\n" → "\r\n"
 
 Le fond, le texte et le curseur viennent des jetons de design lus sur
 l'élément hôte (`--hos-bg-base`, `--hos-text-primary`, `--hos-accent`) ; la
-police vient de `--hos-font-mono` (14 px). La palette des 16 couleurs ANSI est
+police vient de `--hos-font-mono` (`0.875rem`, 14 px à 100 %). La palette des 16 couleurs ANSI est
 celle du legacy, avec le vert d'accent de HackerOS. Le style du cadre est dans
 `TerminalPanel.razor.css` ; la grille elle-même est dessinée par xterm.js.
+
+Accessibilité ([`accessibility.md`](accessibility.md), ADR 0105) : `TerminalPanel` lit
+`AppContext.Accessibility` à l'ouverture et suit `Changed`. La taille de police est relue du
+panneau, dont la taille en `rem` suit la taille du texte ; en contraste élevé, xterm.js reçoit une
+palette dont chaque couleur atteint 7:1 sur fond noir, un curseur et une sélection jaunes ; en
+mouvement réduit, le curseur ne clignote pas. `applyAccessibility` (objet renvoyé par
+`mountTerminal`) applique un changement et réajuste la grille.
 
 ## Utilisation au clavier
 
@@ -78,6 +85,14 @@ Ctrl+D sur une ligne vide est une fin d'entrée lue une fois, Ctrl+C
 interrompt. Ce que la commande n'a pas lu revient à l'invite suivante comme
 frappe anticipée (4096 touches au plus) : `sleep 5` puis `ls` + Entrée tapé
 pendant l'attente lance `ls` ensuite, comme sous Linux.
+
+Une commande peut couper l'écho, comme le drapeau `ECHO` de `termios` (ADR
+0120 §4) : `TerminalInputReader` implémente `ITerminalInputMode`, et
+`TerminalExecutionContext.ReadSecretLineAsync(invite)` met `EchoEnabled` à
+`false` le temps d'une ligne, comme `getpass(3)`. La discipline de ligne
+(`HandleInputKey`) n'affiche alors ni les caractères ni leur effacement
+(Retour arrière, Ctrl+U) ; Entrée passe toujours à la ligne. `passwd` lit
+ainsi les mots de passe.
 
 Une commande inachevée (`for f in *; do` + Entrée, guillemet ouvert, `|`
 final, here-document) affiche l'invite de continuation `>` de bash (`PS2`) :
@@ -165,4 +180,5 @@ retour), terminal intégré de l'éditeur de code.
 - [x] Tests unitaires, vérification dans un navigateur.
 - [x] Entrée standard des commandes en mode canonique (`TerminalInputReader`, ADR 0064).
 - [x] Couleurs dans les cadres plein écran ; `nano` aux raccourcis de GNU nano (ADR 0064).
+- [x] Écho coupé pour les mots de passe (`ITerminalInputMode`, `ReadSecretLineAsync`, ADR 0120).
 - [x] ADR 0061, cette page, index.

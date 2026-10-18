@@ -1,0 +1,5 @@
+{
+  "name": "help",
+  "description": "Affiche l'aide et les pages de manuel des commandes",
+  "terminalUsage": "help [commande]"
+}

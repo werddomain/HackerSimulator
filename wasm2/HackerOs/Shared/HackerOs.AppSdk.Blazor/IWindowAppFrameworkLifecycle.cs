@@ -13,10 +13,16 @@ public interface IWindowAppFrameworkLifecycle
     Task OnAfterRenderAsync(WindowAppBase app, bool firstRender);
 }
 
+/// <summary>
+/// The default <see cref="IWindowAppFrameworkLifecycle"/>: does nothing, for hosts without browser
+/// interop (tests, prerendering) until the interactive host registers its own implementation.
+/// </summary>
 public sealed class NullWindowAppFrameworkLifecycle : IWindowAppFrameworkLifecycle
 {
+    /// <summary>The shared stateless instance.</summary>
     public static NullWindowAppFrameworkLifecycle Instance { get; } = new();
 
+    /// <inheritdoc />
     public Task OnAfterRenderAsync(WindowAppBase app, bool firstRender)
     {
         _ = app;

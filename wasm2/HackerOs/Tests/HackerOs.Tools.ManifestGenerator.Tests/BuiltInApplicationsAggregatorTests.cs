@@ -12,7 +12,7 @@ public sealed class BuiltInApplicationsAggregatorTests : IDisposable
     private string WriteManifest(Type definition, string fileName)
     {
         GeneratedManifest generated = Assert.Single(
-            AppDefinitionInspector.Inspect(typeof(ValidCommandApp).Assembly, [definition], "1.0.0").Manifests);
+            AppDefinitionInspector.Inspect(typeof(ValidCommandApp).Assembly, [definition], HackerOsSdk.Version).Manifests);
         string path = Path.Combine(_directory, fileName);
         File.WriteAllText(path, generated.CanonicalJson);
         return path;
@@ -47,6 +47,65 @@ public sealed class BuiltInApplicationsAggregatorTests : IDisposable
         GeneratorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(GeneratorCodes.InvalidCatalog, diagnostic.Code);
         Assert.Contains("catalog.app-id.duplicate", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Duplicate_command_name_across_apps_fails_with_HOSAPP0022()
+    {
+        AggregationResult result = BuiltInApplicationsAggregator.Aggregate(
+        [
+            new(WriteManifest(typeof(ValidCommandApp), "valid.json"), false),
+            new(WriteManifest(typeof(SameCommandApp), "same.json"), false)
+        ]);
+
+        Assert.Null(result.Json);
+        GeneratorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(GeneratorCodes.DuplicateCommand, diagnostic.Code);
+        Assert.Equal("org.hackeros.tests.valid", diagnostic.Subject);
+        Assert.Contains("org.hackeros.tests.same-command", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_negative_oom_score_adj_is_refused_for_a_non_system_app_with_HOSAPP0024()
+    {
+        string manifest = WriteManifest(typeof(ShieldedApp), "shielded.json");
+
+        AggregationResult refused = BuiltInApplicationsAggregator.Aggregate([new(manifest, IsSystemApp: false)]);
+        GeneratorDiagnostic diagnostic = Assert.Single(refused.Diagnostics);
+        Assert.Equal("HOSAPP0024", diagnostic.Code);
+        Assert.Equal("org.hackeros.tests.shielded", diagnostic.Subject);
+        Assert.Contains("oomScoreAdj -300", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Null(refused.Json);
+
+        AggregationResult accepted = BuiltInApplicationsAggregator.Aggregate([new(manifest, IsSystemApp: true)]);
+        Assert.Empty(accepted.Diagnostics);
+        Assert.Contains("\"oomScoreAdj\":-300", accepted.Json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Command_named_like_a_shell_builtin_fails_with_HOSAPP0022()
+    {
+        AggregationResult result = BuiltInApplicationsAggregator.Aggregate(
+            [new(WriteManifest(typeof(BuiltinNameApp), "builtin.json"), false)]);
+
+        GeneratorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(GeneratorCodes.DuplicateCommand, diagnostic.Code);
+        Assert.Contains("'eval'", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void App_built_for_a_newer_sdk_fails_the_host_build_with_HOSAPP0021()
+    {
+        GeneratedManifest generated = Assert.Single(
+            AppDefinitionInspector.Inspect(typeof(ValidCommandApp).Assembly, [typeof(ValidCommandApp)], "0.99.0").Manifests);
+        string path = Path.Combine(_directory, "newer.json");
+        File.WriteAllText(path, generated.CanonicalJson);
+
+        AggregationResult result = BuiltInApplicationsAggregator.Aggregate([new(path, false)]);
+
+        GeneratorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(GeneratorCodes.InvalidCatalog, diagnostic.Code);
+        Assert.Contains("catalog.sdk.incompatible", diagnostic.Message, StringComparison.Ordinal);
     }
 
     [Fact]

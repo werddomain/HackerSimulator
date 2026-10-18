@@ -232,7 +232,37 @@ public sealed record ShellTildePart : ShellWordPart;
 /// <param name="Message">Human-readable message, printed after <c>hsh: </c>.</param>
 /// <param name="Offset">Offset of the first offending character.</param>
 /// <param name="Length">Number of offending characters (at least 1, except at the end of the input).</param>
-public sealed record ShellSyntaxError(string Code, string Message, int Offset, int Length);
+public sealed record ShellSyntaxError(string Code, string Message, int Offset, int Length)
+{
+    /// <summary>
+    /// Gets the key of the message in <c>Resources/Strings.resx</c> (ADR 0104), or
+    /// <see langword="null"/> when <see cref="Message"/> is only available in English.
+    /// </summary>
+    public string? TextKey { get; init; }
+
+    /// <summary>Gets the arguments of the <see cref="TextKey"/> text (tokens, delimiters).</summary>
+    public IReadOnlyList<object> TextArguments { get; init; } = [];
+
+    /// <summary>
+    /// Gets the message in the language of <paramref name="texts"/> (the shell's language, as bash
+    /// translates its syntax errors through <c>gettext</c>); <see cref="Message"/> stays English.
+    /// </summary>
+    /// <param name="texts">The core's texts in the shell's language (<c>Strings.For(culture)</c>).</param>
+    public string Localize(Microsoft.Extensions.Localization.IStringLocalizer texts)
+    {
+        ArgumentNullException.ThrowIfNull(texts);
+        return TextKey is null ? Message : texts[TextKey, [.. TextArguments]];
+    }
+
+    /// <summary>Creates an error whose English <see cref="Message"/> comes from its resource text.</summary>
+    /// <param name="code">One of <see cref="ShellSyntaxErrorCodes"/>.</param>
+    /// <param name="offset">Offset of the first offending character.</param>
+    /// <param name="length">Number of offending characters.</param>
+    /// <param name="textKey">Key of the message in <c>Resources/Strings.resx</c>.</param>
+    /// <param name="arguments">Arguments of the message.</param>
+    internal static ShellSyntaxError Create(string code, int offset, int length, string textKey, params object[] arguments) =>
+        new(code, ShellText.English[textKey, arguments], offset, length) { TextKey = textKey, TextArguments = arguments };
+}
 
 /// <summary>Stable codes of <see cref="ShellSyntaxError"/>.</summary>
 public static class ShellSyntaxErrorCodes
@@ -268,7 +298,7 @@ public static class ShellSyntaxErrorCodes
     public const string BadFunctionName = "shell.syntax.bad-function-name";
 }
 
-/// <summary>Outcome of <see cref="ShellParser.Parse"/>.</summary>
+/// <summary>Outcome of <see cref="ShellParser.Parse(string)"/>.</summary>
 /// <param name="Commands">The parsed program, or <see langword="null"/> on error or for blank input.</param>
 /// <param name="Error">The syntax error, or <see langword="null"/> on success.</param>
 public sealed record ShellParseResult(ShellCommandList? Commands, ShellSyntaxError? Error)

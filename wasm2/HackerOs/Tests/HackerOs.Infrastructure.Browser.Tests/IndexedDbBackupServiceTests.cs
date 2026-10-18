@@ -48,21 +48,63 @@ public sealed class IndexedDbBackupServiceTests
     }
 
     [Fact]
-    public async Task Merge_uses_add_if_absent_or_equal_and_reports_atomic_conflict()
+    public async Task Merge_puts_archive_records_over_existing_ones_without_clearing()
     {
         FakeIndexedDbModule module = new(CreateSnapshot());
         await using IndexedDbBackupService service = new(new FakeJsRuntime(module));
         string backup = await service.ExportAsync();
-        module.ThrowMergeConflict = true;
 
-        IndexedDbBackupValidationException exception = await Assert.ThrowsAsync<IndexedDbBackupValidationException>(async () =>
-            await service.RestoreAsync(backup, IndexedDbRestoreMode.Merge));
+        IndexedDbRestoreResult result = await service.RestoreAsync(backup, IndexedDbRestoreMode.Merge);
 
         TransactionInvocation restore = module.Transactions[1];
         IndexedDbOperation operation = Assert.Single(restore.Operations);
-        Assert.Equal("addIfAbsentOrEqual", operation.Kind);
-        Assert.Equal("backup.merge-conflict", operation.FailureCode);
-        Assert.Contains("no records were changed", exception.Message, StringComparison.Ordinal);
+        Assert.Equal("put", operation.Kind);
+        Assert.Equal(IndexedDbRestoreMode.Merge, result.Mode);
+    }
+
+    [Fact]
+    public async Task Archive_round_trips_through_gzip_and_plain_json_is_still_accepted()
+    {
+        FakeIndexedDbModule module = new(CreateSnapshot());
+        await using IndexedDbBackupService service = new(new FakeJsRuntime(module));
+
+        byte[] archive = await service.ExportArchiveAsync();
+        string json = IndexedDbBackupService.ReadArchive(archive);
+
+        Assert.Equal(0x1F, archive[0]);
+        Assert.Equal(0x8B, archive[1]);
+        IndexedDbBackupSummary summary = IndexedDbBackupService.Inspect(json);
+        Assert.Equal(1, summary.RecordCount);
+        Assert.Equal(1, summary.StoreRecordCounts[HackerOsIndexedDbSchema.UserStoreName]);
+        Assert.Equal(json, IndexedDbBackupService.ReadArchive(System.Text.Encoding.UTF8.GetBytes(json)));
+    }
+
+    [Fact]
+    public void Damaged_gzip_archive_is_refused()
+    {
+        byte[] damaged = [0x1F, 0x8B, 0x08, 0x00, 0x01, 0x02, 0x03];
+
+        // A truncated stream either fails to decompress or yields no backup: both are refused.
+        Assert.Throws<IndexedDbBackupValidationException>(
+            () => IndexedDbBackupService.Inspect(IndexedDbBackupService.ReadArchive(damaged)));
+    }
+
+    [Fact]
+    public async Task Backup_of_another_schema_version_is_refused_with_both_versions_named()
+    {
+        FakeIndexedDbModule module = new(CreateSnapshot());
+        await using IndexedDbBackupService service = new(new FakeJsRuntime(module));
+        string backup = await service.ExportAsync();
+        string older = backup.Replace(
+            $"\"databaseSchemaVersion\":{HackerOsIndexedDbSchema.CurrentVersion}",
+            "\"databaseSchemaVersion\":3",
+            StringComparison.Ordinal);
+
+        IndexedDbBackupValidationException exception = Assert.Throws<IndexedDbBackupValidationException>(
+            () => IndexedDbBackupService.Inspect(older));
+
+        Assert.Contains("version 3", exception.Message, StringComparison.Ordinal);
+        Assert.Contains($"version {HackerOsIndexedDbSchema.CurrentVersion}", exception.Message, StringComparison.Ordinal);
     }
 
     private static JsonElement[] CreateSnapshot()
@@ -92,7 +134,6 @@ public sealed class IndexedDbBackupServiceTests
     private sealed class FakeIndexedDbModule(JsonElement[] snapshot) : IJSObjectReference
     {
         internal List<TransactionInvocation> Transactions { get; } = [];
-        internal bool ThrowMergeConflict { get; set; }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
@@ -114,11 +155,6 @@ public sealed class IndexedDbBackupServiceTests
                 Assert.IsType<string>(arguments[3]),
                 Assert.IsAssignableFrom<IReadOnlyList<IndexedDbOperation>>(arguments[4]));
             Transactions.Add(invocation);
-            if (ThrowMergeConflict && invocation.Mode == "readwrite")
-            {
-                throw new JSException("ConstraintError: backup.merge-conflict.");
-            }
-
             return ValueTask.FromResult((TValue)(object)(invocation.Mode == "readonly" ? snapshot : []));
         }
     }

@@ -1,0 +1,5 @@
+{
+  "name": "mkdir",
+  "description": "Crée des dossiers dans le système de fichiers virtuel",
+  "terminalUsage": "mkdir [-pv] <dossier...>"
+}

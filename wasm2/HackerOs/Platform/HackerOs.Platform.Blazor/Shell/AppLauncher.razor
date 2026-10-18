@@ -3,7 +3,7 @@
 <div class="launcher-overlay" @onclick="CloseAsync">
     <section class="launcher-popover"
              role="dialog"
-             aria-label="Start menu"
+             aria-label="@L["Launcher.Title"]"
              @onclick:stopPropagation="true"
              @onkeydown="HandleDialogKeyDownAsync">
         <header class="launcher-header">
@@ -22,8 +22,8 @@
                 </span>
                 <button type="button"
                         class="close-button"
-                        aria-label="Close Start menu"
-                        title="Close"
+                        aria-label="@L["Launcher.Close"]"
+                        title="@L["Common.Close"]"
                         @onclick="CloseAsync">
                     <HackerIcon Library="IconLibrary.Lucide" Name="x" Size="17" Title="" />
                 </button>
@@ -37,7 +37,7 @@
                     {
                         <section class="pinned-section" aria-labelledby="launcher-pinned-heading">
                             <div class="section-heading">
-                                <h2 id="launcher-pinned-heading">Pinned</h2>
+                                <h2 id="launcher-pinned-heading">@L["Launcher.Pinned"]</h2>
                                 <span>@_projection.PinnedApps.Count</span>
                             </div>
                             <ul class="pinned-list">
@@ -48,7 +48,7 @@
                                     <li class="pinned-row">
                                         <button type="button"
                                                 class="app-launch-button"
-                                                aria-label="Launch @app.Name"
+                                                aria-label="@L["Launcher.LaunchApp", app.Name]"
                                                 @onclick="() => LaunchAppAsync(app)">
                                             <span class="app-icon-shell" aria-hidden="true">
                                                 <HackerIcon Library="IconLibrary.Lucide" Name="@GetAppIconName(app)" Size="20" Title="" />
@@ -62,25 +62,25 @@
                                             <button type="button"
                                                     class="icon-action"
                                                     disabled="@(pinnedIndex == 0 || _isUpdatingPreferences)"
-                                                    aria-label="Move @app.Name up"
-                                                    title="Move up"
+                                                    aria-label="@L["Launcher.MoveAppUp", app.Name]"
+                                                    title="@L["Launcher.MoveUp"]"
                                                     @onclick="() => MovePinnedAsync(app.Id, -1)">
                                                 <HackerIcon Library="IconLibrary.Lucide" Name="chevron-up" Size="15" Title="" />
                                             </button>
                                             <button type="button"
                                                     class="icon-action"
                                                     disabled="@(pinnedIndex == _projection.PinnedApps.Count - 1 || _isUpdatingPreferences)"
-                                                    aria-label="Move @app.Name down"
-                                                    title="Move down"
+                                                    aria-label="@L["Launcher.MoveAppDown", app.Name]"
+                                                    title="@L["Launcher.MoveDown"]"
                                                     @onclick="() => MovePinnedAsync(app.Id, 1)">
                                                 <HackerIcon Library="IconLibrary.Lucide" Name="chevron-down" Size="15" Title="" />
                                             </button>
                                             <button type="button"
                                                     class="icon-action is-pinned"
                                                     disabled="@(!CanManagePins)"
-                                                    aria-label="Unpin @app.Name from Start menu"
+                                                    aria-label="@L["Launcher.UnpinApp", app.Name]"
                                                     aria-pressed="true"
-                                                    title="Unpin from Start menu"
+                                                    title="@L["Launcher.Unpin"]"
                                                     @onclick="() => TogglePinAsync(app.Id)">
                                                 <HackerIcon Library="IconLibrary.Lucide" Name="pin-off" Size="15" Title="" />
                                             </button>
@@ -93,25 +93,25 @@
 
                     <section class="programs-section" aria-labelledby="launcher-programs-heading">
                         <div class="section-heading">
-                            <h2 id="launcher-programs-heading">@(HasSearchQuery ? "Search results" : "All Programs")</h2>
+                            <h2 id="launcher-programs-heading">@(HasSearchQuery ? L["Launcher.SearchResults"] : L["Launcher.AllPrograms"])</h2>
                             <span>@_projection.VisibleApps.Count</span>
                         </div>
 
                         @if (!HasSearchQuery && _projection.Categories.Count > 0)
                         {
-                            <nav class="category-list" aria-label="Application categories">
+                            <nav class="category-list" aria-label="@L["Launcher.Categories"]">
                                 <button type="button"
                                         class="category-button @(string.IsNullOrEmpty(_selectedCategory) ? "is-active" : null)"
-                                        aria-pressed="@string.IsNullOrEmpty(_selectedCategory)"
+                                        aria-pressed="@(string.IsNullOrEmpty(_selectedCategory) ? "true" : "false")"
                                         @onclick="() => SelectCategory(null)">
-                                    All
+                                    @L["Launcher.AllCategories"]
                                 </button>
                                 @foreach (string category in _projection.Categories)
                                 {
                                     bool isSelected = StringComparer.OrdinalIgnoreCase.Equals(_selectedCategory, category);
                                     <button type="button"
                                             class="category-button @(isSelected ? "is-active" : null)"
-                                            aria-pressed="@isSelected"
+                                            aria-pressed="@(isSelected ? "true" : "false")"
                                             @onclick="() => SelectCategory(category)">
                                         @FormatCategory(category)
                                     </button>
@@ -122,13 +122,13 @@
                         <div id="launcher-app-list"
                              class="app-list"
                              role="grid"
-                             aria-label="@(HasSearchQuery ? "Application search results" : "Available applications")">
+                             aria-label="@(HasSearchQuery ? L["Launcher.SearchResultsList"] : L["Launcher.AvailableApps"])">
                             @if (_projection.VisibleApps.Count == 0)
                             {
                                 <div class="empty-state" role="row">
                                     <div class="empty-state-content" role="gridcell">
                                         <HackerIcon Library="IconLibrary.Lucide" Name="search-x" Size="28" Title="" />
-                                        <span role="status">No applications match your search.</span>
+                                        <span role="status">@L["Launcher.NoMatch"]</span>
                                     </div>
                                 </div>
                             }
@@ -143,12 +143,12 @@
                                     <div id="@GetOptionId(app)"
                                          class="app-row @(isSelected ? "is-focused" : null)"
                                          role="row"
-                                         aria-selected="@isSelected"
+                                         aria-selected="@(isSelected ? "true" : "false")"
                                          @onmouseenter="() => SetSelectedIndex(currentIndex)">
                                         <div class="app-launch-cell" role="gridcell">
                                             <button type="button"
                                                     class="app-launch-button"
-                                                    aria-label="Launch @app.Name"
+                                                    aria-label="@L["Launcher.LaunchApp", app.Name]"
                                                     @onclick="() => LaunchAppAsync(app)">
                                                 <span class="app-icon-shell" aria-hidden="true">
                                                     <HackerIcon Library="IconLibrary.Lucide" Name="@GetAppIconName(app)" Size="20" Title="" />
@@ -163,9 +163,9 @@
                                             <button type="button"
                                                     class="pin-toggle @(isPinned ? "is-pinned" : null)"
                                                     disabled="@(!CanManagePins)"
-                                                    aria-label="@(isPinned ? $"Unpin {app.Name} from Start menu" : $"Pin {app.Name} to Start menu")"
-                                                    aria-pressed="@isPinned"
-                                                    title="@(isPinned ? "Unpin from Start menu" : "Pin to Start menu")"
+                                                    aria-label="@(isPinned ? L["Launcher.UnpinApp", app.Name] : L["Launcher.PinApp", app.Name])"
+                                                    aria-pressed="@(isPinned ? "true" : "false")"
+                                                    title="@(isPinned ? L["Launcher.Unpin"] : L["Launcher.Pin"])"
                                                     @onclick="() => TogglePinAsync(app.Id)">
                                                 <HackerIcon Library="IconLibrary.Lucide" Name="@(isPinned ? "pin-off" : "pin")" Size="16" Title="" />
                                             </button>
@@ -187,11 +187,11 @@
                                type="search"
                                class="search-input"
                                value="@_searchQuery"
-                               placeholder="Search programs and files"
+                               placeholder="@L["Launcher.SearchPlaceholder"]"
                                autocomplete="off"
                                spellcheck="false"
                                role="combobox"
-                               aria-label="Search applications"
+                               aria-label="@L["Launcher.SearchLabel"]"
                                aria-autocomplete="list"
                                aria-haspopup="grid"
                                aria-expanded="true"
@@ -204,8 +204,8 @@
                         {
                             <button type="button"
                                     class="clear-search-button"
-                                    aria-label="Clear application search"
-                                    title="Clear search"
+                                    aria-label="@L["Launcher.ClearSearch"]"
+                                    title="@L["Launcher.ClearSearchTitle"]"
                                     @onclick="ClearSearch">
                                 <HackerIcon Library="IconLibrary.Lucide" Name="x" Size="15" Title="" />
                             </button>
@@ -215,39 +215,39 @@
                 </footer>
             </main>
 
-            <aside class="quick-panel" aria-label="Quick access">
-                <h2>Quick access</h2>
+            <aside class="quick-panel" aria-label="@L["Launcher.QuickAccess"]">
+                <h2>@L["Launcher.QuickAccess"]</h2>
                 <button type="button"
                         class="quick-link"
                         disabled="@(FileExplorerApp is null)"
-                        aria-label="Open File Explorer"
+                        aria-label="@L["Launcher.OpenFileExplorer"]"
                         @onclick="() => LaunchQuickAppAsync(FileExplorerAppId)">
                     <span class="quick-icon" aria-hidden="true">
                         <HackerIcon Library="IconLibrary.Lucide" Name="folder" Size="22" Title="" />
                     </span>
                     <span>
-                        <strong>File Explorer</strong>
-                        <small>Browse your home files</small>
+                        <strong>@L["Launcher.FileExplorer"]</strong>
+                        <small>@L["Launcher.FileExplorerHint"]</small>
                     </span>
                 </button>
                 <button type="button"
                         class="quick-link"
                         disabled="@(SettingsApp is null)"
-                        aria-label="Open Settings"
+                        aria-label="@L["Launcher.OpenSettings"]"
                         @onclick="() => LaunchQuickAppAsync(SettingsAppId)">
                     <span class="quick-icon" aria-hidden="true">
                         <HackerIcon Library="IconLibrary.Lucide" Name="settings" Size="22" Title="" />
                     </span>
                     <span>
-                        <strong>Settings</strong>
-                        <small>Personalize HackerOS</small>
+                        <strong>@L["Launcher.Settings"]</strong>
+                        <small>@L["Launcher.SettingsHint"]</small>
                     </span>
                 </button>
 
                 <div class="quick-panel-spacer"></div>
                 <div class="session-summary">
                     <HackerIcon Library="IconLibrary.Lucide" Name="shield-check" Size="17" Title="" />
-                    <span>Local session</span>
+                    <span>@L["Launcher.LocalSession"]</span>
                 </div>
             </aside>
         </div>

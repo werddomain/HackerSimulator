@@ -117,6 +117,15 @@ public sealed record AppManifest
     public bool AutoStart { get; init; }
 
     /// <summary>
+    /// Gets when an automatic <see cref="AppKind.Service"/> app starts (ADR 0097, section 4): after a
+    /// login (<see cref="AppServiceStartup.Login"/>, the default) or at boot
+    /// (<see cref="AppServiceStartup.Boot"/>, system apps only). <see langword="null"/> (omitted from
+    /// <c>manifest.json</c>) means <see cref="AppServiceStartup.Login"/>, so existing manifests keep
+    /// their exact bytes. Rejected by <see cref="AppManifestValidator"/> for every other kind.
+    /// </summary>
+    public AppServiceStartup? ServiceStartup { get; init; }
+
+    /// <summary>
     /// Gets whether this app participates in platform Back navigation
     /// (docs/mobile-interface-platform-plan.md §8, <c>MOB-012</c>) — a Desktop-only chrome Back
     /// button is shown for it, and the Mobile system navigation bar's triangle calls into it first.
@@ -128,12 +137,36 @@ public sealed record AppManifest
     public bool SupportsBack { get; init; }
 
     /// <summary>
+    /// Gets the window sizes a <see cref="AppKind.Window"/> app declares (ADR 0095 §2), or
+    /// <see langword="null"/> (omitted from <c>manifest.json</c>) when it declares none, in which case
+    /// the OS uses <see cref="WindowOptions.Default"/>. <see cref="AppManifestValidator"/> rejects it
+    /// for every other kind.
+    /// </summary>
+    public WindowOptions? Window { get; init; }
+
+    /// <summary>
     /// Gets where the OS runs this app (ADR 0070, section 1): <c>mainThread</c>, <c>pool</c> or
     /// <c>dedicated</c>. The generator always writes the resolved value; <see langword="null"/> only for
     /// a manifest written before ADR 0070, read as the default of its <see cref="Kind"/>
     /// (<see cref="AppExecutionHosts.Of"/>).
     /// </summary>
     public AppExecutionHost? Execution { get; init; }
+
+    /// <summary>
+    /// Gets the web part of a <see cref="AppKind.Web"/> app (ADR 0073, section 1): the URLs it
+    /// answers on. Required for a web app, forbidden for every other kind; <see langword="null"/>
+    /// (omitted from <c>manifest.json</c>) otherwise, so existing manifests keep their exact bytes.
+    /// </summary>
+    public WebAppManifest? Web { get; init; }
+
+    /// <summary>
+    /// Gets the <c>oom_score_adj</c> the app's processes start with (ADR 0126, section 4), from
+    /// <c>-1000</c> (never chosen by the OOM killer) to <c>1000</c> (chosen first), or
+    /// <see langword="null"/> (omitted from <c>manifest.json</c>) for the OS default. A negative value
+    /// is honored only for a system app: the generator refuses it for any other (<c>HOSAPP0024</c>)
+    /// and the catalog ignores it at run time.
+    /// </summary>
+    public int? OomScoreAdj { get; init; }
 }
 
 /// <summary>

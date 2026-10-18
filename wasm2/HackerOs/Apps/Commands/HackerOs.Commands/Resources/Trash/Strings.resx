@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Empty.TooManyArguments" xml:space="preserve">
+    <value>empty: too many arguments</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>trash: {0}</value>
+  </data>
+  <data name="List.OtherDevice" xml:space="preserve">
+    <value>  (deleted on another device)</value>
+  </data>
+  <data name="List.TooManyArguments" xml:space="preserve">
+    <value>list: too many arguments</value>
+  </data>
+  <data name="List.UnknownOrigin" xml:space="preserve">
+    <value>(unknown origin)</value>
+  </data>
+  <data name="PermissionDenied" xml:space="preserve">
+    <value>Permission denied</value>
+  </data>
+  <data name="Put.Error" xml:space="preserve">
+    <value>put: {0}</value>
+  </data>
+  <data name="Put.MissingOperand" xml:space="preserve">
+    <value>put: missing operand</value>
+  </data>
+  <data name="Put.Permanent" xml:space="preserve">
+    <value>put: --permanent is not a trash operation; use 'rm --permanent'</value>
+  </data>
+  <data name="Restore.Expected" xml:space="preserve">
+    <value>restore: expected &lt;name|original-path&gt; [destination]</value>
+  </data>
+  <data name="Restore.NotInTrash" xml:space="preserve">
+    <value>restore: '{0}' is not in the trash</value>
+  </data>
+  <data name="Rm.MissingName" xml:space="preserve">
+    <value>rm: missing trash element name</value>
+  </data>
+  <data name="Rm.NotInTrash" xml:space="preserve">
+    <value>trash: rm: '{0}' is not in the trash</value>
+  </data>
+  <data name="UnknownSubcommand" xml:space="preserve">
+    <value>unknown subcommand '{0}'</value>
+  </data>
+  <data name="Usage" xml:space="preserve">
+    <value>usage: trash put [-f] &lt;file...&gt;
+       trash list
+       trash restore &lt;name|original-path&gt; [destination]
+       trash rm &lt;name...&gt;
+       trash empty</value>
+  </data>
+</root>

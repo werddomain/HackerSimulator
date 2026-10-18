@@ -88,12 +88,29 @@ compositeur (ADR 0067, [`resource-accounting.md`](resource-accounting.md#apps-ex
 - « Not responding » (ADR 0067) : quand `/proc/<pid>/status` porte
   `Responding: 0` (`HackProcess.Responding` faux), la colonne d'état affiche
   « Not responding » en rouge à la place de l'état, avec une infobulle ; le tri
-  par état en tient compte. Affichage seulement : rien n'est arrêté, « End
-  task » reste le seul moyen. Voir [`cpu-accounting.md`](cpu-accounting.md).
+  par état en tient compte. Affichage seulement : le gestionnaire n'arrête
+  rien de lui-même, « End task » reste son seul moyen. Voir
+  [`cpu-accounting.md`](cpu-accounting.md). Pour une app à fenêtre, la fenêtre
+  elle-même affiche aussi « (Not responding) » et la boîte « Attendre |
+  Terminer l'application » (ADR 0127,
+  [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md)).
   Pour un processus dans un Web Worker (ADR 0070), l'état apparaît **pendant**
   le blocage : son worker ne bat plus depuis 5 s, et le reste de l'interface
   continue de répondre ; « End task » puis « Force kill » terminent le worker
   ([`worker-processes.md`](worker-processes.md)).
+- Priorité (ADR 0127 §1) : colonne « Priority » (`ProcessColumn.Priority`,
+  `ProcessRow.Nice`) affichée par un bouton bascule (`ProcessTable.ShowPriority`,
+  masquée au départ) ; elle montre la valeur `nice` lue dans
+  `/proc/<pid>/stat` et se trie. Le gestionnaire l'affiche seulement : on la
+  change avec `renice`. Voir [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md).
+- Tâches de fond : une tâche `HackBackground.RunAsync` est un processus enfant
+  de son app (ADR 0128, 0140) ; elle apparaît comme une ligne à part, nommée
+  d'après la tâche (`Name:` de `status`, lignes `Job:` et `Host:`), et
+  « End task » l'arrête comme les autres ([`background-jobs.md`](background-jobs.md)).
+- Un processus tué par l'OOM killer (ADR 0126) ou par sa limite `rss`/`cpu`
+  (ADR 0125) disparaît simplement de la table à la lecture suivante ; une
+  victime de l'OOM killer laisse sa trace dans `dmesg`
+  ([`oom-killer.md`](oom-killer.md), [`process-limits.md`](process-limits.md)).
 - Tri par colonne (clic sur l'en-tête ; même colonne : sens inverse ; colonne
   de mesure : plus grand d'abord). À valeur égale, ordre par PID, pour que les
   lignes ne sautent pas à chaque seconde.
@@ -128,6 +145,11 @@ compositeur (ADR 0067, [`resource-accounting.md`](resource-accounting.md#apps-ex
 
 ### Services
 
+Colonnes État (`active`, `activating`, `deactivating`, `inactive`, `failed`
+avec sa raison, ADR 0097) et Santé (santé et texte rapportés par le service).
+Une ligne `failed` est mise en évidence et offre « Reset » (`reset-failed`).
+L'état vient du gestionnaire de services (`RefreshStatusAsync` à chaque
+rafraîchissement) ; seul un OS qui ne le fournit pas retombe sur `/proc`.
 La liste et les types de démarrage sont lus à l'ouverture de l'onglet et après
 chaque action ; l'état et le PID suivent les processus lus chaque seconde par
 la fenêtre, donc un service qui s'arrête apparaît arrêté sans recharger la
@@ -160,10 +182,22 @@ await p.KillAsync();                                           // SIGKILL
   `Responding` (`Responding:` de `status`, toujours vrai quand le CPU n'est pas
   mesuré). `ParseStatTimes(texte)` analyse une ligne `stat`. Voir
   [`cpu-accounting.md`](cpu-accounting.md).
+- Priorité (ADR 0127 §1) : `Nice` (champ 19 de `stat`, de -20 à 19) et
+  `BasePriority` (`20 + Nice`, le `PR` de `top`) ; `ParseStatNice(texte)`.
+  Changer la priorité passe par `IAppProcessGateway.SetNice` (commande `renice`).
+- Limites (ADR 0125, [`process-limits.md`](process-limits.md)) :
+  `GetResourceLimitsAsync()` lit `/proc/<pid>/limits` (`HackResourceLimits` :
+  `Cpu`, `Rss`, `NoFile`, `NProc`, `Enforcement`, `IsCpuMeasured`,
+  `IsMemoryMeasured`) ; `SetResourceLimitAsync(kind, souple, dure)` en change
+  une comme `prlimit` (`process.manage` pour un autre processus, `sudo` pour
+  monter une limite dure ou toucher le processus d'un autre utilisateur).
 - Lecture : `/proc` (liste et date de création de `/proc/<pid>` comme
   `StartTime`), `status`, `stat`, `cmdline`, `cwd` (cible du lien), `io`, `environ`.
   Visibilité de `/proc` : son propre processus, les autres avec
-  `process.list`. Lire `/proc` demande `filesystem.system.read`.
+  `process.list`. Lire `/proc` demande `filesystem.system.read`. Par la
+  passerelle (`IAppProcessGateway`), une app voit, arrête et tue aussi ses
+  propres descendants (ses tâches `HackBackground`) sans `process.list` ni
+  `process.manage` (ADR 0140 §7).
 - Action : `KillAsync` (`SIGKILL` : immédiat, descendants compris, pas de
   `StopRequested`), `TerminateAsync` (`SIGTERM` d'un autre processus, raison
   `Terminated`, `DefaultTerminateTimeout` = 5 s) et `CloseMainWindowAsync`
@@ -185,7 +219,15 @@ await sync.SetStartTypeAsync(ServiceStartMode.Automatic);
 
 - Propriétés : `ServiceName` (id d'app), `DisplayName`, `Description`,
   `Status` (`Stopped`, `StartPending`, `StopPending`, `Running`, valeurs de
-  `ServiceControllerStatus`), `StartType` (`ServiceStartMode?`), `ProcessId`.
+  `ServiceControllerStatus`, déduit de l'état actif : `failed` donne
+  `Stopped`), `StartType` (`ServiceStartMode?`), `ProcessId`.
+- États façon systemd (ADR 0097) : `ActiveState` (`HackServiceActiveState` :
+  `Inactive`, `Activating`, `Active`, `Deactivating`, `Failed`), `Result`
+  (`HackServiceResult` : `Success`, `ExitCode`, `Exception`, `Killed`,
+  `Timeout`), `Health` (`HackServiceHealth`), `StatusText`,
+  `ActiveStateChangedAt`, `ExitCode`. `ResetFailedAsync()` efface `failed` ;
+  `RefreshStatusAsync()` relit l'état seul. `HackServiceStates.ToSystemdName`
+  donne les mots de systemd.
 - Liste : `HackApps.GetInstalledAsync` filtrée sur `AppKind.Service`, triée
   par nom. État : `HackProcess`. Type de démarrage et actions :
   `IAppServiceControlGateway`.
@@ -275,7 +317,17 @@ await sync.SetStartTypeAsync(ServiceStartMode.Automatic);
   (`ProcFilesTests`), différences et historique (`SystemMetricsTests`), tri,
   filtre, sélection et « End task » (`ProcessTableTests`), « End task » en
   `SIGTERM` 5 s et « Force kill » en `SIGKILL`, sélection signalée ensemble
-  (`EndTaskTests`), unités (`UnitsTests`), manifeste (`SystemMonitorWindowTests`).
+  (`EndTaskTests`), unités (`UnitsTests`), manifeste (`SystemMonitorWindowTests`),
+  textes anglais et français et unités françaises (`SystemMonitorLocalizationTests`).
+
+## Langues (ADR 0104)
+
+Les textes de l'app sont dans `Resources/Strings.resx` (anglais) et
+`Strings.fr.resx` (français), lus avec `AppContext.GetLocalizer<Strings>()`.
+Les nombres suivent `AppContext.FormatCulture` : `Units` a des surcharges qui
+prennent une culture (`1,5 Mio`, `12,5 %`, `2 j 03:14:15` en français) ; les
+surcharges sans culture restent invariantes. Les noms et valeurs lus dans
+`/proc` (champs de `status`, états systemd) ne sont pas traduits.
 
 ## Liste des tâches du chantier `rebuild/4-task-manager`
 
@@ -302,5 +354,6 @@ await sync.SetStartTypeAsync(ServiceStartMode.Automatic);
 
 - [x] `Metrics/ProcFiles.cs` lit `/proc/hackeros/workers` (`ProcWorkers`, `ProcWorker`, `ParseWorkers`) ; `ProcReader` le lit s'il existe.
 - [x] Onglet Performance : section « Workers » (capacité, taille du pool, une carte par worker avec rôle, état, cœur, mémoire, processus) ; « Not responding » en rouge.
+  Depuis `exec/9` (ADR 0131, 0143), quand la page est isolée, la mémoire d'une carte est celle que le navigateur mesure pour ce worker (`memory-measure: browser` dans `/proc/hackeros/workers`) ; l'app n'a pas changé.
 - [x] « Not responding » visible pendant le blocage d'une commande dans un worker ; « Force kill » termine le worker.
 - [x] Tests : `ProcFilesTests` (`ParseWorkers`).

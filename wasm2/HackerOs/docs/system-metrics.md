@@ -15,31 +15,36 @@ Le gestionnaire de tâches ([`task-manager.md`](task-manager.md), chantier
 | Fichier ou API | Mesure | Source |
 | --- | --- | --- |
 | `/proc/stat` | temps CPU cumulé par cœur, en `USER_HZ` | **mesuré** quand la mesure CPU est active (ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)), **simulé** sinon : simulateur de ressources |
-| `/proc/<pid>/stat` | `utime` et `stime` d'un processus | **mesuré** au changement de contexte (ADR 0067), sinon reconstruit depuis le simulateur |
+| `/proc/<pid>/stat` | `utime` et `stime` d'un processus ; `priority` et `nice` | temps : **mesuré** au changement de contexte (ADR 0067), sinon reconstruit depuis le simulateur ; priorité : valeur `nice` du gestionnaire de processus (`nice`, `renice`, ADR 0127, [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md)) |
 | `/proc/<pid>/io` | octets lus et écrits par un processus | **compté** : service de fichiers et passerelle réseau |
+| `/proc/<pid>/limits`, `/proc/<pid>/fd/` | limites `cpu`, `rss`, `nofile`, `nproc` et descripteurs ouverts (ADR 0125, 0139) | table des limites et table des descripteurs du gestionnaire de processus ([`process-limits.md`](process-limits.md)) |
+| `/proc/<pid>/oom_score`, `/proc/vmstat` (`oom_kill`) | score de l'OOM killer ; nombre de processus tués depuis le démarrage (ADR 0126, 0142) | `VmRSS` mesuré, table `oom_score_adj`, compteur de l'OOM killer ([`oom-killer.md`](oom-killer.md)) |
 | `/proc/diskstats` | requêtes, secteurs et temps du disque `hda` | **compté** : transactions IndexedDB du système de fichiers |
 | `/proc/net/dev` | octets et paquets de `lo` et `eth0` | **compté** : passerelle réseau des apps |
 | `/proc/mounts` | table des montages | routeur de montages |
 | `HackDriveInfo` | taille et espace libre de `/` | profil matériel, contenu stocké, quota du navigateur |
-| `/proc/hackeros/workers` | Web Workers de l'OS : rôle, état, cœur, mémoire du runtime, âge du battement de cœur, temps occupé, processus (ADR 0070) | **mesuré** : battement de cœur de chaque worker, toutes les 250 ms ([`worker-processes.md`](worker-processes.md)) ; absent quand l'hôte n'a pas de workers |
+| `/proc/hackeros/workers` | isolation cross-origin de la page (ADR 0131, 0143), puis Web Workers de l'OS : rôle, état, cœur, mémoire du runtime, âge du battement de cœur, temps occupé, processus (ADR 0070) | **mesuré** : battement de cœur de chaque worker, toutes les 250 ms ; page isolée, mémoire de chaque worker mesurée par le navigateur (`performance.measureUserAgentSpecificMemory()`, toutes les 20 s, `memory-measure: browser`) ([`worker-processes.md`](worker-processes.md)) ; absent quand l'hôte n'a pas de workers |
 
 Un `cat` d'un gros fichier fait monter `rchar` du processus et les secteurs lus
 de `hda` ; une page chargée par le navigateur fait monter `eth0`. Le navigateur
 ne mesure pas le CPU par app : depuis la phase 5, l'OS le chronomètre lui-même
-à chaque changement de contexte (ADR 0067), quand la mesure est active. La
-mémoire mesurée suivra (ADR 0068,
-[`execution-isolation-plan.md`](execution-isolation-plan.md)).
+à chaque changement de contexte (ADR 0067), quand la mesure est active ; la
+mémoire est mesurée de même (ADR 0068, section « Mémoire mesurée » ci-dessous).
 
 ### Deux sources pour le CPU et la mémoire d'un processus (ADR 0066)
 
 | Source | Quand | Indicateur |
 | --- | --- | --- |
-| **simulée** : `IResourceSimulator`, profil `ResourceProfile` de l'app | mesure coupée au build (`HackerOsCpuAccounting`, `HackerOsMemoryAccounting`) ou dans `appsettings.json` (`HackerOs:ResourceAccounting`), mesure pas encore implémentée, processus du contenu de jeu | `CpuSource: simulated`, `MemSource: simulated` ; mention « estimated » dans le gestionnaire de tâches |
+| **simulée** : `IResourceSimulator`, profil `ResourceProfile` de l'app | mesure coupée au build (`HackerOsCpuAccounting`, `HackerOsMemoryAccounting`) ou dans `appsettings.json` (`HackerOs:ResourceAccounting`), mesure pas encore implémentée, processus simulé sans code | `CpuSource: simulated`, `MemSource: simulated` ; mention « estimated » dans le gestionnaire de tâches |
 | **mesurée** : `ICpuTimeAccountant`, `IMemoryAccountant` alimentés par le crochet de changement de contexte | mesure livrée et activée, et le comptable répond pour ce processus | `CpuSource: measured`, `MemSource: measured` |
 
 Le fournisseur `/proc` reçoit les deux comptables par `ProcMetricsSources`
 (`CpuAccountant`, `MemoryAccountant`) et retombe sur le simulateur dès qu'un
-comptable ne répond pas. Le chantier `5-accounting-switches` livre les
+comptable ne répond pas. Depuis la série `exec`, `ProcMetricsSources` porte
+aussi les tables des limites (`ResourceLimits`) et des descripteurs
+(`FileDescriptors`), les tâches `HackBackground` (`BackgroundJobs`), la table
+`oom_score_adj` (`OomScores`), le compteur `OomKills` et l'état de l'isolation
+(`CrossOriginIsolation`). Le chantier `5-accounting-switches` livre les
 interrupteurs, le crochet et les comptables nuls ; le chantier
 `5-memory-accounting` mesure la mémoire (section suivante) ; le chantier
 `5-cpu-accounting` mesure le CPU avec `MeasuredCpuTimeAccountant`
@@ -61,7 +66,17 @@ est reconstituée en quatre couches ([`memory-accounting.md`](memory-accounting.
 `VmRSS = RssAnon + RssFile + VmData`. `/proc/meminfo` garde `MemTotal` du
 profil matériel et ajoute `AnonPages`, `Mapped` (chaque assembly comptée une
 fois) et `Slab` (part noyau des processus et part du tas allouée par l'OS
-lui-même). Aucune limite, aucun OOM killer.
+lui-même). Ces chiffres mesurés sont aussi ceux qu'appliquent la limite `rss`
+d'un processus (`ulimit -m`, ADR 0125, [`process-limits.md`](process-limits.md))
+et l'OOM killer, **désactivé par défaut** et activé dans
+`/etc/hackeros/memory.config` (ADR 0126, 0142, [`oom-killer.md`](oom-killer.md)) :
+ni l'un ni l'autre n'agit sur une mémoire simulée.
+
+Dans une page isolée (ADR 0131, ADR 0143 §6), la mémoire du runtime de chaque
+Web Worker vient du navigateur (`performance.measureUserAgentSpecificMemory()`,
+toutes les 20 s, valable trois périodes) au lieu du battement de cœur ; elle
+est répartie entre les processus du worker comme avant, et `MemSource` reste
+`measured` ([`memory-accounting.md`](memory-accounting.md)).
 
 Règles de calcul (constantes de `MemoryAccountingConstants` et
 `AppNetworkGateway`, couvertes par des tests) :
@@ -109,7 +124,7 @@ persistés.
 | `ProcFileSystemProvider` + `ProcMetricsSources` | `Platform.Core/FileSystem/Virtual` | rend les fichiers |
 | `AppDriveGateway` | `Platform.Core/Execution` | `statfs` de l'OS derrière `HackDriveInfo` |
 | `IndexedDbInteropAdapter` | `Infrastructure.Browser/Interop` | chronomètre chaque transaction et la signale à `hda` |
-| `IndexedDbStorageUsageProvider` | `Infrastructure.Browser/FileSystem` | espace occupé (contenu dédupliqué) et quota (`navigator.storage.estimate()`) |
+| `IndexedDbStorageUsageProvider` | `Infrastructure.Browser/FileSystem` | espace occupé et quota réels du navigateur (`navigator.storage.estimate()`, ADR 0099 §2) ; sans quota connu, contenu dédupliqué |
 
 Branchement : `EcosystemServiceCollectionExtensions` enregistre les compteurs en
 `Scoped` (une instance par machine, comme le gestionnaire de processus), les
@@ -132,7 +147,9 @@ worker du cœur 0), et le `utime` d'un processus dans un worker vient du
 battement de cœur de son worker, plus le temps noyau passé sur le fil principal
 à servir ses appels ; un worker qui ne bat plus compte ce temps comme occupé
 par ses processus (voir [`worker-processes.md`](worker-processes.md)). Voir
-[`cpu-accounting.md`](cpu-accounting.md). Ce qui suit décrit le mode simulé,
+[`cpu-accounting.md`](cpu-accounting.md). La colonne `nice` de `/proc/stat`
+reste à `0` (`CpuTimes.Nice`) : le temps d'un processus dont `nice`/`renice`
+ont changé la priorité (ADR 0127) reste compté dans `user`. Ce qui suit décrit le mode simulé,
 toujours utilisé quand la mesure est coupée.
 
 Avant ce chantier, rien n'appelait `IResourceSimulator.Tick` dans un hôte réel :
@@ -191,7 +208,11 @@ et la termine :
 - taille : les octets du fichier pour le contenu, un bloc de 4 Kio pour une
   transaction de métadonnées (la taille d'une mise à jour d'inode sous Linux) ;
 - une transaction en échec compte dans le temps occupé, pas dans les requêtes
-  terminées.
+  terminées ;
+- la recherche d'un chemin est une seule transaction quelle que soit sa
+  profondeur (opération `resolvePath`, ADR 0090), donc une seule lecture, comme
+  un noyau dont le cache des entrées de répertoire évite de relire chaque
+  préfixe.
 
 `BlockDeviceStatistics` tient `io_ticks` (temps avec au moins une requête en
 vol) et `time_in_queue` (temps pondéré par la profondeur de file) comme le
@@ -216,7 +237,9 @@ compte l'échange sur `eth0` :
 Un paquet est une requête ou une réponse (ADR 0057). Un hôte introuvable,
 injoignable, un délai dépassé ou une connexion refusée comptent la requête et
 une erreur de réception (`errs`). Un appel refusé faute de capacité ne sort
-pas : rien n'est compté. `lo` reste à zéro.
+pas : rien n'est compté. Depuis `web/3-listener-dns`, un échange avec un
+port local (cible résolue en loopback par `hackdns`) est compté sur `lo` et
+non sur `eth0` ([`listening-ports-and-dns.md`](listening-ports-and-dns.md)).
 
 ### Montages (`/proc/mounts`)
 
@@ -232,9 +255,11 @@ parce que le routeur le contient.
 
 - **taille** : `StorageCapacityBytes`, ramenée au quota du navigateur quand il
   est plus petit ;
-- **occupé** : somme des longueurs des contenus distincts référencés par une
-  entrée de fichier (deux fichiers identiques comptent une fois, comme leurs
-  blocs dédupliqués) ;
+- **occupé** : depuis l'ADR 0099 §2, tout ce que l'origine stocke d'après
+  `navigator.storage.estimate()` (fichiers, comptes, réglages, bases des
+  sites). Quand le navigateur ne donne pas de quota, c'est encore la somme des
+  longueurs des contenus distincts référencés par une entrée de fichier (deux
+  fichiers identiques comptent une fois, comme leurs blocs dédupliqués) ;
 - **libre** : taille − occupé, jamais négatif.
 
 Aucune capacité n'est demandée, comme `df`.
@@ -278,6 +303,10 @@ seuls le propriétaire et l'autorité `System` le lisent.
 - **`HackDriveInfo` lit ses valeurs une fois.** Le navigateur ne répond qu'en
   asynchrone ; `GetDrivesAsync` rend des instances figées, à redemander pour des
   valeurs fraîches.
+- **Chiffres réels du navigateur (ADR 0099 §2).** `df` montre l'utilisé et
+  le quota de `navigator.storage.estimate()` ; la réserve de root et l'alerte
+  d'espace faible utilisent les mêmes chiffres
+  ([`system-backup.md`](system-backup.md#espace-de-stockage-adr-0099-2)).
 - **Espace occupé sans les blocs orphelins.** Les blocs en attente de nettoyage
   ne sont plus référencés par aucun fichier et ne sont pas comptés.
 

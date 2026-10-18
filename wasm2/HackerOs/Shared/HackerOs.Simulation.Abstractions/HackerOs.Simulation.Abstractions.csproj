@@ -1,4 +1,12 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="../../Platform/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.Simulation.Abstractions</PackageId>
+    <Description>Contracts of the simulated machine (file system, processes, sessions, network, events) exposed by the HackerOS SDK. Not referenced directly by apps.</Description>
+    <PackageTags>hackeros;simulation;contracts</PackageTags>
+  </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\HackerOs.App.Abstractions\HackerOs.App.Abstractions.csproj" />

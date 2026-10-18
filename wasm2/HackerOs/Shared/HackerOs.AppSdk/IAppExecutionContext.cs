@@ -136,6 +136,26 @@ public interface IAppExecutionContext
     IAppIntentGateway Intents => new UnsupportedAppIntentGateway();
 
     /// <summary>
+    /// Gets the intent this process was started for (ADR 0096, section 5): an app-defined intent
+    /// with its payload, or the OS intent that launched it. <see langword="null"/> for a plain launch.
+    /// Defaults to <see langword="null"/> so existing implementations keep compiling; the trusted
+    /// platform factory sets it from the launch.
+    /// </summary>
+    AppIntentDelivery? Intent => null;
+
+    /// <summary>
+    /// Raised when the OS hands an intent to this already running instance instead of starting a new
+    /// one: a <see cref="AppManifest.SingleInstancePerUser"/> window app or a service, like a second
+    /// <c>GApplication</c> activation (ADR 0096, section 5). Defaults to an event that is never
+    /// raised; the trusted platform factory overrides it.
+    /// </summary>
+    event EventHandler<AppIntentDelivery>? IntentReceived
+    {
+        add { }
+        remove { }
+    }
+
+    /// <summary>
     /// Gets this instance's authorized directory-change watch gateway. Defaults to an unsupported
     /// gateway so existing <see cref="IAppExecutionContext"/> implementations that predate this member
     /// keep compiling; the trusted platform factory overrides it with a real implementation.
@@ -149,6 +169,14 @@ public interface IAppExecutionContext
     /// the trusted platform factory overrides it with a real implementation.
     /// </summary>
     IAppServiceControlGateway Services => new UnsupportedAppServiceControlGateway();
+
+    /// <summary>
+    /// Gets the channel a running service uses to tell the OS it is ready and how healthy it is
+    /// (ADR 0097, section 2; <see cref="ServiceAppBase.ReportHealth"/>). Defaults to a gateway that
+    /// drops every message, so contexts that predate this member keep compiling; the trusted
+    /// platform factory gives a service process the real one.
+    /// </summary>
+    IAppServiceNotifyGateway ServiceNotify => NullAppServiceNotifyGateway.Instance;
 
     /// <summary>
     /// Gets this instance's permission-error notification gateway. Defaults to a no-op gateway so
@@ -175,6 +203,24 @@ public interface IAppExecutionContext
     /// the trusted platform factory overrides it with the live process entry.
     /// </summary>
     IAppEnvironmentGateway Environment => new DetachedAppEnvironmentGateway(this);
+
+    /// <summary>
+    /// Gets the language of this instance's texts (ADR 0104, the "language gateway"): <c>en</c> or
+    /// <c>fr</c>, read from its own process environment (<c>LC_ALL</c>, <c>LC_MESSAGES</c>, then
+    /// <c>LANG</c>) at every access, never from the browser tab's shared thread culture.
+    /// <see cref="Globalization.HackLocalization.GetLocalizer{TResource}(IAppExecutionContext?)"/>
+    /// looks texts up in this culture.
+    /// </summary>
+    System.Globalization.CultureInfo Culture =>
+        Globalization.HackLocale.ResolveLanguage(Environment.GetVariable);
+
+    /// <summary>
+    /// Gets the culture of this instance's dates and numbers (ADR 0104, section 1): the full locale
+    /// of <c>LC_TIME</c> (or <c>LC_ALL</c>, then <c>LANG</c>), e.g. <c>fr-CA</c>, which can differ
+    /// from <see cref="Culture"/>'s language.
+    /// </summary>
+    System.Globalization.CultureInfo FormatCulture =>
+        Globalization.HackLocale.ResolveFormatCulture(Environment.GetVariable);
 
     /// <summary>
     /// Gets this instance's network stack: resolution, ping, HTTP and TCP probes, with the OS's
@@ -241,6 +287,20 @@ public interface IAppExecutionContext
     IAppStorageDiagnosticsGateway StorageDiagnostics => UnsupportedAdministrationGateways.StorageDiagnostics;
 
     /// <summary>
+    /// Gets this instance's whole-machine backup gateway, behind <see cref="HackSystemBackup"/>
+    /// (ADR 0099, section 1; capability <c>system.backup</c> plus an administrator). Defaults to an
+    /// unsupported gateway; the trusted platform factory overrides it.
+    /// </summary>
+    IAppSystemBackupGateway SystemBackup => UnsupportedAdministrationGateways.SystemBackup;
+
+    /// <summary>
+    /// Gets this instance's local accounts gateway, behind <see cref="HackUserAccounts"/> (ADR 0120;
+    /// own password without capability, another account's with <c>users.manage</c> plus an
+    /// administrator). Defaults to an unsupported gateway; the trusted platform factory overrides it.
+    /// </summary>
+    IAppUserAccountsGateway UserAccounts => UnsupportedAdministrationGateways.UserAccounts;
+
+    /// <summary>
     /// Gets this instance's ability to host interactive shells (<c>shell.host</c>, ADR 0056
     /// section 7), read by <see cref="Shell.HackShell"/>. Defaults to an unsupported gateway so
     /// existing <see cref="IAppExecutionContext"/> implementations that predate this member keep
@@ -256,6 +316,13 @@ public interface IAppExecutionContext
     IO.IAppDriveGateway Drives => new UnsupportedAppDriveGateway();
 
     /// <summary>
+    /// Gets the OS's cross-origin isolation, behind <see cref="Diagnostics.HackCrossOriginIsolation"/>
+    /// (ADR 0146; no capability). Defaults to an unsupported gateway so existing implementations keep
+    /// compiling; the trusted platform factory overrides it.
+    /// </summary>
+    Diagnostics.IAppCrossOriginIsolationGateway CrossOriginIsolation => new UnsupportedAppCrossOriginIsolationGateway();
+
+    /// <summary>
     /// Gets this instance's view of the session clipboard, behind <see cref="HackClipboard"/> (ADR 0056,
     /// section 12; capabilities <c>clipboard.read</c> and <c>clipboard.write</c>). Defaults to an
     /// unsupported gateway so existing implementations keep compiling; the trusted platform factory
@@ -264,12 +331,44 @@ public interface IAppExecutionContext
     IAppClipboardGateway Clipboard => new UnsupportedAppClipboardGateway();
 
     /// <summary>
+    /// Gets this instance's browser database, behind <c>HackWebDb</c> of the web SDK (ADR 0073 section 3,
+    /// ADR 0088): the IndexedDB database <c>hackweb.&lt;app id&gt;</c> of the host browser. Only an app of
+    /// kind <c>Web</c> gets a working one. Defaults to an unsupported gateway so existing implementations
+    /// keep compiling; the trusted platform factory overrides it.
+    /// </summary>
+    WebData.IAppWebDatabaseGateway WebDatabase => UnsupportedAppWebDatabaseGateway.Instance;
+
+    /// <summary>
     /// Gets the instance's standard streams (ADR 0064), behind <see cref="HackConsole"/>: the
     /// terminal, pipe or file of the shell that started it, or <c>/dev/null</c> when it was
     /// started from the desktop. Defaults to a detached console so existing implementations keep
     /// compiling.
     /// </summary>
     IAppConsoleGateway Console => DetachedAppConsoleGateway.Instance;
+
+    /// <summary>
+    /// Gets the session user's keyring as this app sees it, behind <see cref="Keyring.HackKeyring"/>
+    /// (ADR 0100 section 2; own entries without capability, every app's with <c>keyring.read-all</c>).
+    /// Defaults to a locked gateway so existing implementations keep compiling; the trusted platform
+    /// factory overrides it.
+    /// </summary>
+    HackerOs.AppSdk.Keyring.IAppKeyringGateway Keyring => HackerOs.AppSdk.Keyring.UnsupportedAppKeyringGateway.Instance;
+
+    /// <summary>
+    /// Gets the session's effective accessibility preferences, behind
+    /// <see cref="Accessibility.HackAccessibility"/> (ADR 0105 section 3; no capability). Defaults to a
+    /// gateway answering the defaults so existing implementations keep compiling; the trusted platform
+    /// factory overrides it.
+    /// </summary>
+    HackerOs.AppSdk.Accessibility.IAppAccessibilityGateway Accessibility => HackerOs.AppSdk.Accessibility.DefaultAppAccessibilityGateway.Instance;
+
+    /// <summary>
+    /// Gets the app's background tasks, behind <see cref="Threading.HackBackground"/> (ADR 0128). The
+    /// trusted platform factory runs each one as a child process (in a Web Worker when the host has
+    /// some); this default runs it at once on the calling thread, with the same serialization, so an
+    /// app's unit tests exercise the same contract.
+    /// </summary>
+    HackerOs.AppSdk.Threading.IAppBackgroundGateway Background => new HackerOs.AppSdk.Threading.InlineAppBackgroundGateway(this);
 }
 
 /// <summary>
@@ -294,6 +393,24 @@ public static class UnsupportedAdministrationGateways
 
     /// <summary>Unsupported <see cref="IAppStorageDiagnosticsGateway"/>.</summary>
     public static IAppStorageDiagnosticsGateway StorageDiagnostics { get; } = new UnsupportedStorageDiagnostics();
+
+    /// <summary>Unsupported <see cref="IAppSystemBackupGateway"/>.</summary>
+    public static IAppSystemBackupGateway SystemBackup { get; } = new UnsupportedSystemBackup();
+
+    /// <summary>Unsupported <see cref="IAppUserAccountsGateway"/>.</summary>
+    public static IAppUserAccountsGateway UserAccounts { get; } = new UnsupportedUserAccounts();
+
+    private sealed class UnsupportedUserAccounts : IAppUserAccountsGateway
+    {
+        public ValueTask<IReadOnlyList<HackUserAccount>> ListAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask ChangePasswordAsync(string currentPassword, string newPassword, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask ResetPasswordAsync(string loginName, string? newPassword, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
 
     private sealed class UnsupportedSystemSettings : IAppSystemSettingsGateway
     {
@@ -358,6 +475,17 @@ public static class UnsupportedAdministrationGateways
 
         public ValueTask<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(CancellationToken cancellationToken = default) =>
             throw new NotSupportedException(Message);
+
+        public ValueTask ShowConflictsAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
+
+        public ValueTask<HackSyncStatus> GetSyncStatusAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask SetSyncPausedAsync(bool paused, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<HackSyncStatus> SyncNowAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
     }
 
     private sealed class UnsupportedSystemPower : IAppSystemPowerGateway
@@ -367,11 +495,37 @@ public static class UnsupportedAdministrationGateways
         public ValueTask FactoryResetAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException(Message);
     }
 
+    private sealed class UnsupportedSystemBackup : IAppSystemBackupGateway
+    {
+        public bool IsSupported => false;
+
+        public ValueTask<HackBackupInfo> CreateAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask<HackBackupInfo?> RestoreAsync(HackBackupRestoreMode mode, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
+
     private sealed class UnsupportedStorageDiagnostics : IAppStorageDiagnosticsGateway
     {
         public ValueTask<HackStorageSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default) =>
             throw new NotSupportedException(Message);
     }
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.WebDatabase"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppWebDatabaseGateway : WebData.IAppWebDatabaseGateway
+{
+    public static UnsupportedAppWebDatabaseGateway Instance { get; } = new();
+
+    public string DatabaseName => throw Unsupported();
+
+    public ValueTask OpenAsync(WebData.HackWebDbSchemaDefinition schema, CancellationToken cancellationToken = default) => throw Unsupported();
+
+    public ValueTask<IReadOnlyList<string?>> ExecuteAsync(WebData.HackWebDbRequest request, CancellationToken cancellationToken = default) => throw Unsupported();
+
+    private static NotSupportedException Unsupported() =>
+        new("This IAppExecutionContext implementation does not provide a browser database (only web apps have one).");
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.Clipboard"/> for contexts that don't wire one up.</summary>
@@ -401,6 +555,13 @@ file sealed class UnsupportedAppDriveGateway : IO.IAppDriveGateway
 {
     public ValueTask<IReadOnlyList<IO.HackDriveSnapshot>> GetDrivesAsync(CancellationToken cancellationToken = default) =>
         throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Drives gateway.");
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.CrossOriginIsolation"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppCrossOriginIsolationGateway : Diagnostics.IAppCrossOriginIsolationGateway
+{
+    public ValueTask<Diagnostics.HackCrossOriginIsolationStatus> GetStatusAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a CrossOriginIsolation gateway.");
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.Catalog"/> for contexts that don't wire one up.</summary>

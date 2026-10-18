@@ -2,9 +2,9 @@
 
 Recurring mistakes this codebase has already made at least once, each expensive
 to re-diagnose from scratch. Read this before touching static web assets,
-`AppManifest`, the IndexedDB schema, or an E2E test harness. Every entry below
-was found and fixed for real in this project; treat a fresh occurrence as a
-regression, not a surprise.
+`AppManifest`, the IndexedDB schema, an E2E test harness, or ARIA attributes in
+Razor markup. Every entry below was found and fixed for real in this project;
+treat a fresh occurrence as a regression, not a surprise.
 
 ## 1. A referenced Blazor WASM "app" project's static assets are unprefixed, not `_content/{Project}/...`
 
@@ -18,6 +18,13 @@ true Razor Class Library, whose assets get the `_content/{Library}/...`
 prefix you'd expect. `@Assets["app.css"]` and `_content/HackerOs.Ecosystem/css/app.css`
 are both wrong keys for this file; the correct one is `css/app.css` (or
 `@Assets["css/app.css"]` if you want fingerprinting).
+
+> **Update (v3/6, ADR 0098 §2):** `wwwroot/css/app.css` moved to the Razor Class
+> Library `OS/HackerOs.Ecosystem.Host`, so every host (the Ecosystem PWA included)
+> now serves it at `_content/HackerOs.Ecosystem.Host/css/app.css`, the normal RCL
+> prefix. The unprefixed-route behaviour below still applies to anything left in
+> the Ecosystem app's own `wwwroot` (service worker, web manifest, icons), and the
+> rule about decoy copies is unchanged.
 
 **Why this bites hard:** the wrong key doesn't error — if the host also has
 its own file at that literal path (e.g. a leftover `dotnet new blazor`
@@ -155,3 +162,45 @@ failures but the same tests pass individually, that's resource contention in
 the environment, not a bug in the app — filter E2E projects out of routine
 solution-wide test runs (`--filter "FullyQualifiedName!~E2E.Tests&
 FullyQualifiedName!~Pwa.E2E"`) and run them separately.
+
+## 7. Test projects don't run the trim analyzer: a shipping app is the only place IL2110/IL2111 surface
+
+`Directory.Build.props` turns on `IsTrimmable`/`EnableTrimAnalyzer` (warnings
+as errors) for every project whose name does not end with `.Tests`. ASP.Hack
+views were built and tested for weeks inside test projects only; the first
+app under `Apps/` with views (the Intranet sample, web/11, ADR 0087 §2) failed
+to build with `IL2110`/`IL2111` in the generated route table and in every
+Razor-generated view.
+
+Why: a view type is named with `DynamicallyAccessedMemberTypes.All` (the
+generated view table, `RazorCompiledItemAttribute`, `[Layout(typeof(...))]`).
+`All` makes every member of the type **and of its base classes** "accessed by
+reflection", so any `[DynamicallyAccessedMembers]` on a base-class member (a
+property, or a parameter that an `async` method captures into its state
+machine field) is reported in every consuming project.
+
+**Rule:** no member of a view or component base class (`HackViewBase`,
+`HackRazorPage`, `HackComponentBase`, ...) carries a DAM annotation; keep it on
+the OS methods that receive a `Type`, and keep annotated parameters out of
+`async` methods (do the reflection in a synchronous prologue). When you add a
+base type to an SDK library, build a shipping project that uses it (the
+Ecosystem host builds the samples), not just its test project.
+
+## 8. Never bind an ARIA state attribute straight to a `bool`
+
+Blazor renders a `bool` attribute value the HTML way: `true` writes the
+attribute with an **empty** value and `false` drops it. That is right for
+`disabled` or `checked`, but wrong for ARIA states, whose values are the
+strings `"true"`/`"false"`: `aria-checked="@isOn"` renders `aria-checked=""`
+(invalid, so axe reports `aria-required-attr` on a `role="radio"`) and nothing
+at all when off (a toggle button that loses `aria-pressed` is no longer a
+toggle for a screen reader). `HackerOs.UI.E2E.Tests` caught this in Settings,
+the Code Editor and the App Launcher (fixed on `rebuild/5-ui-a11y-mkdir`,
+2026-10-16, 37 attributes).
+
+**Rule:** spell the value out — `aria-pressed="@(isOn ? "true" : "false")"`,
+or a `string?` property when the attribute must disappear in some states
+(`FileViewTreeNode.AriaExpanded`: `null` for a file, which has no
+`aria-expanded`). This applies to `aria-checked`, `aria-selected`,
+`aria-pressed`, `aria-expanded`, `aria-invalid`, `aria-busy`,
+`aria-multiselectable`, and every other `true`/`false` ARIA state.

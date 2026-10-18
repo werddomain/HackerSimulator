@@ -6,7 +6,7 @@
 
 ---
 
-**Before you start:** read [`wasm2/HackerOs/docs/old/common-pitfalls.md`](wasm2/HackerOs/docs/old/common-pitfalls.md) — recurring mistakes already made (and fixed) once in this codebase around static-asset routing, `AppManifest`/schema drift, IndexedDB versioning, and E2E test harness setup. Each one was expensive to re-diagnose from scratch; don't repeat them.
+**Before you start:** read [`wasm2/HackerOs/docs/old/common-pitfalls.md`](wasm2/HackerOs/docs/old/common-pitfalls.md) — recurring mistakes already made (and fixed) once in this codebase around static-asset routing, `AppManifest`/schema drift, IndexedDB versioning, E2E test harness setup, and ARIA states bound to `bool` in Razor markup. Each one was expensive to re-diagnose from scratch; don't repeat them.
 
 ---
 
@@ -18,7 +18,7 @@
     * **Three host projects currently serve `wasm2/HackerOs/`** (see [`wasm2/HackerOs/docs/old/hosting-model.md`](wasm2/HackerOs/docs/old/hosting-model.md) for the full picture):
         * `OS/HackerOs.Ecosystem/HackerOs.Ecosystem.csproj` — the standalone, self-contained Blazor WebAssembly PWA (own `wwwroot/index.html`). This is the production/offline-first host and must always work with no server present.
         * `test/test/test.csproj` — a Blazor Web App used only to debug the same WASM components interactively (`Components/App.razor`, `AddInteractiveWebAssemblyRenderMode`). Not a distribution target.
-        * `Server/HackerOs.Server/HackerOs.Server.csproj` — the **optional** ASP.NET Core backend (sync, identity, HTTP/TCP/UDP proxy). It also serves the same Razor component tree in Interactive Server render mode (ADR 0027, `Server/HackerOs.Server/Components/App.razor`), single-tenant / single-active-circuit for now. It remains optional: nothing may require it.
+        * `Server/HackerOs.Server/HackerOs.Server.csproj` — the **optional** ASP.NET Core backend (sync, identity, HTTP/TCP/UDP proxy). It also serves the Ecosystem's published OS files as they are, so the browser runs the same WebAssembly OS as the standalone PWA (ADR 0130; Interactive Server rendering and direct service injection, ADR 0027/0036, are gone). The OS it serves connects to it by itself and shows the state in the taskbar's notification area (ADR 0134, [`docs/server-hosting.md`](wasm2/HackerOs/docs/server-hosting.md)). It remains optional: nothing may require it.
     * Any component or service you add must keep working when only the Ecosystem host is present; never take a hard dependency on the server being reachable.
 
 2.  **Technology Preference: C# over JavaScript:**
@@ -41,7 +41,7 @@
 
 2.  **Collocated Component Assets — No Inline CSS/JS in Markup:**
     * **MANDATORY:** All CSS and JavaScript for a Blazor component **MUST** live in scoped, collocated files next to that component, not inline in the `.razor` markup. For a component `MyComponent.razor`: styles go in `MyComponent.razor.css`, component-scoped script goes in `MyComponent.razor.js`, and a non-trivial code-behind goes in `MyComponent.razor.cs`.
-    * **PROHIBITED:** inline `style="..."` attributes, `<style>` blocks, `<script>` blocks, and raw JS event attributes directly in `.razor` markup when a scoped file can hold them instead. This is enforced at build time (ADR 0007) — inline styles/scripts fail the build.
+    * **PROHIBITED:** inline `style="..."` attributes, `<style>` blocks, `<script>` blocks, and raw JS event attributes directly in `.razor` markup when a scoped file can hold them instead. This is enforced at build time (ADR 0007) — inline styles/scripts fail the build. The one tolerated form is a bodiless `<script src="...">` reference, which an ASP.Hack view uses to link its own `wwwroot/js` files (ADR 0083).
     * Only truly global styles belong in the shared global CSS (design tokens, resets, fatal boot-error states); everything else stays scoped to its component.
     * This applies only to component markup — root host documents (`OS/HackerOs.Ecosystem/wwwroot/index.html`, `test/test/Components/App.razor`) are the framework bootstrap boundary and are exempt.
 

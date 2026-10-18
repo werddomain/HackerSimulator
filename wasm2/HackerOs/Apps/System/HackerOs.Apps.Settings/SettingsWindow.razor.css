@@ -51,7 +51,7 @@
 }
 
 .setting-desc {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-secondary, #a8bac4);
     margin-bottom: 12px;
 }
@@ -158,21 +158,6 @@
     background: #b38cff;
 }
 
-.associations-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.assoc-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 12px;
-    background-color: var(--hos-bg-base, #101417);
-    border: 1px solid var(--hos-border-subtle, #27343a);
-    border-radius: var(--hos-radius-sm, 0.25rem);
-}
-
 .grants-list {
     display: flex;
     flex-wrap: wrap;
@@ -185,7 +170,7 @@
     color: var(--hos-success, #42d392);
     padding: 4px 8px;
     border-radius: var(--hos-radius-sm, 0.25rem);
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .system-info-box {
@@ -417,4 +402,84 @@
 .accent-btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+}
+
+/* Synchronization tab (ADR 0101). */
+.sync-pause-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0;
+    font-size: 0.8125rem;
+    color: var(--hos-text-primary, #e6f1f2);
+    cursor: pointer;
+}
+
+.sync-pause-toggle input {
+    accent-color: var(--hos-accent, #2bd4c4);
+}
+
+.sync-conflict-list {
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sync-conflict-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 10px;
+    border-left: 3px solid #f5c451;
+    border-radius: 4px;
+    background: rgb(245 196 81 / 8%);
+    overflow-wrap: anywhere;
+}
+
+.sync-conflict-date {
+    font-size: 0.6875rem;
+    color: var(--hos-text-secondary, #a8bac4);
+}
+
+/* User themes (ADR 0103): a theme card plus an Edit link opening the Theme Editor. */
+.user-theme-option {
+    display: grid;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.user-theme-option .theme-option {
+    width: 100%;
+}
+
+.theme-origin {
+    margin-left: 0.35rem;
+    font-family: var(--hos-font-mono, monospace);
+    font-size: 0.72rem;
+    color: var(--hos-text-muted, #6f838d);
+}
+
+.btn-link {
+    justify-self: start;
+    padding: 0.1rem 0.25rem;
+    border: 0;
+    background: none;
+    color: var(--hos-accent, #42d392);
+    font: inherit;
+    font-size: 0.8rem;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.btn-link:focus-visible {
+    outline: 2px solid var(--hos-focus-ring, #42d392);
+    outline-offset: 2px;
+}
+
+.theme-warnings {
+    color: var(--hos-warning, #e0ad50);
 }

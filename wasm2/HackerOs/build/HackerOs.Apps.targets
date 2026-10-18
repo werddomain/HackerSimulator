@@ -17,6 +17,15 @@
       GetHackerOsAppManifests       query target used by hosts: the manifest files of this project,
                                     the name and path of its assembly and its dependency list.
 
+    Packages (ADR 0098 §2): this file ships in the HackerOs.App.Build package (hackeros-build/), imported by its
+    buildTransitive/HackerOs.App.Build.targets with $(HackerOsBuildFromPackage) == true. A project
+    outside this repository then gets the same manifest generation, SDK boundary and host
+    aggregation: the generator runs from the package's tools/ folder, a project referencing the
+    package is an app unless it is a host, and a host aggregates the apps of its PackageReference
+    items (each app package carries its manifests and a buildTransitive file declaring them as
+    HackerOsPackagedApp items) with the same IsSystemApp metadata as a ProjectReference.
+    _HackerOsPackageAppManifests puts an app's manifests and that file in its own package.
+
     Host projects ($(HackerOsAppHost) == true, today only OS/HackerOs.Ecosystem):
       CollectHackerOsBuiltInApplications
                                     after ResolveProjectReferences, asks every direct ProjectReference
@@ -25,9 +34,11 @@
                                     HackerOs.BuiltInApplications.json and marks each app assembly
                                     BlazorWebAssemblyLazyLoad. Installing an app = one ProjectReference.
                                     Each entry also carries the app's image (assembly sizes, ADR 0068).
+                                    It also writes HackerOs.TrimmerRoots.xml, the ILLink roots of those
+                                    apps (TrimmerRootDescriptor), for a trimmed publish (ADR 0106).
   -->
 
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(HackerOsBuildFromPackage)' != 'true'">
     <_HackerOsRepoRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..'))</_HackerOsRepoRoot>
     <_HackerOsAppsRoot>$([MSBuild]::NormalizeDirectory('$(_HackerOsRepoRoot)Apps'))</_HackerOsAppsRoot>
 
@@ -42,6 +53,27 @@
     <HackerOsSdkLibrary Condition="'$(HackerOsSdkLibrary)' == ''">false</HackerOsSdkLibrary>
 
     <HackerOsManifestGeneratorProject Condition="'$(HackerOsManifestGeneratorProject)' == ''">$(_HackerOsRepoRoot)Tools/HackerOs.Tools.ManifestGenerator/HackerOs.Tools.ManifestGenerator.csproj</HackerOsManifestGeneratorProject>
+  </PropertyGroup>
+
+  <!--
+    Package mode (ADR 0098 §2): a project that references HackerOs.App.Build is an app unless it says
+    it is a host (or sets HackerOsAppProject itself). The generator comes from the package.
+  -->
+  <PropertyGroup Condition="'$(HackerOsBuildFromPackage)' == 'true'">
+    <HackerOsAppHost Condition="'$(HackerOsAppHost)' == ''">false</HackerOsAppHost>
+    <HackerOsAppProject Condition="'$(HackerOsAppProject)' == '' and '$(HackerOsAppHost)' != 'true'">true</HackerOsAppProject>
+    <HackerOsAppProject Condition="'$(HackerOsAppProject)' == ''">false</HackerOsAppProject>
+    <HackerOsSdkLibrary Condition="'$(HackerOsSdkLibrary)' == ''">false</HackerOsSdkLibrary>
+    <!--
+      ADR 0106 §4: an app built elsewhere is trimmed when a host publishes it, so its build runs the
+      trim analysis, as every shipping project of this repository does (Directory.Build.props).
+    -->
+    <IsTrimmable Condition="'$(IsTrimmable)' == '' and '$(HackerOsAppProject)' == 'true'">true</IsTrimmable>
+    <EnableTrimAnalyzer Condition="'$(EnableTrimAnalyzer)' == '' and '$(HackerOsAppProject)' == 'true'">true</EnableTrimAnalyzer>
+    <_HackerOsManifestGeneratorPath>$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '..', 'tools', 'generator', 'HackerOs.Tools.ManifestGenerator.dll'))</_HackerOsManifestGeneratorPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <_HackerOsDotnetHost>$(DOTNET_HOST_PATH)</_HackerOsDotnetHost>
     <_HackerOsDotnetHost Condition="'$(_HackerOsDotnetHost)' == ''">dotnet</_HackerOsDotnetHost>
   </PropertyGroup>
@@ -50,7 +82,7 @@
     Build order only: the generator must be built before an app runs it. PrivateAssets keeps the
     tool (which needs the server-side ASP.NET Core framework) out of every host's dependency graph.
   -->
-  <ItemGroup Condition="'$(HackerOsAppProject)' == 'true' or '$(HackerOsAppHost)' == 'true'">
+  <ItemGroup Condition="'$(HackerOsBuildFromPackage)' != 'true' and ('$(HackerOsAppProject)' == 'true' or '$(HackerOsAppHost)' == 'true')">
     <ProjectReference Include="$(HackerOsManifestGeneratorProject)"
                       ReferenceOutputAssembly="false"
                       Private="false"
@@ -60,12 +92,102 @@
   </ItemGroup>
 
   <!--
+    ASP.Hack route generator (ADR 0082): a Roslyn source generator every app compiles with. It only
+    writes code when the app references HackerOs.AppSdk.Web (controllers, WebAppDefinition); for other
+    apps it does nothing. Analyzer only: never a runtime dependency of the app.
+  -->
+  <PropertyGroup Condition="'$(HackerOsBuildFromPackage)' != 'true'">
+    <HackerOsWebRouteGeneratorProject Condition="'$(HackerOsWebRouteGeneratorProject)' == ''">$(_HackerOsRepoRoot)Tools/HackerOs.Tools.WebRouteGenerator/HackerOs.Tools.WebRouteGenerator.csproj</HackerOsWebRouteGeneratorProject>
+  </PropertyGroup>
+  <!-- In package mode the generator is the package's analyzer (analyzers/dotnet/cs). -->
+  <ItemGroup Condition="'$(HackerOsBuildFromPackage)' != 'true' and '$(HackerOsAppProject)' == 'true'">
+    <ProjectReference Include="$(HackerOsWebRouteGeneratorProject)"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--
+    HackBackground analyzer (ADR 0128 §2, ADR 0140): every app compiles with the HOSBG rules. In
+    package mode it is the HackerOs.AppSdk package's analyzer (analyzers/dotnet/cs).
+  -->
+  <PropertyGroup Condition="'$(HackerOsBuildFromPackage)' != 'true'">
+    <HackerOsBackgroundAnalyzerProject Condition="'$(HackerOsBackgroundAnalyzerProject)' == ''">$(_HackerOsRepoRoot)Tools/HackerOs.Tools.BackgroundAnalyzer/HackerOs.Tools.BackgroundAnalyzer.csproj</HackerOsBackgroundAnalyzerProject>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(HackerOsBuildFromPackage)' != 'true' and '$(HackerOsAppProject)' == 'true'">
+    <ProjectReference Include="$(HackerOsBackgroundAnalyzerProject)"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--
+    ASP.Hack wwwroot (ADR 0073 §2, ADR 0083 §6): a site's wwwroot/ is embedded in its assembly as resources
+    named "wwwroot/<relative path>" and served read-only by UseStaticFiles; it is never a static web asset
+    of the host (an app's wwwroot would otherwise land under _content/). On by default for a project that
+    references HackerOs.AppSdk.Web; set HackerOsEmbedWebRoot to true/false to decide yourself.
+  -->
+  <Target Name="_HackerOsEmbedWebRoot" BeforeTargets="AssignTargetPaths;ResolveStaticWebAssetsInputs;ResolveProjectStaticWebAssets">
+    <PropertyGroup>
+      <_HackerOsReferencesWebSdk Condition="'%(ProjectReference.Filename)' == 'HackerOs.AppSdk.Web'">true</_HackerOsReferencesWebSdk>
+      <_HackerOsReferencesWebSdk Condition="'%(PackageReference.Identity)' == 'HackerOs.AppSdk.Web'">true</_HackerOsReferencesWebSdk>
+      <HackerOsEmbedWebRoot Condition="'$(HackerOsEmbedWebRoot)' == '' and '$(_HackerOsReferencesWebSdk)' == 'true'">true</HackerOsEmbedWebRoot>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(HackerOsEmbedWebRoot)' == 'true'">
+      <_HackerOsWebRootFile Include="$(MSBuildProjectDirectory)/wwwroot/**" />
+      <Content Remove="@(_HackerOsWebRootFile)" />
+      <None Remove="@(_HackerOsWebRootFile)" />
+      <EmbeddedResource Include="@(_HackerOsWebRootFile)"
+                        LogicalName="wwwroot/%(RecursiveDir)%(Filename)%(Extension)"
+                        WithCulture="false"
+                        Type="Non-Resx" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    ASP.Hack .cshtml views (ADR 0086 §2): the Razor compiler of the SDK compiles a .cshtml in MVC mode, whose
+    generated C# names a few ASP.NET MVC types. For a project that references HackerOs.AppSdk.Web and has
+    .cshtml files, this target adds a root _ViewImports.cshtml (base class HackRazorPage<TModel> and the
+    helpers in place of MVC's implicit @inject) and a C# file of internal compatibility types with the names
+    the generated code expects. No ASP.NET MVC reference is involved. RAZORSDK1004 ("no Razor support for
+    MVC") is expected for these projects and kept as a message.
+  -->
+  <PropertyGroup>
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);RAZORSDK1004</MSBuildWarningsAsMessages>
+    <_HackerOsAspHackRazorDir>$(MSBuildThisFileDirectory)asp-hack/</_HackerOsAspHackRazorDir>
+  </PropertyGroup>
+
+  <Target Name="_HackerOsAspHackRazorViews" BeforeTargets="AssignRazorGenerateTargetPaths;CoreCompile" Condition="'@(RazorGenerate)' != ''">
+    <PropertyGroup>
+      <_HackerOsCshtmlSite Condition="'%(ProjectReference.Filename)' == 'HackerOs.AppSdk.Web' and '@(RazorGenerate->WithMetadataValue('Extension', '.cshtml')->Count())' != '0'">true</_HackerOsCshtmlSite>
+      <_HackerOsCshtmlSite Condition="'%(PackageReference.Identity)' == 'HackerOs.AppSdk.Web' and '@(RazorGenerate->WithMetadataValue('Extension', '.cshtml')->Count())' != '0'">true</_HackerOsCshtmlSite>
+    </PropertyGroup>
+    <Error Condition="'$(_HackerOsCshtmlSite)' == 'true' and '$(_HackerOsAspHackRazorAdded)' != 'true' and Exists('$(MSBuildProjectDirectory)/_ViewImports.cshtml')"
+           Text="ASP.Hack provides the root _ViewImports.cshtml of a site (ADR 0086). Move this project's _ViewImports.cshtml to Views/_ViewImports.cshtml." />
+    <ItemGroup Condition="'$(_HackerOsCshtmlSite)' == 'true' and '$(_HackerOsAspHackRazorAdded)' != 'true'">
+      <RazorGenerate Include="$(_HackerOsAspHackRazorDir)_ViewImports.cshtml" Link="_ViewImports.cshtml" />
+      <Compile Include="$(_HackerOsAspHackRazorDir)HackRazorCompat.cs" Link="obj/HackRazorCompat.cs" />
+    </ItemGroup>
+    <PropertyGroup Condition="'$(_HackerOsCshtmlSite)' == 'true'">
+      <_HackerOsAspHackRazorAdded>true</_HackerOsAspHackRazorAdded>
+    </PropertyGroup>
+  </Target>
+
+  <!--
     Generated manifests sit in the project directory (tracked by git for review) but are not
     content: they must never be copied or published under the same name by several apps.
   -->
   <ItemGroup Condition="'$(HackerOsAppProject)' == 'true'">
-    <Content Remove="manifest.json;manifests/**" />
-    <None Remove="manifest.json;manifests/**" />
+    <Content Remove="manifest.json;manifests/**;localization/**" />
+    <None Remove="manifest.json;manifests/**;localization/**" />
+    <!--
+      ADR 0104 section 4: Resources/AppManifest.<culture>.resx is read by the generator, which writes
+      localization/<culture>.json for the host catalog; it is not compiled into a satellite assembly.
+    -->
+    <EmbeddedResource Remove="Resources/AppManifest.*.resx" />
+    <None Include="Resources/AppManifest.*.resx" />
   </ItemGroup>
 
   <!-- Paths are computed inside targets so that IntermediateOutputPath is final. -->
@@ -76,7 +198,7 @@
     </PropertyGroup>
   </Target>
 
-  <Target Name="_HackerOsResolveManifestGeneratorPath">
+  <Target Name="_HackerOsResolveManifestGeneratorPath" Condition="'$(HackerOsBuildFromPackage)' != 'true'">
     <MSBuild Projects="$(HackerOsManifestGeneratorProject)"
              Targets="GetTargetPath"
              Properties="Configuration=$(Configuration)"
@@ -94,6 +216,11 @@
       <_HackerOsManifestDependency Include="@(ReferencePath->'%(FullPath)')" />
       <_HackerOsExistingManifest Include="$(MSBuildProjectDirectory)/manifest.json" Condition="Exists('$(MSBuildProjectDirectory)/manifest.json')" />
       <_HackerOsExistingManifest Include="$(MSBuildProjectDirectory)/manifests/*.json" />
+      <!-- ADR 0104: translations of the manifest, and the files generated from them. -->
+      <_HackerOsExistingManifest Include="$(MSBuildProjectDirectory)/Resources/AppManifest.*.resx" />
+      <_HackerOsExistingManifest Include="$(MSBuildProjectDirectory)/localization/**/*.json" />
+      <!-- ADR 0098 §5: declared assets are hashed from wwwroot/, so an edited asset reruns the generator. -->
+      <_HackerOsAssetFile Include="$(MSBuildProjectDirectory)/wwwroot/**" />
     </ItemGroup>
     <WriteLinesToFile File="$(_HackerOsManifestDependencies)"
                       Lines="@(_HackerOsManifestDependency)"
@@ -112,7 +239,7 @@
           AfterTargets="CopyFilesToOutputDirectory"
           DependsOnTargets="_HackerOsResolveManifestGenerator"
           Condition="'$(HackerOsAppProject)' == 'true'"
-          Inputs="@(IntermediateAssembly);$(_HackerOsManifestGeneratorPath);$(MSBuildThisFileFullPath);$(_HackerOsManifestDependencies);@(_HackerOsExistingManifest)"
+          Inputs="@(IntermediateAssembly);$(_HackerOsManifestGeneratorPath);$(MSBuildThisFileFullPath);$(_HackerOsManifestDependencies);@(_HackerOsExistingManifest);@(_HackerOsAssetFile)"
           Outputs="$(_HackerOsManifestStamp)">
     <Exec Command="&quot;$(_HackerOsDotnetHost)&quot; &quot;$(_HackerOsManifestGeneratorPath)&quot; generate --assembly &quot;$(TargetPath)&quot; --project &quot;$(MSBuildProjectFullPath)&quot; --dependencies &quot;$(_HackerOsManifestDependencies)&quot; --stamp &quot;$(_HackerOsManifestStamp)&quot;"
           StandardOutputImportance="low"
@@ -152,8 +279,8 @@
 
   <PropertyGroup>
     <!-- Paths relative to the HackerOs root, forward slashes, compared case-insensitively. -->
-    <_HackerOsAppAllowedReferencePattern>(?i)^(Shared/HackerOs\.(App|Simulation|Theming|Game)\.Abstractions|Shared/HackerOs\.AppSdk(\.[^/]+)?|Platform/HackerOs\.Theming\.Blazor)/[^/]+\.csproj$|^Apps/.+\.csproj$</_HackerOsAppAllowedReferencePattern>
-    <_HackerOsSdkAllowedReferencePattern>(?i)^Shared/HackerOs\.((App|Simulation|Theming|Game)\.Abstractions|AppSdk(\.[^/]+)?)/[^/]+\.csproj$</_HackerOsSdkAllowedReferencePattern>
+    <_HackerOsAppAllowedReferencePattern>(?i)^(Shared/HackerOs\.(App|Simulation|Theming)\.Abstractions|Shared/HackerOs\.AppSdk(\.[^/]+)?|Platform/HackerOs\.Theming\.Blazor)/[^/]+\.csproj$|^Apps/.+\.csproj$</_HackerOsAppAllowedReferencePattern>
+    <_HackerOsSdkAllowedReferencePattern>(?i)^Shared/HackerOs\.((App|Simulation|Theming)\.Abstractions|AppSdk(\.[^/]+)?)/[^/]+\.csproj$</_HackerOsSdkAllowedReferencePattern>
   </PropertyGroup>
 
   <!-- Evaluation-time snapshot of this project's own ProjectReference items (see ValidateHackerOsSdkBoundary). -->
@@ -161,9 +288,14 @@
     <_HackerOsDirectProjectReference Include="@(ProjectReference)" />
   </ItemGroup>
 
+  <!--
+    Repository mode only: the rule is written in paths under the HackerOs root. In package mode a
+    project's own ProjectReference items are its repository's business; what crosses the boundary
+    there is a HackerOS package, checked by _ValidateHackerOsPackageBoundary below.
+  -->
   <Target Name="ValidateHackerOsSdkBoundary"
           BeforeTargets="ResolveProjectReferences"
-          Condition="'$(HackerOsAppProject)' == 'true' or '$(HackerOsSdkLibrary)' == 'true'">
+          Condition="'$(HackerOsBuildFromPackage)' != 'true' and ('$(HackerOsAppProject)' == 'true' or '$(HackerOsSdkLibrary)' == 'true')">
     <PropertyGroup>
       <_HackerOsBoundaryPattern Condition="'$(HackerOsAppProject)' == 'true'">$(_HackerOsAppAllowedReferencePattern)</_HackerOsBoundaryPattern>
       <_HackerOsBoundaryPattern Condition="'$(HackerOsAppProject)' != 'true'">$(_HackerOsSdkAllowedReferencePattern)</_HackerOsBoundaryPattern>
@@ -177,10 +309,10 @@
       <!--
         Direct references only, captured at evaluation: the .NET SDK adds transitive ones to
         @(ProjectReference) during the build, and those are checked in the project declaring them.
-        The generator reference is build order only (ReferenceOutputAssembly=false), added by this file.
+        The generator references are build order / analyzer only (ReferenceOutputAssembly=false), added by this file.
       -->
       <_HackerOsBoundaryReference Include="@(_HackerOsDirectProjectReference->'%(FullPath)')"
-                                  Condition="'%(Filename)' != 'HackerOs.Tools.ManifestGenerator'" />
+                                  Condition="'%(Filename)' != 'HackerOs.Tools.ManifestGenerator' and '%(Filename)' != 'HackerOs.Tools.WebRouteGenerator' and '%(Filename)' != 'HackerOs.Tools.BackgroundAnalyzer'" />
       <_HackerOsBoundaryReference>
         <RelativePath>$([MSBuild]::MakeRelative('$(_HackerOsRepoRoot)', '%(Identity)').Replace('\', '/'))</RelativePath>
       </_HackerOsBoundaryReference>
@@ -192,6 +324,37 @@
            Code="$(_HackerOsBoundaryCode)"
            File="$(MSBuildProjectFullPath)"
            Text="[$(MSBuildProjectName)] Forbidden project reference '%(_HackerOsBoundaryViolation.RelativePath)'. $(_HackerOsBoundaryRule) (ADR 0055 §2)." />
+  </Target>
+
+  <!--
+    ADR 0098 §2: the same rule for packages. Every compile reference that comes from a HackerOs.*
+    package (direct or transitive, so a helper library cannot smuggle the platform in) must be one
+    an app (or an SDK library) may use. Other packages are not HackerOS's to judge.
+  -->
+  <PropertyGroup>
+    <_HackerOsAppAllowedPackagePattern>(?i)^HackerOs\.((App|Simulation|Theming)\.Abstractions|AppSdk(\..+)?|Theming\.Blazor|App\.Build|Apps\..+|Commands)$</_HackerOsAppAllowedPackagePattern>
+    <_HackerOsSdkAllowedPackagePattern>(?i)^HackerOs\.((App|Simulation|Theming)\.Abstractions|AppSdk(\..+)?)$</_HackerOsSdkAllowedPackagePattern>
+  </PropertyGroup>
+
+  <Target Name="_ValidateHackerOsPackageBoundary"
+          AfterTargets="ResolveAssemblyReferences"
+          Condition="'$(HackerOsAppProject)' == 'true' or '$(HackerOsSdkLibrary)' == 'true'">
+    <PropertyGroup>
+      <_HackerOsPackagePattern Condition="'$(HackerOsAppProject)' == 'true'">$(_HackerOsAppAllowedPackagePattern)</_HackerOsPackagePattern>
+      <_HackerOsPackagePattern Condition="'$(HackerOsAppProject)' != 'true'">$(_HackerOsSdkAllowedPackagePattern)</_HackerOsPackagePattern>
+      <_HackerOsPackageCode Condition="'$(HackerOsAppProject)' == 'true'">HOSAPP0030</_HackerOsPackageCode>
+      <_HackerOsPackageCode Condition="'$(HackerOsAppProject)' != 'true'">HOSSDK0001</_HackerOsPackageCode>
+    </PropertyGroup>
+    <ItemGroup>
+      <_HackerOsReferencedPackage Include="@(ReferencePath->'%(NuGetPackageId)'->Distinct())"
+                                  Condition="$([System.String]::Copy('%(ReferencePath.NuGetPackageId)').StartsWith('HackerOs.', StringComparison.OrdinalIgnoreCase))" />
+      <_HackerOsPackageViolation Include="@(_HackerOsReferencedPackage)"
+                                 Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('%(Identity)', '$(_HackerOsPackagePattern)'))" />
+    </ItemGroup>
+    <Error Condition="'@(_HackerOsPackageViolation)' != ''"
+           Code="$(_HackerOsPackageCode)"
+           File="$(MSBuildProjectFullPath)"
+           Text="[$(MSBuildProjectName)] Forbidden package '%(_HackerOsPackageViolation.Identity)'. An app may only use the *.Abstractions packages, the SDK (HackerOs.AppSdk*), HackerOs.Theming.Blazor, HackerOs.App.Build or app packages (HackerOs.Apps.*, HackerOs.Commands); an SDK library only the *.Abstractions packages and the SDK (ADR 0055 §2, ADR 0098 §2)." />
   </Target>
 
   <!-- ===================================================================================== -->
@@ -227,13 +390,35 @@
     </ItemGroup>
   </Target>
 
+  <!--
+    ADR 0098 §2: apps installed as packages. Each app package declares its manifests as
+    HackerOsPackagedApp items (PackageId, AssemblyFileName, AssemblyPath metadata) through its
+    buildTransitive file; an app package another app package depends on comes along, like a
+    package manager installs a dependency. IsSystemApp comes from the host's PackageReference of
+    that package (a transitive one is never a system app).
+  -->
+  <Target Name="_HackerOsCollectPackagedAppManifests" Condition="'@(HackerOsPackagedApp)' != ''">
+    <ItemGroup>
+      <_HackerOsSystemPackageId Include="@(PackageReference)" Condition="'%(PackageReference.IsSystemApp)' == 'true'" />
+      <!-- Keyed by package id, so Remove can intersect with the system packages. -->
+      <_HackerOsPackagedAppById Include="@(HackerOsPackagedApp->'%(PackageId)')" ManifestPath="%(HackerOsPackagedApp.FullPath)" />
+      <_HackerOsPackagedUserApp Include="@(_HackerOsPackagedAppById)" />
+      <_HackerOsPackagedUserApp Remove="@(_HackerOsSystemPackageId)" />
+      <_HackerOsPackagedSystemApp Include="@(_HackerOsPackagedAppById)" />
+      <_HackerOsPackagedSystemApp Remove="@(_HackerOsPackagedUserApp)" />
+      <_HackerOsBuiltInManifest Include="@(_HackerOsPackagedUserApp->'%(ManifestPath)')" IsSystemApp="false" DependenciesFile="" />
+      <_HackerOsBuiltInManifest Include="@(_HackerOsPackagedSystemApp->'%(ManifestPath)')" IsSystemApp="true" DependenciesFile="" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="CollectHackerOsBuiltInApplications"
           AfterTargets="ResolveProjectReferences"
-          DependsOnTargets="_HackerOsResolveManifestGeneratorPath;_HackerOsCollectAppManifestsFromReference"
+          DependsOnTargets="_HackerOsResolveManifestGeneratorPath;_HackerOsCollectAppManifestsFromReference;_HackerOsCollectPackagedAppManifests"
           Condition="'$(HackerOsAppHost)' == 'true'">
     <PropertyGroup>
       <_HackerOsBuiltInApplicationsFile>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'BuiltInApplications.json'))</_HackerOsBuiltInApplicationsFile>
       <_HackerOsBuiltInApplicationsList>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'hackeros-builtin-applications.txt'))</_HackerOsBuiltInApplicationsList>
+      <_HackerOsTrimmerRootsFile>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'HackerOs.TrimmerRoots.xml'))</_HackerOsTrimmerRootsFile>
     </PropertyGroup>
     <ItemGroup>
       <!--
@@ -248,7 +433,7 @@
                       Overwrite="true"
                       WriteOnlyWhenDifferent="true" />
 
-    <Exec Command="&quot;$(_HackerOsDotnetHost)&quot; &quot;$(_HackerOsManifestGeneratorPath)&quot; aggregate --project &quot;$(MSBuildProjectFullPath)&quot; --apps &quot;$(_HackerOsBuiltInApplicationsList)&quot; --output &quot;$(_HackerOsBuiltInApplicationsFile)&quot;"
+    <Exec Command="&quot;$(_HackerOsDotnetHost)&quot; &quot;$(_HackerOsManifestGeneratorPath)&quot; aggregate --project &quot;$(MSBuildProjectFullPath)&quot; --apps &quot;$(_HackerOsBuiltInApplicationsList)&quot; --output &quot;$(_HackerOsBuiltInApplicationsFile)&quot; --trimmer-roots &quot;$(_HackerOsTrimmerRootsFile)&quot;"
           StandardOutputImportance="low"
           IgnoreExitCode="true"
           Condition="'$(DesignTimeBuild)' != 'true'">
@@ -265,7 +450,78 @@
       <!-- Remove first: a host may still list a migrated app by hand during the transition. -->
       <BlazorWebAssemblyLazyLoad Remove="@(_HackerOsLazyAssembly)" />
       <BlazorWebAssemblyLazyLoad Include="@(_HackerOsLazyAssembly)" />
-      <FileWrites Include="$(_HackerOsBuiltInApplicationsFile);$(_HackerOsBuiltInApplicationsList)" />
+      <!--
+        ADR 0106 §2: the OS reaches an app's entry point, components and site root only by the names
+        in its manifest, so a trimmed publish would drop the lazy-loaded app assemblies whole. The
+        generator writes their roots next to BuiltInApplications.json; ILLink reads them through
+        TrimmerRootDescriptor (ignored by an untrimmed publish).
+      -->
+      <TrimmerRootDescriptor Include="$(_HackerOsTrimmerRootsFile)" Condition="Exists('$(_HackerOsTrimmerRootsFile)')" />
+      <FileWrites Include="$(_HackerOsBuiltInApplicationsFile);$(_HackerOsBuiltInApplicationsList);$(_HackerOsTrimmerRootsFile)" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    ADR 0113 (adjusts ADR 0106 §1-2): a trimmed publish of a host keeps every HackerOS assembly
+    whole (platform, SDK, browser infrastructure, apps from this repository or from packages) and
+    trims the framework and the other trimmable libraries. Their code hands its own records to
+    JavaScript interop and reflection-based JSON (IJSRuntime arguments are params object[], which
+    the trim analyzer cannot follow): a member-level trim removes properties and constructor
+    parameter names only serialization reads, with no build warning, for under 1 MB.
+    The apps of other names are kept whole by HackerOs.TrimmerRoots.xml.
+  -->
+  <Target Name="_HackerOsRootHackerOsAssemblies"
+          BeforeTargets="PrepareForILLink"
+          DependsOnTargets="_ComputeManagedAssemblyToLink"
+          Condition="'$(HackerOsAppHost)' == 'true' and '$(PublishTrimmed)' == 'true'">
+    <ItemGroup>
+      <TrimmerRootAssembly Include="@(ManagedAssemblyToLink->'%(Filename)')"
+                           Condition="$([System.String]::Copy('%(Filename)').StartsWith('HackerOs.', StringComparison.Ordinal))" />
+    </ItemGroup>
+  </Target>
+
+  <!-- ===================================================================================== -->
+  <!-- App packages (ADR 0098 §2)                                                             -->
+  <!-- ===================================================================================== -->
+
+  <!--
+    An app project that is packed carries its generated manifests under hackeros/manifests/ and a
+    buildTransitive/<PackageId>.targets that declares them as HackerOsPackagedApp items, so a host
+    referencing the package aggregates the app exactly as it would a ProjectReference.
+  -->
+  <PropertyGroup Condition="'$(HackerOsAppProject)' == 'true'">
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_HackerOsPackageAppManifests</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
+  <Target Name="_HackerOsPackageAppManifests" DependsOnTargets="_HackerOsAppManifestPaths">
+    <ReadLinesFromFile File="$(_HackerOsManifestStamp)" Condition="Exists('$(_HackerOsManifestStamp)')">
+      <Output TaskParameter="Lines" ItemName="_HackerOsPackManifest" />
+    </ReadLinesFromFile>
+    <Error Condition="'@(_HackerOsPackManifest)' == ''"
+           Code="HOSAPP0099"
+           Text="[$(MSBuildProjectName)] No generated manifest to pack: build the app before packing it." />
+    <PropertyGroup>
+      <_HackerOsPackageTargetsFile>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'hackeros-package', '$(PackageId).targets'))</_HackerOsPackageTargetsFile>
+    </PropertyGroup>
+    <ItemGroup>
+      <_HackerOsPackageTargetsLine Include="&lt;Project&gt;" />
+      <_HackerOsPackageTargetsLine Include="  &lt;!-- Generated by HackerOS (ADR 0098 §2): the apps of package $(PackageId). --&gt;" />
+      <_HackerOsPackageTargetsLine Include="  &lt;ItemGroup&gt;" />
+      <_HackerOsPackageTargetsLine Include="@(_HackerOsPackManifest->'    &lt;HackerOsPackagedApp Include=&quot;%24(MSBuildThisFileDirectory)../hackeros/manifests/%(Filename)%(Extension)&quot; PackageId=&quot;$(PackageId)&quot; AssemblyFileName=&quot;$(TargetFileName)&quot; AssemblyPath=&quot;%24(MSBuildThisFileDirectory)../lib/$(TargetFramework)/$(TargetFileName)&quot; /&gt;')" />
+      <_HackerOsPackageTargetsLine Include="  &lt;/ItemGroup&gt;" />
+      <_HackerOsPackageTargetsLine Include="&lt;/Project&gt;" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(_HackerOsPackageTargetsFile)" Lines="@(_HackerOsPackageTargetsLine)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <FileWrites Include="$(_HackerOsPackageTargetsFile)" />
+      <TfmSpecificPackageFile Include="@(_HackerOsPackManifest)" PackagePath="hackeros/manifests/%(Filename)%(Extension)" />
+      <!--
+        ADR 0104/0111: the translated manifest texts (localization/<culture>.json, resolved next to
+        manifests/ by the host's aggregation) travel with the manifests.
+      -->
+      <_HackerOsPackLocalization Include="$(MSBuildProjectDirectory)/localization/**/*.json" />
+      <TfmSpecificPackageFile Include="@(_HackerOsPackLocalization)" PackagePath="hackeros/localization/%(RecursiveDir)%(Filename)%(Extension)" />
+      <TfmSpecificPackageFile Include="$(_HackerOsPackageTargetsFile)" PackagePath="buildTransitive/$(PackageId).targets" />
     </ItemGroup>
   </Target>
 </Project>

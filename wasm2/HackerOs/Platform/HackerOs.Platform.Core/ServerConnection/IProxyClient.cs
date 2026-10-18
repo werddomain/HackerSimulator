@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Net.WebSockets;
 using HackerOs.Server.Contracts.Proxy;
 
 namespace HackerOs.Platform.Core.ServerConnection;
@@ -18,6 +19,16 @@ namespace HackerOs.Platform.Core.ServerConnection;
 /// </remarks>
 public interface IProxyClient
 {
+    /// <summary>
+    /// Has the server perform one real HTTP request on the app's behalf (<c>POST api/proxy/http</c>),
+    /// subject to the server's proxy policy and the app's stored capability grant.
+    /// </summary>
+    /// <param name="serverBaseUrl">The server's base URL; endpoint paths are resolved relative to it.</param>
+    /// <param name="accessToken">The bearer token of the connected account.</param>
+    /// <param name="request">The method, URL, headers, timeout and requesting app; <c>IncludeBody</c> asks for the body too.</param>
+    /// <param name="cancellationToken">Cancels the HTTP request.</param>
+    /// <returns>The status, headers and, when requested, the base64 body of the real response.</returns>
+    /// <exception cref="ServerConnectionException">The server refused or failed the request; the message carries the proxy error code when there is one.</exception>
     Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
         Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default);
 
@@ -28,13 +39,44 @@ public interface IProxyClient
     Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
         Uri serverBaseUrl, string accessToken, ProxyTcpProbeRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>Reads the proxy limits the server applies to this device (<c>GET api/proxy/policy</c>).</summary>
+    /// <param name="serverBaseUrl">The server's base URL; endpoint paths are resolved relative to it.</param>
+    /// <param name="accessToken">The bearer token of the connected account.</param>
+    /// <param name="cancellationToken">Cancels the HTTP request.</param>
+    /// <returns>Concurrency, payload, duration and redirect limits, allowed protocols and operator warnings.</returns>
+    /// <exception cref="ServerConnectionException">The server answered with a non-success status.</exception>
     Task<ProxyPolicyResponse> GetPolicyAsync(
         Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Opens one relayed TCP stream or "connected" UDP socket (ADR 0102 §2, §3). The socket is
+    /// connected on the server when this returns; disposing the channel closes it.
+    /// </summary>
+    /// <exception cref="ProxyStreamException">The server refused the stream (its code says why).</exception>
+    /// <exception cref="ServerConnectionException">The server could not be reached.</exception>
+    Task<IProxyStreamChannel> OpenStreamAsync(
+        Uri serverBaseUrl, string accessToken, ProxyProtocol protocol, ProxyStreamRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This proxy client cannot open relayed streams.");
 }
 
 /// <summary>Default <see cref="IProxyClient"/> implementation backed by <see cref="HttpClient"/>.</summary>
-public sealed class HttpProxyClient(HttpClient httpClient) : IProxyClient
+/// <param name="httpClient">Client for the JSON endpoints.</param>
+/// <param name="webSocketConnector">
+/// Opens the WebSocket of a stream route; a <see cref="ClientWebSocket"/> (the browser's
+/// <c>WebSocket</c> under WebAssembly) when omitted. Tests pass the test server's client.
+/// </param>
+public sealed class HttpProxyClient(
+    HttpClient httpClient,
+    Func<Uri, CancellationToken, Task<WebSocket>>? webSocketConnector = null) : IProxyClient
 {
+    /// <summary>Creates the client used by dependency injection.</summary>
+    /// <param name="httpClient">Client for the JSON endpoints.</param>
+    public HttpProxyClient(HttpClient httpClient)
+        : this(httpClient, null)
+    {
+    }
+
+    /// <inheritdoc />
     public async Task<ProxyHttpResponse> ExecuteHttpRequestAsync(
         Uri serverBaseUrl, string accessToken, ProxyHttpRequest request, CancellationToken cancellationToken = default)
     {
@@ -58,6 +100,7 @@ public sealed class HttpProxyClient(HttpClient httpClient) : IProxyClient
             ProxyContractsJsonContext.Default.ProxyHttpResponse, cancellationToken).ConfigureAwait(false))!;
     }
 
+    /// <inheritdoc />
     public async Task<ProxyTcpProbeResponse> ExecuteTcpProbeAsync(
         Uri serverBaseUrl, string accessToken, ProxyTcpProbeRequest request, CancellationToken cancellationToken = default)
     {
@@ -81,6 +124,7 @@ public sealed class HttpProxyClient(HttpClient httpClient) : IProxyClient
             ProxyContractsJsonContext.Default.ProxyTcpProbeResponse, cancellationToken).ConfigureAwait(false))!;
     }
 
+    /// <inheritdoc />
     public async Task<ProxyPolicyResponse> GetPolicyAsync(
         Uri serverBaseUrl, string accessToken, CancellationToken cancellationToken = default)
     {
@@ -96,6 +140,63 @@ public sealed class HttpProxyClient(HttpClient httpClient) : IProxyClient
 
         return (await response.Content.ReadFromJsonAsync(
             ProxyContractsJsonContext.Default.ProxyPolicyResponse, cancellationToken).ConfigureAwait(false))!;
+    }
+
+    /// <inheritdoc />
+    public async Task<IProxyStreamChannel> OpenStreamAsync(
+        Uri serverBaseUrl, string accessToken, ProxyProtocol protocol, ProxyStreamRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(serverBaseUrl);
+        ArgumentNullException.ThrowIfNull(request);
+
+        // The browser's WebSocket cannot carry an Authorization header: the token travels as the
+        // access_token query parameter, which the server accepts on the two stream routes only.
+        UriBuilder builder = new(new Uri(serverBaseUrl, ProxyStreamRoutes.PathOf(protocol)))
+        {
+            Scheme = serverBaseUrl.Scheme == Uri.UriSchemeHttps ? "wss" : "ws",
+            Query = string.Join('&',
+                $"{ProxyStreamRoutes.HostParameter}={Uri.EscapeDataString(request.Host)}",
+                $"{ProxyStreamRoutes.PortParameter}={request.Port}",
+                $"{ProxyStreamRoutes.AppIdParameter}={Uri.EscapeDataString(request.AppId)}",
+                $"{ProxyStreamRoutes.AccessTokenParameter}={Uri.EscapeDataString(accessToken)}")
+        };
+
+        WebSocket socket;
+        try
+        {
+            socket = webSocketConnector is not null
+                ? await webSocketConnector(builder.Uri, cancellationToken).ConfigureAwait(false)
+                : await ConnectClientWebSocketAsync(builder.Uri, cancellationToken).ConfigureAwait(false);
+        }
+        catch (WebSocketException exception)
+        {
+            throw new ServerConnectionException($"The relay stream could not be opened: {exception.Message}");
+        }
+
+        try
+        {
+            return await WebSocketProxyStreamChannel.OpenAsync(socket, protocol, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            socket.Dispose();
+            throw;
+        }
+    }
+
+    private static async Task<WebSocket> ConnectClientWebSocketAsync(Uri uri, CancellationToken cancellationToken)
+    {
+        ClientWebSocket socket = new();
+        try
+        {
+            await socket.ConnectAsync(uri, cancellationToken).ConfigureAwait(false);
+            return socket;
+        }
+        catch
+        {
+            socket.Dispose();
+            throw;
+        }
     }
 
     private static async Task<ProxyErrorResponse?> TryReadErrorAsync(HttpResponseMessage response, CancellationToken cancellationToken)

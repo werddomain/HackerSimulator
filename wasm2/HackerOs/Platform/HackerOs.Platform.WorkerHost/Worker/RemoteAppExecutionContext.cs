@@ -5,6 +5,7 @@ using HackerOs.AppSdk.Clipboard;
 using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Net;
+using HackerOs.AppSdk.Threading;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -20,9 +21,10 @@ namespace HackerOs.Platform.WorkerHost.Worker;
 /// </summary>
 /// <remarks>
 /// The administration gateways (system settings, permissions, server connection, power, storage
-/// diagnostics, app management), the interactive shell host, typed events and directory watches are
-/// not offered: they keep the SDK's "unsupported" default, and an app that needs them declares
-/// <see cref="AppExecutionHost.MainThread"/>.
+/// diagnostics, app management) and the interactive shell host are not offered: they keep the SDK's
+/// "unsupported" default, and an app that needs them declares <see cref="AppExecutionHost.MainThread"/>.
+/// Typed events, topic messages and directory watches are offered since ADR 0124: their payloads cross
+/// as JSON.
 /// </remarks>
 internal sealed class RemoteAppExecutionContext : IAppExecutionContext
 {
@@ -57,6 +59,7 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
         Notifications = new RemoteNotificationGateway(channel);
         Intents = new RemoteIntentGateway(channel);
         Services = new RemoteServiceControlGateway(channel);
+        ServiceNotify = new RemoteServiceNotifyGateway(channel);
         Environment = new RemoteEnvironmentGateway(
             channel, snapshot.Arguments, snapshot.CurrentDirectory,
             new Dictionary<string, string>(snapshot.Variables, StringComparer.Ordinal),
@@ -64,8 +67,63 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
         Network = new RemoteNetworkGateway(channel);
         Catalog = new RemoteCatalogGateway(channel);
         Drives = new RemoteDriveGateway(channel);
+        CrossOriginIsolation = new RemoteCrossOriginIsolationGateway(channel);
         Clipboard = new RemoteClipboardGateway(channel);
+        WebDatabase = new RemoteWebDatabaseGateway(channel, snapshot.Manifest.Id);
         Console = console;
+        Intent = snapshot.Intent;
+        // ADR 0124: events and directory watches go through the OS's bus, by message.
+        EventTable = new RemoteEventTable(channel);
+        EventTable.Bind(
+            () => HackExecutionContext.Enter(this),
+            message => Logging.Log(HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Error, message));
+        Events = new RemoteEventGateway(channel, EventTable);
+        Watch = new RemoteWatchGateway(channel, EventTable);
+        // ADR 0128 section 6: a task started from here is placed by the OS, through bg.run.
+        BackgroundJobs = new RemoteBackgroundGateway(channel);
+    }
+
+    /// <summary>Gets the process's background tasks, fed by the OS's <c>bgp</c> messages (ADR 0128).</summary>
+    public RemoteBackgroundGateway BackgroundJobs { get; }
+
+    /// <inheritdoc />
+    public IAppBackgroundGateway Background => BackgroundJobs;
+
+    /// <summary>Gets the process's subscriptions, fed by the OS's <c>ev</c> messages (ADR 0124).</summary>
+    public RemoteEventTable EventTable { get; }
+
+    /// <inheritdoc />
+    public AppIntentDelivery? Intent { get; }
+
+    /// <inheritdoc />
+    public event EventHandler<AppIntentDelivery>? IntentReceived;
+
+    /// <summary>
+    /// Raises <see cref="IntentReceived"/> for an intent the OS handed to this running process
+    /// (ADR 0096, section 5), inside its ambient context. A handler that throws does not keep the
+    /// others from running.
+    /// </summary>
+    public void DeliverIntent(AppIntentDelivery delivery)
+    {
+        if (IntentReceived is not { } handlers)
+        {
+            return;
+        }
+
+        using IDisposable scope = HackExecutionContext.Enter(this);
+        foreach (EventHandler<AppIntentDelivery> handler in handlers.GetInvocationList().Cast<EventHandler<AppIntentDelivery>>())
+        {
+            try
+            {
+                handler(this, delivery);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                Logging.Log(
+                    HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Error,
+                    $"An IntentReceived handler threw {exception.GetType().Name}: {exception.Message}");
+            }
+        }
     }
 
     public AppManifest Manifest { get; }
@@ -104,7 +162,7 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
 
     public IAppFileSystemGateway FileSystem { get; }
 
-    public IAppEventGateway Events { get; } = new RemoteEventGateway();
+    public IAppEventGateway Events { get; }
 
     public IAppNotificationGateway Notifications { get; }
 
@@ -116,9 +174,11 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
 
     public IAppIntentGateway Intents { get; }
 
-    public IAppFileSystemWatchGateway Watch { get; } = new RemoteWatchGateway();
+    public IAppFileSystemWatchGateway Watch { get; }
 
     public IAppServiceControlGateway Services { get; }
+
+    public IAppServiceNotifyGateway ServiceNotify { get; }
 
     public IAppPermissionErrorGateway PermissionErrors => _permissionErrors;
 
@@ -130,7 +190,11 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
 
     public IAppDriveGateway Drives { get; }
 
+    public IAppCrossOriginIsolationGateway CrossOriginIsolation { get; }
+
     public IAppClipboardGateway Clipboard { get; }
+
+    public HackerOs.AppSdk.WebData.IAppWebDatabaseGateway WebDatabase { get; }
 
     public IAppConsoleGateway Console { get; }
 
@@ -190,4 +254,5 @@ internal sealed record RemoteProcessSnapshot(
     string CurrentDirectory,
     IReadOnlyDictionary<string, string> Variables,
     string EnvironmentUserName,
-    string MachineName);
+    string MachineName,
+    AppIntentDelivery? Intent = null);

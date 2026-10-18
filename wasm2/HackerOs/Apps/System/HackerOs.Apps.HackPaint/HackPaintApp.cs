@@ -26,7 +26,7 @@ public sealed class HackPaintApp : AppDefinition
 
     /// <inheritdoc />
     public override string Description =>
-        "Virtual image editor with drawing canvas, filters, undo/redo, and file dialog export";
+        "Image editor that opens and saves PNG, JPEG, BMP, GIF and WebP files, with a drawing canvas and undo/redo";
 
     /// <inheritdoc />
     public override string Category => "graphics";
@@ -34,6 +34,29 @@ public sealed class HackPaintApp : AppDefinition
     /// <inheritdoc />
     public override IReadOnlyList<string> Capabilities =>
         [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.DialogFileOpen, AppCapabilities.DialogFileSave];
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// ADR 0103 §1: Hack Paint opens and edits the image types the browser decodes; it is the
+    /// default handler of <c>edit</c> for them (<c>/etc/hackeros/file-associations.json</c>).
+    /// </remarks>
+    public override IReadOnlyList<FileHandler> FileHandlers =>
+    [
+        new("image/png", [".png"], ["open", "edit"]),
+        new("image/jpeg", [".jpg", ".jpeg"], ["open", "edit"]),
+        new("image/bmp", [".bmp"], ["open", "edit"]),
+        new("image/gif", [".gif"], ["open", "edit"]),
+        new("image/webp", [".webp"], ["open", "edit"])
+    ];
+
+    /// <inheritdoc />
+    public override WindowOptions? Window => new()
+    {
+        DefaultWidth = 960,
+        DefaultHeight = 680,
+        MinWidth = 600,
+        MinHeight = 420
+    };
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

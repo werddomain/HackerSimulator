@@ -9,7 +9,7 @@
     <link rel="preload" id="webassembly" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="css/app.css#[.{fingerprint}]" />
+    <link rel="stylesheet" href="_content/HackerOs.Ecosystem.Host/css/app.css#[.{fingerprint}]" />
     <link rel="stylesheet" href="HackerOs.Ecosystem.styles.css#[.{fingerprint}]" />
     <link href="manifest.webmanifest" rel="manifest" />
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
@@ -30,8 +30,104 @@
         <a href="." class="reload">Reload</a>
         <span class="dismiss">x</span>
     </div>
+
+    <!--
+        ADR 0099 §3: fatal boot-error screen. Hidden until the boot guard below shows it;
+        data-state picks which message is visible (styles in css/app.css).
+    -->
+    <section id="hackeros-boot-error" role="alert" aria-labelledby="hackeros-boot-error-title" hidden>
+        <h1 id="hackeros-boot-error-title">HackerOS could not start</h1>
+        <p class="boot-error-repairing">Damaged system files were found in the offline cache. Downloading a fresh copy&hellip;</p>
+        <p class="boot-error-offline">The offline cache of HackerOS is damaged and cannot be repaired without a network connection. Reconnect to the Internet once, then retry: the damaged files will be downloaded again. Your files and settings are not affected.</p>
+        <p class="boot-error-failed">The system files could not be loaded, even from a freshly rebuilt cache. Retry later; if the problem persists, clear this site's data in the browser.</p>
+        <p class="boot-error-detail"></p>
+        <button type="button" class="boot-error-retry">Retry</button>
+    </section>
+
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
-    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js" autostart="false"></script>
+    <script>
+        // ADR 0099 §3, boot guard for a corrupted PWA cache. Blazor checks the SHA-256 of every
+        // boot resource (SRI) and refuses a damaged one; the boot then fails with "Failed to
+        // start platform. Reason: ...". In .NET 10 that error escapes as an unhandled promise
+        // rejection while the promise of Blazor.start() stays pending, so both are watched.
+        // On an integrity or load failure, the page asks the service worker (RESET_CACHE in
+        // service-worker.published.js) to empty its cache and refill it from the server, then
+        // reloads once: the sessionStorage guard stops a reload loop if the fresh copy fails
+        // too. When the server cannot be reached the worker keeps the damaged cache untouched
+        // and this page explains that the user must reconnect once.
+        (function () {
+            const guardKey = 'hackeros.bootRecovery';
+            const loadFailure = /integrity|SRI|download '|Failed to fetch|Failed to load|NetworkError|Load failed|ERR_/i;
+            const guard = {
+                isSet: () => { try { return !!sessionStorage.getItem(guardKey); } catch { return false; } },
+                set: () => { try { sessionStorage.setItem(guardKey, String(Date.now())); } catch { } },
+                clear: () => { try { sessionStorage.removeItem(guardKey); } catch { } }
+            };
+
+            // state: 'repairing' (no button), 'offline' or 'failed'.
+            function showBootError(state, detail) {
+                const panel = document.getElementById('hackeros-boot-error');
+                document.documentElement.classList.add('hackeros-boot-failed');
+                panel.dataset.state = state;
+                panel.querySelector('.boot-error-detail').textContent = detail || '';
+                panel.querySelector('.boot-error-retry').onclick = () => window.location.reload();
+                panel.hidden = false;
+            }
+
+            // Sends RESET_CACHE to the controlling worker; resolves with its { ok, reason } reply.
+            function resetWorkerCache(worker) {
+                return new Promise(resolve => {
+                    const channel = new MessageChannel();
+                    const timer = setTimeout(() => resolve({ ok: false, reason: 'timeout' }), 120000);
+                    channel.port1.onmessage = event => { clearTimeout(timer); resolve(event.data || { ok: false }); };
+                    worker.postMessage({ type: 'RESET_CACHE' }, [channel.port2]);
+                });
+            }
+
+            let settled = false;
+            async function onBootFailed(error) {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                const detail = String((error && (error.message || error)) || 'unknown error');
+                const worker = navigator.serviceWorker && navigator.serviceWorker.controller;
+                if (!loadFailure.test(detail) || !worker) {
+                    showBootError('failed', detail);
+                    return;
+                }
+                if (guard.isSet()) {
+                    // The cache was already rebuilt and the page reloaded once in this tab: no loop.
+                    showBootError(navigator.onLine === false ? 'offline' : 'failed', detail);
+                    return;
+                }
+                showBootError('repairing');
+                const result = await resetWorkerCache(worker);
+                if (result.ok) {
+                    guard.set();
+                    window.location.reload();
+                } else {
+                    showBootError(result.reason === 'unreachable' ? 'offline' : 'failed', detail);
+                }
+            }
+
+            window.addEventListener('unhandledrejection', event => {
+                const reason = event.reason;
+                if (!settled && /Failed to start platform/.test(String((reason && reason.message) || reason))) {
+                    onBootFailed(reason);
+                }
+            });
+
+            if (!window.Blazor) {
+                // blazor.webassembly.js itself did not load or run (damaged or missing).
+                onBootFailed(new Error('Failed to load _framework/blazor.webassembly.js'));
+            } else {
+                // A successful boot re-arms the recovery for a later failure in this tab.
+                Blazor.start().then(() => { settled = true; guard.clear(); }, onBootFailed);
+            }
+        })();
+    </script>
     <script>
         if ('serviceWorker' in navigator && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
             navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' })

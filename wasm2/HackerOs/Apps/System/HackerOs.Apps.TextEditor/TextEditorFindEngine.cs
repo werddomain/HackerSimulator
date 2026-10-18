@@ -176,8 +176,13 @@ public static class TextEditorFindEngine
     }
 
     /// <summary>Formats the Replace All summary shown in the panel ("1 replacement", "12 replacements").</summary>
-    public static string DescribeReplacementCount(int count) =>
-        count == 1 ? "1 replacement" : $"{count} replacements";
+    /// <param name="count">How many occurrences were replaced.</param>
+    /// <param name="text">
+    /// The editor's texts in the window's language; <see langword="null"/> reads them in the language of
+    /// the process running the code (English outside any app).
+    /// </param>
+    public static string DescribeReplacementCount(int count, Microsoft.Extensions.Localization.IStringLocalizer? text = null) =>
+        Strings.Plural(text ?? AppSdk.Globalization.HackLocalization.GetLocalizer<Strings>(), "Replace.Count", count);
 
     private static bool IsWholeWordAt(string content, int start, int length)
     {

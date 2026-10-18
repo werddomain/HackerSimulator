@@ -35,7 +35,7 @@ public sealed class MkdirApp : AppDefinition
         [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite];
 
     /// <inheritdoc />
-    public override TerminalCommand? Terminal => new("mkdir", "mkdir [-p] <directory...>");
+    public override TerminalCommand? Terminal => new("mkdir", "mkdir [-pv] <directory...>");
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

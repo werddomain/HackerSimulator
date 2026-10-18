@@ -60,6 +60,22 @@ public sealed class FileSystemSeeder(
             LoginEnvironment.HostNameFilePath.Value, LoginEnvironment.DefaultHostName + "\n", 0x01A4, system, cancellationToken);
         await EnsureFileAsync(
             LoginEnvironment.EnvironmentFilePath.Value, LoginEnvironment.DefaultEnvironmentFileContent, 0x01A4, system, cancellationToken);
+        // ADR 0104: systemd-style system locale, root-owned 0644, changed with localectl.
+        await EnsureFileAsync(
+            LoginEnvironment.SystemLocaleFilePath.Value, LoginEnvironment.DefaultSystemLocaleFileContent, 0x01A4, system, cancellationToken);
+        // ADR 0074, section 4: the static host table read first by hackdns, root-owned 0644.
+        await EnsureFileAsync(
+            Network.Local.HackDnsResolver.HostsFilePath.Value, Network.Local.HackDnsResolver.DefaultHostsFileContent, 0x01A4, system, cancellationToken);
+
+        // ADR 0125, section 3: pam_limits-style session limits, every line commented, root-owned 0644.
+        await EnsureDirectoryAsync("/etc/security", 0x01ED, system, cancellationToken);
+        await EnsureDirectoryAsync(ResourceLimitsConfiguration.LimitsDirectoryPath.Value, 0x01ED, system, cancellationToken);
+        await EnsureFileAsync(
+            ResourceLimitsConfiguration.LimitsFilePath.Value, ResourceLimitsConfiguration.DefaultLimitsFileContent, 0x01A4, system, cancellationToken);
+
+        // ADR 0077/0080: declarations of the hosted static sites (hackwebd), edited by an administrator.
+        await EnsureDirectoryAsync("/etc/hackweb", 0x01ED, system, cancellationToken);
+        await EnsureDirectoryAsync("/etc/hackweb/sites", 0x01ED, system, cancellationToken);
 
         string home = $"/home/{userName.Value}";
         await EnsureDirectoryAsync(home, 0x01C0, userProvisioning, cancellationToken);

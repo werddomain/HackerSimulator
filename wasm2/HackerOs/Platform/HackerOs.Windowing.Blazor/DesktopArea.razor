@@ -2,8 +2,9 @@
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
+@inject IServiceProvider LocalizationServices
 
-<main @ref="_desktopElement" class="desktop-area" aria-label="Desktop workspace">
+<main @ref="_desktopElement" class="desktop-area" aria-label="@L["Desktop.Workspace"]">
     <div class="desktop-grid" aria-hidden="true"></div>
     @if (BackgroundContent is not null)
     {
@@ -11,7 +12,7 @@
             @BackgroundContent
         </section>
     }
-    <section class="window-layer" aria-label="Open windows">
+    <section class="window-layer" aria-label="@L["Desktop.OpenWindows"]">
         @foreach (WindowRuntimeState window in Windows)
         {
             <WindowHost @key="window.Id"
@@ -22,7 +23,9 @@
                         OnToggleMaximize="OnToggleMaximize"
                         OnClose="OnClose"
                         OnBack="OnBack"
-                        OnGesture="OnGesture">
+                        OnWindowMenu="OnWindowMenu"
+                        OnGesture="OnGesture"
+                        Overlay="@(WindowOverlay?.Invoke(window))">
                 @if (WindowContent is not null)
                 {
                     @WindowContent(window)
@@ -53,6 +56,13 @@
     [Parameter]
     public RenderFragment? BackgroundContent { get; set; }
 
+    /// <summary>
+    /// Gets or sets content layered over one window's content area, such as the platform's
+    /// "not responding" dialog (ADR 0127 §3); rendered through <see cref="WindowHost.Overlay"/>.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<WindowRuntimeState>? WindowOverlay { get; set; }
+
     /// <summary>Gets or sets the focus request callback.</summary>
     [Parameter]
     public EventCallback<WindowId> OnFocus { get; set; }
@@ -72,6 +82,10 @@
     /// <summary>Gets or sets the Back request callback.</summary>
     [Parameter]
     public EventCallback<WindowId> OnBack { get; set; }
+
+    /// <summary>Gets or sets the window menu request callback (ADR 0095 §3).</summary>
+    [Parameter]
+    public EventCallback<WindowMenuRequest> OnWindowMenu { get; set; }
 
     /// <summary>Gets or sets the pointer gesture command callback.</summary>
     [Parameter]
@@ -125,4 +139,8 @@
             }
         }
     }
+
+    /// <summary>Gets the package's texts: the host's session language, or English without localization (ADR 0104).</summary>
+    private IStringLocalizer L => _localizer ??= PackageStringLocalizer.Resolve<Strings>(LocalizationServices);
+    private IStringLocalizer? _localizer;
 }

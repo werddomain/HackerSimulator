@@ -22,7 +22,7 @@ namespace HackerOs.AppSdk.FileView;
 /// </summary>
 public partial class FileView : IAsyncDisposable
 {
-    /// <summary>The custom <c>DataTransfer</c> MIME type <see cref="FileView.razor.js"/> reads/writes drag payloads under.</summary>
+    /// <summary>The custom <c>DataTransfer</c> MIME type <c>FileView.razor.js</c> reads/writes drag payloads under.</summary>
     internal const string DragMimeType = "application/vnd.hackeros.file-drag+json";
 
     private readonly List<FileViewItem> _items = [];
@@ -36,6 +36,9 @@ public partial class FileView : IAsyncDisposable
     private DotNetObjectReference<FileView>? _pasteCallbacks;
     private bool _pasteTargetAttached;
     private ElementReference _rootElement;
+
+    /// <summary>Item to scroll into view and focus after the next render (<see cref="RevealAsync"/>).</summary>
+    private string? _pendingReveal;
     private FileSystemDirectorySnapshot? _lastSnapshot;
 
     /// <summary>Scoped filesystem access supplied by the host app. Required.</summary>
@@ -48,6 +51,18 @@ public partial class FileView : IAsyncDisposable
     /// </summary>
     [Parameter]
     public IAppFileSystemWatchGateway? Watch { get; set; }
+
+    /// <summary>
+    /// Gets or sets the app this view belongs to, cascaded by the window host: its process's language
+    /// is the language of the view's texts (ADR 0104). Without one, the ambient app's language applies.
+    /// </summary>
+    [CascadingParameter]
+    public IAppExecutionContext? AppContext { get; set; }
+
+    /// <summary>Gets the library's texts in the owning app's language, shared by the mode renderers.</summary>
+    internal Microsoft.Extensions.Localization.IStringLocalizer<Strings> L => AppContext is { } context
+        ? HackerOs.AppSdk.Globalization.HackLocalization.GetLocalizer<Strings>(context)
+        : HackerOs.AppSdk.Globalization.HackLocalization.GetLocalizer<Strings>();
 
     /// <summary>Optional scoped intent access, required only when <see cref="FolderActivation"/> is <see cref="FileViewFolderActivationMode.NewWindow"/>.</summary>
     [Parameter]
@@ -97,7 +112,7 @@ public partial class FileView : IAsyncDisposable
     [Parameter]
     public bool AllowMultiSelect { get; set; } = true;
 
-    /// <summary>Whether drag & drop is enabled. Defaults to <see langword="true"/>.</summary>
+    /// <summary>Whether drag &amp; drop is enabled. Defaults to <see langword="true"/>.</summary>
     [Parameter]
     public bool AllowDragDrop { get; set; } = true;
 
@@ -259,6 +274,13 @@ public partial class FileView : IAsyncDisposable
             _pasteCallbacks ??= DotNetObjectReference.Create(this);
             _pasteTargetAttached = await module.InvokeAsync<bool>("attachPasteTarget", _rootElement, _pasteCallbacks);
         }
+
+        if (_pendingReveal is { } reveal && JavaScript is not null)
+        {
+            _pendingReveal = null;
+            IJSObjectReference module = await EnsureJsModuleAsync();
+            await module.InvokeAsync<bool>("revealItem", _rootElement, reveal);
+        }
     }
 
     private void ApplyCutPaths()
@@ -328,6 +350,42 @@ public partial class FileView : IAsyncDisposable
 
     /// <summary>Clears the current selection.</summary>
     public void ClearSelect() => ChangeSelection([]);
+
+    /// <summary>
+    /// Shows one item (ADR 0096, section 1, the file manager's half of <c>RevealFileIntent</c>):
+    /// navigates to its parent folder when needed, selects it alone and scrolls it into view once
+    /// rendered, giving it the keyboard focus.
+    /// </summary>
+    /// <param name="path">Absolute path of the file or folder to show.</param>
+    /// <param name="cancellationToken">Cancels the navigation.</param>
+    /// <returns><see langword="true"/> when the item exists in its folder and is now selected.</returns>
+    /// <exception cref="InvalidOperationException">The parent folder cannot be listed.</exception>
+    public async Task<bool> RevealAsync(VirtualPath path, CancellationToken cancellationToken = default)
+    {
+        int separator = path.Value.LastIndexOf('/');
+        if (path.Value == "/" || separator < 0)
+        {
+            return false;
+        }
+
+        VirtualPath parent = separator == 0 ? VirtualPath.Parse("/") : VirtualPath.Parse(path.Value[..separator]);
+        if (CurrentDirectory != parent)
+        {
+            await NavigateAsync(parent, cancellationToken);
+        }
+
+        string name = path.Value[(separator + 1)..];
+        FileViewItem? match = _items.Find(item => string.Equals(item.FileName, name, StringComparison.Ordinal));
+        if (match is null)
+        {
+            return false;
+        }
+
+        ChangeSelection([match]);
+        _pendingReveal = match.FullPath.Value;
+        StateHasChanged();
+        return true;
+    }
 
     /// <summary>Selects the item with the given file name, if present in the current directory.</summary>
     public void SelectByName(string fileName)
@@ -715,7 +773,7 @@ public partial class FileView : IAsyncDisposable
     /// Starts a native HTML5 drag for <paramref name="item"/> (drag-drop, <c>FV-006</c>): if <paramref name="item"/>
     /// isn't already selected it becomes the sole selection (matching common OS behavior — dragging an
     /// unselected row drags just that row), then the resulting selection is serialized onto the native
-    /// <c>DataTransfer</c> via <see cref="FileView.razor.js"/>.
+    /// <c>DataTransfer</c> via <c>FileView.razor.js</c>.
     /// </summary>
     internal async Task OnItemDragStartAsync(FileViewItem item, DragEventArgs args)
     {
@@ -1095,11 +1153,13 @@ public partial class FileView : IAsyncDisposable
     /// </summary>
     internal async Task CreateFolderInteractiveAsync()
     {
-        string name = "New Folder";
+        // The default name follows the app's language, as Nautilus names it "Nouveau dossier" in French.
+        string baseName = L["Menu.NewFolder.DefaultName"];
+        string name = baseName;
         int suffix = 2;
         while (_items.Any(item => string.Equals(item.FileName, name, StringComparison.Ordinal)))
         {
-            name = $"New Folder ({suffix++})";
+            name = $"{baseName} ({suffix++})";
         }
 
         await CreateFolderAsync(name);

@@ -2,6 +2,8 @@ using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Alias;
 
@@ -17,8 +19,10 @@ namespace HackerOs.Commands.Alias;
 /// </remarks>
 public sealed class AliasCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public AliasCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)
@@ -26,6 +30,7 @@ public sealed class AliasCommand : TerminalAppBase
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         bool remove = InvokedAs(context) is "unalias" or "rmalias";
         List<string> positional = [];
         foreach (string arg in context.Arguments)
@@ -50,7 +55,7 @@ public sealed class AliasCommand : TerminalAppBase
         {
             if (positional.Count == 0)
             {
-                context.StandardError.WriteLine("unalias: usage: unalias <name...>");
+                context.StandardError.WriteLine(text["Unalias.Usage"]);
                 return 1;
             }
 
@@ -64,14 +69,14 @@ public sealed class AliasCommand : TerminalAppBase
                 }
                 else
                 {
-                    context.StandardError.WriteLine($"unalias: {name}: not found");
+                    context.StandardError.WriteLine(text["Unalias.NotFound", name]);
                     status = 1;
                 }
             }
 
             if (changed && !await SaveAliasesAsync(context, aliasFilePath, home, aliases, fileRevision, cancellationToken))
             {
-                context.StandardError.WriteLine("unalias: failed to save aliases");
+                context.StandardError.WriteLine(text["Unalias.SaveFailed"]);
                 status = 1;
             }
 
@@ -105,14 +110,14 @@ public sealed class AliasCommand : TerminalAppBase
             }
             else
             {
-                context.StandardError.WriteLine($"alias: {arg}: not found");
+                context.StandardError.WriteLine(text["NotFound", arg]);
                 exitCode = 1;
             }
         }
 
         if (wrote && !await SaveAliasesAsync(context, aliasFilePath, home, aliases, fileRevision, cancellationToken))
         {
-            context.StandardError.WriteLine("alias: failed to save aliases");
+            context.StandardError.WriteLine(text["SaveFailed"]);
             exitCode = 1;
         }
 

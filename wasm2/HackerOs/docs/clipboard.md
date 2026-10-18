@@ -50,7 +50,8 @@ string? text = await HackClipboard.GetTextAsync();       // y compris un texte c
 ```
 
 Une app ne parle jamais à `navigator.clipboard`. `BrowserClipboard`
-(`HackerOs.AppSdk.Blazor`) est `[Obsolete]` : il contourne le réglage.
+(`HackerOs.AppSdk.Blazor`), qui contournait le réglage, a été retiré au gel du
+SDK 1.0 (ADR 0114 §3).
 
 ### OS
 
@@ -131,5 +132,5 @@ la convention de l'ADR 0044.
 - [x] `BrowserHostClipboardChannel` et `hostClipboard.js` dans Infrastructure.Browser.
 - [x] Enregistrement dans `AddHackerOsEcosystem`, démarrage dans `App.razor`.
 - [x] `FileView` : Ctrl+V par `paste`, fichiers de l'hôte collés importés comme un dépôt.
-- [x] Diagnostic copie par `HackClipboard` (`clipboard.write`) ; `BrowserClipboard` `[Obsolete]`.
+- [x] Diagnostic copie par `HackClipboard` (`clipboard.write`) ; `BrowserClipboard` `[Obsolete]`, puis retiré en 1.0 (ADR 0114).
 - [x] Tests et documentation.

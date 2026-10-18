@@ -1,6 +1,9 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Commands.Common;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Touch;
 
@@ -10,19 +13,22 @@ namespace HackerOs.Commands.Touch;
 /// </summary>
 public sealed class TouchCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public TouchCommand(AppManifest manifest) : base(manifest) { }
 
+    /// <inheritdoc />
     public override async ValueTask<int> ExecuteAsync(
         TerminalExecutionContext context,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
         var paths = context.Arguments.Where(a => !a.StartsWith('-')).ToList();
         if (paths.Count == 0)
         {
-            context.StandardError.WriteLine("touch: missing file operand");
+            context.StandardError.WriteLine(text["MissingOperand"]);
             return 1;
         }
 
@@ -34,7 +40,7 @@ public sealed class TouchCommand : TerminalAppBase
                 new FileSystemStatRequest(VirtualPath.Parse(GetParentPath(resolved))), cancellationToken);
             if (!parentStat.Succeeded || parentStat.Value is null)
             {
-                context.StandardError.WriteLine($"touch: cannot touch '{path}': No such file or directory");
+                context.StandardError.WriteLine(text["CannotTouch", path, CommandText.Reason(context, Errno.NotFound)]);
                 status = 1;
                 continue;
             }
@@ -48,7 +54,7 @@ public sealed class TouchCommand : TerminalAppBase
             var result = await context.App.FileSystem.CreateAsync(req, cancellationToken);
             if (!result.Succeeded && result.Transaction.Error?.Code != FileSystemErrorCode.AlreadyExists)
             {
-                context.StandardError.WriteLine($"touch: cannot touch '{path}': {result.Transaction.Error?.Code.ToString() ?? "Operation failed"}");
+                context.StandardError.WriteLine(text["CannotTouch", path, result.Transaction.Error?.Code.ToString() ?? text["Reason.Failed"]]);
                 status = 1;
             }
         }

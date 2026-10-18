@@ -1,7 +1,10 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.Commands.Common;
 using HackerOs.AppSdk.IO;
 using HackerOs.Simulation.Abstractions.FileSystem;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Rm;
 
@@ -16,6 +19,7 @@ namespace HackerOs.Commands.Rm;
 /// </remarks>
 public sealed class RmCommand : TerminalAppBase
 {
+    /// <summary>Initializes the command with its manifest.</summary>
     public RmCommand(AppManifest manifest) : base(manifest) { }
 
     /// <inheritdoc />
@@ -25,10 +29,11 @@ public sealed class RmCommand : TerminalAppBase
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
 
-        if (!RmOptions.TryParse(context.Arguments, out RmOptions options, out string? usageError))
+        if (!RmOptions.TryParse(context.Arguments, text, out RmOptions options, out string? usageError))
         {
-            context.StandardError.WriteLine($"rm: {usageError}");
+            context.StandardError.WriteLine(text["Error", usageError!]);
             return 1;
         }
 
@@ -39,7 +44,7 @@ public sealed class RmCommand : TerminalAppBase
                 return 0;
             }
 
-            context.StandardError.WriteLine("rm: missing operand");
+            context.StandardError.WriteLine(text["MissingOperand"]);
             return 1;
         }
 
@@ -59,6 +64,7 @@ public sealed class RmCommand : TerminalAppBase
     internal static async Task<bool> RemoveAsync(
         TerminalExecutionContext context, string target, RmOptions options, CancellationToken cancellationToken)
     {
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         string resolved = ResolvePath(context.WorkingDirectory, target);
         var entryStat = await context.App.FileSystem.StatAsync(
             new FileSystemStatRequest(VirtualPath.Parse(resolved), FileSystemLinkBehavior.NoFollow), cancellationToken);
@@ -71,17 +77,17 @@ public sealed class RmCommand : TerminalAppBase
                     return true;
                 }
 
-                context.StandardError.WriteLine($"rm: cannot remove '{target}': No such file or directory");
+                context.StandardError.WriteLine(text["CannotRemove", target, CommandText.Reason(context, Errno.NotFound)]);
                 return false;
             }
 
-            context.StandardError.WriteLine($"rm: cannot remove '{target}': {entryStat.Error?.Code}");
+            context.StandardError.WriteLine(text["CannotRemove", target, entryStat.Error?.Code.ToString() ?? string.Empty]);
             return false;
         }
 
         if (entryStat.Value.Metadata.Kind == FileSystemEntryKind.Directory && !options.Recursive)
         {
-            context.StandardError.WriteLine($"rm: cannot remove '{target}': Is a directory");
+            context.StandardError.WriteLine(text["CannotRemove", target, CommandText.Reason(context, Errno.IsDirectory)]);
             return false;
         }
 
@@ -93,6 +99,7 @@ public sealed class RmCommand : TerminalAppBase
     private static async Task<bool> MoveToTrashAsync(
         TerminalExecutionContext context, string target, string resolved, CancellationToken cancellationToken)
     {
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         try
         {
             await HackTrash.MoveToTrashAsync(resolved, cancellationToken);
@@ -101,17 +108,17 @@ public sealed class RmCommand : TerminalAppBase
         catch (HackFileNotFoundException)
         {
             // Vanished between our stat and the move: same outcome as a missing operand.
-            context.StandardError.WriteLine($"rm: cannot remove '{target}': No such file or directory");
+            context.StandardError.WriteLine(text["CannotRemove", target, CommandText.Reason(context, Errno.NotFound)]);
             return false;
         }
         catch (UnauthorizedAccessException)
         {
-            context.StandardError.WriteLine($"rm: cannot remove '{target}': Permission denied");
+            context.StandardError.WriteLine(text["CannotRemove", target, CommandText.Reason(context, Errno.PermissionDenied)]);
             return false;
         }
         catch (IOException exception)
         {
-            context.StandardError.WriteLine($"rm: cannot remove '{target}': {exception.Message}");
+            context.StandardError.WriteLine(text["CannotRemove", target, exception.Message]);
             return false;
         }
     }
@@ -124,11 +131,12 @@ public sealed class RmCommand : TerminalAppBase
         FileSystemEntrySnapshot entry,
         CancellationToken cancellationToken)
     {
+        IStringLocalizer<Strings> text = context.App.GetLocalizer<Strings>();
         var parentStat = await context.App.FileSystem.StatAsync(
             new FileSystemStatRequest(VirtualPath.Parse(GetParentPath(resolved))), cancellationToken);
         if (!parentStat.Succeeded || parentStat.Value is null)
         {
-            context.StandardError.WriteLine($"rm: cannot remove '{target}': No such file or directory");
+            context.StandardError.WriteLine(text["CannotRemove", target, CommandText.Reason(context, Errno.NotFound)]);
             return false;
         }
 
@@ -146,9 +154,9 @@ public sealed class RmCommand : TerminalAppBase
 
         FileSystemErrorCode? code = result.Transaction.Error?.Code;
         string reason = code is FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied
-            ? "Permission denied"
-            : code?.ToString() ?? "unknown error";
-        context.StandardError.WriteLine($"rm: cannot remove '{target}': {reason}");
+            ? CommandText.Reason(context, Errno.PermissionDenied)
+            : code?.ToString() ?? text["Reason.Unknown"];
+        context.StandardError.WriteLine(text["CannotRemove", target, reason]);
         return false;
     }
 
@@ -169,8 +177,11 @@ public sealed class RmCommand : TerminalAppBase
 /// <param name="Targets">Operands, in order.</param>
 internal sealed record RmOptions(bool Recursive, bool Force, bool Permanent, IReadOnlyList<string> Targets)
 {
-    /// <summary>Parses GNU-style options: grouped short flags (<c>-rf</c>) and <c>--</c> to end options.</summary>
-    public static bool TryParse(IReadOnlyList<string> arguments, out RmOptions options, out string? error)
+    /// <summary>
+    /// Parses GNU-style options: grouped short flags (<c>-rf</c>) and <c>--</c> to end options.
+    /// <paramref name="text"/> words <paramref name="error"/> in the language of the calling process.
+    /// </summary>
+    public static bool TryParse(IReadOnlyList<string> arguments, IStringLocalizer<Strings> text, out RmOptions options, out string? error)
     {
         bool recursive = false, force = false, permanent = false, endOfOptions = false;
         List<string> targets = [];
@@ -203,7 +214,7 @@ internal sealed record RmOptions(bool Recursive, bool Force, bool Permanent, IRe
 
             if (argument.StartsWith("--", StringComparison.Ordinal))
             {
-                error = $"unrecognized option '{argument}'";
+                error = text["UnrecognizedOption", argument];
                 return false;
             }
 
@@ -218,7 +229,7 @@ internal sealed record RmOptions(bool Recursive, bool Force, bool Permanent, IRe
                         force = true;
                         break;
                     default:
-                        error = $"invalid option -- '{flag}'";
+                        error = text["InvalidOption", flag];
                         return false;
                 }
             }

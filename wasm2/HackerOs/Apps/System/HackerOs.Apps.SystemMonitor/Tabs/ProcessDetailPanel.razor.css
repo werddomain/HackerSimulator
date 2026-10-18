@@ -23,7 +23,7 @@
 }
 
 .detail-subtitle {
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-text-muted, #6e7681);
     word-break: break-all;
 }
@@ -38,14 +38,14 @@ h4 {
     align-items: baseline;
     gap: 8px;
     margin: 12px 0 6px;
-    font-size: 11px;
+    font-size: 0.6875rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--hos-text-secondary, #8b949e);
 }
 
 .detail-source {
-    font-size: 10px;
+    font-size: 0.625rem;
     text-transform: none;
     letter-spacing: 0;
     color: var(--hos-text-muted, #6e7681);
@@ -56,7 +56,7 @@ h4 {
     grid-template-columns: max-content minmax(0, 1fr);
     gap: 3px 12px;
     margin: 0;
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .kv dt {
@@ -79,14 +79,14 @@ h4 {
     background: var(--hos-bg-base, #0d1117);
     border: 1px solid var(--hos-border-subtle, #30363d);
     border-radius: 3px;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-accent, #42d392);
     word-break: break-all;
 }
 
 .detail-muted {
     margin: 0;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-muted, #6e7681);
 }
 
@@ -96,7 +96,7 @@ h4 {
     border: none;
     background: none;
     font: inherit;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-info, #58a6ff);
     cursor: pointer;
     text-decoration: underline dotted;

@@ -69,6 +69,17 @@ public static partial class AppManifestValidator
             AddError(errors, "manifest.autoStart.forbidden", "autoStart", "Only service apps can declare autoStart.");
         }
 
+        if (manifest.ServiceStartup is not null && manifest.Kind != AppKind.Service)
+        {
+            // ADR 0097 section 4: boot or login only means something for a service.
+            AddError(errors, "manifest.serviceStartup.forbidden", "serviceStartup", "Only service apps can declare serviceStartup.");
+        }
+
+        if (manifest.ServiceStartup is { } startup && !Enum.IsDefined(startup))
+        {
+            AddError(errors, "manifest.serviceStartup.invalid", "serviceStartup", "serviceStartup must be 'login' or 'boot'.");
+        }
+
         ValidateKindSpecificFields(manifest, errors);
 
         return new ManifestValidationResult(errors);
@@ -205,11 +216,76 @@ public static partial class AppManifestValidator
 
         if (!Enum.IsDefined(execution) || execution == AppExecutionHost.Default)
         {
-            AddError(errors, "manifest.execution.invalid", "execution", "Execution must be mainThread, pool or dedicated.");
+            AddError(errors, "manifest.execution.invalid", "execution", "Execution must be mainThread, pool, dedicated or web.");
         }
         else if (manifest.Kind == AppKind.Window && execution != AppExecutionHost.MainThread)
         {
             AddError(errors, "manifest.execution.window", "execution", "Window apps run on the main thread: they need the DOM.");
+        }
+        else if (manifest.Kind == AppKind.Web && execution is not (AppExecutionHost.Web or AppExecutionHost.MainThread))
+        {
+            // ADR 0073, section 1: the server code of every site shares the web worker.
+            AddError(errors, "manifest.execution.web", "execution", "Web apps run in the shared web worker (web) or on the main thread.");
+        }
+        else if (manifest.Kind != AppKind.Web && execution == AppExecutionHost.Web)
+        {
+            AddError(errors, "manifest.execution.web-only", "execution", "Only web apps run in the shared web worker.");
+        }
+    }
+
+    /// <summary>
+    /// Checks the web part of ADR 0073: a web app declares at least one valid, distinct URL; no
+    /// other kind declares any; and a site never asks for the file system (its data lives in the
+    /// host browser's IndexedDB, section 3).
+    /// </summary>
+    private static void ValidateWeb(AppManifest manifest, List<ManifestValidationError> errors)
+    {
+        if (manifest.Kind != AppKind.Web)
+        {
+            if (manifest.Web is not null)
+            {
+                AddError(errors, "manifest.web.forbidden", "web", "Only web apps can declare web URLs.");
+            }
+
+            return;
+        }
+
+        if (manifest.Web is not { Urls.Count: > 0 } web)
+        {
+            AddError(errors, "manifest.web.urls.required", "web.urls", "Web apps must declare at least one URL, e.g. 'http://intranet.hack/'.");
+        }
+        else
+        {
+            HashSet<string> seen = new(StringComparer.Ordinal);
+            foreach (string url in web.Urls)
+            {
+                if (!WebAppUrls.TryParse(url, allowWildcardHost: false, out WebBinding binding, out string? error))
+                {
+                    AddError(errors, "manifest.web.url.invalid", "web.urls", error!);
+                }
+                else if (!seen.Add(binding.ToString()))
+                {
+                    AddError(errors, "manifest.web.url.duplicate", "web.urls", $"URL '{url}' is declared twice.");
+                }
+            }
+        }
+
+        if (manifest.Web?.Blazor is { } blazor)
+        {
+            // ADR 0084, section 1: lazy loading fetches the entry-point assembly only, as for components.
+            RequireText(blazor.Type, "web.blazor.type", errors);
+            if (!string.Equals(blazor.Assembly, manifest.EntryPoint?.Assembly, StringComparison.Ordinal))
+            {
+                AddError(errors, "manifest.web.blazor.assembly", "web.blazor.assembly", $"The Blazor root '{blazor.Type}' must live in the app's entry-point assembly.");
+            }
+        }
+
+        foreach (string capability in manifest.Capabilities)
+        {
+            if (capability.StartsWith("filesystem.", StringComparison.Ordinal))
+            {
+                AddError(errors, "manifest.web.filesystem", "capabilities", $"A web site cannot request '{capability}': its data lives in the browser's database, not in the OS file system (ADR 0073).");
+            }
         }
     }
 
@@ -249,6 +325,13 @@ public static partial class AppManifestValidator
         }
 
         ValidateExecution(manifest, errors);
+        if (manifest.OomScoreAdj is < -1000 or > 1000)
+        {
+            AddError(errors, "manifest.oomScoreAdj.range", "oomScoreAdj", "oomScoreAdj must be between -1000 and 1000 (ADR 0126).");
+        }
+
+        ValidateWindow(manifest, errors);
+        ValidateWeb(manifest, errors);
         ValidateComponents(manifest, errors);
 
         foreach (FileHandlerManifest handler in manifest.FileHandlers)
@@ -265,6 +348,57 @@ public static partial class AppManifestValidator
 
             ValidateUniqueValues(handler.Extensions, "fileHandlers.extensions", errors);
             ValidateUniqueValues(handler.Actions, "fileHandlers.actions", errors);
+        }
+    }
+
+    /// <summary>
+    /// Checks the declared window sizes of ADR 0095 §2: only a window app has a window, every size is
+    /// positive, the window opens no smaller than its minimum and no larger than its maximum.
+    /// </summary>
+    private static void ValidateWindow(AppManifest manifest, List<ManifestValidationError> errors)
+    {
+        if (manifest.Window is not { } window)
+        {
+            return;
+        }
+
+        if (manifest.Kind != AppKind.Window)
+        {
+            AddError(errors, "manifest.window.forbidden", "window", "Only window apps can declare window sizes.");
+            return;
+        }
+
+        bool sizesValid = true;
+        foreach ((int? value, string field) in new (int?, string)[]
+        {
+            (window.DefaultWidth, "window.defaultWidth"),
+            (window.DefaultHeight, "window.defaultHeight"),
+            (window.MinWidth, "window.minWidth"),
+            (window.MinHeight, "window.minHeight"),
+            (window.MaxWidth, "window.maxWidth"),
+            (window.MaxHeight, "window.maxHeight")
+        })
+        {
+            if (value is <= 0)
+            {
+                AddError(errors, "manifest.window.size.invalid", field, "Window sizes must be positive.");
+                sizesValid = false;
+            }
+        }
+
+        if (!sizesValid)
+        {
+            return;
+        }
+
+        if (window.MinWidth > window.DefaultWidth || window.MinHeight > window.DefaultHeight)
+        {
+            AddError(errors, "manifest.window.minimum.exceedsDefault", "window", "The minimum window size cannot be larger than the default size.");
+        }
+
+        if (window.DefaultWidth > window.MaxWidth || window.DefaultHeight > window.MaxHeight)
+        {
+            AddError(errors, "manifest.window.default.exceedsMaximum", "window", "The default window size cannot be larger than the maximum size.");
         }
     }
 

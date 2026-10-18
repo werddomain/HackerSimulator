@@ -50,17 +50,4 @@ public interface IAppClipboardGateway
     /// <summary>Empties the clipboard. Requires <c>clipboard.write</c>.</summary>
     /// <param name="cancellationToken">Cancels the request.</param>
     ValueTask ClearAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>Gets the file paths on the clipboard, or an empty list. Requires <c>clipboard.read</c>.</summary>
-    /// <param name="cancellationToken">Cancels the request.</param>
-    [Obsolete("Use GetFileDropListAsync, which also tells whether the files were cut or copied (ADR 0056, section 12).")]
-    async ValueTask<IReadOnlyList<string>> GetFileReferencesAsync(CancellationToken cancellationToken = default) =>
-        (await GetFileDropListAsync(cancellationToken).ConfigureAwait(false))?.Paths ?? [];
-
-    /// <summary>Copies file paths to the clipboard. Requires <c>clipboard.write</c>.</summary>
-    /// <param name="filePaths">Absolute paths.</param>
-    /// <param name="cancellationToken">Cancels the request.</param>
-    [Obsolete("Use SetFileDropListAsync with HackClipboardFileOperation.Copy (ADR 0056, section 12).")]
-    ValueTask SetFileReferencesAsync(IReadOnlyList<string> filePaths, CancellationToken cancellationToken = default) =>
-        SetFileDropListAsync(new HackClipboardFileList(HackClipboardFileOperation.Copy, filePaths ?? []), cancellationToken);
 }

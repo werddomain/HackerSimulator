@@ -118,8 +118,62 @@ internal static class PwaTestSupport
         }
     }
 
+    /// <summary>Body written over a cached boot resource by <see cref="CorruptCachedBootResourceAsync"/>.</summary>
+    public const string CorruptedBody = "CORRUPTED-BY-TEST";
+
+    /// <summary>Waits for the onboarding form, the first view of a booted OS with no profile yet.</summary>
+    public static Task WaitForOnboardingAsync(IPage page, float timeoutMs = 20000) =>
+        page.GetByLabel("Login name").WaitForAsync(
+            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = timeoutMs });
+
+    /// <summary>
+    /// Overwrites <c>System.Private.CoreLib.*.wasm</c> (needed by every boot) in the service
+    /// worker's release cache, as a damaged disk or an interrupted write would, and returns its URL.
+    /// </summary>
+    public static Task<string> CorruptCachedBootResourceAsync(IPage page, string cacheName) =>
+        page.EvaluateAsync<string>(
+            """
+            async ([cacheName, body]) => {
+                const cache = await caches.open(cacheName);
+                const target = (await cache.keys()).find(r => /System\.Private\.CoreLib\.[^/]*\.wasm$/.test(r.url));
+                await cache.put(target, new Response(body, { headers: { 'Content-Type': 'application/wasm' } }));
+                return target.url;
+            }
+            """,
+            new object[] { cacheName, CorruptedBody });
+
+    /// <summary>Byte length of <paramref name="url"/> in the given cache, or -1 when it is absent.</summary>
+    public static Task<int> GetCachedLengthAsync(IPage page, string cacheName, string url) =>
+        page.EvaluateAsync<int>(
+            """
+            async ([cacheName, url]) => {
+                const response = await (await caches.open(cacheName)).match(url);
+                return response ? (await response.arrayBuffer()).byteLength : -1;
+            }
+            """,
+            new object[] { cacheName, url });
+
     public static Task<string[]> GetCacheKeysAsync(IPage page) =>
         page.EvaluateAsync<string[]>("async () => await caches.keys()");
+
+    /// <summary>
+    /// The service worker's caches other than the release ones: <c>hackeros-isolation</c> keeps the
+    /// cross-origin isolation choice of this origin across releases (ADR 0131 §5, ADR 0143), so it is
+    /// never purged with an old release.
+    /// </summary>
+    public static readonly IReadOnlySet<string> ReleaseIndependentCaches = new HashSet<string>(StringComparer.Ordinal) { "hackeros-isolation" };
+
+    /// <summary>
+    /// Asserts that the only release cache is <paramref name="expectedReleaseCache"/> and that every
+    /// other cache is one of <see cref="ReleaseIndependentCaches"/>.
+    /// </summary>
+    public static async Task AssertOnlyReleaseCacheAsync(IPage page, string expectedReleaseCache)
+    {
+        string[] cacheKeys = await GetCacheKeysAsync(page);
+        Assert.Equal([expectedReleaseCache], cacheKeys.Where(key => key.StartsWith("hackeros-cache-", StringComparison.Ordinal)));
+        Assert.All(cacheKeys.Where(key => !key.StartsWith("hackeros-cache-", StringComparison.Ordinal)),
+            key => Assert.Contains(key, ReleaseIndependentCaches));
+    }
 
     public static Task<string> GetAssetsManifestVersionAsync(IPage page) =>
         page.EvaluateAsync<string>("async () => (await (await fetch('service-worker-assets.js')).text()).match(/\"version\"\\s*:\\s*\"([^\"]+)\"/)[1]");
@@ -245,8 +299,20 @@ internal static class PwaTestSupport
         await addressInput.PressAsync("Enter");
 
         ILocator row = page.Locator("tr.entry-row", new PageLocatorOptions { HasText = fileName });
-        await row.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20000 });
-        await row.ClickAsync();
+        // The listing can reload once more right after the navigation and drop the selection
+        // (same race HackerOs.UI.E2E.Tests' SelectFileExplorerEntryAsync handles): click until the
+        // row reports itself selected, so "Download" is enabled.
+        for (int attempt = 1; ; attempt++)
+        {
+            await row.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20000 });
+            await row.ClickAsync();
+            await page.WaitForTimeoutAsync(500);
+            string? classes = await row.GetAttributeAsync("class");
+            if (classes?.Split(' ').Contains("selected") == true || attempt >= 5)
+            {
+                break;
+            }
+        }
 
         int countBefore = await page.EvaluateAsync<int>("window.__pwaCaptures.length");
         await page.GetByRole(AriaRole.Button, new() { Name = "Download" }).ClickAsync();

@@ -45,8 +45,19 @@ public interface IShellSession
     /// <exception cref="ArgumentException">The name is not a valid shell identifier.</exception>
     void UnsetVariable(string name);
 
-    /// <summary>Gets the installed commands (name, aliases, usage, description), ordered by name.</summary>
+    /// <summary>
+    /// Gets the installed commands (name, aliases, usage, description), ordered by name, with
+    /// descriptions and usages in the shell's language (its <c>LANG</c>, ADR 0104).
+    /// </summary>
     IReadOnlyList<ShellCommandInfo> GetCommands();
+
+    /// <summary>
+    /// Gets the installed commands with descriptions and usages in <paramref name="culture"/>,
+    /// e.g. the language of the <c>help</c> process asking (ADR 0104, section 4). Defaults to
+    /// <see cref="GetCommands()"/> so existing implementations keep compiling.
+    /// </summary>
+    /// <param name="culture">The language wanted: <c>en</c> or <c>fr</c>.</param>
+    IReadOnlyList<ShellCommandInfo> GetCommands(System.Globalization.CultureInfo culture) => GetCommands();
 
     /// <summary>
     /// Asks the shell to exit once the current command returns, like the <c>exit</c> built-in
@@ -123,9 +134,32 @@ public interface IShellSession
         TextWriter standardOutput,
         TextWriter standardError,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Runs one command at another niceness (ADR 0127), as <c>nice</c> does: the command starts as a
+    /// child of the caller (the <c>nice</c> process) in the shell's directory, with the caller's
+    /// niceness plus <paramref name="adjustment"/>, its output going to <paramref name="standardOutput"/>
+    /// and <paramref name="standardError"/>. Like GNU <c>nice</c>, a negative adjustment without root
+    /// prints <c>nice: cannot set niceness: Permission denied</c> and runs the command at the caller's
+    /// niceness. The target never receives access to the shell. Defaults to refusing, so existing
+    /// implementations keep compiling.
+    /// </summary>
+    /// <param name="arguments">The command's <c>argv</c>, command name first.</param>
+    /// <param name="adjustment">Added to the caller's niceness; the result is clamped to <c>-20</c>..<c>19</c>.</param>
+    /// <param name="standardOutput">Where the command writes its output.</param>
+    /// <param name="standardError">Where the command and the shell write errors.</param>
+    /// <param name="cancellationToken">Interrupts the command.</param>
+    /// <returns>The command's exit code, or <c>125</c> (shell built-in) or <c>127</c> (not found), GNU <c>nice</c>'s codes.</returns>
+    ValueTask<int> RunNicedAsync(
+        IReadOnlyList<string> arguments,
+        int adjustment,
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken) =>
+        throw new NotSupportedException("This shell cannot run a command at another niceness.");
 }
 
-/// <summary>One installed command, as listed by <see cref="IShellSession.GetCommands"/> for <c>help</c>.</summary>
+/// <summary>One installed command, as listed by <see cref="IShellSession.GetCommands()"/> for <c>help</c>.</summary>
 /// <param name="Name">The command name typed in the shell.</param>
 /// <param name="Aliases">Other names declared by the command's manifest.</param>
 /// <param name="Usage">Usage line from the manifest.</param>

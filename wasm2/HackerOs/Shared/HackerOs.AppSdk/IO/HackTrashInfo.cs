@@ -9,7 +9,12 @@ namespace HackerOs.AppSdk.IO;
 /// </summary>
 /// <param name="OriginalPath">Decoded absolute original path, or <see langword="null"/> when missing or invalid.</param>
 /// <param name="DeletedAt">Deletion time in the local time zone, or <see langword="null"/> when missing or invalid.</param>
-internal sealed record HackTrashInfo(string? OriginalPath, DateTimeOffset? DeletedAt)
+/// <param name="DeletedOnAnotherDevice">
+/// The synchronization put the element here because it was deleted on another device (ADR 0101
+/// section 1): <c>X-HackerOS-Origin=deleted-on-another-device</c>, an extension key other
+/// implementations ignore.
+/// </param>
+internal sealed record HackTrashInfo(string? OriginalPath, DateTimeOffset? DeletedAt, bool DeletedOnAnotherDevice = false)
 {
     private const string Header = "[Trash Info]";
     private const string DateFormat = "yyyy-MM-ddTHH:mm:ss";
@@ -37,6 +42,7 @@ internal sealed record HackTrashInfo(string? OriginalPath, DateTimeOffset? Delet
         bool inSection = false;
         string? path = null;
         DateTimeOffset? deletedAt = null;
+        bool deletedOnAnotherDevice = false;
 
         foreach (string rawLine in content.Split('\n'))
         {
@@ -68,9 +74,13 @@ internal sealed record HackTrashInfo(string? OriginalPath, DateTimeOffset? Delet
             {
                 deletedAt = ParseDate(value);
             }
+            else if (key == "X-HackerOS-Origin")
+            {
+                deletedOnAnotherDevice = value == "deleted-on-another-device";
+            }
         }
 
-        return inSection || path is not null ? new HackTrashInfo(path, deletedAt) : null;
+        return inSection || path is not null ? new HackTrashInfo(path, deletedAt, deletedOnAnotherDevice) : null;
     }
 
     /// <summary>

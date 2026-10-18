@@ -1,5 +1,11 @@
 # Hosting Model
 
+> **Fait le 2026-10-18 (`exec/8-server-wasm`) :** l'[ADR 0130](../adr/0130-server-serves-webassembly-os-and-api.md)
+> remplace les ADR 0027 et 0036. `HackerOs.Server` sert l'OS de l'Ecosystem en
+> WebAssembly et ne garde que son API ; l'OS s'y connecte tout seul (ADR 0134).
+> État actuel : [`../server-hosting.md`](../server-hosting.md). Ce document
+> décrit l'état d'avant.
+
 ## Purpose
 
 HackerOS is one set of Razor components, apps, and Platform/Infrastructure
@@ -34,6 +40,13 @@ compile-time dependency on the server. This is the host that ships — it must
 build, publish, and run fully offline on its own. See
 [`ecosystem-host.md`](ecosystem-host.md).
 
+> **Update (v3/6, ADR 0098 §2):** the OS itself (`App.razor`, boot coordinator,
+> `AddHackerOsEcosystem`, browser adapters, `css/app.css`) moved to the Razor
+> Class Library `OS/HackerOs.Ecosystem.Host` (namespace unchanged, so
+> `HackerOs.Ecosystem.App` now lives in that assembly). `OS/HackerOs.Ecosystem`
+> keeps its page, service worker, app references and a three-line `Program.cs`
+> calling `AddHackerOsBrowserHost`. See [`../sdk-packages.md`](../sdk-packages.md).
+
 ### 2. `test/test` — the interactive debug harness
 
 `test/test/test.csproj` is a Blazor **Web App** (ASP.NET Core host, `Program.cs`
@@ -65,8 +78,10 @@ backend capabilities:
   connection via Settings).
 - **Proxy** — server-validated HTTP/TCP/UDP proxying for authorized apps
   reaching the real network. Consumed client-side per ADR 0028
-  (`IProxyClient`), currently wired into `ping`'s real-host fallback only —
-  see `docs/server-implementation-pass.md` for the rest.
+  (`IProxyClient`). Since `v3/10-server-proxy` it relays every HTTP method
+  with its body, TCP and UDP streams over WebSockets, checks the app's grant
+  itself and reads its policy from `appsettings.json` — see
+  [`../server-network-relay.md`](../server-network-relay.md).
 
 Browser-local storage (IndexedDB) remains the source of truth regardless of
 whether a device is connected to the optional server — connecting is always

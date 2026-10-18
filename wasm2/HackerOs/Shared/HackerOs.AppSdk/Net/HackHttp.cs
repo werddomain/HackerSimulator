@@ -1,5 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
-using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using HackerOs.Simulation.Abstractions.Network;
 
 namespace HackerOs.AppSdk.Net;
@@ -13,25 +15,29 @@ public sealed record HackCookie(string Domain, string Name, string Value);
 /// <summary>One HTTP request as the gateway receives it; apps build it through <see cref="HackHttpClient"/>.</summary>
 /// <param name="Method">HTTP method, upper case (<c>GET</c>, <c>HEAD</c>, <c>POST</c>…).</param>
 /// <param name="RequestUri">Absolute <c>http</c> or <c>https</c> URI.</param>
-/// <param name="Headers">Request headers.</param>
-/// <param name="Form">URL-encoded form fields of a <c>POST</c>, or <see langword="null"/>.</param>
+/// <param name="Headers">Request headers; <c>Content-Type</c> and <c>Content-Length</c> come from <paramref name="Content"/>.</param>
+/// <param name="Content">The body (ADR 0074, section 1): a form, text, JSON or bytes; <see langword="null"/> for none.</param>
 /// <param name="Cookies">Every cookie of the caller's container; the OS sends those of the target host.</param>
 public sealed record HackHttpRequest(
     string Method,
     Uri RequestUri,
     IReadOnlyList<KeyValuePair<string, string>> Headers,
-    IReadOnlyList<KeyValuePair<string, string>>? Form,
+    HackHttpContent? Content,
     IReadOnlyList<HackCookie> Cookies);
 
 /// <summary>
 /// An HTTP response, the parts of <see cref="HttpResponseMessage"/> HackerOS apps use, plus the
-/// structured page a simulated site returns.
+/// structured page a historical simulated site returns.
 /// </summary>
+/// <remarks>
+/// ADR 0074, section 1: <see cref="Content"/> gives the body as text (decoded with the charset of
+/// <see cref="ContentType"/>), <see cref="ContentBytes"/> the raw bytes.
+/// </remarks>
 /// <param name="StatusCode">Status code, e.g. 200.</param>
 /// <param name="ReasonPhrase">Reason phrase, e.g. <c>OK</c>.</param>
 /// <param name="RequestUri">Final URI, after the redirects.</param>
 /// <param name="Headers">Response headers.</param>
-/// <param name="Content">Body bytes; empty for <c>HEAD</c>. A simulated page's body is its text rendering.</param>
+/// <param name="ContentBytes">Body bytes; empty for <c>HEAD</c>. A simulated page's body is its text rendering.</param>
 /// <param name="Page">Structured page of a simulated site, which the browser renders; <see langword="null"/> otherwise.</param>
 /// <param name="RedirectCount">Number of redirects followed.</param>
 /// <param name="SetCookies">Cookies the exchange set, already stored in the client's container.</param>
@@ -40,7 +46,7 @@ public sealed record HackHttpResponse(
     string ReasonPhrase,
     Uri RequestUri,
     IReadOnlyList<KeyValuePair<string, string>> Headers,
-    byte[] Content,
+    byte[] ContentBytes,
     SimulatedPage? Page,
     int RedirectCount,
     IReadOnlyList<HackCookie> SetCookies)
@@ -48,8 +54,34 @@ public sealed record HackHttpResponse(
     /// <summary>Gets whether <see cref="StatusCode"/> is in the 200–299 range.</summary>
     public bool IsSuccessStatusCode => StatusCode is >= 200 and <= 299;
 
-    /// <summary>Decodes <see cref="Content"/> as UTF-8.</summary>
-    public string ReadAsString() => Encoding.UTF8.GetString(Content);
+    /// <summary>Gets the <c>Content-Type</c> header, or <see langword="null"/> when the response has none.</summary>
+    public string? ContentType => GetHeader("Content-Type");
+
+    /// <summary>Gets the <c>type/subtype</c> part of <see cref="ContentType"/>, lower case; empty when there is none.</summary>
+    public string MediaType => SimulatedMediaTypes.GetMediaType(ContentType);
+
+    /// <summary>Gets the body as text, decoded with the charset of <see cref="ContentType"/> (UTF-8 when none).</summary>
+    public string Content => ReadAsString();
+
+    /// <summary>Decodes <see cref="ContentBytes"/> with the charset of <see cref="ContentType"/> (UTF-8 when none).</summary>
+    public string ReadAsString() => SimulatedMediaTypes.GetEncoding(ContentType).GetString(ContentBytes);
+
+    /// <summary>Gets the first value of a header, by case-insensitive name, or <see langword="null"/>.</summary>
+    public string? GetHeader(string name) =>
+        Headers.FirstOrDefault(header => header.Key.Equals(name, StringComparison.OrdinalIgnoreCase)) is { Key: not null } found
+            ? found.Value
+            : null;
+
+    /// <summary>Deserializes the JSON body with source-generated metadata (trim-safe).</summary>
+    /// <exception cref="JsonException">The body is not valid JSON for <typeparamref name="T"/>.</exception>
+    public T? ReadFromJson<T>(JsonTypeInfo<T> jsonTypeInfo) => JsonSerializer.Deserialize(ContentBytes, jsonTypeInfo);
+
+    /// <summary>Deserializes the JSON body by reflection, with the web defaults unless <paramref name="options"/> says otherwise.</summary>
+    /// <exception cref="JsonException">The body is not valid JSON for <typeparamref name="T"/>.</exception>
+    [RequiresUnreferencedCode("JSON deserialization by reflection may need types the trimmer removes; use the JsonTypeInfo overload.")]
+    [RequiresDynamicCode("JSON deserialization by reflection may need runtime code generation; use the JsonTypeInfo overload.")]
+    public T? ReadFromJson<T>(JsonSerializerOptions? options = null) =>
+        JsonSerializer.Deserialize<T>(ContentBytes, options ?? HackJson.WebOptions);
 
     /// <summary>Throws when <see cref="IsSuccessStatusCode"/> is <see langword="false"/>, like <see cref="HttpResponseMessage.EnsureSuccessStatusCode"/>.</summary>
     /// <exception cref="HttpRequestException">The status code is not a success.</exception>
@@ -70,10 +102,17 @@ public sealed record HackHttpResponse(
         301 => "Moved Permanently",
         302 => "Found",
         303 => "See Other",
+        304 => "Not Modified",
+        307 => "Temporary Redirect",
+        308 => "Permanent Redirect",
         400 => "Bad Request",
         401 => "Unauthorized",
         403 => "Forbidden",
         404 => "Not Found",
+        405 => "Method Not Allowed",
+        409 => "Conflict",
+        415 => "Unsupported Media Type",
+        422 => "Unprocessable Content",
         500 => "Internal Server Error",
         502 => "Bad Gateway",
         503 => "Service Unavailable",
@@ -133,6 +172,23 @@ public sealed class HackCookieContainer
         }
     }
 
+    /// <summary>
+    /// Removes a cookie, as a browser does when a cookie expires (<c>Max-Age=0</c> or an
+    /// <c>Expires</c> date in the past).
+    /// </summary>
+    /// <param name="domain">Host the cookie belongs to.</param>
+    /// <param name="name">Cookie name.</param>
+    /// <returns>Whether a cookie was removed.</returns>
+    public bool Remove(string domain, string name)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+        ArgumentNullException.ThrowIfNull(name);
+        lock (_gate)
+        {
+            return _cookies.Remove((domain.ToLowerInvariant(), name));
+        }
+    }
+
     /// <summary>Gets the cookies sent to <paramref name="uri"/>'s host.</summary>
     public IReadOnlyList<HackCookie> GetCookies(Uri uri)
     {
@@ -164,15 +220,16 @@ public sealed class HackCookieContainer
 }
 
 /// <summary>
-/// HTTP client, modeled on <see cref="HttpClient"/> (ADR 0056, section 6). Needs
-/// <c>network.simulated.read</c> for <c>GET</c> and <c>HEAD</c>, <c>network.simulated.write</c>
-/// for any other method.
+/// HTTP client, modeled on <see cref="HttpClient"/> (ADR 0056, section 6; bodies, ADR 0074
+/// section 1). Needs <c>network.simulated.read</c> for <c>GET</c>, <c>HEAD</c> and <c>OPTIONS</c>,
+/// <c>network.simulated.write</c> for any other method.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Redirects are followed (at most 10); a <c>POST</c> answered by 301, 302 or 303 continues as a
-/// <c>GET</c>, as browsers and <see cref="HttpClient"/> do. Cookies set along the way land in
-/// <see cref="Cookies"/>.
+/// Redirects are followed (at most 10), as browsers and <see cref="HttpClient"/> do: after 301 or
+/// 302 a <c>POST</c> continues as a <c>GET</c> without its body, after 303 every method but
+/// <c>HEAD</c> does, and 307 or 308 repeat the same method with the same body. Cookies set along
+/// the way land in <see cref="Cookies"/>.
 /// </para>
 /// <para>
 /// A host outside the simulated network is reached through the optional server when the app holds
@@ -199,6 +256,14 @@ public sealed class HackHttpClient : IDisposable
     /// <summary>Gets the cookie container read and filled by every exchange.</summary>
     public HackCookieContainer Cookies { get; }
 
+    /// <summary>
+    /// Gets or sets the base address a relative request URI is resolved against, as
+    /// <c>HttpClient.BaseAddress</c>: <c>GetAsync("api/notes")</c> with <c>http://intranet.hack/</c>
+    /// requests <c>http://intranet.hack/api/notes</c>. <see langword="null"/> (the default) accepts
+    /// absolute URIs only. A Blazor site's client (ADR 0084, section 6) is set to the site's address.
+    /// </summary>
+    public Uri? BaseAddress { get; set; }
+
     /// <summary>Gets the headers added to every request.</summary>
     public IDictionary<string, string> DefaultRequestHeaders { get; } =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["User-Agent"] = "HackerOS/1.0" };
@@ -207,7 +272,7 @@ public sealed class HackHttpClient : IDisposable
     /// <exception cref="HackHttpRequestException">No response came back.</exception>
     /// <exception cref="UnauthorizedAccessException">The app lacks <c>network.simulated.read</c>.</exception>
     public Task<HackHttpResponse> GetAsync(string requestUri, CancellationToken cancellationToken = default) =>
-        SendAsync(HttpMethod.Get, requestUri, form: null, cancellationToken);
+        SendAsync(HttpMethod.Get, requestUri, content: null, cancellationToken);
 
     /// <summary>Sends a <c>GET</c> request and returns the body as text, throwing on an error status.</summary>
     /// <exception cref="HttpRequestException">No response came back, or its status is not a success.</exception>
@@ -217,20 +282,67 @@ public sealed class HackHttpClient : IDisposable
         return response.EnsureSuccessStatusCode().ReadAsString();
     }
 
-    /// <summary>Sends a <c>POST</c> request with URL-encoded form fields (<see cref="FormUrlEncodedContent"/>).</summary>
+    /// <summary>Sends a <c>GET</c> request and returns the body bytes, throwing on an error status.</summary>
+    /// <exception cref="HttpRequestException">No response came back, or its status is not a success.</exception>
+    public async Task<byte[]> GetByteArrayAsync(string requestUri, CancellationToken cancellationToken = default)
+    {
+        HackHttpResponse response = await GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
+        return response.EnsureSuccessStatusCode().ContentBytes;
+    }
+
+    /// <summary>Sends a <c>GET</c> request and deserializes the JSON body, throwing on an error status.</summary>
+    /// <exception cref="HttpRequestException">No response came back, or its status is not a success.</exception>
+    /// <exception cref="JsonException">The body is not valid JSON for <typeparamref name="T"/>.</exception>
+    public async Task<T?> GetFromJsonAsync<T>(string requestUri, JsonTypeInfo<T> jsonTypeInfo, CancellationToken cancellationToken = default)
+    {
+        HackHttpResponse response = await GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
+        return response.EnsureSuccessStatusCode().ReadFromJson(jsonTypeInfo);
+    }
+
+    /// <summary>Sends a <c>POST</c> request with URL-encoded form fields (<see cref="HackFormUrlEncodedContent"/>).</summary>
     /// <exception cref="HackHttpRequestException">No response came back.</exception>
     /// <exception cref="UnauthorizedAccessException">The app lacks <c>network.simulated.write</c>.</exception>
     public Task<HackHttpResponse> PostAsync(
         string requestUri, IEnumerable<KeyValuePair<string, string>> form, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(form);
-        return SendAsync(HttpMethod.Post, requestUri, [.. form], cancellationToken);
+        return PostAsync(requestUri, new HackFormUrlEncodedContent(form), cancellationToken);
     }
 
-    /// <summary>Sends a request with any method.</summary>
+    /// <summary>Sends a <c>POST</c> request with a body.</summary>
+    /// <exception cref="HackHttpRequestException">No response came back.</exception>
+    /// <exception cref="UnauthorizedAccessException">The app lacks <c>network.simulated.write</c>.</exception>
+    public Task<HackHttpResponse> PostAsync(string requestUri, HackHttpContent? content, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Post, requestUri, content, cancellationToken);
+
+    /// <summary>Sends a <c>POST</c> request with <paramref name="value"/> serialized as JSON (trim-safe).</summary>
+    /// <exception cref="HackHttpRequestException">No response came back.</exception>
+    /// <exception cref="UnauthorizedAccessException">The app lacks <c>network.simulated.write</c>.</exception>
+    public Task<HackHttpResponse> PostAsJsonAsync<T>(string requestUri, T value, JsonTypeInfo<T> jsonTypeInfo, CancellationToken cancellationToken = default) =>
+        PostAsync(requestUri, HackJsonContent.Create(value, jsonTypeInfo), cancellationToken);
+
+    /// <summary>Sends a <c>PUT</c> request with a body.</summary>
+    /// <exception cref="HackHttpRequestException">No response came back.</exception>
+    /// <exception cref="UnauthorizedAccessException">The app lacks <c>network.simulated.write</c>.</exception>
+    public Task<HackHttpResponse> PutAsync(string requestUri, HackHttpContent? content, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Put, requestUri, content, cancellationToken);
+
+    /// <summary>Sends a <c>PATCH</c> request with a body.</summary>
+    /// <exception cref="HackHttpRequestException">No response came back.</exception>
+    /// <exception cref="UnauthorizedAccessException">The app lacks <c>network.simulated.write</c>.</exception>
+    public Task<HackHttpResponse> PatchAsync(string requestUri, HackHttpContent? content, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Patch, requestUri, content, cancellationToken);
+
+    /// <summary>Sends a <c>DELETE</c> request.</summary>
+    /// <exception cref="HackHttpRequestException">No response came back.</exception>
+    /// <exception cref="UnauthorizedAccessException">The app lacks <c>network.simulated.write</c>.</exception>
+    public Task<HackHttpResponse> DeleteAsync(string requestUri, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Delete, requestUri, content: null, cancellationToken);
+
+    /// <summary>Sends a request with any method and an optional body.</summary>
     /// <param name="method">HTTP method.</param>
     /// <param name="requestUri">Absolute <c>http</c> or <c>https</c> URI.</param>
-    /// <param name="form">URL-encoded form fields, or <see langword="null"/>.</param>
+    /// <param name="content">The body, or <see langword="null"/>.</param>
     /// <param name="cancellationToken">Cancels the exchange.</param>
     /// <exception cref="ArgumentException"><paramref name="requestUri"/> is not an absolute http(s) URI.</exception>
     /// <exception cref="HackHttpRequestException">No response came back.</exception>
@@ -238,7 +350,7 @@ public sealed class HackHttpClient : IDisposable
     public async Task<HackHttpResponse> SendAsync(
         HttpMethod method,
         string requestUri,
-        IReadOnlyList<KeyValuePair<string, string>>? form = null,
+        HackHttpContent? content = null,
         CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -249,7 +361,7 @@ public sealed class HackHttpClient : IDisposable
             method.Method.ToUpperInvariant(),
             uri,
             [.. DefaultRequestHeaders],
-            form,
+            content,
             Cookies.GetAllCookies());
 
         HackNetworkResult<HackHttpResponse> result = await HackNetworkErrorTranslator
@@ -266,11 +378,16 @@ public sealed class HackHttpClient : IDisposable
     /// <summary>Marks the client disposed; the cookie container stays usable by its other owners.</summary>
     public void Dispose() => _disposed = true;
 
-    private static Uri ParseUri(string requestUri)
+    private Uri ParseUri(string requestUri)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(requestUri);
         if (!Uri.TryCreate(requestUri, UriKind.Absolute, out Uri? uri)
-            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            && (BaseAddress is null || !Uri.TryCreate(BaseAddress, requestUri, out uri)))
+        {
+            throw new ArgumentException($"'{requestUri}' is not an absolute http or https URI.", nameof(requestUri));
+        }
+
+        if (uri is null || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             throw new ArgumentException($"'{requestUri}' is not an absolute http or https URI.", nameof(requestUri));
         }

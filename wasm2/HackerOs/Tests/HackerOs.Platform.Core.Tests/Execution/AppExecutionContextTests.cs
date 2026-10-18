@@ -359,7 +359,7 @@ public sealed class AppExecutionContextTests
                 Description = "Execution context test application.",
                 Kind = AppKind.Terminal,
                 EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", "TestApp"),
-                SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+                SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
                 Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
                 Resources = AppResourceProfileManifest.None
             };

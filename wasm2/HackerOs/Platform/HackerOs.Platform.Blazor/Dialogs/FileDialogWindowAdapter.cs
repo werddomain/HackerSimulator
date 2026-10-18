@@ -1,7 +1,10 @@
+using HackerOs.AppSdk.Globalization;
+using HackerOs.Platform.Core.Globalization;
 using HackerOs.Windowing.Core;
 using HackerOs.Windowing.Abstractions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Platform.Blazor.Dialogs;
 
@@ -15,18 +18,27 @@ public sealed class FileDialogWindowAdapter : IDisposable
     private readonly FileDialogCoordinator _fileCoordinator;
     private readonly DialogCoordinator? _basicCoordinator;
     private readonly WindowRuntime _windows;
+    private readonly IStringLocalizer _text;
     private readonly Dictionary<Guid, WindowId> _projected = [];
     private bool _disposed;
 
     /// <summary>Creates an adapter over session dialog coordinators and their window runtime.</summary>
+    /// <param name="fileCoordinator">The session's file dialogs.</param>
+    /// <param name="windows">The window runtime the dialogs are projected into.</param>
+    /// <param name="basicCoordinator">The session's basic dialogs (message box, input, chooser); optional.</param>
+    /// <param name="locale">
+    /// The session language of the default dialog titles (ADR 0104); <see langword="null"/> gives English.
+    /// </param>
     public FileDialogWindowAdapter(
         FileDialogCoordinator fileCoordinator,
         WindowRuntime windows,
-        DialogCoordinator? basicCoordinator = null)
+        DialogCoordinator? basicCoordinator = null,
+        SessionLocaleService? locale = null)
     {
         _fileCoordinator = fileCoordinator ?? throw new ArgumentNullException(nameof(fileCoordinator));
         _windows = windows ?? throw new ArgumentNullException(nameof(windows));
         _basicCoordinator = basicCoordinator;
+        _text = Strings.For(() => locale?.Culture ?? HackLocale.DefaultLanguage);
 
         _fileCoordinator.Changed += Synchronize;
         if (_basicCoordinator is not null)
@@ -175,6 +187,7 @@ public sealed class FileDialogWindowAdapter : IDisposable
             MessageBoxPresentation => (460, 220),
             TextInputPresentation => (480, 240),
             CredentialPromptPresentation => (420, 300),
+            AppChooserPresentation => (460, 380),
             _ => (480, 240)
         };
 
@@ -272,22 +285,30 @@ public sealed class FileDialogWindowAdapter : IDisposable
             builder.AddAttribute(2, nameof(CredentialPromptDialog.Coordinator), _basicCoordinator);
             builder.CloseComponent();
         },
+        AppChooserPresentation chooser => builder =>
+        {
+            builder.OpenComponent<AppChooserDialog>(0);
+            builder.AddAttribute(1, nameof(AppChooserDialog.Presentation), chooser);
+            builder.AddAttribute(2, nameof(AppChooserDialog.Coordinator), _basicCoordinator);
+            builder.CloseComponent();
+        },
         _ => throw new NotSupportedException($"Unsupported dialog presentation '{presentation.GetType()}'."),
     };
 
-    private static string FileTitle(FileDialogPresentation presentation) => presentation switch
+    private string FileTitle(FileDialogPresentation presentation) => presentation switch
     {
-        OpenFileDialogPresentation open => open.Request.Title ?? "Open file",
-        SaveFileDialogPresentation save => save.Request.Title ?? "Save file",
-        SelectFolderDialogPresentation folder => folder.Request.Title ?? "Select folder",
-        _ => "File dialog",
+        OpenFileDialogPresentation open => open.Request.Title ?? _text["FileDialog.OpenFile"],
+        SaveFileDialogPresentation save => save.Request.Title ?? _text["FileDialog.SaveFile"],
+        SelectFolderDialogPresentation folder => folder.Request.Title ?? _text["FileDialog.SelectFolder"],
+        _ => _text["FileDialog.Title"],
     };
 
-    private static string BasicTitle(DialogPresentation presentation) => presentation switch
+    private string BasicTitle(DialogPresentation presentation) => presentation switch
     {
-        MessageBoxPresentation msgBox => !string.IsNullOrWhiteSpace(msgBox.Request.Title) ? msgBox.Request.Title : "Message",
-        TextInputPresentation input => !string.IsNullOrWhiteSpace(input.Request.Title) ? input.Request.Title : "Input",
-        CredentialPromptPresentation credential => !string.IsNullOrWhiteSpace(credential.Request.Title) ? credential.Request.Title : "Authorization Required",
-        _ => "Dialog",
+        MessageBoxPresentation msgBox => !string.IsNullOrWhiteSpace(msgBox.Request.Title) ? msgBox.Request.Title : _text["Dialog.Message"],
+        TextInputPresentation input => !string.IsNullOrWhiteSpace(input.Request.Title) ? input.Request.Title : _text["Dialog.Input"],
+        CredentialPromptPresentation credential => !string.IsNullOrWhiteSpace(credential.Request.Title) ? credential.Request.Title : _text["Dialog.AuthorizationRequired"],
+        AppChooserPresentation chooser => !string.IsNullOrWhiteSpace(chooser.Request.Title) ? chooser.Request.Title : _text["Dialog.OpenWith"],
+        _ => _text["Dialog.Title"],
     };
 }

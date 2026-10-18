@@ -23,10 +23,26 @@ public interface IAppEnablementRegistry
 /// <param name="Success">Whether the target app (and any cascaded dependents) is now disabled.</param>
 /// <param name="DisabledAppIds">Every app ID newly disabled by this request, dependents first.</param>
 /// <param name="Errors">Explanatory errors when <paramref name="Success"/> is <see langword="false"/>.</param>
+/// <param name="StoppedProcesses">
+/// The processes the request stopped (ADR 0097, section 5), each marked when it had to be forced
+/// after its grace period; <see langword="null"/> is read as none.
+/// </param>
 public sealed record AppDisableResult(
     bool Success,
     IReadOnlyList<string> DisabledAppIds,
-    IReadOnlyList<string> Errors);
+    IReadOnlyList<string> Errors,
+    IReadOnlyList<AppProcessInfo>? StoppedProcesses = null);
+
+/// <summary>One running process of an app, as an uninstall confirmation or report lists it (ADR 0097, section 5).</summary>
+/// <param name="Pid">Process ID.</param>
+/// <param name="AppId">App the process runs.</param>
+/// <param name="Name">Name shown to the user: the app's name.</param>
+/// <param name="UserName">Login name of the user it runs as.</param>
+/// <param name="Forced">
+/// In a report: whether the process did not finish its stop work within its grace period and was
+/// cut off. Always <see langword="false"/> in a plan.
+/// </param>
+public sealed record AppProcessInfo(long Pid, string AppId, string Name, string UserName, bool Forced = false);
 
 /// <summary>Describes the outcome of a runtime enable request, per `P1-APP-011`.</summary>
 /// <param name="Success">Whether the app is now enabled.</param>

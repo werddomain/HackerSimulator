@@ -1,6 +1,8 @@
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Administration;
+using HackerOs.AppSdk.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.Settings;
 
@@ -31,6 +33,11 @@ public sealed partial class AppPermissionsPanel
     private IAppExecutionContext Context => AppContext
         ?? throw new InvalidOperationException("This panel must be rendered inside the Settings window.");
 
+    private IStringLocalizer<Strings>? _localizer;
+
+    /// <summary>The panel's texts in the language of the Settings process (ADR 0104).</summary>
+    private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
+
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
@@ -56,20 +63,20 @@ public sealed partial class AppPermissionsPanel
             ? Task.CompletedTask
             : RunAsync(
                 () => HackPermissionAdministration.SetPolicyAsync(Context, policy, Context.CancellationToken),
-                policy == HackDangerousCapabilityPolicy.Block ? "Politique : toujours bloquer." : "Politique : demander à un administrateur.");
+                policy == HackDangerousCapabilityPolicy.Block ? L["Permissions.Message.PolicyBlock"] : L["Permissions.Message.PolicyPrompt"]);
 
     private Task SetMachineDecisionAsync(
         HackAppPermissionInfo app, HackCapabilityPermissionInfo capability, HackPermissionDecision decision) =>
         RunAsync(
             () => HackPermissionAdministration.SetMachineDecisionAsync(
                 Context, app.AppId, capability.Capability, decision, Context.CancellationToken),
-            $"{app.AppName} : décision enregistrée, effective au prochain lancement.");
+            L["Permissions.Message.DecisionSaved", app.AppName]);
 
     private Task RemoveOwnDenialAsync(HackAppPermissionInfo app, HackCapabilityPermissionInfo capability) =>
         RunAsync(
             () => HackPermissionAdministration.RemoveOwnDenialAsync(
                 Context, app.AppId, capability.Capability, Context.CancellationToken),
-            $"{app.AppName} : votre refus est retiré, la question reviendra au prochain lancement.");
+            L["Permissions.Message.DenialRemoved", app.AppName]);
 
     private async Task RunAsync(Func<Task> action, string successMessage)
     {
@@ -83,11 +90,11 @@ public sealed partial class AppPermissionsPanel
         }
         catch (UnauthorizedAccessException)
         {
-            _message = "Aucun administrateur n'a confirmé : rien n'a été modifié.";
+            _message = L["Permissions.Error.NotConfirmed"];
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or ArgumentException)
         {
-            _message = $"La décision n'a pas pu être enregistrée : {exception.Message}";
+            _message = L["Permissions.Error.CannotSave", exception.Message];
         }
         finally
         {
@@ -98,14 +105,14 @@ public sealed partial class AppPermissionsPanel
     private string PolicyClass(HackDangerousCapabilityPolicy policy) =>
         policy == _policy ? "policy-option selected" : "policy-option";
 
-    private static string StateLabel(HackPermissionState state) => state switch
+    private string StateLabel(HackPermissionState state) => state switch
     {
-        HackPermissionState.System => "Système",
-        HackPermissionState.Allowed => "Autorisée",
-        HackPermissionState.DeniedByUser => "Refusée par vous",
-        HackPermissionState.DeniedByAdministrator => "Refusée par l'administrateur",
-        HackPermissionState.BlockedByPolicy => "Bloquée par la politique",
-        _ => "En attente"
+        HackPermissionState.System => L["Permissions.State.System"],
+        HackPermissionState.Allowed => L["Permissions.State.Allowed"],
+        HackPermissionState.DeniedByUser => L["Permissions.State.DeniedByUser"],
+        HackPermissionState.DeniedByAdministrator => L["Permissions.State.DeniedByAdministrator"],
+        HackPermissionState.BlockedByPolicy => L["Permissions.State.BlockedByPolicy"],
+        _ => L["Permissions.State.Pending"]
     };
 
     private static string StateClass(HackPermissionState state) => state switch

@@ -95,7 +95,7 @@ Toutes les voies consultent `IAppEnablementRegistry` :
 | --- | --- |
 | `AppLifecycleOrchestrator.LaunchAsync` | `AppLaunchStatus.Disabled` |
 | `AppIntentDispatcher` (intentions, `launch`) | refus ; `launch` répond « is not installed » |
-| `FileAssociationResolver` | ni défaut ni candidate ; les préférences de `/etc/hackeros/file-associations.json` ne sont **pas** réécrites |
+| `FileAssociationResolver` | ni défaut ni candidate ; les préférences de `/etc/hackeros/file-associations.json` et de `~/.config/hackeros/file-associations.json` ne sont **pas** réécrites (une entrée périmée est sautée, ADR 0121) |
 | Lanceur et recherche (`LauncherAppProjection`) | absente ; le menu ouvert se met à jour sur `Changed` |
 | Explorateur, « Open With... » | absente de la liste |
 | Terminal (`ShellCommandResolver`, `ShellInterpreter`) | `command not found`, absente de `help` et de la complétion |
@@ -117,6 +117,13 @@ public interface IAppInstallationService
 
 - `GetUninstallClosure(appId)` : les apps qui en dépendent (dépendants d'abord)
   puis l'app elle-même ; la boîte de confirmation les liste.
+- `PlanUninstallAsync(appId)` (ADR 0097 §5) : la fermeture et les processus
+  actifs qu'elle arrêtera (`AppProcessInfo` : PID, app, nom, utilisateur), sans
+  rien changer. Paramètres les liste dans la confirmation (« These processes
+  will be stopped »). Le résultat de `UninstallAsync` donne
+  `StoppedProcesses`, avec `Forced` pour ceux tués après leur délai ; chacun est
+  écrit dans `/var/log/syslog`. Dans le SDK : `HackAppManagement.PlanUninstallAsync`
+  et `UninstallWithReportAsync` (`HackUninstallPlan`, `HackUninstallReport`).
 - `UninstallAsync` écrit toute la fermeture dans le fichier de la portée.
   Refus : `apps.app.system:<id>`, `apps.closure.system-app:<id système>`,
   `apps.app.not-found:<id>`, `apps.session.required`.
@@ -154,6 +161,10 @@ utilisée pour ce fichier. La liste des apps installées, elle, est lue par
   administrateur (un utilisateur standard n'a que sa propre portée) ; « For all
   users » ouvre la fenêtre de l'agent d'authentification, où l'administrateur
   retape son mot de passe ;
+- pour un site (app `Web`) emporté par la désinstallation, la confirmation
+  annonce que sa base de navigateur `hackweb.<id>` sera supprimée ; elle l'est
+  après la désinstallation par `UninstallAsync`, seule donnée qu'une
+  désinstallation efface (ADR 0088 §4, [`asp-hack-site-data.md`](asp-hack-site-data.md)) ;
 - **Reinstall** pour une app désinstallée dans une portée que l'utilisateur
   peut modifier ; sinon la mention « Uninstalled by the administrator » ;
 - l'ancien interrupteur activer/désactiver a disparu ;

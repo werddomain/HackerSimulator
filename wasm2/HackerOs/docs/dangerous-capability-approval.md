@@ -3,7 +3,8 @@
 ## Objectif
 
 Une app non système ne reçoit jamais en silence une capacité dangereuse
-(`process.manage`, `network.real.access`, `filesystem.system.write`…, voir
+(`process.manage`, `network.real.access`, `filesystem.system.write`,
+`keyring.read-all` de l'ADR 0100, `users.manage` de l'ADR 0120…, voir
 [`capabilities.md`](capabilities.md)). Au lancement, l'OS demande à un
 administrateur de l'approuver, comme le « bureau sécurisé » de l'UAC de Windows,
 et mémorise la décision dans de vrais fichiers. Ce document décrit
@@ -132,6 +133,9 @@ administrateur requise » avec bouclier, identité de l'app (nom, identifiant,
 de risque, champs nom et mot de passe, boutons **Refuser** et **Autoriser**
 (désactivé sans nom ni mot de passe), pied « Cette décision sera inscrite dans
 /var/log/auth.log ». Le champ mot de passe prend le focus à l'ouverture.
+Les libellés suivent la langue de la session (ADR 0104) : ceux cités ici sont
+ceux d'une session française ; en anglais, la langue par défaut, la fenêtre
+dit « Administrator authorization required », **Deny** et **Allow**.
 
 `DangerousCapabilityApprovalBroker` montre une demande à la fois. Sans fenêtre
 attachée, une demande finit en `Unavailable` (donc `capability.deferred`) ; si

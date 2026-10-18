@@ -12,12 +12,28 @@ namespace HackerOs.HostSmoke.Tests;
 /// </param>
 /// <param name="ExpectedMemSource">Same as <paramref name="ExpectedCpuSource"/> for <c>MemSource:</c>.</param>
 /// <param name="ArtifactsDirectory">Where a failing run leaves its screenshot, or <see langword="null"/>.</param>
+/// <param name="LimitsEnabled">
+/// Whether the host applies the process limits of ADR 0125 (<c>HackerOs:ResourceLimits:Enabled</c>);
+/// <see langword="false"/> for the run that switches them off.
+/// </param>
+/// <param name="ExpectsOomKill">
+/// Whether the run turns the OOM killer on and expects <c>stress --vm</c> to be killed (ADR 0126):
+/// the <c>ecosystem-oom</c> run, whose simulated <c>MemTotal</c> is small.
+/// </param>
+/// <param name="ExpectedIsolation">
+/// When set, whether the page must be cross-origin isolated (ADR 0131): <see langword="true"/> for a
+/// host that sends COOP/COEP (its service worker or its server), <see langword="false"/> for a run
+/// with <c>HackerOs:CrossOriginIsolation</c> off; <see langword="null"/> checks nothing.
+/// </param>
 public sealed record HostSmokeSettings(
     string Url,
     string HostName,
     string? ExpectedCpuSource,
     string? ExpectedMemSource,
-    string? ArtifactsDirectory)
+    string? ArtifactsDirectory,
+    bool LimitsEnabled = true,
+    bool ExpectsOomKill = false,
+    bool? ExpectedIsolation = null)
 {
     /// <summary>Base address of the host under test. Required.</summary>
     public const string UrlVariable = "HACKEROS_SMOKE_URL";
@@ -34,12 +50,27 @@ public sealed record HostSmokeSettings(
     /// <summary>Directory for failure screenshots.</summary>
     public const string ArtifactsVariable = "HACKEROS_SMOKE_ARTIFACTS";
 
+    /// <summary><c>off</c> when the host switches the process limits off (ADR 0125).</summary>
+    public const string LimitsVariable = "HACKEROS_SMOKE_EXPECT_LIMITS";
+
+    /// <summary><c>on</c> when the run checks the OOM killer (ADR 0126).</summary>
+    public const string OomVariable = "HACKEROS_SMOKE_EXPECT_OOM";
+
+    /// <summary><c>yes</c> or <c>no</c>: the page's expected <c>crossOriginIsolated</c> (ADR 0131).</summary>
+    public const string IsolationVariable = "HACKEROS_SMOKE_EXPECT_ISOLATION";
+
     /// <summary>Reads the settings, or returns <see langword="null"/> when no URL is set.</summary>
     /// <summary>
-    /// Gets whether the host runs commands in Web Workers (ADR 0070): every WebAssembly host, not the
-    /// server, which renders in Interactive Server mode (section 6).
+    /// Gets whether the host runs commands in Web Workers (ADR 0070): every host since ADR 0130, the
+    /// server included, runs the OS in WebAssembly.
     /// </summary>
-    public bool ExpectsWorkers => !string.Equals(HostName, "server", StringComparison.Ordinal);
+    public bool ExpectsWorkers => true;
+
+    /// <summary>
+    /// Gets whether the OS must connect by itself to the host that served it (ADR 0134): only the
+    /// <c>server</c> run is a HackerOS server.
+    /// </summary>
+    public bool ExpectsServerConnection => string.Equals(HostName, "server", StringComparison.Ordinal);
 
     public static HostSmokeSettings? FromEnvironment()
     {
@@ -54,7 +85,15 @@ public sealed record HostSmokeSettings(
             Read(HostVariable) ?? "host",
             Read(CpuSourceVariable),
             Read(MemSourceVariable),
-            Read(ArtifactsVariable));
+            Read(ArtifactsVariable),
+            !string.Equals(Read(LimitsVariable), "off", StringComparison.Ordinal),
+            string.Equals(Read(OomVariable), "on", StringComparison.Ordinal),
+            Read(IsolationVariable) switch
+            {
+                "yes" => true,
+                "no" => false,
+                _ => null
+            });
     }
 
     private static string? Read(string name)

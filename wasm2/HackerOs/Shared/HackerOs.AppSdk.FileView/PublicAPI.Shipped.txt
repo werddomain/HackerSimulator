@@ -1,0 +1,423 @@
+#nullable enable
+HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuContext
+HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuContext.FileViewContextMenuContext(HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope Scope, HackerOs.AppSdk.FileView.FileViewItem? Item) -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuContext.Item.get -> HackerOs.AppSdk.FileView.FileViewItem?
+HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuContext.Item.init -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuContext.Scope.get -> HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope
+HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuContext.Scope.init -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope
+HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope.Background = 0 -> HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope
+HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope.Directory = 1 -> HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope
+HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope.File = 2 -> HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope
+HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope.FileType = 3 -> HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem.FileViewMenuItem(string! Id, string! Label, HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor? Icon, System.Func<System.Threading.Tasks.Task!>! OnActivate, bool IsSeparatorBefore = false, bool IsDisabled = false) -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem.Icon.get -> HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor?
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem.Icon.init -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem.Id.get -> string!
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem.Id.init -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem.IsDisabled.get -> bool
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem.IsDisabled.init -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem.IsSeparatorBefore.get -> bool
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem.IsSeparatorBefore.init -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem.Label.get -> string!
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem.Label.init -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem.OnActivate.get -> System.Func<System.Threading.Tasks.Task!>!
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem.OnActivate.init -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection.Add(HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem! item) -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection.Clear() -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection.FileViewMenuItemCollection() -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection.InsertAfter(string! afterId, HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem! item) -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection.InsertBefore(string! beforeId, HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem! item) -> void
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection.Items.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItem!>!
+HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection.Remove(string! id) -> void
+HackerOs.AppSdk.FileView.ContextMenu.IFileViewContextMenuProvider
+HackerOs.AppSdk.FileView.ContextMenu.IFileViewContextMenuProvider.Customize(HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuContext! context, HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection! items) -> void
+HackerOs.AppSdk.FileView.ContextMenu.IFileViewContextMenuProvider.Matches(HackerOs.AppSdk.FileView.FileViewItem! item) -> bool
+HackerOs.AppSdk.FileView.ContextMenu.IFileViewContextMenuProvider.Scope.get -> HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope
+HackerOs.AppSdk.FileView.Events.FileViewCancelEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewCancelEventArgs.Cancel.get -> bool
+HackerOs.AppSdk.FileView.Events.FileViewCancelEventArgs.Cancel.set -> void
+HackerOs.AppSdk.FileView.Events.FileViewCancelEventArgs.FileViewCancelEventArgs() -> void
+HackerOs.AppSdk.FileView.Events.FileViewClipboardAction
+HackerOs.AppSdk.FileView.Events.FileViewClipboardAction.Copy = 1 -> HackerOs.AppSdk.FileView.Events.FileViewClipboardAction
+HackerOs.AppSdk.FileView.Events.FileViewClipboardAction.Cut = 0 -> HackerOs.AppSdk.FileView.Events.FileViewClipboardAction
+HackerOs.AppSdk.FileView.Events.FileViewClipboardAction.Paste = 2 -> HackerOs.AppSdk.FileView.Events.FileViewClipboardAction
+HackerOs.AppSdk.FileView.Events.FileViewClipboardRequestedEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewClipboardRequestedEventArgs.Action.get -> HackerOs.AppSdk.FileView.Events.FileViewClipboardAction
+HackerOs.AppSdk.FileView.Events.FileViewClipboardRequestedEventArgs.Destination.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.Events.FileViewClipboardRequestedEventArgs.FileViewClipboardRequestedEventArgs(HackerOs.AppSdk.FileView.Events.FileViewClipboardAction action, System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>! items, HackerOs.App.Abstractions.VirtualPath destination) -> void
+HackerOs.AppSdk.FileView.Events.FileViewClipboardRequestedEventArgs.Items.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>!
+HackerOs.AppSdk.FileView.Events.FileViewContextMenuOpeningEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewContextMenuOpeningEventArgs.FileViewContextMenuOpeningEventArgs(HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope scope, HackerOs.AppSdk.FileView.FileViewItem? item, HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection! items) -> void
+HackerOs.AppSdk.FileView.Events.FileViewContextMenuOpeningEventArgs.Item.get -> HackerOs.AppSdk.FileView.FileViewItem?
+HackerOs.AppSdk.FileView.Events.FileViewContextMenuOpeningEventArgs.Items.get -> HackerOs.AppSdk.FileView.ContextMenu.FileViewMenuItemCollection!
+HackerOs.AppSdk.FileView.Events.FileViewContextMenuOpeningEventArgs.Scope.get -> HackerOs.AppSdk.FileView.ContextMenu.FileViewContextMenuScope
+HackerOs.AppSdk.FileView.Events.FileViewCopiedEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewCopiedEventArgs.Destination.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.Events.FileViewCopiedEventArgs.FileViewCopiedEventArgs(System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>! items, HackerOs.App.Abstractions.VirtualPath destination) -> void
+HackerOs.AppSdk.FileView.Events.FileViewCopiedEventArgs.Items.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>!
+HackerOs.AppSdk.FileView.Events.FileViewCopyingEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewCopyingEventArgs.Destination.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.Events.FileViewCopyingEventArgs.FileViewCopyingEventArgs(System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>! items, HackerOs.App.Abstractions.VirtualPath destination) -> void
+HackerOs.AppSdk.FileView.Events.FileViewCopyingEventArgs.Items.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>!
+HackerOs.AppSdk.FileView.Events.FileViewCreatedEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewCreatedEventArgs.FileViewCreatedEventArgs(HackerOs.AppSdk.FileView.FileViewItem! item) -> void
+HackerOs.AppSdk.FileView.Events.FileViewCreatedEventArgs.Item.get -> HackerOs.AppSdk.FileView.FileViewItem!
+HackerOs.AppSdk.FileView.Events.FileViewCreatingEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewCreatingEventArgs.FileViewCreatingEventArgs(HackerOs.App.Abstractions.VirtualPath parentDirectory, string! name, HackerOs.Simulation.Abstractions.FileSystem.FileSystemEntryKind kind) -> void
+HackerOs.AppSdk.FileView.Events.FileViewCreatingEventArgs.Kind.get -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemEntryKind
+HackerOs.AppSdk.FileView.Events.FileViewCreatingEventArgs.Name.get -> string!
+HackerOs.AppSdk.FileView.Events.FileViewCreatingEventArgs.ParentDirectory.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.Events.FileViewDeleteRequestedEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewDeleteRequestedEventArgs.FileViewDeleteRequestedEventArgs(System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>! items, bool permanent) -> void
+HackerOs.AppSdk.FileView.Events.FileViewDeleteRequestedEventArgs.Items.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>!
+HackerOs.AppSdk.FileView.Events.FileViewDeleteRequestedEventArgs.Permanent.get -> bool
+HackerOs.AppSdk.FileView.Events.FileViewDeletedEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewDeletedEventArgs.FileViewDeletedEventArgs(System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.VirtualPath>! paths) -> void
+HackerOs.AppSdk.FileView.Events.FileViewDeletedEventArgs.Paths.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.VirtualPath>!
+HackerOs.AppSdk.FileView.Events.FileViewDeletingEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewDeletingEventArgs.FileViewDeletingEventArgs(System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>! items) -> void
+HackerOs.AppSdk.FileView.Events.FileViewDeletingEventArgs.Items.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>!
+HackerOs.AppSdk.FileView.Events.FileViewDraggedEntry
+HackerOs.AppSdk.FileView.Events.FileViewDraggedEntry.FileViewDraggedEntry(HackerOs.App.Abstractions.VirtualPath Path, bool IsDirectory) -> void
+HackerOs.AppSdk.FileView.Events.FileViewDraggedEntry.IsDirectory.get -> bool
+HackerOs.AppSdk.FileView.Events.FileViewDraggedEntry.IsDirectory.init -> void
+HackerOs.AppSdk.FileView.Events.FileViewDraggedEntry.Path.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.Events.FileViewDraggedEntry.Path.init -> void
+HackerOs.AppSdk.FileView.Events.FileViewDropRequestedEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewDropRequestedEventArgs.Copy.get -> bool
+HackerOs.AppSdk.FileView.Events.FileViewDropRequestedEventArgs.Destination.get -> HackerOs.App.Abstractions.VirtualPath?
+HackerOs.AppSdk.FileView.Events.FileViewDropRequestedEventArgs.Entries.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.Events.FileViewDraggedEntry!>!
+HackerOs.AppSdk.FileView.Events.FileViewDropRequestedEventArgs.FileViewDropRequestedEventArgs(HackerOs.App.Abstractions.VirtualPath? destination, System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.Events.FileViewDraggedEntry!>! entries, System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.Transfers.FileTransferHostFile!>! hostFiles, bool copy) -> void
+HackerOs.AppSdk.FileView.Events.FileViewDropRequestedEventArgs.HostFiles.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.Transfers.FileTransferHostFile!>!
+HackerOs.AppSdk.FileView.Events.FileViewDropRequestedEventArgs.IsEmpty.get -> bool
+HackerOs.AppSdk.FileView.Events.FileViewMovedEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewMovedEventArgs.Destination.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.Events.FileViewMovedEventArgs.FileViewMovedEventArgs(System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>! items, HackerOs.App.Abstractions.VirtualPath destination) -> void
+HackerOs.AppSdk.FileView.Events.FileViewMovedEventArgs.Items.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>!
+HackerOs.AppSdk.FileView.Events.FileViewMovingEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewMovingEventArgs.Destination.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.Events.FileViewMovingEventArgs.FileViewMovingEventArgs(System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>! items, HackerOs.App.Abstractions.VirtualPath destination) -> void
+HackerOs.AppSdk.FileView.Events.FileViewMovingEventArgs.Items.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>!
+HackerOs.AppSdk.FileView.Events.FileViewNavigatingEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewNavigatingEventArgs.FileViewNavigatingEventArgs(HackerOs.App.Abstractions.VirtualPath from, HackerOs.App.Abstractions.VirtualPath to) -> void
+HackerOs.AppSdk.FileView.Events.FileViewNavigatingEventArgs.From.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.Events.FileViewNavigatingEventArgs.To.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.Events.FileViewOpenedEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewOpenedEventArgs.FileViewOpenedEventArgs(HackerOs.AppSdk.FileView.FileViewItem! item) -> void
+HackerOs.AppSdk.FileView.Events.FileViewOpenedEventArgs.Item.get -> HackerOs.AppSdk.FileView.FileViewItem!
+HackerOs.AppSdk.FileView.Events.FileViewOpeningEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewOpeningEventArgs.FileViewOpeningEventArgs(HackerOs.AppSdk.FileView.FileViewItem! item, HackerOs.AppSdk.FileView.FileViewFolderActivationMode mode) -> void
+HackerOs.AppSdk.FileView.Events.FileViewOpeningEventArgs.Item.get -> HackerOs.AppSdk.FileView.FileViewItem!
+HackerOs.AppSdk.FileView.Events.FileViewOpeningEventArgs.Mode.get -> HackerOs.AppSdk.FileView.FileViewFolderActivationMode
+HackerOs.AppSdk.FileView.Events.FileViewPathChangedEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewPathChangedEventArgs.FileViewPathChangedEventArgs(HackerOs.App.Abstractions.VirtualPath path) -> void
+HackerOs.AppSdk.FileView.Events.FileViewPathChangedEventArgs.Path.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.Events.FileViewRenamedEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewRenamedEventArgs.FileViewRenamedEventArgs(HackerOs.AppSdk.FileView.FileViewItem! item, string! previousName) -> void
+HackerOs.AppSdk.FileView.Events.FileViewRenamedEventArgs.Item.get -> HackerOs.AppSdk.FileView.FileViewItem!
+HackerOs.AppSdk.FileView.Events.FileViewRenamedEventArgs.PreviousName.get -> string!
+HackerOs.AppSdk.FileView.Events.FileViewRenamingEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewRenamingEventArgs.FileViewRenamingEventArgs(HackerOs.AppSdk.FileView.FileViewItem! item, string! proposedName) -> void
+HackerOs.AppSdk.FileView.Events.FileViewRenamingEventArgs.Item.get -> HackerOs.AppSdk.FileView.FileViewItem!
+HackerOs.AppSdk.FileView.Events.FileViewRenamingEventArgs.ProposedName.get -> string!
+HackerOs.AppSdk.FileView.Events.FileViewSelectionChangedEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewSelectionChangedEventArgs.FileViewSelectionChangedEventArgs(System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>! selection) -> void
+HackerOs.AppSdk.FileView.Events.FileViewSelectionChangedEventArgs.Selection.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>!
+HackerOs.AppSdk.FileView.Events.FileViewSelectionChangingEventArgs
+HackerOs.AppSdk.FileView.Events.FileViewSelectionChangingEventArgs.FileViewSelectionChangingEventArgs(System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>! proposedSelection) -> void
+HackerOs.AppSdk.FileView.Events.FileViewSelectionChangingEventArgs.ProposedSelection.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>!
+HackerOs.AppSdk.FileView.FileView
+HackerOs.AppSdk.FileView.FileView.AllowDragDrop.get -> bool
+HackerOs.AppSdk.FileView.FileView.AllowDragDrop.set -> void
+HackerOs.AppSdk.FileView.FileView.AllowMultiSelect.get -> bool
+HackerOs.AppSdk.FileView.FileView.AllowMultiSelect.set -> void
+HackerOs.AppSdk.FileView.FileView.AppContext.get -> HackerOs.AppSdk.IAppExecutionContext?
+HackerOs.AppSdk.FileView.FileView.AppContext.set -> void
+HackerOs.AppSdk.FileView.FileView.CanPaste.get -> bool
+HackerOs.AppSdk.FileView.FileView.CanPaste.set -> void
+HackerOs.AppSdk.FileView.FileView.ClearSelect() -> void
+HackerOs.AppSdk.FileView.FileView.ClipboardRequested.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.FileView.Events.FileViewClipboardRequestedEventArgs!>
+HackerOs.AppSdk.FileView.FileView.ClipboardRequested.set -> void
+HackerOs.AppSdk.FileView.FileView.Columns.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewColumn!>?
+HackerOs.AppSdk.FileView.FileView.Columns.set -> void
+HackerOs.AppSdk.FileView.FileView.ContextMenuOpening -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewContextMenuOpeningEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.ContextMenuProviders.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.ContextMenu.IFileViewContextMenuProvider!>!
+HackerOs.AppSdk.FileView.FileView.ContextMenuProviders.set -> void
+HackerOs.AppSdk.FileView.FileView.Copied -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewCopiedEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.Copying -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewCopyingEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.Created -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewCreatedEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.Creating -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewCreatingEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.CurrentDirectory.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.FileView.CutPaths.get -> System.Collections.Generic.IReadOnlyCollection<string!>?
+HackerOs.AppSdk.FileView.FileView.CutPaths.set -> void
+HackerOs.AppSdk.FileView.FileView.DeleteRequested.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.FileView.Events.FileViewDeleteRequestedEventArgs!>
+HackerOs.AppSdk.FileView.FileView.DeleteRequested.set -> void
+HackerOs.AppSdk.FileView.FileView.Deleted -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewDeletedEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.Deleting -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewDeletingEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.AppSdk.FileView.FileView.DropRequested.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.FileView.Events.FileViewDropRequestedEventArgs!>
+HackerOs.AppSdk.FileView.FileView.DropRequested.set -> void
+HackerOs.AppSdk.FileView.FileView.FileSystem.get -> HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway!
+HackerOs.AppSdk.FileView.FileView.FileSystem.set -> void
+HackerOs.AppSdk.FileView.FileView.FileView() -> void
+HackerOs.AppSdk.FileView.FileView.Filter.get -> System.Func<HackerOs.AppSdk.FileView.FileViewItem!, bool>?
+HackerOs.AppSdk.FileView.FileView.Filter.set -> void
+HackerOs.AppSdk.FileView.FileView.FolderActivation.get -> HackerOs.AppSdk.FileView.FileViewFolderActivationMode
+HackerOs.AppSdk.FileView.FileView.FolderActivation.set -> void
+HackerOs.AppSdk.FileView.FileView.IconProvider.get -> HackerOs.AppSdk.FileView.Icons.IShellIconProvider?
+HackerOs.AppSdk.FileView.FileView.IconProvider.set -> void
+HackerOs.AppSdk.FileView.FileView.InitialDirectory.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.FileView.InitialDirectory.set -> void
+HackerOs.AppSdk.FileView.FileView.Intents.get -> HackerOs.Simulation.Abstractions.Gateways.IAppIntentGateway?
+HackerOs.AppSdk.FileView.FileView.Intents.set -> void
+HackerOs.AppSdk.FileView.FileView.Items.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>!
+HackerOs.AppSdk.FileView.FileView.Mode.get -> HackerOs.AppSdk.FileView.FileViewMode
+HackerOs.AppSdk.FileView.FileView.Mode.set -> void
+HackerOs.AppSdk.FileView.FileView.ModeChanged.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.FileView.FileViewMode>
+HackerOs.AppSdk.FileView.FileView.ModeChanged.set -> void
+HackerOs.AppSdk.FileView.FileView.Moved -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewMovedEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.Moving -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewMovingEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.NavigateAsync(HackerOs.App.Abstractions.VirtualPath path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.AppSdk.FileView.FileView.Navigating -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewNavigatingEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.OnCustomFolderActivate.get -> System.Func<HackerOs.AppSdk.FileView.FileViewItem!, System.Threading.Tasks.Task!>?
+HackerOs.AppSdk.FileView.FileView.OnCustomFolderActivate.set -> void
+HackerOs.AppSdk.FileView.FileView.OnPasteShortcutAsync(bool hostFiles) -> System.Threading.Tasks.Task!
+HackerOs.AppSdk.FileView.FileView.OnPathChange -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewPathChangedEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.Opened -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewOpenedEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.Opening -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewOpeningEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.OwnerAppId.get -> string?
+HackerOs.AppSdk.FileView.FileView.OwnerAppId.set -> void
+HackerOs.AppSdk.FileView.FileView.RefreshAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.AppSdk.FileView.FileView.RefreshFilter() -> void
+HackerOs.AppSdk.FileView.FileView.Renamed -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewRenamedEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.Renaming -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewRenamingEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.RevealAsync(HackerOs.App.Abstractions.VirtualPath path, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+HackerOs.AppSdk.FileView.FileView.SelectByName(string! fileName) -> void
+HackerOs.AppSdk.FileView.FileView.SelectedItem.get -> HackerOs.AppSdk.FileView.FileViewItem?
+HackerOs.AppSdk.FileView.FileView.SelectedItems.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.FileViewItem!>!
+HackerOs.AppSdk.FileView.FileView.SelectionChanged -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewSelectionChangedEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.SelectionChanging -> System.EventHandler<HackerOs.AppSdk.FileView.Events.FileViewSelectionChangingEventArgs!>?
+HackerOs.AppSdk.FileView.FileView.Watch.get -> HackerOs.Simulation.Abstractions.FileSystem.IAppFileSystemWatchGateway?
+HackerOs.AppSdk.FileView.FileView.Watch.set -> void
+HackerOs.AppSdk.FileView.FileViewBreadcrumb
+HackerOs.AppSdk.FileView.FileViewBreadcrumb.Dispose() -> void
+HackerOs.AppSdk.FileView.FileViewBreadcrumb.FileViewBreadcrumb() -> void
+HackerOs.AppSdk.FileView.FileViewBreadcrumb.Owner.get -> HackerOs.AppSdk.FileView.FileView!
+HackerOs.AppSdk.FileView.FileViewBreadcrumb.Owner.set -> void
+HackerOs.AppSdk.FileView.FileViewBreadcrumb.RootLabel.get -> string!
+HackerOs.AppSdk.FileView.FileViewBreadcrumb.RootLabel.set -> void
+HackerOs.AppSdk.FileView.FileViewColumn
+HackerOs.AppSdk.FileView.FileViewColumn.FileViewColumn(string! Key, string! Header, System.Func<HackerOs.AppSdk.FileView.FileViewItem!, System.IComparable!>! SortAccessor, double? Width = null) -> void
+HackerOs.AppSdk.FileView.FileViewColumn.Header.get -> string!
+HackerOs.AppSdk.FileView.FileViewColumn.Header.init -> void
+HackerOs.AppSdk.FileView.FileViewColumn.Key.get -> string!
+HackerOs.AppSdk.FileView.FileViewColumn.Key.init -> void
+HackerOs.AppSdk.FileView.FileViewColumn.SortAccessor.get -> System.Func<HackerOs.AppSdk.FileView.FileViewItem!, System.IComparable!>!
+HackerOs.AppSdk.FileView.FileViewColumn.SortAccessor.init -> void
+HackerOs.AppSdk.FileView.FileViewColumn.Width.get -> double?
+HackerOs.AppSdk.FileView.FileViewColumn.Width.init -> void
+HackerOs.AppSdk.FileView.FileViewContextMenu
+HackerOs.AppSdk.FileView.FileViewContextMenu.FileViewContextMenu() -> void
+HackerOs.AppSdk.FileView.FileViewContextMenu.Owner.get -> HackerOs.AppSdk.FileView.FileView!
+HackerOs.AppSdk.FileView.FileViewContextMenu.Owner.set -> void
+HackerOs.AppSdk.FileView.FileViewDetails
+HackerOs.AppSdk.FileView.FileViewDetails.FileViewDetails() -> void
+HackerOs.AppSdk.FileView.FileViewDetails.Owner.get -> HackerOs.AppSdk.FileView.FileView!
+HackerOs.AppSdk.FileView.FileViewDetails.Owner.set -> void
+HackerOs.AppSdk.FileView.FileViewDropZone
+HackerOs.AppSdk.FileView.FileViewDropZone.ChildContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
+HackerOs.AppSdk.FileView.FileViewDropZone.ChildContent.set -> void
+HackerOs.AppSdk.FileView.FileViewDropZone.Class.get -> string?
+HackerOs.AppSdk.FileView.FileViewDropZone.Class.set -> void
+HackerOs.AppSdk.FileView.FileViewDropZone.Destination.get -> HackerOs.App.Abstractions.VirtualPath?
+HackerOs.AppSdk.FileView.FileViewDropZone.Destination.set -> void
+HackerOs.AppSdk.FileView.FileViewDropZone.Dropped.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.FileView.Events.FileViewDropRequestedEventArgs!>
+HackerOs.AppSdk.FileView.FileViewDropZone.Dropped.set -> void
+HackerOs.AppSdk.FileView.FileViewDropZone.FileViewDropZone() -> void
+HackerOs.AppSdk.FileView.FileViewDropZone.Owner.get -> HackerOs.AppSdk.FileView.FileView!
+HackerOs.AppSdk.FileView.FileViewDropZone.Owner.set -> void
+HackerOs.AppSdk.FileView.FileViewFolderActivationMode
+HackerOs.AppSdk.FileView.FileViewFolderActivationMode.Custom = 2 -> HackerOs.AppSdk.FileView.FileViewFolderActivationMode
+HackerOs.AppSdk.FileView.FileViewFolderActivationMode.Navigate = 0 -> HackerOs.AppSdk.FileView.FileViewFolderActivationMode
+HackerOs.AppSdk.FileView.FileViewFolderActivationMode.NewWindow = 1 -> HackerOs.AppSdk.FileView.FileViewFolderActivationMode
+HackerOs.AppSdk.FileView.FileViewIcons
+HackerOs.AppSdk.FileView.FileViewIcons.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.AppSdk.FileView.FileViewIcons.FileViewIcons() -> void
+HackerOs.AppSdk.FileView.FileViewIcons.Owner.get -> HackerOs.AppSdk.FileView.FileView!
+HackerOs.AppSdk.FileView.FileViewIcons.Owner.set -> void
+HackerOs.AppSdk.FileView.FileViewItem
+HackerOs.AppSdk.FileView.FileViewItem.Deselect() -> void
+HackerOs.AppSdk.FileView.FileViewItem.FileName.get -> string!
+HackerOs.AppSdk.FileView.FileViewItem.FileViewItem(HackerOs.App.Abstractions.VirtualPath fullPath, string! fileName, bool isDirectory, HackerOs.Simulation.Abstractions.FileSystem.FileSystemEntryMetadata! metadata) -> void
+HackerOs.AppSdk.FileView.FileViewItem.FullPath.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.FileViewItem.IconOverride.get -> HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor?
+HackerOs.AppSdk.FileView.FileViewItem.IconOverride.set -> void
+HackerOs.AppSdk.FileView.FileViewItem.IsCut.get -> bool
+HackerOs.AppSdk.FileView.FileViewItem.IsDirectory.get -> bool
+HackerOs.AppSdk.FileView.FileViewItem.IsRenaming.get -> bool
+HackerOs.AppSdk.FileView.FileViewItem.IsSelected.get -> bool
+HackerOs.AppSdk.FileView.FileViewItem.Metadata.get -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemEntryMetadata!
+HackerOs.AppSdk.FileView.FileViewItem.Rename() -> void
+HackerOs.AppSdk.FileView.FileViewItem.Select(bool additive = false) -> void
+HackerOs.AppSdk.FileView.FileViewMode
+HackerOs.AppSdk.FileView.FileViewMode.Details = 1 -> HackerOs.AppSdk.FileView.FileViewMode
+HackerOs.AppSdk.FileView.FileViewMode.Icons = 2 -> HackerOs.AppSdk.FileView.FileViewMode
+HackerOs.AppSdk.FileView.FileViewMode.Tree = 0 -> HackerOs.AppSdk.FileView.FileViewMode
+HackerOs.AppSdk.FileView.FileViewTree
+HackerOs.AppSdk.FileView.FileViewTree.FileViewTree() -> void
+HackerOs.AppSdk.FileView.FileViewTree.Owner.get -> HackerOs.AppSdk.FileView.FileView!
+HackerOs.AppSdk.FileView.FileViewTree.Owner.set -> void
+HackerOs.AppSdk.FileView.FileViewTreeNode
+HackerOs.AppSdk.FileView.FileViewTreeNode.Depth.get -> int
+HackerOs.AppSdk.FileView.FileViewTreeNode.Depth.set -> void
+HackerOs.AppSdk.FileView.FileViewTreeNode.FileViewTreeNode() -> void
+HackerOs.AppSdk.FileView.FileViewTreeNode.Node.get -> HackerOs.AppSdk.FileView.FileViewTreeNodeState!
+HackerOs.AppSdk.FileView.FileViewTreeNode.Node.set -> void
+HackerOs.AppSdk.FileView.FileViewTreeNode.Owner.get -> HackerOs.AppSdk.FileView.FileView!
+HackerOs.AppSdk.FileView.FileViewTreeNode.Owner.set -> void
+HackerOs.AppSdk.FileView.FileViewTreeNode.Root.get -> HackerOs.AppSdk.FileView.FileViewTree!
+HackerOs.AppSdk.FileView.FileViewTreeNode.Root.set -> void
+HackerOs.AppSdk.FileView.FileViewTreeNodeState
+HackerOs.AppSdk.FileView.FileViewTreeNodeState.Children.get -> System.Collections.Generic.List<HackerOs.AppSdk.FileView.FileViewTreeNodeState!>?
+HackerOs.AppSdk.FileView.FileViewTreeNodeState.Children.set -> void
+HackerOs.AppSdk.FileView.FileViewTreeNodeState.FileViewTreeNodeState() -> void
+HackerOs.AppSdk.FileView.FileViewTreeNodeState.IsExpanded.get -> bool
+HackerOs.AppSdk.FileView.FileViewTreeNodeState.IsExpanded.set -> void
+HackerOs.AppSdk.FileView.FileViewTreeNodeState.IsLoading.get -> bool
+HackerOs.AppSdk.FileView.FileViewTreeNodeState.IsLoading.set -> void
+HackerOs.AppSdk.FileView.FileViewTreeNodeState.Item.get -> HackerOs.AppSdk.FileView.FileViewItem!
+HackerOs.AppSdk.FileView.FileViewTreeNodeState.Item.set -> void
+HackerOs.AppSdk.FileView.Icons.DefaultShellIconProvider
+HackerOs.AppSdk.FileView.Icons.DefaultShellIconProvider.DefaultShellIconProvider() -> void
+HackerOs.AppSdk.FileView.Icons.DefaultShellIconProvider.Resolve(HackerOs.AppSdk.FileView.Icons.FileViewIconRequest request) -> HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor!
+HackerOs.AppSdk.FileView.Icons.FileViewIconRequest
+HackerOs.AppSdk.FileView.Icons.FileViewIconRequest.Extension.get -> string?
+HackerOs.AppSdk.FileView.Icons.FileViewIconRequest.Extension.init -> void
+HackerOs.AppSdk.FileView.Icons.FileViewIconRequest.FileViewIconRequest() -> void
+HackerOs.AppSdk.FileView.Icons.FileViewIconRequest.FileViewIconRequest(HackerOs.App.Abstractions.VirtualPath Path, bool IsDirectory, string? Extension, string? MediaType) -> void
+HackerOs.AppSdk.FileView.Icons.FileViewIconRequest.IsDirectory.get -> bool
+HackerOs.AppSdk.FileView.Icons.FileViewIconRequest.IsDirectory.init -> void
+HackerOs.AppSdk.FileView.Icons.FileViewIconRequest.MediaType.get -> string?
+HackerOs.AppSdk.FileView.Icons.FileViewIconRequest.MediaType.init -> void
+HackerOs.AppSdk.FileView.Icons.FileViewIconRequest.Path.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.AppSdk.FileView.Icons.FileViewIconRequest.Path.init -> void
+HackerOs.AppSdk.FileView.Icons.IShellIconProvider
+HackerOs.AppSdk.FileView.Icons.IShellIconProvider.Resolve(HackerOs.AppSdk.FileView.Icons.FileViewIconRequest request) -> HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor!
+HackerOs.AppSdk.FileView.Icons.ShellIcon
+HackerOs.AppSdk.FileView.Icons.ShellIcon.Icon.get -> HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor?
+HackerOs.AppSdk.FileView.Icons.ShellIcon.Icon.set -> void
+HackerOs.AppSdk.FileView.Icons.ShellIcon.ShellIcon() -> void
+HackerOs.AppSdk.FileView.Icons.ShellIcon.Size.get -> int
+HackerOs.AppSdk.FileView.Icons.ShellIcon.Size.set -> void
+HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor
+HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor.Kind.get -> HackerOs.AppSdk.FileView.Icons.ShellIconKind
+HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor.Kind.init -> void
+HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor.LibraryOrPath.get -> string?
+HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor.LibraryOrPath.init -> void
+HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor.Name.get -> string?
+HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor.Name.init -> void
+HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor.ShellIconDescriptor(HackerOs.AppSdk.FileView.Icons.ShellIconKind Kind, string? LibraryOrPath, string? Name) -> void
+HackerOs.AppSdk.FileView.Icons.ShellIconKind
+HackerOs.AppSdk.FileView.Icons.ShellIconKind.Custom = 2 -> HackerOs.AppSdk.FileView.Icons.ShellIconKind
+HackerOs.AppSdk.FileView.Icons.ShellIconKind.Png = 1 -> HackerOs.AppSdk.FileView.Icons.ShellIconKind
+HackerOs.AppSdk.FileView.Icons.ShellIconKind.Vector = 0 -> HackerOs.AppSdk.FileView.Icons.ShellIconKind
+HackerOs.AppSdk.FileView.Icons.ShellIconLabel
+HackerOs.AppSdk.FileView.Icons.ShellIconLabel.ChildContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
+HackerOs.AppSdk.FileView.Icons.ShellIconLabel.ChildContent.set -> void
+HackerOs.AppSdk.FileView.Icons.ShellIconLabel.Icon.get -> HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor?
+HackerOs.AppSdk.FileView.Icons.ShellIconLabel.Icon.set -> void
+HackerOs.AppSdk.FileView.Icons.ShellIconLabel.ShellIconLabel() -> void
+HackerOs.AppSdk.FileView.Icons.ShellIconLabel.Size.get -> int
+HackerOs.AppSdk.FileView.Icons.ShellIconLabel.Size.set -> void
+HackerOs.AppSdk.FileView.Transfers.FileConflictChoice
+HackerOs.AppSdk.FileView.Transfers.FileConflictChoice.KeepBoth = 1 -> HackerOs.AppSdk.FileView.Transfers.FileConflictChoice
+HackerOs.AppSdk.FileView.Transfers.FileConflictChoice.Replace = 0 -> HackerOs.AppSdk.FileView.Transfers.FileConflictChoice
+HackerOs.AppSdk.FileView.Transfers.FileConflictChoice.Skip = 2 -> HackerOs.AppSdk.FileView.Transfers.FileConflictChoice
+HackerOs.AppSdk.FileView.Transfers.FileConflictResolution
+HackerOs.AppSdk.FileView.Transfers.FileConflictResolution.ApplyToAll.get -> bool
+HackerOs.AppSdk.FileView.Transfers.FileConflictResolution.ApplyToAll.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileConflictResolution.Choice.get -> HackerOs.AppSdk.FileView.Transfers.FileConflictChoice
+HackerOs.AppSdk.FileView.Transfers.FileConflictResolution.Choice.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileConflictResolution.FileConflictResolution(HackerOs.AppSdk.FileView.Transfers.FileConflictChoice Choice, bool ApplyToAll = false) -> void
+HackerOs.AppSdk.FileView.Transfers.FileConflictResolver
+HackerOs.AppSdk.FileView.Transfers.FileTransfer
+HackerOs.AppSdk.FileView.Transfers.FileTransferConflict
+HackerOs.AppSdk.FileView.Transfers.FileTransferConflict.DestinationIsDirectory.get -> bool
+HackerOs.AppSdk.FileView.Transfers.FileTransferConflict.DestinationIsDirectory.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferConflict.DestinationPath.get -> string!
+HackerOs.AppSdk.FileView.Transfers.FileTransferConflict.DestinationPath.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferConflict.FileTransferConflict(string! SourcePath, string! DestinationPath, bool SourceIsDirectory, bool DestinationIsDirectory) -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferConflict.Name.get -> string!
+HackerOs.AppSdk.FileView.Transfers.FileTransferConflict.SourceIsDirectory.get -> bool
+HackerOs.AppSdk.FileView.Transfers.FileTransferConflict.SourceIsDirectory.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferConflict.SourcePath.get -> string!
+HackerOs.AppSdk.FileView.Transfers.FileTransferConflict.SourcePath.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferFailure
+HackerOs.AppSdk.FileView.Transfers.FileTransferFailure.FileTransferFailure(string! Path, string! Reason) -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferFailure.Path.get -> string!
+HackerOs.AppSdk.FileView.Transfers.FileTransferFailure.Path.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferFailure.Reason.get -> string!
+HackerOs.AppSdk.FileView.Transfers.FileTransferFailure.Reason.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferHostFile
+HackerOs.AppSdk.FileView.Transfers.FileTransferHostFile.ContentType.get -> string?
+HackerOs.AppSdk.FileView.Transfers.FileTransferHostFile.ContentType.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferHostFile.FileTransferHostFile(string! Name, long Size, string? ContentType, System.Func<long, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.IO.Stream!>!>! OpenReadStreamAsync) -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferHostFile.Name.get -> string!
+HackerOs.AppSdk.FileView.Transfers.FileTransferHostFile.Name.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferHostFile.OpenReadStreamAsync.get -> System.Func<long, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.IO.Stream!>!>!
+HackerOs.AppSdk.FileView.Transfers.FileTransferHostFile.OpenReadStreamAsync.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferHostFile.Size.get -> long
+HackerOs.AppSdk.FileView.Transfers.FileTransferHostFile.Size.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferItemResult
+HackerOs.AppSdk.FileView.Transfers.FileTransferItemResult.DestinationPath.get -> string!
+HackerOs.AppSdk.FileView.Transfers.FileTransferItemResult.DestinationPath.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferItemResult.FileTransferItemResult(string! SourcePath, string! DestinationPath) -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferItemResult.SourcePath.get -> string!
+HackerOs.AppSdk.FileView.Transfers.FileTransferItemResult.SourcePath.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferMode
+HackerOs.AppSdk.FileView.Transfers.FileTransferMode.Copy = 0 -> HackerOs.AppSdk.FileView.Transfers.FileTransferMode
+HackerOs.AppSdk.FileView.Transfers.FileTransferMode.Move = 1 -> HackerOs.AppSdk.FileView.Transfers.FileTransferMode
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult.Cancelled.get -> bool
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult.Cancelled.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult.Completed.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.Transfers.FileTransferItemResult!>!
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult.Completed.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult.DescribeFailures(string! verb) -> string?
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult.DescribeFailures(string! verb, HackerOs.AppSdk.IAppExecutionContext? context) -> string?
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult.Failures.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.Transfers.FileTransferFailure!>!
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult.Failures.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult.FileTransferResult(System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.Transfers.FileTransferItemResult!>! Completed, System.Collections.Generic.IReadOnlyList<string!>! Skipped, System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.Transfers.FileTransferFailure!>! Failures, bool Cancelled = false) -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult.Skipped.get -> System.Collections.Generic.IReadOnlyList<string!>!
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult.Skipped.init -> void
+HackerOs.AppSdk.FileView.Transfers.FileTransferResult.Succeeded.get -> bool
+HackerOs.AppSdk.FileView._Imports
+HackerOs.AppSdk.FileView._Imports.Execute() -> void
+HackerOs.AppSdk.FileView._Imports._Imports() -> void
+const HackerOs.AppSdk.FileView.Transfers.FileTransfer.MaxHostFileBytes = 268435456 -> long
+override HackerOs.AppSdk.FileView.FileView.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override HackerOs.AppSdk.FileView.FileView.OnParametersSetAsync() -> System.Threading.Tasks.Task!
+override HackerOs.AppSdk.FileView.FileViewBreadcrumb.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override HackerOs.AppSdk.FileView.FileViewBreadcrumb.OnParametersSet() -> void
+override HackerOs.AppSdk.FileView.FileViewDropZone.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor.Png(string! assetPathOrUri) -> HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor!
+static HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor.Vector(HackerOs.AppSdk.Icons.IconLibrary library, string! name) -> HackerOs.AppSdk.FileView.Icons.ShellIconDescriptor!
+static HackerOs.AppSdk.FileView.Transfers.FileTransfer.CopyAsync(System.Collections.Generic.IReadOnlyList<string!>! sources, string! destinationDirectory, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.FileView.Transfers.FileTransferResult!>!
+static HackerOs.AppSdk.FileView.Transfers.FileTransfer.GetCopyName(string! name, bool isDirectory, System.Func<string!, bool>! isTaken) -> string!
+static HackerOs.AppSdk.FileView.Transfers.FileTransfer.GetName(string! path) -> string!
+static HackerOs.AppSdk.FileView.Transfers.FileTransfer.ImportAsync(System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.FileView.Transfers.FileTransferHostFile!>! files, string! destinationDirectory, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.FileView.Transfers.FileTransferResult!>!
+static HackerOs.AppSdk.FileView.Transfers.FileTransfer.MoveAsync(System.Collections.Generic.IReadOnlyList<string!>! sources, string! destinationDirectory, HackerOs.AppSdk.FileView.Transfers.FileConflictResolver? resolveConflict, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.FileView.Transfers.FileTransferResult!>!
+static HackerOs.AppSdk.FileView.Transfers.FileTransfer.MoveToTrashAsync(System.Collections.Generic.IReadOnlyList<string!>! sources, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.FileView.Transfers.FileTransferResult!>!
+static HackerOs.AppSdk.FileView.Transfers.FileTransfer.TransferAsync(System.Collections.Generic.IReadOnlyList<string!>! sources, string! destinationDirectory, HackerOs.AppSdk.FileView.Transfers.FileTransferMode mode, HackerOs.AppSdk.FileView.Transfers.FileConflictResolver? resolveConflict, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.FileView.Transfers.FileTransferResult!>!
+~override HackerOs.AppSdk.FileView.FileView.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.AppSdk.FileView.FileViewBreadcrumb.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.AppSdk.FileView.FileViewContextMenu.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.AppSdk.FileView.FileViewDetails.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.AppSdk.FileView.FileViewDropZone.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.AppSdk.FileView.FileViewIcons.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.AppSdk.FileView.FileViewTree.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.AppSdk.FileView.FileViewTreeNode.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.AppSdk.FileView.Icons.ShellIcon.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.AppSdk.FileView.Icons.ShellIconLabel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

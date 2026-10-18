@@ -1,0 +1,52 @@
+.site {
+    --site-accent: #0b7a75;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    color: #1b1b1b;
+    background: #f6f8f8;
+}
+
+.site-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 12px 24px;
+    background: var(--site-accent);
+    color: #ffffff;
+}
+
+.site-brand {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.site-nav {
+    display: flex;
+    gap: 16px;
+}
+
+.site-nav ::deep a {
+    color: #d8f3f1;
+    text-decoration: none;
+    padding: 4px 0;
+    border-bottom: 2px solid transparent;
+}
+
+.site-nav ::deep a.active {
+    color: #ffffff;
+    border-bottom-color: #ffffff;
+}
+
+.site-body {
+    flex: 1;
+    padding: 24px;
+}
+
+.site-footer {
+    padding: 8px 24px;
+    font-size: 12px;
+    color: #5c6b6a;
+    border-top: 1px solid #d6dedd;
+}

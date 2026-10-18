@@ -1,0 +1,5 @@
+{
+  "name": "nice",
+  "description": "Exécute une commande avec une priorité modifiée",
+  "terminalUsage": "nice [-n N] [commande [arguments...]]"
+}

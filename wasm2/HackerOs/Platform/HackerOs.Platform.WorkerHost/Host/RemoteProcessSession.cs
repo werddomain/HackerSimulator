@@ -7,6 +7,7 @@ using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Shell;
 using HackerOs.Platform.WorkerHost.Protocol;
+using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -44,7 +45,14 @@ internal sealed class RemoteProcessSession
     private readonly Lock _gate = new();
     private readonly Dictionary<int, CancellationTokenSource> _calls = [];
     private readonly Dictionary<int, FileSystemContentReadHandle> _reads = [];
+    private readonly Dictionary<int, HackerOs.AppSdk.Net.IHackHttpListenerSocket> _listeners = [];
+    private readonly Dictionary<int, IDisposable> _descriptors = [];
+    private readonly CancellationTokenSource _listening = new();
+    private readonly RemoteEventRouter _events;
     private int _nextReadHandle;
+    private int _nextListener;
+    private int _nextDescriptor;
+    private bool _listenersClosed;
     private bool _stdoutClosed;
     private bool _stderrClosed;
     private bool _killAcknowledged;
@@ -56,24 +64,53 @@ internal sealed class RemoteProcessSession
         TextWriter output,
         TextWriter error,
         bool inputAttached)
+        : this(worker, launch.Context, launch.Control, input, output, error, inputAttached)
+    {
+        Launch = launch;
+    }
+
+    /// <summary>A background task's process (ADR 0128): no entry point, no streams of its own.</summary>
+    public RemoteProcessSession(WorkerConnection worker, RemoteBackgroundJobLaunch job)
+        : this(worker, job.Context, job.Control, TextReader.Null, TextWriter.Null, TextWriter.Null, inputAttached: false)
+    {
+        JobProgress = job.Progress;
+    }
+
+    private RemoteProcessSession(
+        WorkerConnection worker,
+        IAppExecutionContext context,
+        ProcessControlBlock? control,
+        TextReader input,
+        TextWriter output,
+        TextWriter error,
+        bool inputAttached)
     {
         _worker = worker;
-        Launch = launch;
-        _context = launch.Context;
-        _control = launch.Control;
+        _context = context;
+        _control = control;
         _input = input;
         _output = output;
         _error = error;
         InputAttached = inputAttached;
-        Pid = launch.Context.ProcessId.Value;
+        Pid = context.ProcessId.Value;
+        _events = new RemoteEventRouter(Pid, worker.Post, worker.Log);
         _outputPump = PumpOutputAsync();
     }
 
     /// <summary>Gets the process.</summary>
     public long Pid { get; }
 
-    /// <summary>Gets what the OS handed to the worker.</summary>
-    public RemoteProcessLaunch Launch { get; }
+    /// <summary>Gets what the OS handed to the worker; <see langword="null"/> for a background task.</summary>
+    public RemoteProcessLaunch? Launch { get; }
+
+    /// <summary>Receives the reports of a background task (ADR 0128), or <see langword="null"/>.</summary>
+    public Action<HackerOs.AppSdk.Threading.HackBackgroundProgress>? JobProgress { get; }
+
+    /// <summary>
+    /// Receives the <c>ui</c> outputs of a window rendered in the worker (ADR 0129 trial), on the
+    /// page's thread; the element is valid during the call only. <see langword="null"/> otherwise.
+    /// </summary>
+    public Action<JsonElement>? UiReceiver { get; set; }
 
     /// <summary>Gets whether the process reads a real standard input (a pipe or the terminal).</summary>
     public bool InputAttached { get; }
@@ -96,6 +133,9 @@ internal sealed class RemoteProcessSession
         }
     }
 
+    /// <summary>Gets the process's open event subscriptions and watches (ADR 0124).</summary>
+    public int EventSubscriptionCount => _events.Count;
+
     /// <summary>Gets the task the worker completes when <c>OnStoppingAsync</c> of a hosted service returned.</summary>
     public Task ServiceStopped => _serviceStopped.Task;
 
@@ -103,6 +143,7 @@ internal sealed class RemoteProcessSession
     public void Attach()
     {
         _context.StopRequested += OnStopRequested;
+        _context.IntentReceived += OnIntentReceived;
         _context.PermissionErrors.PermissionDenied += OnPermissionDenied;
         if (_context.StopRequest is { } already)
         {
@@ -115,6 +156,19 @@ internal sealed class RemoteProcessSession
             CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
+    }
+
+    /// <summary>Forwards an intent the OS handed to this running process to its worker (ADR 0096, section 5).</summary>
+    private void OnIntentReceived(object? sender, AppIntentDelivery delivery)
+    {
+        if (!HasEnded)
+        {
+            _worker.Post(WorkerMessage.Create(WorkerMessageType.Intent, writer =>
+            {
+                writer.WriteNumber("p", Pid);
+                WireCodec.WriteIntentDelivery(writer, "it", delivery);
+            }));
+        }
     }
 
     /// <summary>Ctrl+C: cancels the process token in the worker.</summary>
@@ -178,6 +232,18 @@ internal sealed class RemoteProcessSession
         }
     }
 
+    /// <summary>The process answered a request of one of its listening sockets (<c>hres</c>).</summary>
+    public void OnHttpResponse(int socketId, long exchangeId, HackerOs.AppSdk.Net.HackHttpListenerReply reply)
+    {
+        HackerOs.AppSdk.Net.IHackHttpListenerSocket? socket;
+        lock (_gate)
+        {
+            _listeners.TryGetValue(socketId, out socket);
+        }
+
+        socket?.Respond(exchangeId, reply);
+    }
+
     /// <summary>Abandons a call whose token the worker cancelled.</summary>
     public void OnCancel(int id)
     {
@@ -190,8 +256,11 @@ internal sealed class RemoteProcessSession
         call?.Cancel();
     }
 
-    /// <summary>Serves one call and posts its answer.</summary>
-    public async Task OnCallAsync(int id, string operation, JsonElement arguments)
+    /// <summary>
+    /// Serves one call and posts its answer; a <paramref name="synchronous"/> call (ADR 0131,
+    /// section 4) is answered in the worker's shared slot instead, where its thread waits.
+    /// </summary>
+    public async Task OnCallAsync(int id, string operation, JsonElement arguments, bool synchronous = false)
     {
         using CancellationTokenSource cancellation = new();
         lock (_gate)
@@ -227,7 +296,15 @@ internal sealed class RemoteProcessSession
             }
         }
 
-        _worker.Post(reply);
+        if (synchronous)
+        {
+            // ADR 0131, section 4: the worker waits in Atomics.wait; the answer goes to its shared slot.
+            _worker.AnswerSynchronously(id, reply);
+        }
+        else
+        {
+            _worker.Post(reply);
+        }
     }
 
     /// <summary>Serves one call that has no answer; a failure is logged, as nobody waits for it.</summary>
@@ -246,20 +323,43 @@ internal sealed class RemoteProcessSession
     private void End(RemoteProcessExit exit)
     {
         _context.StopRequested -= OnStopRequested;
+        _context.IntentReceived -= OnIntentReceived;
         _context.PermissionErrors.PermissionDenied -= OnPermissionDenied;
         List<FileSystemContentReadHandle> reads;
         List<CancellationTokenSource> calls;
+        List<HackerOs.AppSdk.Net.IHackHttpListenerSocket> listeners;
+        List<IDisposable> descriptors;
         lock (_gate)
         {
+            descriptors = [.. _descriptors.Values];
+            _descriptors.Clear();
             reads = [.. _reads.Values];
             _reads.Clear();
             calls = [.. _calls.Values];
             _calls.Clear();
+            listeners = [.. _listeners.Values];
+            _listeners.Clear();
+            _listenersClosed = true;
+        }
+
+        // The kernel closes the sockets of a process that ends: the port is free again. Its
+        // subscriptions leave the bus too, without waiting for the worker (ADR 0124, section 1).
+        _listening.Cancel();
+        _events.CloseAll();
+        foreach (HackerOs.AppSdk.Net.IHackHttpListenerSocket listener in listeners)
+        {
+            _ = listener.DisposeAsync();
         }
 
         foreach (FileSystemContentReadHandle read in reads)
         {
             _ = read.DisposeAsync();
+        }
+
+        // exit(2) closes every descriptor the process still holds (ADR 0125).
+        foreach (IDisposable descriptor in descriptors)
+        {
+            descriptor.Dispose();
         }
 
         foreach (CancellationTokenSource call in calls)
@@ -303,6 +403,8 @@ internal sealed class RemoteProcessSession
             return;
         }
 
+        // A killed process receives nothing more, even if its worker is slow to drop it.
+        _events.CloseAll();
         _worker.Post(WorkerMessage.Create(WorkerMessageType.Kill, writer => writer.WriteNumber("p", Pid)));
         _ = _worker.EnsureKilledAsync(this);
     }
@@ -351,6 +453,104 @@ internal sealed class RemoteProcessSession
                 writer.WriteNumber("p", Pid);
                 writer.WriteNumber("n", text.Length);
             }));
+        }
+    }
+
+    /// <summary>
+    /// ADR 0128 section 6: a process in a worker starts a background task. The OS places it like any
+    /// other (the pool, or the main thread) through this process's own gateway, and forwards its
+    /// reports to the worker as <c>bgp</c> messages keyed by the caller's job number <c>j</c>.
+    /// </summary>
+    private async Task<Action<Utf8JsonWriter>> RunBackgroundJobAsync(JsonElement a, CancellationToken cancellationToken)
+    {
+        JsonElement target = a.GetProperty("jt");
+        HackerOs.AppSdk.Threading.HackBackgroundJobRequest request = new(
+            new HackerOs.AppSdk.Threading.HackBackgroundJobTarget(
+                target.GetString("asm"), target.GetString("ty"), target.GetOptionalString("me"), target.GetString("it")),
+            a.GetString("ji"),
+            a.GetOptionalString("n"),
+            a.GetOptional("ni")?.GetInt32() ?? 0);
+        int job = a.GetInt32("j");
+        Action<HackerOs.AppSdk.Threading.HackBackgroundProgress>? progress = a.GetFlag("pg")
+            ? report => _worker.Post(WorkerMessage.Create(WorkerMessageType.BackgroundJobProgress, writer =>
+            {
+                writer.WriteNumber("p", Pid);
+                writer.WriteNumber("j", job);
+                writer.WriteNumber("f", report.Fraction);
+                if (report.Message is { } message)
+                {
+                    writer.WriteString("m", message);
+                }
+            }))
+            : null;
+        string? result = await _context.Background.RunAsync(request, progress, cancellationToken).ConfigureAwait(false);
+        return writer =>
+        {
+            if (result is not null)
+            {
+                writer.WriteString("r", result);
+            }
+        };
+    }
+
+    /// <summary>
+    /// Opens a listening socket for the process (ADR 0074, section 2) and starts carrying its
+    /// requests to the worker as <c>hreq</c> messages; the worker buffers a request that arrives
+    /// before the answer naming the socket.
+    /// </summary>
+    private async Task<Action<Utf8JsonWriter>> ListenAsync(IReadOnlyList<string> prefixes, CancellationToken cancellationToken)
+    {
+        var result = await _context.Network.ListenHttpAsync(prefixes, cancellationToken).ConfigureAwait(false);
+        if (!result.Succeeded)
+        {
+            return writer => WireCodec.WriteNetwork(writer, result, static (_, _) => { });
+        }
+
+        HackerOs.AppSdk.Net.IHackHttpListenerSocket socket = result.Value!;
+        int id;
+        lock (_gate)
+        {
+            if (_listenersClosed)
+            {
+                _ = socket.DisposeAsync();
+                throw new HackProcessKilledException(Pid);
+            }
+
+            id = ++_nextListener;
+            _listeners[id] = socket;
+        }
+
+        _ = PumpListenerAsync(id, socket);
+        return writer =>
+        {
+            writer.WriteNumber("ne", (int)HackerOs.AppSdk.Net.HackNetworkError.None);
+            writer.WriteNumber("sk", id);
+            WireCodec.WriteStrings(writer, "px", socket.Prefixes);
+        };
+    }
+
+    /// <summary>Hands each request of one socket to the worker until the socket closes.</summary>
+    private async Task PumpListenerAsync(int id, HackerOs.AppSdk.Net.IHackHttpListenerSocket socket)
+    {
+        try
+        {
+            while (await socket.AcceptAsync(_listening.Token).ConfigureAwait(false) is { } exchange)
+            {
+                _worker.Post(WorkerMessage.Create(WorkerMessageType.HttpRequest, writer =>
+                {
+                    writer.WriteNumber("p", Pid);
+                    writer.WriteNumber("sk", id);
+                    WireCodec.WriteListenerExchange(writer, "ex", exchange);
+                }));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The process ended.
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            _worker.Log($"pid {Pid}: listening socket {id} failed: {exception.Message}");
         }
     }
 
@@ -413,17 +613,51 @@ internal sealed class RemoteProcessSession
                 };
             }
 
+            case RemoteOps.BackgroundProgress:
+                // ADR 0128 section 4: the task's own process reports; already throttled in the worker.
+                JobProgress?.Invoke(new HackerOs.AppSdk.Threading.HackBackgroundProgress(
+                    Math.Clamp(a.GetDouble("f"), 0d, 1d), a.GetOptionalString("m")));
+                return static _ => { };
+            case RemoteOps.BackgroundRun:
+                return await RunBackgroundJobAsync(a, cancellationToken).ConfigureAwait(false);
+
             case RemoteOps.EnvSetDirectory:
                 c.Environment.SetCurrentDirectory(WireCodec.ReadPath(a, "p"));
                 return static _ => { };
             case RemoteOps.EnvSetVariable:
                 c.Environment.SetVariable(a.GetString("n"), a.GetOptionalString("v"));
                 return static _ => { };
+            case RemoteOps.ServiceNotify:
+                // The trusted context of this process only accepts it if it is a service (ADR 0097).
+                c.ServiceNotify.Notify(WireCodec.ReadServiceNotification(a));
+                return static _ => { };
             case RemoteOps.Log:
                 c.Logging.Log(
                     (HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity)a.GetInt32("s"),
                     a.GetString("m"),
                     a.TryGetProperty("pr", out _) ? WireCodec.ReadDictionary(a, "pr") : null);
+                return static _ => { };
+            case RemoteOps.LogFile:
+                try
+                {
+                    c.Logging.AppendToLogFile(a.GetString("p"), a.GetString("m"));
+                }
+                catch (Exception exception) when (exception is UnauthorizedAccessException or ArgumentException)
+                {
+                    // A fire-and-forget line the OS refuses is dropped, like a datagram to a closed syslog socket.
+                }
+
+                return static _ => { };
+            case RemoteOps.LogSite:
+                try
+                {
+                    c.Logging.AppendToSiteDebugLog(a.GetString("m"));
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Same as LogFile: a line the OS refuses is dropped.
+                }
+
                 return static _ => { };
             case RemoteOps.NotificationPost:
                 c.Notifications.Post(
@@ -445,6 +679,11 @@ internal sealed class RemoteProcessSession
                     ProcessId.FromInt64(a.GetInt64("pid")), TimeSpan.FromTicks(a.GetInt64("to")),
                     (ProcessExitReason)a.GetInt32("r"), cancellationToken).ConfigureAwait(false);
                 return writer => WireCodec.WriteProcess(writer, "pr", stopped);
+            }
+            case RemoteOps.ProcessList:
+            {
+                IReadOnlyList<ProcessRecord> processes = c.Processes.ListProcesses();
+                return writer => WireCodec.WriteProcesses(writer, "ps", processes);
             }
             case RemoteOps.ProcessKill:
             {
@@ -483,6 +722,28 @@ internal sealed class RemoteProcessSession
                 var result = await c.Network.DetectOperatingSystemAsync(a.GetString("h"), cancellationToken).ConfigureAwait(false);
                 return writer => WireCodec.WriteNetwork(writer, result, WireCodec.WriteFingerprint);
             }
+            case RemoteOps.NetListen:
+                return await ListenAsync(WireCodec.ReadStrings(a, "px"), cancellationToken).ConfigureAwait(false);
+            case RemoteOps.NetUnlisten:
+            {
+                HackerOs.AppSdk.Net.IHackHttpListenerSocket? socket;
+                lock (_gate)
+                {
+                    _listeners.Remove(a.GetInt32("sk"), out socket);
+                }
+
+                if (socket is not null)
+                {
+                    await socket.DisposeAsync().ConfigureAwait(false);
+                }
+
+                return static _ => { };
+            }
+            case RemoteOps.NetListeners:
+            {
+                var listeners = await c.Network.GetTcpListenersAsync(cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteListeners(writer, listeners);
+            }
 
             case RemoteOps.CatalogInstalled:
             {
@@ -493,6 +754,17 @@ internal sealed class RemoteProcessSession
             {
                 var apps = await c.Catalog.GetHandlersAsync(WireCodec.ReadPath(a, "p"), a.GetOptionalString("mt"), cancellationToken).ConfigureAwait(false);
                 return writer => WireCodec.WriteApps(writer, apps);
+            }
+            case RemoteOps.CatalogDefaults:
+            {
+                var associations = await c.Catalog.GetDefaultHandlersAsync(cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteAssociations(writer, associations);
+            }
+            case RemoteOps.CatalogSetDefault:
+            {
+                HackerOs.AppSdk.Apps.HackDefaultHandlerStatus status = await c.Catalog.SetUserDefaultHandlerAsync(
+                    a.GetString("t"), a.GetString("a"), a.GetOptionalString("id"), cancellationToken).ConfigureAwait(false);
+                return writer => writer.WriteNumber("s", (int)status);
             }
             case RemoteOps.ServiceStart:
                 return ServiceResult(await c.Services.StartAsync(a.GetString("id"), cancellationToken).ConfigureAwait(false));
@@ -505,10 +777,22 @@ internal sealed class RemoteProcessSession
             }
             case RemoteOps.ServiceSetMode:
                 return ServiceResult(await c.Services.SetStartModeAsync(a.GetString("id"), (ServiceStartMode)a.GetInt32("m"), cancellationToken).ConfigureAwait(false));
+            case RemoteOps.ServiceStatus:
+            {
+                ServiceStatusSnapshot status = await c.Services.GetStatusAsync(a.GetString("id"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteServiceStatus(writer, status);
+            }
+            case RemoteOps.ServiceResetFailed:
+                return ServiceResult(await c.Services.ResetFailedAsync(a.GetString("id"), cancellationToken).ConfigureAwait(false));
             case RemoteOps.Drives:
             {
                 var drives = await c.Drives.GetDrivesAsync(cancellationToken).ConfigureAwait(false);
                 return writer => WireCodec.WriteDrives(writer, drives);
+            }
+            case RemoteOps.CrossOriginIsolation:
+            {
+                HackCrossOriginIsolationStatus isolation = await c.CrossOriginIsolation.GetStatusAsync(cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteCrossOriginIsolation(writer, isolation);
             }
             case RemoteOps.IntentLaunch:
             {
@@ -519,6 +803,33 @@ internal sealed class RemoteProcessSession
             {
                 AppIntentOpenFileResult result = await c.Intents.OpenFileAsync(WireCodec.ReadPath(a, "p"), a.GetOptionalString("mt"), cancellationToken).ConfigureAwait(false);
                 return writer => WireCodec.WriteOpenFileResult(writer, result);
+            }
+            case RemoteOps.IntentEditFile:
+            {
+                AppIntentOpenFileResult result = await c.Intents.EditFileAsync(WireCodec.ReadPath(a, "p"), a.GetOptionalString("mt"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteOpenFileResult(writer, result);
+            }
+            case RemoteOps.IntentReveal:
+            {
+                AppIntentResult result = await c.Intents.RevealFileAsync(WireCodec.ReadPath(a, "p"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteIntentResult(writer, result);
+            }
+            case RemoteOps.IntentOpenUri:
+            {
+                AppIntentResult result = await c.Intents.OpenUriAsync(new Uri(a.GetString("u"), UriKind.Absolute), a.GetOptionalString("app"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteIntentResult(writer, result);
+            }
+            case RemoteOps.IntentShowSettings:
+            {
+                AppIntentResult result = await c.Intents.ShowAppSettingsAsync(a.GetString("id"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteIntentResult(writer, result);
+            }
+            case RemoteOps.IntentSend:
+            {
+                AppIntentResult result = await c.Intents.SendIntentAsync(
+                    a.GetString("id"), a.GetOptionalString("pl"), a.GetOptionalString("app"),
+                    a.TryGetProperty("rm", out _) && a.GetFlag("rm"), cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteIntentResult(writer, result);
             }
             case RemoteOps.ClipboardGetText:
             {
@@ -545,10 +856,184 @@ internal sealed class RemoteProcessSession
             case RemoteOps.ClipboardClear:
                 await c.Clipboard.ClearAsync(cancellationToken).ConfigureAwait(false);
                 return static _ => { };
+            case RemoteOps.EventSubscribe:
+                Subscribe(a);
+                return static _ => { };
+            case RemoteOps.EventUnsubscribe:
+                _events.Close(a.GetInt32("s"));
+                return static _ => { };
+            case RemoteOps.EventAcknowledge:
+                _events.Acknowledge(a.GetInt32("s"), a.GetInt32("n"));
+                return static _ => { };
+            case RemoteOps.EventPublish:
+            {
+                TopicPublishResult result = PublishFromWorker(a);
+                if (result.Outcome != TopicPublishOutcome.Delivered)
+                {
+                    // Publish is synchronous and provisional in the worker: the refusal goes to the app's log (ADR 0138, section 3).
+                    c.Logging.Log(HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Warning,
+                        $"The OS refused a publication on '{a.GetString("top")}': {result.Outcome}.");
+                }
+
+                return static _ => { };
+            }
+
+            case RemoteOps.EventPublishWithResult:
+            {
+                // PublishAsync (ADR 0145): the app reads the outcome itself, nothing is logged.
+                TopicPublishResult result = PublishFromWorker(a);
+                return writer =>
+                {
+                    writer.WriteNumber("o", (int)result.Outcome);
+                    if (result.SubscriberFaults.Count > 0)
+                    {
+                        writer.WriteStartArray("f");
+                        foreach (EventDispatchFault fault in result.SubscriberFaults)
+                        {
+                            writer.WriteStartObject();
+                            RemoteErrors.Write(writer, fault.Exception);
+                            writer.WriteEndObject();
+                        }
+
+                        writer.WriteEndArray();
+                    }
+                };
+            }
+            case RemoteOps.EventSharedChannel:
+                try
+                {
+                    c.Events.RegisterSharedChannel(WirePayloadCodec.ParseTopic(a.GetString("top")), Worker.RemoteEventGateway.ReadPolicy(a));
+                }
+                catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
+                {
+                    // The call is synchronous and returns nothing in the worker: the refusal goes to the app's log.
+                    c.Logging.Log(HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Warning,
+                        $"The OS refused to register the shared channel '{a.GetString("top")}': {exception.Message}");
+                }
+
+                return static _ => { };
+            case RemoteOps.WatchOpen:
+            {
+                int id = a.GetInt32("s");
+                ITopicChannelSubscription<FileSystemChangeEvent> watch = await c.Watch.WatchAsync(
+                    WireCodec.ReadPath(a, "p"), (FileSystemWatchScope)a.GetInt32("sc"), cancellationToken).ConfigureAwait(false);
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    await watch.DisposeAsync().ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
+                _events.OpenWatch(id, watch);
+                return static _ => { };
+            }
+            case RemoteOps.WebDbOpen:
+                await c.WebDatabase.OpenAsync(
+                    JsonSerializer.Deserialize(a.GetString("j"), HackerOs.AppSdk.WebData.HackWebDbJsonContext.Default.HackWebDbSchemaDefinition)
+                        ?? throw new ArgumentException("No schema.", "j"),
+                    cancellationToken).ConfigureAwait(false);
+                return static _ => { };
+            case RemoteOps.WebDbExecute:
+            {
+                IReadOnlyList<string?> results = await c.WebDatabase.ExecuteAsync(
+                    JsonSerializer.Deserialize(a.GetString("j"), HackerOs.AppSdk.WebData.HackWebDbJsonContext.Default.HackWebDbRequest)
+                        ?? throw new ArgumentException("No request.", "j"),
+                    cancellationToken).ConfigureAwait(false);
+                string json = JsonSerializer.Serialize([.. results], HackerOs.AppSdk.WebData.HackWebDbJsonContext.Default.ListString);
+                return writer => writer.WriteString("r", json);
+            }
+            case RemoteOps.FsDescriptorOpen:
+                return OpenDescriptor(await c.FileSystem.OpenDescriptorAsync(WireCodec.ReadPath(a, "p"), cancellationToken).ConfigureAwait(false));
+            case RemoteOps.FsDescriptorClose:
+            {
+                IDisposable? descriptor;
+                lock (_gate)
+                {
+                    _descriptors.Remove(a.GetInt32("fd"), out descriptor);
+                }
+
+                descriptor?.Dispose();
+                return static _ => { };
+            }
+            case RemoteOps.ProcessSetLimit:
+            {
+                ResourceLimitChangeResult changed = await c.Processes.SetResourceLimitAsync(
+                    ProcessId.FromInt64(a.GetInt64("pid")), (ResourceLimitKind)a.GetInt32("k"),
+                    new ResourceLimit(a.GetInt64("s"), a.GetInt64("h")), cancellationToken).ConfigureAwait(false);
+                return writer => writer.WriteNumber("r", (int)changed);
+            }
             default:
                 throw new NotSupportedException($"Unknown remote operation '{operation}'.");
         }
     }
+
+    /// <summary>Keeps a descriptor the OS opened for the process until the worker closes it or the process ends.</summary>
+    private Action<Utf8JsonWriter> OpenDescriptor(FileSystemResult<IDisposable> result)
+    {
+        if (!result.Succeeded)
+        {
+            return writer => WireCodec.WriteResult(writer, FileSystemResult<int>.Failure(result.Error!), static (_, _) => { });
+        }
+
+        int id;
+        bool closed;
+        lock (_gate)
+        {
+            closed = _listenersClosed;
+            id = ++_nextDescriptor;
+            if (!closed)
+            {
+                _descriptors[id] = result.Value!;
+            }
+        }
+
+        if (closed)
+        {
+            // The process ended while the descriptor was being opened.
+            result.Value!.Dispose();
+            throw new HackProcessKilledException(Pid);
+        }
+
+        return writer => WireCodec.WriteResult(writer, FileSystemResult<int>.Success(id), static (w, value) => w.WriteNumber("fd", value));
+    }
+
+    /// <summary>
+    /// <c>ev.sub</c> (ADR 0124, section 1): a real subscription of the OS's bus, made by the process's
+    /// own trusted gateway (its identity, its rights), whose deliveries are queued for the worker.
+    /// </summary>
+    private void Subscribe(JsonElement a)
+    {
+        AppEventGateway events = TrustedEvents();
+        int id = a.GetInt32("s");
+        string wireName = a.GetString("w");
+        if (a.GetString("k") == Worker.RemoteEventGateway.EventKind)
+        {
+            _events.Open(id, boundedCapacity: null, enqueue =>
+                events.SubscribeEventWire(wireName, (type, @event) => enqueue(_events.EventMessage(id, type, @event))));
+            return;
+        }
+
+        TopicName topic = WirePayloadCodec.ParseTopic(a.GetString("top"));
+        int? capacity = a.GetOptional("c")?.GetInt32();
+        _events.Open(id, capacity, enqueue =>
+            events.SubscribeWire(topic, wireName, delivery => enqueue(_events.TopicMessage(id, delivery))));
+    }
+
+    /// <summary>
+    /// <c>ev.pub</c>: publishes what the process serialized in its worker, with its identity. Nobody
+    /// waits for the answer in the worker (ADR 0138), so a refusal goes to the app's log, where the
+    /// developer looks when a message never arrives.
+    /// </summary>
+    /// <summary>Publishes a worker's message on the OS's bus with the process's own identity (<c>ev.pub</c>, <c>ev.pubr</c>).</summary>
+    private TopicPublishResult PublishFromWorker(JsonElement a)
+    {
+        string json = a.GetString("j");
+        return TrustedEvents().PublishWire(
+            WirePayloadCodec.ParseTopic(a.GetString("top")), a.GetString("w"), json, type => WirePayloadCodec.Deserialize(type, json));
+    }
+
+    private AppEventGateway TrustedEvents() =>
+        _context.Events as AppEventGateway
+        ?? throw new NotSupportedException("This process's event gateway cannot serve a worker.");
 
     private static Action<Utf8JsonWriter> Mutation(FileSystemMutationResult result) => writer => WireCodec.WriteMutation(writer, result);
 

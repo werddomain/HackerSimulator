@@ -1,0 +1,5 @@
+{
+  "name": "cd",
+  "description": "Change le dossier de travail",
+  "terminalUsage": "cd [dossier|-]"
+}

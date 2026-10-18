@@ -29,6 +29,8 @@ internal static class RemoteOps
 
     // Logging, notifications: fire-and-forget.
     public const string Log = "log";
+    public const string LogFile = "log.file";
+    public const string LogSite = "log.site";
     public const string NotificationPost = "notify.post";
 
     // Clock.
@@ -38,6 +40,9 @@ internal static class RemoteOps
     public const string ProcessStop = "proc.stop";
     public const string ProcessKill = "proc.kill";
 
+    /// <summary>The process table (ADR 0131, section 4): only ever called synchronously, by <c>ListProcesses</c>.</summary>
+    public const string ProcessList = "proc.list";
+
     // Network (IAppNetworkGateway).
     public const string NetResolve = "net.resolve";
     public const string NetReverse = "net.reverse";
@@ -46,19 +51,61 @@ internal static class RemoteOps
     public const string NetTcp = "net.tcp";
     public const string NetOs = "net.os";
 
+    // Listening sockets (ADR 0074, section 2): requests then travel as hreq/hres messages.
+    public const string NetListen = "net.listen";
+    public const string NetUnlisten = "net.unlisten";
+    public const string NetListeners = "net.listeners";
+
     // App catalog, services, drives, intents, clipboard.
     public const string CatalogInstalled = "cat.installed";
     public const string CatalogHandlers = "cat.handlers";
+    public const string CatalogDefaults = "cat.defaults";
+    public const string CatalogSetDefault = "cat.setdef";
     public const string ServiceStart = "svc.start";
     public const string ServiceStop = "svc.stop";
     public const string ServiceGetMode = "svc.getmode";
     public const string ServiceSetMode = "svc.setmode";
+    public const string ServiceStatus = "svc.status";
+    public const string ServiceResetFailed = "svc.resetfailed";
+    public const string ServiceNotify = "svc.notify";
     public const string Drives = "drv.list";
+    public const string CrossOriginIsolation = "coi.get";
     public const string IntentLaunch = "int.launch";
     public const string IntentOpenFile = "int.open";
+    public const string IntentEditFile = "int.edit";
+    public const string IntentReveal = "int.reveal";
+    public const string IntentOpenUri = "int.uri";
+    public const string IntentShowSettings = "int.settings";
+    public const string IntentSend = "int.send";
     public const string ClipboardGetText = "clip.get";
     public const string ClipboardSetText = "clip.set";
     public const string ClipboardGetFiles = "clip.getfiles";
     public const string ClipboardSetFiles = "clip.setfiles";
     public const string ClipboardClear = "clip.clear";
+
+    // Events and directory watches (ADR 0124): the bus stays in the OS; a worker subscribes by
+    // message and receives each delivery as an `ev` message, acknowledged by `ev.ack` (credit).
+    public const string EventSubscribe = "ev.sub";
+    public const string EventUnsubscribe = "ev.unsub";
+    public const string EventPublish = "ev.pub";
+
+    /// <summary><c>PublishAsync</c> (ADR 0145): the same publication as a call, answered with the OS's outcome and faults.</summary>
+    public const string EventPublishWithResult = "ev.pubr";
+    public const string EventSharedChannel = "ev.chan";
+    public const string EventAcknowledge = "ev.ack";
+    public const string WatchOpen = "watch.open";
+
+    // Background tasks (ADR 0128): a task's reports (note, from the task's own process), and a task
+    // started by a process already in a worker (call, section 6; reports come back as `bgp` messages).
+    public const string BackgroundProgress = "bg.progress";
+    public const string BackgroundRun = "bg.run";
+
+    // Browser database of a web site (IAppWebDatabaseGateway, ADR 0088): the schema or the batch as JSON.
+    public const string WebDbOpen = "wdb.open";
+    public const string WebDbExecute = "wdb.exec";
+
+    // Resource limits (ADR 0125): a descriptor held by a write stream, and prlimit(2).
+    public const string FsDescriptorOpen = "fs.fdopen";
+    public const string FsDescriptorClose = "fs.fdclose";
+    public const string ProcessSetLimit = "proc.rlimit";
 }

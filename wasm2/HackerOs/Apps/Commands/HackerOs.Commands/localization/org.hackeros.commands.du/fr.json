@@ -1,0 +1,5 @@
+{
+  "name": "du",
+  "description": "Estime l'espace occupé par les fichiers",
+  "terminalUsage": "du [-a] [-s] [-h] [-c] [-d profondeur] [chemin...]"
+}

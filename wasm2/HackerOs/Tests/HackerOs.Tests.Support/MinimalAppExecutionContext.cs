@@ -31,7 +31,8 @@ public sealed class MinimalAppExecutionContext(
     IAppEnvironmentGateway? environment = null,
     bool isRootElevated = false,
     IAppClipboardGateway? clipboard = null,
-    ProcessId? processId = null) : IAppExecutionContext
+    ProcessId? processId = null,
+    HackerOs.AppSdk.Apps.IAppCatalogGateway? catalog = null) : IAppExecutionContext
 {
     public AppManifest Manifest { get; } = manifest;
     public Guid InstanceId { get; } = Guid.NewGuid();
@@ -59,6 +60,28 @@ public sealed class MinimalAppExecutionContext(
     public bool IsRootElevated { get; } = isRootElevated;
     public IAppClipboardGateway Clipboard => clipboard ?? throw Unsupported(nameof(Clipboard));
 
+    // Without a catalog, the interface's own default applies (every call throws NotSupportedException).
+    HackerOs.AppSdk.Apps.IAppCatalogGateway IAppExecutionContext.Catalog => catalog ?? UnsupportedCatalog.Instance;
+
     private static NotSupportedException Unsupported(string gatewayName) =>
         new($"'{gatewayName}' was not provided to this test's MinimalAppExecutionContext.");
+}
+
+/// <summary>Stands for the SDK's default catalog of a context that wires none.</summary>
+file sealed class UnsupportedCatalog : HackerOs.AppSdk.Apps.IAppCatalogGateway
+{
+    public static readonly UnsupportedCatalog Instance = new();
+
+    public event EventHandler? Changed
+    {
+        add { }
+        remove { }
+    }
+
+    public ValueTask<IReadOnlyList<HackerOs.AppSdk.Apps.HackAppInfo>> GetInstalledAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Catalog gateway.");
+
+    public ValueTask<IReadOnlyList<HackerOs.AppSdk.Apps.HackAppInfo>> GetHandlersAsync(
+        VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Catalog gateway.");
 }

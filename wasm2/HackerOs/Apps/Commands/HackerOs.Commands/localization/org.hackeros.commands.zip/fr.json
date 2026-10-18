@@ -1,0 +1,5 @@
+{
+  "name": "zip",
+  "description": "Regroupe et compresse des fichiers dans une archive zip",
+  "terminalUsage": "zip [-r] [-q] [-j] [-d] archive.zip fichier..."
+}

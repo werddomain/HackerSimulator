@@ -174,6 +174,22 @@ public sealed class InMemoryLocalUserRepository : ILocalUserRepository
         return ValueTask.FromResult(SetAuthority(id, authority));
     }
 
+    /// <inheritdoc />
+    public ValueTask<LocalUser> SetCredentialAsync(
+        LocalUserId id,
+        LocalPasswordCredential? credential,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_gate)
+        {
+            LocalUser user = GetRequired(id);
+            LocalUser updated = WithMutation(user, credential: new CredentialChange(credential));
+            _usersById[id] = updated;
+            return ValueTask.FromResult(updated);
+        }
+    }
+
     private bool IsLastEnabledAdministrator(LocalUser user) =>
         user.Enabled
         && user.Authority == AppAuthority.Administrator
@@ -183,7 +199,11 @@ public sealed class InMemoryLocalUserRepository : ILocalUserRepository
         ? user
         : throw new KeyNotFoundException($"No local user with ID '{id}'.");
 
-    private LocalUser WithMutation(LocalUser user, bool? enabled = null, AppAuthority? authority = null) => new(
+    private LocalUser WithMutation(
+        LocalUser user,
+        bool? enabled = null,
+        AppAuthority? authority = null,
+        CredentialChange? credential = null) => new(
         user.Id,
         user.LoginName,
         user.DisplayName,
@@ -191,10 +211,13 @@ public sealed class InMemoryLocalUserRepository : ILocalUserRepository
         authority ?? user.Authority,
         user.PrimaryGroupId,
         user.AdditionalGroupIds,
-        user.Credential,
+        credential is { } change ? change.Credential : user.Credential,
         user.Revision + 1,
         user.CreatedAtUtc,
         _clock());
+
+    /// <summary>A credential to set, possibly <see langword="null"/> (no password), as opposed to no change.</summary>
+    private readonly record struct CredentialChange(LocalPasswordCredential? Credential);
 }
 
 /// <summary>In-memory <see cref="ILocalGroupRepository"/>.</summary>

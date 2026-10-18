@@ -1,5 +1,11 @@
 # Gameplay V3 Domain Analysis & Architectural Specifications
 
+> **Mise à jour du 2026-10-17 :** ce domaine ne sera pas construit dans ce dépôt.
+> Le jeu vivra dans un autre dépôt qui utilise l'écosystème HackerOS
+> ([ADR 0092](../../wasm2/HackerOs/docs/adr/0092-game-in-a-separate-repository.md),
+> qui remplace l'ADR 0023). Ce document reste une référence pour ce dépôt-là.
+
+
 ## Overview
 
 This analysis document defines the architectural specifications, scope, mechanics, persistence, security boundaries, optional build model, and delivery slices for **Phase 4 Wave 6: Gameplay Domains** (`P4-W6-001` through `P4-W6-006`).

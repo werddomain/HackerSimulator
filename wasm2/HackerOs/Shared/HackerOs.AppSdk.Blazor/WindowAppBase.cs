@@ -15,7 +15,7 @@ namespace HackerOs.AppSdk.Blazor;
 /// Component lifecycle overrides are sealed so framework setup cannot be skipped.
 /// Apps use the corresponding <c>OnApp*</c> hooks instead.
 /// </remarks>
-public abstract class WindowAppBase : ComponentBase, IHandleEvent, IHandleAfterRender
+public abstract partial class WindowAppBase : ComponentBase, IHandleEvent, IHandleAfterRender, IWindowAppEventTarget
 {
     private Guid? _boundInstanceId;
     private bool _permissionErrorHandlerAttached;
@@ -31,6 +31,12 @@ public abstract class WindowAppBase : ComponentBase, IHandleEvent, IHandleAfterR
     [Parameter]
     [EditorRequired]
     public IAppExecutionContext AppContext { get; set; } = default!;
+
+    /// <summary>
+    /// Gets the SDK's own texts (the dialogs this base class opens) in the language of the app's
+    /// process (ADR 0104); the app's own texts come from its own <c>Strings</c>.
+    /// </summary>
+    private Microsoft.Extensions.Localization.IStringLocalizer<Strings> SdkText => HackerOs.AppSdk.Globalization.HackLocalization.GetLocalizer<Strings>(AppContext);
 
     /// <summary>Gets or sets the ecosystem-owned file dialog service.</summary>
     [Inject]
@@ -277,7 +283,103 @@ public abstract class WindowAppBase : ComponentBase, IHandleEvent, IHandleAfterR
             _permissionErrorHandlerAttached = true;
             AppContext.PermissionErrors.PermissionDenied += HandlePermissionDenied;
             AppContext.StopRequested += HandleStopRequested;
+            AppContext.IntentReceived += HandleIntentReceived;
         }
+    }
+
+    /// <summary>
+    /// Gets the intent this window was started for (ADR 0096, section 5): an app-defined intent with
+    /// its payload, <c>reveal-file</c>, <c>show-app-settings</c>... or <see langword="null"/> for a
+    /// plain launch. Its <see cref="AppIntentDelivery.Arguments"/> equal <see cref="LaunchArguments"/>.
+    /// </summary>
+    protected AppIntentDelivery? LaunchIntent => AppContext.Intent;
+
+    /// <summary>
+    /// Runs when the OS hands an intent to this already open window instead of starting a second
+    /// instance (ADR 0096, section 5): only a <see cref="AppManifest.SingleInstancePerUser"/> app
+    /// receives it. A second launch with arguments arrives as <see cref="AppIntentIds.LaunchApp"/>
+    /// with those arguments, like the command line a <c>GApplication</c> forwards to its primary
+    /// instance. Runs on the renderer's dispatcher, inside the app's ambient scope.
+    /// </summary>
+    /// <param name="intent">Identifier, payload, sender and arguments.</param>
+    /// <returns>A task representing the handling.</returns>
+    protected virtual Task OnIntentReceivedAsync(AppIntentDelivery intent) => Task.CompletedTask;
+
+    private void HandleIntentReceived(object? sender, AppIntentDelivery intent)
+    {
+        try
+        {
+            _ = InvokeAsync(async () =>
+            {
+                using IDisposable? scope = AmbientComponentDispatch.Enter(AppContext);
+                await OnIntentReceivedAsync(intent);
+                StateHasChanged();
+            });
+        }
+        catch (InvalidOperationException)
+        {
+            // Not attached to a renderer yet: the window shows the state its launch gave it.
+            _ = OnIntentReceivedAsync(intent);
+        }
+    }
+
+    /// <summary>
+    /// Sends an app-defined intent (ADR 0096, section 5) and, when several apps can handle it and
+    /// the user chose none yet, shows the OS's "Open with" chooser and sends it to the picked app,
+    /// remembering it when the user ticks "Always use this app".
+    /// </summary>
+    /// <param name="intentId">Identifier <c>domain.reversed.name.vN</c>.</param>
+    /// <param name="payloadJson">Optional JSON object of at most 64 KiB.</param>
+    /// <param name="cancellationToken">Cancels the request and the chooser.</param>
+    /// <returns>
+    /// <see langword="true"/> when an app received it; <see langword="false"/> when nobody handles it or
+    /// the user cancelled the chooser.
+    /// </returns>
+    /// <exception cref="ArgumentException">The identifier or payload is refused.</exception>
+    /// <exception cref="HackerOs.AppSdk.Apps.HackAppLaunchException">The handler failed to start.</exception>
+    /// <exception cref="HackerOs.AppSdk.IO.HackUnauthorizedAccessException">This app lacks <c>apps.launch</c>.</exception>
+    protected async Task<bool> SendIntentAsync(string intentId, string? payloadJson = null, CancellationToken cancellationToken = default)
+    {
+        using IDisposable? scope = AmbientComponentDispatch.Enter(AppContext);
+        HackerOs.AppSdk.Apps.HackIntentResult result =
+            await HackerOs.AppSdk.Apps.HackApps.SendIntentAsync(intentId, payloadJson, cancellationToken: cancellationToken);
+        if (result.Status != HackerOs.AppSdk.Apps.HackIntentStatus.ChooserRequired)
+        {
+            return result.Status == HackerOs.AppSdk.Apps.HackIntentStatus.Delivered;
+        }
+
+        AppChooserDialogResult choice = await ChooseAppAsync(
+            result.CandidateAppIds, SdkText["Intent.ChooseApp", intentId], cancellationToken);
+        if (choice.Status != AppChooserStatus.Selected || choice.AppId is null)
+        {
+            return false;
+        }
+
+        HackerOs.AppSdk.Apps.HackIntentResult sent = await HackerOs.AppSdk.Apps.HackApps.SendIntentAsync(
+            intentId, payloadJson, choice.AppId, choice.AlwaysUse, cancellationToken);
+        return sent.Status == HackerOs.AppSdk.Apps.HackIntentStatus.Delivered;
+    }
+
+    /// <summary>
+    /// Shows the OS's "Open with" chooser over <paramref name="appIds"/> (ADR 0096, section 5), with
+    /// each app's installed name and description.
+    /// </summary>
+    /// <param name="appIds">The candidate apps, e.g. <see cref="HackerOs.AppSdk.Apps.HackIntentResult.CandidateAppIds"/>.</param>
+    /// <param name="content">Sentence above the list.</param>
+    /// <param name="cancellationToken">Cancels the dialog.</param>
+    protected async Task<AppChooserDialogResult> ChooseAppAsync(
+        IReadOnlyList<string> appIds, string content, CancellationToken cancellationToken = default)
+    {
+        EnsureBasicDialogService();
+        IReadOnlyList<HackerOs.AppSdk.Apps.HackAppInfo> installed = await AppContext.Catalog.GetInstalledAsync(cancellationToken);
+        List<AppChooserOption> options = [.. appIds.Select(id =>
+            installed.FirstOrDefault(app => app.Id == id) is { } app
+                ? new AppChooserOption(app.Id, app.Name, app.Description)
+                : new AppChooserOption(id, id))];
+        return await Dialogs.ChooseAppAsync(
+            AppContext,
+            new AppChooserDialogRequest { Title = SdkText["Intent.OpenWith"], Content = content, Candidates = options },
+            cancellationToken);
     }
 
     /// <summary>
@@ -345,9 +447,8 @@ public abstract class WindowAppBase : ComponentBase, IHandleEvent, IHandleAfterR
             EnsureBasicDialogService();
             CredentialPromptDialogResult prompt = await Dialogs.CredentialPromptAsync(AppContext, new CredentialPromptDialogRequest
             {
-                Title = "Permission Denied — Request Approval?",
-                Description = $"'{Manifest.Name}' was denied access to '{e.Error.Path}'. " +
-                    "Enter an enabled Administrator's credentials to approve this one action."
+                Title = SdkText["Permission.Approval.Title"],
+                Description = SdkText["Permission.Approval.Description", Manifest.Name, e.Error.Path?.ToString() ?? string.Empty]
             });
 
             if (prompt.Status == CredentialPromptStatus.Submitted)
@@ -358,24 +459,24 @@ public abstract class WindowAppBase : ComponentBase, IHandleEvent, IHandleAfterR
                 {
                     AppContext.OneShotElevation.Grant(e.Error.RequiredCapability, e.Error.Path);
                     await MessageBox(
-                        "Access Approved",
-                        "An administrator approved this action once. Please try the action again.",
+                        SdkText["Permission.Approved.Title"],
+                        SdkText["Permission.Approved.Message"],
                         MessageBoxType.Ok);
                     return;
                 }
             }
         }
 
-        await MessageBox("Permission Denied", DescribePermissionError(e.Error), MessageBoxType.Ok);
+        await MessageBox(SdkText["Permission.Denied.Title"], DescribePermissionError(e.Error), MessageBoxType.Ok);
     }
 
-    private static string DescribePermissionError(FileSystemError error) => error.Code switch
+    private string DescribePermissionError(FileSystemError error) => SdkText[error.Code switch
     {
-        FileSystemErrorCode.PermissionDenied => $"You don't have permission to access '{error.Path}'.",
-        FileSystemErrorCode.CapabilityDenied => $"This app isn't authorized to access '{error.Path}'.",
-        FileSystemErrorCode.AuthorityDenied => $"This operation on '{error.Path}' requires elevated authority.",
-        _ => $"Access to '{error.Path}' was denied."
-    };
+        FileSystemErrorCode.PermissionDenied => "Permission.Denied.User",
+        FileSystemErrorCode.CapabilityDenied => "Permission.Denied.Capability",
+        FileSystemErrorCode.AuthorityDenied => "Permission.Denied.Authority",
+        _ => "Permission.Denied.Other"
+    }, error.Path?.ToString() ?? string.Empty];
 
     private void EnsureFileDialogService()
     {

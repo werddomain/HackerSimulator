@@ -123,17 +123,17 @@ public sealed class CodeEditorWorkspace
         string trimmed = name?.Trim() ?? string.Empty;
         if (trimmed.Length == 0)
         {
-            return "A file or folder name must be provided.";
+            return Strings.Ambient["Workspace.NameRequired"];
         }
 
         if (trimmed is "." or "..")
         {
-            return $"The name '{trimmed}' is not valid as a file or folder name.";
+            return Strings.Ambient["Workspace.NameInvalid", trimmed];
         }
 
         if (trimmed.Contains('/') || trimmed.Contains('\\') || trimmed.Any(char.IsControl))
         {
-            return "The name cannot contain '/', '\\' or control characters.";
+            return Strings.Ambient["Workspace.NameCharacters"];
         }
 
         return null;
@@ -187,7 +187,7 @@ public sealed class CodeEditorWorkspace
             new FileSystemStatRequest(path, FileSystemLinkBehavior.NoFollow), cancellationToken);
         if (existing.Succeeded)
         {
-            return new CodeEditorCreateResult(false, null, $"A file or folder '{name.Trim()}' already exists at this location.");
+            return new CodeEditorCreateResult(false, null, Strings.Ambient["Workspace.AlreadyExists", name.Trim()]);
         }
 
         FileSystemResult<FileSystemEntrySnapshot> parent = await _fileSystem.StatAsync(
@@ -207,11 +207,11 @@ public sealed class CodeEditorWorkspace
 
     private static string Describe(FileSystemErrorCode? code) => code switch
     {
-        FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied => "Access denied.",
-        FileSystemErrorCode.NotFound => "The folder no longer exists.",
-        FileSystemErrorCode.AlreadyExists => "An entry with this name already exists.",
-        FileSystemErrorCode.RevisionConflict => "The folder changed meanwhile; try again.",
-        null => "The entry could not be created.",
+        FileSystemErrorCode.PermissionDenied or FileSystemErrorCode.CapabilityDenied or FileSystemErrorCode.AuthorityDenied => Strings.Ambient["File.AccessDenied"],
+        FileSystemErrorCode.NotFound => Strings.Ambient["Workspace.FolderGone"],
+        FileSystemErrorCode.AlreadyExists => Strings.Ambient["Workspace.EntryExists"],
+        FileSystemErrorCode.RevisionConflict => Strings.Ambient["Workspace.FolderChanged"],
+        null => Strings.Ambient["Workspace.CreateFailed"],
         _ => code.ToString()!
     };
 }

@@ -22,7 +22,7 @@
     border: 1px solid var(--hos-input-border, var(--hos-border, #30363d));
     border-radius: var(--hos-input-radius, var(--hos-radius-sm, 4px));
     font-family: inherit;
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 .proc-filter:focus {
@@ -32,7 +32,7 @@
 }
 
 .proc-count {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--hos-text-secondary, #8b949e);
     white-space: nowrap;
 }
@@ -48,7 +48,7 @@
     gap: 8px;
     padding: 8px 12px;
     border-radius: var(--hos-radius-sm, 4px);
-    font-size: 13px;
+    font-size: 0.8125rem;
 }
 
 .proc-report.ok {
@@ -101,7 +101,7 @@
 }
 
 .sort-indicator {
-    font-size: 10px;
+    font-size: 0.625rem;
 }
 
 /* ADR 0066: discreet mark on a column whose values are simulated, not measured. */
@@ -109,7 +109,7 @@
     margin-left: 6px;
     padding: 0 4px;
     font-family: var(--hos-font-mono, ui-monospace, monospace);
-    font-size: 9px;
+    font-size: 0.5625rem;
     font-weight: 400;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -128,7 +128,7 @@
 
 .proc-app {
     display: block;
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--hos-text-muted, #6e7681);
 }
 
@@ -143,7 +143,7 @@
     display: inline-block;
     padding: 1px 8px;
     border-radius: 10px;
-    font-size: 11px;
+    font-size: 0.6875rem;
     border: 1px solid currentColor;
 }
 

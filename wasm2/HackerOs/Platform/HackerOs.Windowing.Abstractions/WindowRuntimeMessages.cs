@@ -15,6 +15,13 @@ public sealed record MoveWindowCommand(WindowId WindowId, double X, double Y) : 
 /// <summary>Requests new position and dimensions for an edge/corner resize.</summary>
 public sealed record ResizeWindowCommand(WindowId WindowId, WindowBounds Bounds) : WindowCommand;
 
+/// <summary>
+/// Ends an interactive resize (pointer released, keyboard resize validated): the runtime reports one
+/// <see cref="WindowResizeCompletedEvent"/>, like the configure notification an X11 client receives
+/// once the window manager releases its grab, instead of one per intermediate size.
+/// </summary>
+public sealed record CompleteWindowResizeCommand(WindowId WindowId) : WindowCommand;
+
 /// <summary>Requests taskbar minimization for a window.</summary>
 public sealed record MinimizeWindowCommand(WindowId WindowId) : WindowCommand;
 
@@ -36,6 +43,24 @@ public sealed record ForceWindowCloseCommand(WindowId WindowId) : WindowCommand;
 /// <summary>Reports a new desktop work area that may constrain every window.</summary>
 public sealed record ChangeViewportCommand(WindowBounds WorkArea) : WindowCommand;
 
+/// <summary>
+/// Replaces a window's displayed title (ADR 0117 §3), like an X11 client writing
+/// <c>_NET_WM_NAME</c>: the runtime cleans it with <see cref="WindowTitles.Sanitize"/> and shows it
+/// as given, without adding the app's name.
+/// </summary>
+/// <param name="WindowId">The window to rename.</param>
+/// <param name="Title">The new title; must not be empty once cleaned.</param>
+public sealed record SetWindowTitleCommand(WindowId WindowId, string Title) : WindowCommand;
+
+/// <summary>
+/// Marks a window as answering its inputs or not (ADR 0127 §2), the way a window manager flags a
+/// client that missed its <c>_NET_WM_PING</c>. Issued by the platform's responsiveness monitor,
+/// never by the app itself.
+/// </summary>
+/// <param name="WindowId">The window whose state changes.</param>
+/// <param name="IsResponding">Whether the window answers its inputs.</param>
+public sealed record SetWindowRespondingCommand(WindowId WindowId, bool IsResponding) : WindowCommand;
+
 /// <summary>Base contract for an immutable fact emitted after a window transition.</summary>
 public abstract record WindowEvent;
 
@@ -50,6 +75,9 @@ public sealed record WindowMovedEvent(WindowId WindowId, WindowBounds PreviousBo
 
 /// <summary>Reports a completed resize.</summary>
 public sealed record WindowResizedEvent(WindowId WindowId, WindowBounds PreviousBounds, WindowBounds Bounds) : WindowEvent;
+
+/// <summary>Reports that an interactive resize ended with the window at <paramref name="Bounds"/>.</summary>
+public sealed record WindowResizeCompletedEvent(WindowId WindowId, WindowBounds Bounds) : WindowEvent;
 
 /// <summary>Reports a visual-state transition.</summary>
 public sealed record WindowVisualStateChangedEvent(
@@ -67,6 +95,12 @@ public sealed record WindowCloseCancelledEvent(WindowId WindowId) : WindowEvent;
 
 /// <summary>Reports final removal from the runtime.</summary>
 public sealed record WindowClosedEvent(WindowId WindowId, bool WasForced) : WindowEvent;
+
+/// <summary>Reports that a window's displayed title changed (ADR 0117 §3).</summary>
+public sealed record WindowTitleChangedEvent(WindowId WindowId, string PreviousTitle, string Title) : WindowEvent;
+
+/// <summary>Reports that a window started or stopped answering its inputs (ADR 0127 §2).</summary>
+public sealed record WindowRespondingChangedEvent(WindowId WindowId, bool IsResponding) : WindowEvent;
 
 /// <summary>Reports a work-area change and the resulting window snapshots.</summary>
 public sealed record WindowViewportChangedEvent(WindowBounds WorkArea, IReadOnlyList<WindowRuntimeState> Windows) : WindowEvent;

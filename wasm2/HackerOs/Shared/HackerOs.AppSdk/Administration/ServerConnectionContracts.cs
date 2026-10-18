@@ -35,10 +35,74 @@ public enum HackSyncDirection
     Pull = 1
 }
 
-/// <summary>A record a synchronization could not merge: both sides changed it (ADR 0030).</summary>
+/// <summary>
+/// A file both this device and another one changed since their last synchronization (ADR 0030,
+/// ADR 0101 section 2). The file stays frozen (kept as is, neither sent nor replaced) until the
+/// user picks a version in the OS conflict dialog (<see cref="IAppServerConnectionGateway.ShowConflictsAsync"/>).
+/// </summary>
 /// <param name="Domain">Domain of the record.</param>
-/// <param name="Path">Virtual path of the conflicting file.</param>
-public sealed record HackSyncConflict(HackSyncDomain Domain, string Path);
+/// <param name="Path">Path of the conflicting file, relative to the home directory.</param>
+/// <param name="DetectedAt">When the conflict was found, when known.</param>
+public sealed record HackSyncConflict(HackSyncDomain Domain, string Path, DateTimeOffset? DetectedAt = null);
+
+/// <summary>State of the periodic synchronization of the session user (ADR 0101 section 4).</summary>
+/// <param name="IsActive">The background synchronization runs (a session is open on a host that supports it).</param>
+/// <param name="IsPaused">The user paused it in <c>~/.config/hackeros/sync.config</c>.</param>
+/// <param name="IsOnline">The last pass reached the server.</param>
+/// <param name="LastSyncAt">End of the last completed pass, or <see langword="null"/>.</param>
+/// <param name="LastSent">Records the last pass sent.</param>
+/// <param name="LastReceived">Records the last pass applied locally.</param>
+/// <param name="LastError">Why the last pass failed, or <see langword="null"/>.</param>
+/// <param name="Interval">Interval between two periodic passes, set in <c>/etc/hackeros/sync.config</c>.</param>
+public sealed record HackSyncStatus(
+    bool IsActive,
+    bool IsPaused,
+    bool IsOnline,
+    DateTimeOffset? LastSyncAt,
+    int LastSent,
+    int LastReceived,
+    string? LastError,
+    TimeSpan Interval)
+{
+    /// <summary>The status of a host without background synchronization.</summary>
+    public static HackSyncStatus Inactive { get; } = new(false, false, false, null, 0, 0, null, TimeSpan.FromMinutes(5));
+}
+
+/// <summary>
+/// The network relay policy of the connected server (ADR 0102 §5), as <c>GET /api/proxy/policy</c>
+/// reports it and Settings &gt; Server Connection shows it.
+/// </summary>
+/// <param name="Enabled">Whether the server relays at all.</param>
+/// <param name="HttpPorts">Ports an HTTP request may target; empty when <paramref name="AllowAllPorts"/>.</param>
+/// <param name="TcpPorts">Ports a TCP connection may target; empty when <paramref name="AllowAllPorts"/>.</param>
+/// <param name="UdpPorts">Ports a UDP socket may target; empty when <paramref name="AllowAllPorts"/>.</param>
+/// <param name="AllowAllPorts">Whether every port is allowed.</param>
+/// <param name="AllowPrivateNetworks">Whether the server's local network is reachable.</param>
+/// <param name="QuotasEnabled">Whether the limits below apply.</param>
+/// <param name="MaxRequestBytes">Largest request body.</param>
+/// <param name="MaxResponseBytes">Largest response body.</param>
+/// <param name="MaxConcurrentRequests">Requests in flight at once for this device.</param>
+/// <param name="MaxStreams">TCP/UDP sockets open at once for this device.</param>
+/// <param name="OpenStreams">TCP/UDP sockets this device has open now.</param>
+/// <param name="StreamIdleTimeout">How long a socket may stay silent before the server closes it.</param>
+/// <param name="GrantedApps">Apps the server lets use the relay on its own (ADR 0102 §4).</param>
+/// <param name="Warnings">The settings that weaken the server's defaults, one sentence each.</param>
+public sealed record HackServerRelayPolicy(
+    bool Enabled,
+    IReadOnlyList<int> HttpPorts,
+    IReadOnlyList<int> TcpPorts,
+    IReadOnlyList<int> UdpPorts,
+    bool AllowAllPorts,
+    bool AllowPrivateNetworks,
+    bool QuotasEnabled,
+    long MaxRequestBytes,
+    long MaxResponseBytes,
+    int MaxConcurrentRequests,
+    int MaxStreams,
+    int OpenStreams,
+    TimeSpan StreamIdleTimeout,
+    IReadOnlyList<string> GrantedApps,
+    IReadOnlyList<string> Warnings);
 
 /// <summary>
 /// The server refused a request or could not be reached while the user asked for it (connect,
@@ -92,7 +156,43 @@ public interface IAppServerConnectionGateway
     /// <param name="cancellationToken">Cancels the pass.</param>
     ValueTask SyncAsync(HackSyncDomain domain, HackSyncDirection direction, CancellationToken cancellationToken = default);
 
-    /// <summary>Gets the records the last synchronization could not merge.</summary>
+    /// <summary>Gets the pending synchronization conflicts of the session user, oldest first.</summary>
     /// <param name="cancellationToken">Cancels the read.</param>
     ValueTask<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the network relay policy of the connected server (ADR 0102 §5);
+    /// <see langword="null"/> when the device is not connected.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <exception cref="HackServerConnectionException">The server could not be reached.</exception>
+    ValueTask<HackServerRelayPolicy?> GetRelayPolicyAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This server connection gateway cannot read the relay policy.");
+
+    /// <summary>
+    /// Opens the OS conflict dialog (ADR 0101 section 2) over every window; the user picks a version
+    /// there. Does nothing when no conflict is pending.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    ValueTask ShowConflictsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Gets the state of the periodic synchronization (ADR 0101 section 4).</summary>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    ValueTask<HackSyncStatus> GetSyncStatusAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Pauses or resumes the periodic synchronization of the session user, written as
+    /// <c>paused</c> in <c>~/.config/hackeros/sync.config</c>. A manual pass still runs while paused.
+    /// </summary>
+    /// <param name="paused">Whether to pause.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    ValueTask SetSyncPausedAsync(bool paused, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Runs one complete pass now, every domain in the right order (FileSystem push then pull,
+    /// Grants pull, FileAssociations push then pull); does nothing when not connected.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the pass.</param>
+    /// <returns>The status after the pass.</returns>
+    ValueTask<HackSyncStatus> SyncNowAsync(CancellationToken cancellationToken = default);
 }

@@ -25,14 +25,28 @@ Conventions de l'API :
 
 ## Bibliothèques
 
+Toutes sont publiées en paquets NuGet locaux du même nom, à la version de
+`build/Versions.props` (`1.2.0` depuis la fin de la série `exec`, ADR 0132 §2 ; `1.1.0` pour la série v3.1, ADR 0117 §5 ; `1.0.0` au gel du SDK, ADR 0114) ; un autre
+dépôt les consomme comme le décrit [`building-on-hackeros.md`](building-on-hackeros.md).
+La promesse de compatibilité SemVer couvre les bibliothèques de cette page et
+`HackerOs.Theming.Blazor`, pas la plateforme (ADR 0114 §2).
+
+Cette page présente les API qu'une app utilise au quotidien ; elle n'est pas
+exhaustive. La liste complète et exacte de la surface publique 1.2 est le
+fichier `PublicAPI.Shipped.txt` de chaque projet (environ 940 types au gel de la 1.0),
+vérifié au build par l'analyseur d'API publique : un ajout va dans
+`PublicAPI.Unshipped.txt`, un retrait exige une ligne `*REMOVED*` (ADR 0114).
+
 | Projet | Espaces de noms | Pour |
 |---|---|---|
 | `Shared/HackerOs.App.Abstractions` | `HackerOs.App.Abstractions` | Définir une app (`AppDefinition`, capacités, manifeste). |
 | `Shared/HackerOs.Simulation.Abstractions` | `HackerOs.Simulation.Abstractions.*` | Types de données du système simulé (chemins, passerelles, journaux, notifications, processus). |
-| `Shared/HackerOs.AppSdk` | `HackerOs.AppSdk`, `.IO`, `.Settings`, `.Apps`, `.Net`, `.Clipboard`, `.Diagnostics`, `.ServiceProcess`, `.Shell`, `.Administration` | Façades `Hack*`, contexte d'exécution, commandes et services. |
+| `Shared/HackerOs.AppSdk` | `HackerOs.AppSdk`, `.IO`, `.Settings`, `.Keyring`, `.Apps`, `.Net`, `.Clipboard`, `.Diagnostics`, `.ServiceProcess`, `.Shell`, `.Administration`, `.Threading` (SDK 1.2) | Façades `Hack*`, contexte d'exécution, commandes et services. |
 | `Shared/HackerOs.AppSdk.Blazor` | `HackerOs.AppSdk.Blazor`, `.Charts`, `.Interop`, `.Settings` | Apps fenêtrées, dialogues, graphiques. |
 | `Shared/HackerOs.AppSdk.FileView` | `HackerOs.AppSdk.FileView` | Vue de fichiers réutilisable. |
 | `Shared/HackerOs.AppSdk.Terminal` | `HackerOs.AppSdk.Terminal` | Terminal xterm.js. |
+| `Shared/HackerOs.AppSdk.Web` | `HackerOs.AppSdk.Web.Hosting`, `.Http`, `.Routing`, `.Mvc`, `.Views`, `.Antiforgery`, `.Sessions`, `.Diagnostics`, `.Data`, `.Logging` | Sites internes ASP.Hack façon ASP.NET Core MVC ([guide ASP.Hack](asp-hack-developer-guide.md), [`asp-hack-mvc.md`](asp-hack-mvc.md)). |
+| `Shared/HackerOs.AppSdk.Web.Blazor` | `HackerOs.AppSdk.Web.Blazor.Sites` | Sites Blazor interactifs dessinés dans le navigateur ([`blazor-sites.md`](blazor-sites.md)). |
 | `Shared/HackerOs.AppSdk.Icons` | `HackerOs.AppSdk.Icons` | Icônes. |
 | `Shared/HackerOs.AppSdk.VirtualKeyboard` | `HackerOs.AppSdk.VirtualKeyboard` | Clavier virtuel. |
 
@@ -42,7 +56,7 @@ Conventions de l'API :
 |---|---|
 | `[AppManifest]` | Marque la classe qui décrit l'app ; le build en génère `manifest.json`. `Execution` (`AppExecutionHost`) choisit où tourne un processus sans interface (ADR 0070). |
 | `AppExecutionHost`, `AppExecutionHosts` | `Default`, `MainThread`, `Pool`, `Dedicated` ; `DefaultFor(kind)` (commande → `Pool`, service → `Dedicated`, fenêtre → `MainThread`), `Resolve`, `Of(manifest)`, `IsWorker`. Manifeste : `"execution": "mainThread" \| "pool" \| "dedicated"`. Voir [`worker-processes.md`](worker-processes.md). |
-| `AppDefinition` | Classe de base. Obligatoires : `Id`, `Name`, `Kind`, `EntryPoint`. Facultatifs : `Version`, `Description`, `PublisherId`, `Category`, `LaunchVisibility`, `Icons`, `Capabilities`, `FileHandlers`, `Terminal`, `Components`, `MobileEntryPoint`, `SingleInstancePerUser`, `AutoStart`, `SupportsBack`, `Resources`, `Settings`, `Dependencies`, `Intents`, `DeclaredTopicPermissions`, `Localizations`, `Assets`. |
+| `AppDefinition` | Classe de base. Obligatoires : `Id`, `Name`, `Kind`, `EntryPoint`. Facultatifs : `Version`, `Description`, `PublisherId`, `Category`, `LaunchVisibility`, `Icons`, `Capabilities`, `FileHandlers`, `Terminal`, `Components`, `MobileEntryPoint`, `SingleInstancePerUser`, `AutoStart`, `SupportsBack`, `Window` (`WindowOptions`, ADR 0095, [`window-model.md`](window-model.md) ; `RememberGeometry`, SDK 1.1, ADR 0116, [`window-geometry.md`](window-geometry.md)), `Resources`, `Settings`, `Dependencies`, `Intents`, `DeclaredTopicPermissions`, `Localizations`, `Assets`, `OomScoreAdjust` (SDK 1.2, ADR 0126 §4, [`oom-killer.md`](oom-killer.md)). |
 | `AppKind` | `Window`, `Terminal`, `Service`. |
 | `AppLaunchVisibility` | `Visible`, `Hidden` (absente du lanceur). |
 | `FileHandler(MediaType, Extensions, Actions, Priority)` | Type de fichier que l'app ouvre. |
@@ -51,7 +65,8 @@ Conventions de l'API :
 | `AppSettingsSchemaManifest(SchemaVersion, Fields)`, `AppSettingFieldManifest(Key, ValueType, DefaultValue, Scope, Sensitivity, AllowedValues, Group)` | Schéma des paramètres ; `AppSettingValueType` : `String`, `Integer`, `Boolean`, `Enum`. |
 | `AppResourceProfileManifest` | Poids CPU, mémoire, disque et réseau simulés (`None` par défaut). |
 | `AppDefinitionMapper.ToManifest(definition)` | Définition → `AppManifest` (utile dans les tests). |
-| `AppManifest` | Manifeste validé, lu par l'OS ; `AppContext.Manifest` à l'exécution. |
+| `HackerOsSdk` | `Version` (version du SDK chargé, par exemple `1.2.0`), `SemanticVersion`, `IsCompatible(range)` (ADR 0098 §3). `AppDefinition.SdkCompatibility` déclare une plage ; par défaut, la version contre laquelle l'app est compilée est le minimum. |
+| `AppManifest` | Manifeste validé, lu par l'OS ; `AppContext.Manifest` à l'exécution. `OomScoreAdj` (champ `oomScoreAdj`, SDK 1.2, ADR 0126 §4) : valeur de `AppDefinition.OomScoreAdjust`. |
 | `AppCapabilities` | Catalogue des capacités (voir ci-dessous) ; `Describe`, `IsDangerous`, `GetRisk`, `IsKnown`, `RequiresWindowKind`, `All`. |
 | `VirtualPath` | Chemin absolu canonique (`Parse`, `Value`). |
 
@@ -65,10 +80,10 @@ Détails : [`app-model.md`](app-model.md).
 | `FileSystemUserSelectedRead` / `Write` | `filesystem.user-selected.read` / `.write` | normale | fichiers choisis par l'utilisateur |
 | `FileSystemUserHomeRead` / `Write` | `filesystem.user-home.read` / `.write` | normale | dossier personnel |
 | `FileSystemSystemRead` / `Write` | `filesystem.system.read` / `.write` | **dangereuse** | tout le reste (`/etc`, `/var`, `/proc`…) ; écrire `/etc`, `/bin`, `/var` exige aussi un administrateur |
-| `AppsLaunch` | `apps.launch` | normale | `HackApps.LaunchAsync`, `OpenFileAsync` |
+| `AppsLaunch` | `apps.launch` | normale | `HackApps.LaunchAsync`, `OpenFileAsync`, `EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `SendIntentAsync` |
 | `AppsManage` | `apps.manage` | **dangereuse** | `HackAppManagement` |
 | `DialogFileOpen`, `DialogFileSave`, `DialogFolderSelect` | `dialogs.file-open`, `.file-save`, `.folder-select` | normale | dialogues de fichiers (fenêtres seulement) |
-| `FileAssociationsRead` | `file-associations.read` | normale | associations de fichiers |
+| `FileAssociationsRead` | `file-associations.read` | normale | associations de fichiers ; avec `filesystem.user-home.write`, choix propre à l'utilisateur (ADR 0121) |
 | `FileAssociationsWrite` | `file-associations.write` | **dangereuse** | changer les associations de la machine |
 | `ProcessList` | `process.list` | normale | voir les processus des autres apps |
 | `ProcessManage` | `process.manage` | **dangereuse** | arrêter les processus des autres apps |
@@ -78,13 +93,17 @@ Détails : [`app-model.md`](app-model.md).
 | `ClipboardRead` / `Write` | `clipboard.read` / `.write` | normale | `HackClipboard` |
 | `NetworkSimulatedRead` / `Write` | `network.simulated.read` / `.write` | normale | réseau simulé |
 | `NetworkRealAccess` | `network.real.access` | **dangereuse** | vrai réseau par le serveur relais |
-| `GameplayDomainAccess` | `gameplay.domain.access` | normale | moteur de jeu |
+| `NetworkListen` | `network.listen` | normale | `HackHttpListener` sur un préfixe hors de son manifeste |
+| `NetworkListenPrivileged` | `network.listen.privileged` | **dangereuse** | écouter un port sous 1024 |
 | `ShellControl` | `shell.control` | normale | agir sur le shell appelant (`IShellSession`) |
 | `ShellHost` | `shell.host` | **dangereuse** | `HackShell` |
+| `KeyringReadAll` | `keyring.read-all` | **dangereuse** | `HackKeyring` sur les entrées des autres apps |
+| `UsersManage` | `users.manage` | **dangereuse** | `HackUserAccounts.ResetPasswordAsync` / `RemovePasswordAsync` (ADR 0120) |
 | `PermissionsManage` | `permissions.manage` | **dangereuse** | `HackPermissionAdministration` |
 | `ServerConnectionManage` | `server.connection.manage` | **dangereuse** | `HackServerConnection` |
 | `SystemPower` | `system.power` | **dangereuse** | `HackSystem` (avec un administrateur) |
 | `SystemStorageInspect` | `system.storage.inspect` | **dangereuse** | `HackStorageDiagnostics` |
+| `SystemBackup` | `system.backup` | **dangereuse** | `HackSystemBackup` (avec un administrateur) |
 
 Une capacité dangereuse d'une app non système n'est accordée qu'après
 approbation d'un administrateur. Détails : [`capabilities.md`](capabilities.md),
@@ -103,17 +122,24 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `StopRequested`, `StopRequest` | Demande d'arrêt (`SIGTERM`, ADR 0069), levée une fois avant l'annulation du jeton : `HackStopRequestedEventArgs` (`Reason`, `Deadline`, `Defer`). Préférer `HackProcess.Current`. Après un kill, chaque passerelle lève `HackProcessKilledException`. |
 | `UserId`, `UserLoginName`, `UserDisplayName`, `HomeDirectory`, `UserAuthority`, `IsRootElevated` | Utilisateur effectif. |
 | `GrantedCapabilities`, `Capabilities` | Capacités accordées à cette instance. |
-| `FileSystem`, `Watch` | Système de fichiers brut (préférer `HackFile`…) et surveillance. |
+| `FileSystem`, `Watch` | Système de fichiers brut (préférer `HackFile`…) et surveillance ; `Watch` (et `HackFileSystemWatcher`) marche aussi dans un worker depuis l'ADR 0124. |
 | `Logging` | `Log(severity, message, properties)` → `/var/log/apps/<appId>.log`. |
 | `Notifications` | `Post(severity, title, message, actions, expiresAfter)` ; `notifications.post`. |
-| `Events` | Bus d'événements : sujets de l'app (`Publish(topic, payload)`, `Subscribe`, `SubscribeChannel`, `RegisterSharedChannel`) et événements de la plateforme (`Subscribe<TEvent>`). |
+| `Events` | Bus d'événements : sujets de l'app (`Publish(topic, payload)`, `PublishAsync` qui rend le vrai résultat même dans un worker, ADR 0145, `Subscribe`, `SubscribeChannel`, `RegisterSharedChannel`) et événements de la plateforme (`Subscribe<TEvent>`). Dans un worker, les charges d'un type de l'app sont déclarées par `[assembly: HackWireContext(typeof(...))]` (`HackWireContextAttribute`, SDK 1.2, ADR 0124) ; voir [`app-sdk.md`](app-sdk.md#processus-dans-des-web-workers-adr-0070-et-0071). |
 | `Clock` | Temps simulé : `UtcNow`, `CurrentTick`, `DelayAsync`, `Schedule`. |
-| `Processes` | Processus de l'app et des autres (`OwnProcess`, `ListProcesses`, `StopAsync`, `Kill`). Préférer `HackProcess`. |
-| `Intents`, `Catalog`, `AppManagement` | Derrière `HackApps` et `HackAppManagement`. |
+| `Processes` | Processus de l'app et des autres (`OwnProcess`, `ListProcesses`, `StopAsync`, `Kill`). Préférer `HackProcess`. Les descendants du processus de l'app (ses tâches `HackBackground`) comptent comme les siens, sans `process.list` ni `process.manage` (ADR 0140 §7). Dans un worker, `ListProcesses` et `Kill` d'un autre processus demandent une page isolée (ADR 0143 §5), sinon `NotSupportedException`. |
+| `Background` | Passerelle des tâches en arrière-plan (`IAppBackgroundGateway.RunAsync`, SDK 1.2, ADR 0128) ; derrière `HackBackground`. Par défaut (contexte que l'OS n'a pas construit), la tâche s'exécute en ligne avec la même sérialisation. |
+| `Intents`, `Catalog`, `AppManagement` | Derrière `HackApps` et `HackAppManagement`. `IAppIntentGateway` : `LaunchAsync`, `OpenFileAsync`, `EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `ShowAppSettingsAsync`, `SendIntentAsync` → `AppIntentResult` (`AppIntentOutcome`, ADR 0096). |
+| `Intent`, `IntentReceived` | Intent qui a lancé l'instance (`AppIntentDelivery` : `IntentId`, `PayloadJson`, `SenderAppId`, `Arguments`) ; événement levé quand l'OS remet un intent ou une seconde activation à l'instance déjà ouverte (ADR 0096 §5). Voir [`app-intents.md`](app-intents.md). |
 | `Environment` | Derrière `HackEnvironment`. |
+| `Culture`, `FormatCulture` | Langue des textes (`en` ou `fr`, depuis `LC_ALL`/`LC_MESSAGES`/`LANG` du processus) et culture des formats (`fr-CA`, depuis `LC_TIME`) ; membres par défaut relus à chaque appel (ADR 0104). `context.GetLocalizer<Strings>()` donne un `IStringLocalizer<Strings>` lié à cette langue ([`localization.md`](localization.md)). |
 | `Network`, `Drives`, `Clipboard`, `ShellHost`, `Services` | Derrière les façades du même domaine. |
+| `CrossOriginIsolation` | État de l'isolation cross-origin (`IAppCrossOriginIsolationGateway.GetStatusAsync`, ADR 0146, après la 1.2.0) ; derrière `HackCrossOriginIsolation`, aucune capacité. Membre par défaut : `NotSupportedException`. |
 | `Console` | Derrière `HackConsole` (ADR 0064). |
-| `SystemSettings`, `PermissionAdministration`, `ServerConnection`, `SystemPower`, `StorageDiagnostics` | Derrière les façades d'administration. |
+| `SystemSettings`, `PermissionAdministration`, `ServerConnection`, `SystemPower`, `StorageDiagnostics`, `SystemBackup` | Derrière les façades d'administration. |
+| `WebDatabase` | Base IndexedDB `hackweb.<appId>` d'une app `Web` (`IAppWebDatabaseGateway`, ADR 0088) ; derrière `HackWebDb` du SDK web. Une autre app reçoit `UnauthorizedAccessException`. |
+| `Accessibility` | Préférences d'accessibilité effectives de la session (`IAppAccessibilityGateway` : `GetPreferencesAsync`, `Changed`, ADR 0105 §3) ; derrière `HackAccessibility`. Sans service (tests, Web Worker) : `DefaultAppAccessibilityGateway`, qui répond les valeurs par défaut. |
+| `Keyring` | Trousseau de connexion de l'utilisateur (`IAppKeyringGateway`, ADR 0100 §2) ; derrière `HackKeyring`. Toujours verrouillé hors d'une session avec mot de passe. |
 | `PermissionErrors` | Événement `PermissionDenied` à chaque refus de permission. |
 | `OneShotElevation` | Tickets d'élévation à usage unique (ADR 0042). |
 
@@ -122,7 +148,8 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | API | Membres | Capacité | Document |
 |---|---|---|---|
 | `HackExecutionContext` | `Current`, `CurrentOrNull`, `WorkingDirectory`, `Enter(context, workingDirectory)` ; `HackExecutionContextMissingException` | — | [`hack-file-api.md`](hack-file-api.md) |
-| `HackEnvironment` | `CurrentDirectory`, `SetCurrentDirectoryAsync`, `GetEnvironmentVariable(s)`, `SetEnvironmentVariable`, `GetCommandLineArgs`, `GetFolderPath(HackSpecialFolder)`, `UserName`, `MachineName`, `ProcessId`, `NewLine` | — | [`process-environment.md`](process-environment.md) |
+| `HackEnvironment` | `CurrentDirectory`, `SetCurrentDirectoryAsync`, `GetEnvironmentVariable(s)`, `SetEnvironmentVariable`, `GetCommandLineArgs`, `GetFolderPath(HackSpecialFolder)`, `UserName`, `MachineName`, `ProcessId`, `NewLine`, `Culture`, `FormatCulture` | — | [`process-environment.md`](process-environment.md) |
+| `HackLocale`, `HackLocalization`, `HackStringLocalizer`, `EnglishStringLocalizer<T>` (`HackerOs.AppSdk.Globalization`) | Règles de locale (`ResolveLanguage`, `ResolveFormatCulture`, `ParseLocaleConf`, `FormatLocaleConf`, `AvailableLocales`) ; `GetLocalizer<T>()` lié au processus ; localiseur toujours anglais pour les tests | — | [`localization.md`](localization.md) |
 | `HackSpecialFolder` | `UserProfile`, `Desktop`, `MyDocuments`, `ApplicationData`, `LocalApplicationData` | — | [`app-sdk.md`](app-sdk.md#utilisateur-courant-adr-0056-1) |
 | `HackUser` | `Current`, `Describe(context)`, `Root` → `HackUserInfo(LoginName, DisplayName, HomeDirectory, IsAdministrator)` | — | [`app-sdk.md`](app-sdk.md#utilisateur-courant-adr-0056-1) |
 | `HackConsole` (`IAppConsoleGateway`) | `Out`, `Error`, `In`, `IsAttached`, `Write`, `WriteLine[Async]`, `ReadLineAsync` : flux standard de l'instance ; ceux du shell qui l'a lancée (une app fenêtrée lancée par son nom écrit dans le terminal), `/dev/null` depuis le bureau (ADR 0064) | — | [`shell-interpreter.md`](shell-interpreter.md#apps-lancées-par-leur-nom) |
@@ -142,35 +169,78 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `HackTextContent` | `TryDecode`, `TryReadAsync` (texte ou binaire, comme `file`) | [`text-editor.md`](text-editor.md) |
 | `HackRecoveryDraft` | `Open(name)`, `SaveAsync`, `TryReadAsync`, `TakeAsync`, `DeleteAsync` : brouillon de travail non enregistré dans `~/.local/state/<appId>/recovery/` (ADR 0069) | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
 | `HackDriveInfo` | `GetDrivesAsync` : taille et espace libre (comme `df`) | [`system-metrics.md`](system-metrics.md) |
+| `HackCrossOriginIsolation` (`.Diagnostics`) | `GetStatusAsync` → `HackCrossOriginIsolationStatus` (`IsIsolated`, `Reason`, `Setting`, `EmbedderPolicy`, `SharedPipes`, `SynchronousWorkerCalls`, `BrowserMemoryMeasurement`, `TimerResolution`) ; aucune capacité ; après la 1.2.0 (ADR 0146) | [`worker-processes.md`](worker-processes.md#isolation-cross-origin-adr-0131-adr-0143) |
 | Exceptions | `HackIOException`, `HackFileNotFoundException`, `HackDirectoryNotFoundException`, `HackFileConflictException`, `HackUnauthorizedAccessException` | [`hack-file-api.md`](hack-file-api.md) |
 
 Capacités : selon le chemin (`filesystem.private.*`, `.user-home.*`,
 `.system.*`), puis les bits de mode du fichier.
+
+Limites de stockage (ADR 0094 §1, ADR 0099 §2) : `HackIOException.ErrorCode`
+porte le code du moteur, et `ShellErrorText.Describe` donne le message Linux.
+
+| Code (`FileSystemErrorCode`) | Errno | Quand | Message du shell |
+|---|---|---|---|
+| `NoSpace` (1800) | `ENOSPC` | Le navigateur refuse l'écriture (quota atteint), ou il reste moins que la réserve de root et l'appelant n'est pas administrateur | `No space left on device` |
+| `FileTooLarge` (1801) | `EFBIG` | Le contenu dépasse 16 Mio (taille maximale d'un fichier) | `File too large` |
+| `TooManyOpenFiles` (1802, SDK 1.2) | `EMFILE` | Le processus a atteint sa limite `nofile` de descripteurs ouverts (ADR 0125, [`process-limits.md`](process-limits.md)) | `Too many open files` |
 
 ### Paramètres (`HackerOs.AppSdk.Settings`)
 
 | API | Membres | Capacité | Document |
 |---|---|---|---|
 | `HackSettings` | `OpenAsync([context,] documentId)`, `GetAsync<T>`, `SetAsync<T>`, `OpenSystemAsync(documentId)` | `filesystem.private.*` ; documents de l'OS : droits des fichiers | [`settings-files.md`](settings-files.md) |
-| `HackSettingsDocument` | `Get<T>`, `GetSource`, `IsLocked`, `SetAsync`, `SetManyAsync`, `ResetAsync`, `RefreshAsync`, `Changed`, `Warnings` | — | [`settings-files.md`](settings-files.md) |
+| `HackSettingsDocument` | `Get<T>`, `GetValue`, `IsMasked`, `GetSource`, `IsLocked`, `SetAsync`, `SetManyAsync`, `ResetAsync`, `GetSecretAsync`, `SetSecretAsync`, `RefreshAsync`, `Changed`, `Warnings` | — | [`settings-files.md`](settings-files.md), [`sensitive-settings.md`](sensitive-settings.md) |
+| `HackSettingValue` | `QualifiedKey`, `Value`, `Sensitivity`, `Source`, `IsLocked`, `IsMasked`, `DisplayText` (`••••••••`) | — | [`sensitive-settings.md`](sensitive-settings.md) |
 | `HackSettingLockedException` | Clé verrouillée dans `[locked]` | — | [`settings-files.md`](settings-files.md) |
+| `HackSettingMaskedException` | Clé non publique dont le fichier privé est illisible (`QualifiedKey`, `PrivatePath`) | — | [`sensitive-settings.md`](sensitive-settings.md) |
+
+### Trousseau (`HackerOs.AppSdk.Keyring`)
+
+| API | Membres | Capacité | Document |
+|---|---|---|---|
+| `HackKeyring` | `IsUnlocked`, `GetAsync([context,] id)`, `GetAsync(context, appId, id)`, `SetAsync(id, secret, label)`, `DeleteAsync`, `ListAsync`, `ListAllAsync` | aucune pour ses propres entrées ; `keyring.read-all` (dangereuse) pour celles des autres apps | [`sensitive-settings.md`](sensitive-settings.md) |
+| `HackKeyringEntry` | `AppId`, `Id`, `Label`, `UpdatedAtUtc` (jamais le secret) | — | [`sensitive-settings.md`](sensitive-settings.md) |
+| `HackKeyringLockedException` | Trousseau verrouillé | — | [`sensitive-settings.md`](sensitive-settings.md) |
+
+### Comptes et mots de passe (`HackerOs.AppSdk.Administration`)
+
+| API | Membres | Capacité | Document |
+|---|---|---|---|
+| `HackUserAccounts` | `ListAsync`, `ChangePasswordAsync([context,] courant, nouveau)`, `ResetPasswordAsync([context,] login, nouveau)`, `RemovePasswordAsync([context,] login)`, `ValidateNewPassword`, `MinimumPasswordLength` (8), `MaximumPasswordLength` (256) | aucune pour lister et changer son propre mot de passe ; `users.manage` (dangereuse) et un administrateur pour un autre compte | [`sensitive-settings.md`](sensitive-settings.md) |
+| `HackUserAccount` | `LoginName`, `DisplayName`, `Authority`, `IsEnabled`, `HasPassword`, `UpdatedAtUtc`, `IsCurrentUser`, `IsAdministrator` (jamais le hachage) | — | [`sensitive-settings.md`](sensitive-settings.md) |
+| `IAppUserAccountsGateway` | passerelle derrière `HackUserAccounts` (`IAppExecutionContext.UserAccounts`, membre par défaut non pris en charge) | — | [ADR 0120](adr/0120-passwd-and-administrator-password-reset.md) |
 
 ### Apps (`HackerOs.AppSdk.Apps`)
 
 | API | Membres | Capacité | Document |
 |---|---|---|---|
-| `HackApps` | `GetInstalledAsync`, `GetHandlersAsync(path)`, `LaunchAsync(appId, args)`, `OpenFileAsync(path)`, `Changed` ; `HackAppInfo`, `HackOpenFileResult`, `HackAppLaunchException` | lecture : aucune ; lancement : `apps.launch` | [`app-sdk.md`](app-sdk.md#catalogue-des-apps-adr-0056-2) |
+| `HackApps` | `GetInstalledAsync`, `GetHandlersAsync(path)`, `LaunchAsync(appId, args)`, `OpenFileAsync(path)`, `EditFileAsync(path)`, `RevealFileAsync(path)`, `OpenUriAsync(uri, appId)`, `ShowSettingsAsync(appId)`, `SendIntentAsync(intentId, payloadJson, targetAppId, rememberChoice)`, `GetDefaultHandlersAsync()`, `SetDefaultHandlerAsync(target, appId, action)`, `ResetDefaultHandlerAsync(target, action)` (ADR 0121), `Changed` ; `HackFileAssociation`, `HackFileAssociationLayer`, `HackDefaultHandlerStatus`, `HackAppInfo` (avec `Capabilities`), `HackOpenFileResult` (`FellBackToOpen`), `HackIntentResult` (`HackIntentStatus`), `HackAppLaunchException` | lecture et `ShowSettingsAsync` : aucune ; défauts : `file-associations.read` (et `filesystem.user-home.write` pour écrire) ; le reste : `apps.launch` | [`app-sdk.md`](app-sdk.md#catalogue-des-apps-adr-0056-2), [`app-intents.md`](app-intents.md), [`user-file-associations.md`](user-file-associations.md) |
+| `HackBrowser` | `OpenAsync(url)`, `OpenDetachedAsync(url)` (fenêtre détachée, ADR 0078) ; `AppId`, `DetachedArgument` (`--detached`) | `apps.launch` | [`detached-display-windows.md`](detached-display-windows.md) |
 | `HackAppManagement` | `GetAllAsync`, `UninstallAsync`, `ReinstallAsync` ; `HackInstallScope`, `HackAppInstallState` | `apps.manage` | [`app-installation.md`](app-installation.md) |
 
 ### Processus et services
 
 | API | Membres | Capacité | Document |
 |---|---|---|---|
-| `HackProcess` (`.Diagnostics`) | `GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `GetChildren`, `KillAsync` (`SIGKILL`), `TerminateAsync` (`SIGTERM`, 5 s), `CloseMainWindowAsync` ; état, CPU, mémoire (`WorkingSet64` = `VmRSS`, `PrivateMemorySize64` = `RssAnon`, ADR 0068), E/S, arguments ; `UserProcessorTime`, `PrivilegedProcessorTime`, `TotalProcessorTime`, `Responding` (ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)) | `filesystem.system.read` pour `/proc`, `process.list`, `process.manage` | [`task-manager.md`](task-manager.md) |
+| `HackProcess` (`.Diagnostics`) | `GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `GetChildren`, `KillAsync` (`SIGKILL`), `TerminateAsync` (`SIGTERM`, 5 s), `CloseMainWindowAsync` ; état, CPU, mémoire (`WorkingSet64` = `VmRSS`, `PrivateMemorySize64` = `RssAnon`, ADR 0068), E/S, arguments ; `UserProcessorTime`, `PrivilegedProcessorTime`, `TotalProcessorTime`, `Responding` (ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)) ; `GetResourceLimitsAsync` → `HackResourceLimits` (`Cpu`, `Rss`, `NoFile`, `NProc`, `Enforcement` : `HackResourceLimitEnforcement`, `IsCpuMeasured`, `IsMemoryMeasured`), `SetResourceLimitAsync(ResourceLimitKind, soft, hard)` (`getrlimit`/`prlimit`, ADR 0125, SDK 1.2, [`process-limits.md`](process-limits.md)) ; raisons de fin `ProcessExitReason.CpuLimitExceeded`, `MemoryLimitExceeded` (SDK 1.2, ADR 0125) et `OutOfMemory` d'un processus tué par l'OOM killer (SDK 1.2, [`oom-killer.md`](oom-killer.md)) | `filesystem.system.read` pour `/proc`, `process.list`, `process.manage` | [`task-manager.md`](task-manager.md) |
 | `HackProcess.Current` → `HackCurrentProcess` ; `HackProcess.CheckpointAsync` (`.Diagnostics`) | `Id`, `StopToken`, `IsStopRequested`, `StopRequest`, `StopRequested` ; point d'arrêt : lève si l'arrêt est demandé, rend la main au-delà de 8 ms, sinon sans allocation | — | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
-| `HackStopRequestedEventArgs`, `HackProcessKilledException` (`.Diagnostics`) | `Reason`, `RequestedAt`, `Deadline`, `GracePeriod`, `Defer(Task)` ; exception des passerelles d'un processus tué | — | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
+| `HackStopRequestedEventArgs`, `HackProcessKilledException` (`.Diagnostics`) | `Reason`, `RequestedAt`, `Deadline`, `GracePeriod`, `Defer(Task)` ; exception des passerelles d'un processus tué, avec sa `Reason` (`Killed` par défaut, SDK 1.2, ADR 0140) ; elle dérive de `OperationCanceledException` | — | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
+| `HackProcess.Nice`, `BasePriority`, `ParseStatNice` (`.Diagnostics`) ; `IAppProcessGateway.GetNice` / `SetNice`, `ProcessNice` (`Simulation.Abstractions`) ; `IShellSession.RunNicedAsync` | Priorité `nice` (-20..19) d'un processus, lue dans `/proc/<pid>/stat` ; la changer (monter : son processus ; baisser ou autre utilisateur : root) ; lancer une commande avec un ajustement (SDK 1.2, ADR 0127 §1) | `process.manage` hors de son processus et de ses enfants (ADR 0140), `shell.control` | [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md) |
+| `ResourceLimitKind`, `ResourceLimit`, `ProcessResourceLimits`, `ResourceLimitChangeResult`, `ProcessLimitExceededException`, `IAppProcessGateway.SetResourceLimitAsync` (`Simulation.Abstractions`, SDK 1.2) | Contrat des limites (ADR 0125) : `ResourceLimit.Unlimited` vaut `long.MaxValue` ; `ProcessLimitExceededException` (`EAGAIN`, « Resource temporarily unavailable ») : refus par l'OS d'un lancement au-delà de `nproc`, vu par l'app comme un échec de lancement | `process.manage` pour changer la limite d'un autre processus | [`process-limits.md`](process-limits.md) |
 | `IAppProcessGateway.KillAsync(pid, reason)` (`Simulation.Abstractions`) | Tuer un processus en attendant l'accusé de l'OS ; utilisé par `HackProcess.KillAsync`, y compris depuis un Web Worker (méthode par défaut qui retombe sur `Kill`) | `process.manage` | [`worker-processes.md`](worker-processes.md) |
-| `HackServiceController` (`.ServiceProcess`) | `GetServicesAsync`, `RefreshAsync`, `StartAsync`, `StopAsync`, `SetStartTypeAsync`, `Status`, `StartType` | `services.manage` sur les autres apps | [`task-manager.md`](task-manager.md) |
+| `HackServiceController` (`.ServiceProcess`) | `GetServicesAsync`, `RefreshAsync`, `RefreshStatusAsync`, `StartAsync`, `StopAsync`, `ResetFailedAsync`, `SetStartTypeAsync`, `Status`, `StartType`, `ActiveState`, `Result`, `Health`, `StatusText`, `ActiveStateChangedAt`, `ExitCode` ; `HackServiceStates.ToSystemdName` (ADR 0097) | `services.manage` sur les autres apps | [`task-manager.md`](task-manager.md) |
+
+### Tâches en arrière-plan (`HackerOs.AppSdk.Threading`, SDK 1.2)
+
+| API | Membres | Capacité | Document |
+|---|---|---|---|
+| `HackBackground` | `RunAsync<TInput, TResult>(job, input, progress, options, cancellationToken)` pour une méthode statique (`Func<TInput, HackBackgroundContext, Task<TResult>>` ou `TResult`), `RunAsync<TInput>` sans résultat (`Func<…, Task>` ou `Action<…>`), `RunAsync<TJob, TInput, TResult>(input, …)` pour une classe de tâche | — | [`background-jobs.md`](background-jobs.md) |
+| `HackBackgroundJob<TInput, TResult>` | Classe de tâche : `RunAsync(input, context)` ; créée par son constructeur sans paramètre dans le processus de la tâche | — | [`background-jobs.md`](background-jobs.md) |
+| `HackBackgroundContext` | `ProcessId`, `CancellationToken`, `Report(fraction, message)` (au plus 10 par seconde, la dernière l'emporte), `CheckpointAsync()` | — | [`background-jobs.md`](background-jobs.md) |
+| `HackBackgroundProgress`, `HackBackgroundOptions` | `Fraction`, `Message`, `ToString()` (`42% message`) ; `Name` (affiché dans `ps`), `Nice` | — | [`background-jobs.md`](background-jobs.md) |
+| `HackBackgroundJobException` | Exception de la tâche : `OriginalTypeName`, `Message`, `OriginalStackTrace` | — | [`background-jobs.md`](background-jobs.md) |
+| `IAppBackgroundGateway`, `HackBackgroundJobRequest`, `HackBackgroundJobTarget` | Contrat entre le SDK et l'OS : cible nommée (assembly, type, méthode, type d'entrée), entrée JSON, nom, `nice` | — | [`background-jobs.md`](background-jobs.md) |
+| Analyseur `HOSBG0001` à `HOSBG0004` | Livré dans le paquet `HackerOs.AppSdk` : groupe de méthode statique, types déclarés par `HackWireContext`, assembly de l'app, pas de générique | — | [`background-jobs.md`](background-jobs.md#règles-vérifiées-au-build) |
 
 ### Réseau (`HackerOs.AppSdk.Net`)
 
@@ -178,11 +248,19 @@ Capacités : selon le chemin (`filesystem.private.*`, `.user-home.*`,
 |---|---|---|
 | `HackDns` | `GetHostAddressesAsync`, `GetHostEntryAsync` | [`sdk-network.md`](sdk-network.md) |
 | `HackPing` | `SendAsync` → `HackPingReply(Address, Status, RoundtripTime, Ttl)` | [`sdk-network.md`](sdk-network.md) |
-| `HackHttpClient` | `GetAsync`, `GetStringAsync`, `PostAsync`, `SendAsync`, `DefaultRequestHeaders`, `Cookies` ; `HackHttpResponse`, `HackHttpRequestException` | [`sdk-network.md`](sdk-network.md) |
-| `HackTcpClient` | `ProbeAsync` (ports), `DetectOperatingSystemAsync` | [`sdk-network.md`](sdk-network.md) |
+| `HackHttpClient` | `GetAsync`, `GetStringAsync`, `GetByteArrayAsync`, `GetFromJsonAsync`, `PostAsync` (formulaire ou contenu), `PostAsJsonAsync`, `PutAsync`, `PatchAsync`, `DeleteAsync`, `SendAsync`, `DefaultRequestHeaders`, `Cookies` (`HackCookieContainer` : `Add`, `Remove`, `GetCookies`, `GetAllCookies`, `Clear`) ; `HackHttpResponse` (`ContentType`, `MediaType`, `Content`, `ContentBytes`, `GetHeader`, `ReadFromJson`), `HackHttpRequestException` | [`sdk-network.md`](sdk-network.md), [`http-bodies.md`](http-bodies.md) |
+| `HackHttpContent` | `HackStringContent`, `HackByteArrayContent`, `HackFormUrlEncodedContent`, `HackJsonContent` ; `ContentType`, `MediaType`, `CharSet`, `Length`, `ReadAsString`, `ReadAsByteArray` | [`http-bodies.md`](http-bodies.md) |
+| `HackTcpClient` | `ProbeAsync` (ports), `DetectOperatingSystemAsync`, `ConnectAsync` → `HackNetworkStream` | [`sdk-network.md`](sdk-network.md) |
+| `HackNetworkStream` | `ReadAsync`, `WriteAsync`, `RemoteEndPoint` (flux TCP relayé) | [`server-network-relay.md`](server-network-relay.md) |
+| `HackUdpClient` | `ConnectAsync`, `SendAsync`, `ReceiveAsync` → `HackUdpReceiveResult` | [`server-network-relay.md`](server-network-relay.md) |
+| `HackHttpListener` | `Prefixes`, `StartAsync`, `GetContextAsync`, `StopAsync`, `Close` ; `HackHttpListenerContext` (`Request`, `Response`), `HackHttpListenerRequest` (`HttpMethod`, `Url`, `Headers`, `QueryString`, `Cookies`, `Body`, `ReadForm`, `RemoteEndPoint`), `HackHttpListenerResponse` (`StatusCode`, `ContentType`, `Headers`, `OutputStream`, `RedirectLocation`, `Close`) | [`listening-ports-and-dns.md`](listening-ports-and-dns.md) |
+| `HackIPGlobalProperties` | `GetActiveTcpListenersAsync` → `HackTcpListenerInfo`, `GetActiveTcpListenerEndPointsAsync` | [`listening-ports-and-dns.md`](listening-ports-and-dns.md) |
+| `HackWebSite`, `HackWebSiteFile`, `HackWebSiteDeclaration`, `HackWebSiteScope` (`.Net.Hosting`) | Fichiers `.site` des sites statiques : `SystemSitesDirectory`, `GetUserSitesDirectory`, `Parse`, `Validate`, `Serialize`, `TryParseBinding`, `ReadAllAsync` | [`static-sites.md`](static-sites.md) |
+| `WebServerAppBase` (`HackerOs.AppSdk`) | `Urls`, `ProcessRequestAsync`, `OnListeningAsync` : base d'une app web (`AppKind.Web`) | [`listening-ports-and-dns.md`](listening-ports-and-dns.md) |
 
 Capacités : `network.simulated.*` ; le repli sur le vrai réseau est décidé par
-l'OS et exige `network.real.access`.
+l'OS et exige `network.real.access` ; écouter hors de ses `Urls` exige
+`network.listen` (et `network.listen.privileged` sous 1024).
 
 ### Presse-papiers (`HackerOs.AppSdk.Clipboard`)
 
@@ -192,6 +270,15 @@ fichiers), `ContainsFileDropListAsync`, `ClearAsync`, `Changed`. Capacités
 `clipboard.read` et `clipboard.write`. Le texte est partagé avec la vraie
 machine selon `/etc/hackeros/clipboard.config`. Voir [`file-explorer.md`](file-explorer.md)
 et [`clipboard.md`](clipboard.md).
+
+### Accessibilité (`HackerOs.AppSdk.Accessibility`)
+
+`HackAccessibility` : `GetPreferencesAsync()` → `HackAccessibilityPreferences(HighContrast,
+TextScale, ReducedMotion)`, déjà résolues (`auto` suit l'hôte) ; `PreferencesChanged`. Aucune
+capacité. `HackAccessibilityPreferences.Scale(pixels)` agrandit une taille en pixels ;
+`TextScales` liste `1.0`, `1.25`, `1.5`, `2.0`. Le shell applique déjà les préférences à tout ce
+qui est dessiné en HTML avec les jetons ; une app qui dessine elle-même (canvas, terminal, éditeur)
+les lit ici. Voir [`accessibility.md`](accessibility.md).
 
 ### Composants intégrables (`HackerOs.AppSdk.Components`)
 
@@ -206,7 +293,7 @@ et [`clipboard.md`](clipboard.md).
 |---|---|---|---|
 | `HackShell.StartAsync(options)` → `IHackShell` | Démarrer un `hsh` : `ExecuteAsync`, `CompleteAsync`, `WorkingDirectory`, `ExitStatus`, `Prompt`, `HasExited`, historique, `GetInstalledCommands`, `NeedsMoreInput` (ADR 0064, invite `>`) | `shell.host` | [`shell-host.md`](shell-host.md) |
 | `HackShellOptions`, `HackShellExecution`, `HackShellCompletion`, `HackCredentialPrompt` | Options, flux d'une exécution, complétion, saisie des mots de passe | — | [`shell-host.md`](shell-host.md), [`terminal-console.md`](terminal-console.md) |
-| `IShellSession` (`TerminalExecutionContext.Shell`) | Pour une commande : `WorkingDirectory`, `Environment`, `History`, `ChangeDirectoryAsync`, `SetVariable`, `UnsetVariable`, `GetCommands`, `Exit` ; ADR 0064 : `GetVariable`, `AssignVariable`, `RunAsync`, `Jobs` (`ShellJobInfo`), `KillJob` | `shell.control` | [`shell-commands.md`](shell-commands.md) |
+| `IShellSession` (`TerminalExecutionContext.Shell`) | Pour une commande : `WorkingDirectory`, `Environment`, `History`, `ChangeDirectoryAsync`, `SetVariable`, `UnsetVariable`, `GetCommands` (dans la langue du shell ; `GetCommands(culture)` dans une autre, ADR 0104), `Exit` ; ADR 0064 : `GetVariable`, `AssignVariable`, `RunAsync`, `Jobs` (`ShellJobInfo`), `KillJob` | `shell.control` | [`shell-commands.md`](shell-commands.md) |
 | `IFullScreenTerminalSession` (`TerminalExecutionContext.FullScreen`) | Écran alternatif : `Viewport`, `EnterAlternateScreenAsync`, `RenderAsync`, `ReadKeyAsync`, `LeaveAlternateScreenAsync` | — | [`terminal-emulator.md`](terminal-emulator.md) |
 | `ShellErrorText` | Message court d'une erreur de fichier, pour une commande | — | [`app-sdk.md`](app-sdk.md) |
 
@@ -215,9 +302,10 @@ et [`clipboard.md`](clipboard.md).
 | API | Membres | Capacité |
 |---|---|---|
 | `HackPermissionAdministration` | `GetPolicyAsync`, `SetPolicyAsync`, `GetOverviewAsync`, `SetMachineDecisionAsync`, `RemoveOwnDenialAsync` | `permissions.manage` |
-| `HackServerConnection` | `GetStateAsync`, `ConnectAsync`, `CreateAccountAsync`, `DisconnectAsync`, `SyncAsync`, `GetConflictsAsync` | `server.connection.manage` |
+| `HackServerConnection` | `GetStateAsync`, `ConnectAsync`, `CreateAccountAsync`, `DisconnectAsync`, `SyncAsync`, `GetConflictsAsync`, `GetRelayPolicyAsync`, `ShowConflictsAsync`, `GetSyncStatusAsync` (`HackSyncStatus`), `SetSyncPausedAsync`, `SyncNowAsync` ([`synchronization.md`](synchronization.md)) | `server.connection.manage` |
 | `HackSystem` | `RebootAsync`, `FactoryResetAsync` | `system.power` + administrateur |
-| `HackStorageDiagnostics` | `GetSnapshotAsync` | `system.storage.inspect` |
+| `HackStorageDiagnostics` | `GetSnapshotAsync`, `GetWebSiteDatabasesAsync`, `DeleteWebSiteDatabaseAsync` (bases `hackweb.*` des sites, ADR 0088 §4) | `system.storage.inspect` |
+| `HackSystemBackup` | `IsSupported`, `IsSupportedFor(context)`, `CreateAsync` → `HackBackupInfo(FileName, SizeBytes, RecordCount, CreatedAtUtc)`, `RestoreAsync(HackBackupRestoreMode.Merge \| Replace)` → `HackBackupInfo?` (`null` : sélecteur fermé) ; `HackBackupInvalidException` pour une archive refusée (ADR 0099 §1, [`system-backup.md`](system-backup.md)) | `system.backup` + administrateur |
 
 Détails : [`system-administration.md`](system-administration.md),
 [`admin-authentication-agent.md`](admin-authentication-agent.md).
@@ -226,10 +314,11 @@ Détails : [`system-administration.md`](system-administration.md),
 
 | Classe | Projet | À surcharger | Document |
 |---|---|---|---|
-| `WindowAppBase` | `AppSdk.Blazor` | `OnAppInitialized[Async]`, `OnAppParametersSet[Async]`, `OnAppAfterRender[Async]`, `ShouldRenderApp`, `OnPermissionErrorRaised`, `OnAppStopRequestedAsync` (ADR 0069 : la fenêtre se ferme après la tâche renvoyée) ; fournit `AppContext`, `Manifest`, `LaunchArguments`, `LaunchFile`, `OpenFileAsync`, `SaveFileAsync`, `SelectFolderAsync`, `MessageBox`, `TextInput` | [guide §3](sdk-developer-guide.md#3-une-app-fenêtrée) |
+| `WindowAppBase` | `AppSdk.Blazor` | `OnAppInitialized[Async]`, `OnAppParametersSet[Async]`, `OnAppAfterRender[Async]`, `ShouldRenderApp`, `OnPermissionErrorRaised`, `OnAppStopRequestedAsync` (ADR 0069 : la fenêtre se ferme après la tâche renvoyée), crochets de fenêtre `OnWindowActivated[Async]`, `OnWindowDeactivated[Async]`, `OnWindowStateChanged[Async]`, `OnWindowResized[Async]`, état `IsWindowActive`, `WindowState`, `WindowSize`, `TrackDisplaySurface` (ADR 0095, [`window-model.md`](window-model.md)), titre `WindowTitle`, `SetWindowTitleAsync(title)`, `FormatWindowTitle(document, modified)` (SDK 1.1, ADR 0117/0123, [`window-model.md`](window-model.md) §4), `OnIntentReceivedAsync(AppIntentDelivery)` (ADR 0096 §5) ; fournit `AppContext`, `Manifest`, `LaunchArguments`, `LaunchIntent`, `LaunchFile`, `SendIntentAsync` (affiche le sélecteur si plusieurs apps répondent), `ChooseAppAsync`, `OpenFileAsync`, `SaveFileAsync`, `SelectFolderAsync`, `MessageBox`, `TextInput` | [guide §3](sdk-developer-guide.md#3-une-app-fenêtrée) |
 | `HackComponentBase` | `AppSdk.Blazor` | Composant enfant d'une fenêtre qui appelle `Hack*` | [`hack-file-api.md`](hack-file-api.md) |
-| `TerminalAppBase` | `AppSdk` | `ExecuteAsync(TerminalExecutionContext, CancellationToken)` → code de sortie ; le contexte donne `Arguments`, `StandardInput/Output/Error`, `WorkingDirectory`, `Environment`, `App`, `Shell`, `FullScreen` | [guide §4](sdk-developer-guide.md#4-une-commande-du-shell) |
-| `ServiceAppBase` | `AppSdk` | `RunCoreAsync(context, sessionCancellationToken)`, `OnStoppingAsync(ServiceStopReason, token)` (appelé une fois, dès `StopRequested` ; `ServiceStopReason.Terminated` pour `kill`, « End task », `systemctl stop`) | [guide §5](sdk-developer-guide.md#5-un-service) |
+| `TerminalAppBase` | `AppSdk` | `ExecuteAsync(TerminalExecutionContext, CancellationToken)` → code de sortie ; le contexte donne `Arguments`, `StandardInput/Output/Error`, `WorkingDirectory`, `Environment`, `App`, `Shell`, `FullScreen`, et `ReadSecretLineAsync(invite)` qui lit une ligne écho coupé comme `getpass(3)` quand l'entrée est un terminal (`ITerminalInputMode.EchoEnabled`, ADR 0120) | [guide §4](sdk-developer-guide.md#4-une-commande-du-shell) |
+| `WebAppDefinition` | `AppSdk.Web` | Classe `[AppManifest]` `partial` d'un site : `Urls`, `Configure(HackWebApplicationBuilder)` (services, middlewares, `MapControllers`, `MapGet`...) ; le build génère l'`EntryPoint` (`<Nom>WebHost : HackWebHost`) et la table de routes des contrôleurs (`HackController`, `HackApiController`) | [`asp-hack-mvc.md`](asp-hack-mvc.md) |
+| `ServiceAppBase` | `AppSdk` | `OnStartAsync(context, token)` (le service est `activating` jusqu'à son retour, puis `active`, ADR 0107), `RunCoreAsync(context, sessionCancellationToken)`, `ReportHealth(HackServiceHealth, status)` (santé et texte de `systemctl status`, ADR 0097 §2), `OnStoppingAsync(ServiceStopReason, token)` (appelé une fois, dès `StopRequested` ; `ServiceStopReason.Terminated` pour `kill`, « End task », `systemctl stop`), `OnIntentReceivedAsync(AppIntentDelivery, token)` (ADR 0096 §5) | [guide §5](sdk-developer-guide.md#5-un-service) |
 
 Interfaces qu'un composant fenêtré peut implémenter :
 
@@ -237,6 +326,72 @@ Interfaces qu'un composant fenêtré peut implémenter :
 |---|---|
 | `IWindowCloseGuard` | `ConfirmCloseAsync` : autoriser ou refuser la fermeture (modifications non enregistrées). |
 | `IAppBackHandler` | `CanNavigateBack`, `CanNavigateBackChanged`, `NavigateBackAsync` → `AppBackResult` ; avec `SupportsBack => true`. |
+
+## Sites web (ASP.Hack)
+
+Pour apprendre : [guide du développeur ASP.Hack](asp-hack-developer-guide.md),
+qui suit l'exemple `Apps/Samples/HackerOs.Samples.Intranet`.
+
+### Démarrage (`HackerOs.AppSdk.Web.Hosting`)
+
+| Type | Membres | Document |
+|---|---|---|
+| `WebAppDefinition` | `Urls`, `BlazorRoot`, `Capabilities` (jamais `filesystem.*`, `HOSAPP0050`), `Configure(builder)` ; `Kind` `Web`, `Category` `internet`, `LaunchVisibility` `Hidden` | [`asp-hack-mvc.md`](asp-hack-mvc.md) |
+| `HackWebApplicationBuilder` | `Services`, `Json` (`SerializerOptions`, camelCase), `Mvc` (`Filters`), `Antiforgery`, `Logging` (`EnableDebugLog(level)`, `LogRequests`), `Build()` ; `ILogger<T>` injectable | [`asp-hack-mvc.md`](asp-hack-mvc.md), [`asp-hack-site-data.md`](asp-hack-site-data.md#journal-de-débogage) |
+| `HackWebApplication` | `Use`, `UseMiddleware<T>`, `UseExceptionPage`, `UseStatusCodePages`, `UseCookieSession`, `UseStaticFiles(configure)`, `Map`, `MapMethods`, `MapGet`/`MapPost`/`MapPut`/`MapPatch`/`MapDelete`, `MapFallback`, `MapControllers`, `MapControllerRoute`, `MapDefaultControllerRoute`, `ProcessAsync(HackWebRequestData)`, `UnhandledException` | [`asp-hack-mvc.md`](asp-hack-mvc.md) |
+| `HackWebHost` | Classe d'entrée générée (`<Définition>WebHost`) ; `CreateApplication(definition, routes, urls, views)` construit le site sans OS (tests) | [guide §9](asp-hack-developer-guide.md#9-tester-un-site) |
+| `HackStaticFileOptions` | `Assembly`, `ResourcePrefix`, `RequestPath`, `DefaultFileNames`, `CacheControl` du `wwwroot` embarqué | [`asp-hack-razor-views.md`](asp-hack-razor-views.md) |
+| `HackBlazorSiteEndpoints` | Page hôte, `blazor.hack.js` et `blazor.boot.json` d'un site à `BlazorRoot` ; `IsHostPage(html)` | [`blazor-sites.md`](blazor-sites.md) |
+
+### Requête et réponse (`.Http`, `.Sessions`)
+
+| Type | Membres |
+|---|---|
+| `HackHttpContext` | `Request`, `Response`, `RequestServices` (portée de la requête), `Session`, `HasSession`, `Items`, `Endpoint`, `RequestAborted`, `TraceIdentifier` |
+| `HackHttpRequest` | `Method`, `Path`, `PathAndQuery`, `Query`, `Form`, `Headers`, `Cookies`, `ContentType`, `RouteValues`, `ReadBodyAsString()` |
+| `HackHttpResponse` | `StatusCode`, `Headers`, `ContentType`, `Cookies`, `WriteAsync` |
+| `HackWebRequestData`, `HackWebResponseData` | Échange indépendant du transport (`Create(method, url, ...)`, `ReadAsString()`) |
+| `HackSession` | `GetString`/`SetString`, `GetInt32`/`SetInt32`, `TryGetValue`, `Set`, `Remove`, `Clear`, `Keys`, `Id`, `IsNew` ; cookie `.HackSession`, en mémoire du site |
+
+### Contrôleurs (`.Mvc`)
+
+| Type | Rôle |
+|---|---|
+| `HackControllerBase` | `HttpContext`, `Request`, `Response`, `RouteValues`, `ModelState`, `Url` ; résultats `Ok`, `NoContent`, `StatusCode`, `Content`, `File`, `Redirect`, `RedirectPermanent`, `LocalRedirect`, `RedirectToAction`, `Created`, `CreatedAtAction`, `NotFound`, `BadRequest`, `Unauthorized`, `Forbid`, `Conflict`, `Problem`, `ValidationProblem` ; `TryValidateModel(model, prefix)` (ADR 0087 §3) |
+| `HackController` | Pages : `View`, `PartialView`, `View<TView>`, `ViewData`, `Json`, `OnActionExecuting`/`OnActionExecuted` |
+| `HackApiController` | API : corps JSON par défaut, `400` automatique, problèmes RFC 9457 ; route d'attribut obligatoire (`HOSWEB0007`) |
+| Attributs | `[Route]`, `[HttpGet]`/`[HttpPost]`/`[HttpPut]`/`[HttpPatch]`/`[HttpDelete]` (`Name`, `Order`), `[ActionName]`, `[NonAction]`, `[NonController]`, `[FromRoute]`, `[FromQuery]`, `[FromForm]`, `[FromHeader]`, `[FromBody]`, `[FromServices]` |
+| Filtres | `IHackActionFilter`, `IHackAsyncActionFilter`, `HackActionFilterAttribute`, `HackMvcOptions.Filters` |
+| `HackResults` | Résultats des routes minimales : `Ok`, `Text`, `Json` (avec `JsonTypeInfo`), `StatusCode`, `NoContent`, `NotFound`, `BadRequest`, `Created`, `Redirect`, `File`, `Problem` |
+| `IHackUrlHelper` | `Action`, `RouteUrl`, `Content("~/...")`, `IsLocalUrl` |
+
+### Vues et anti-falsification (`.Views`, `.Antiforgery`)
+
+| Type | Rôle | Document |
+|---|---|---|
+| `HackView`, `HackView<TModel>`, `HackLayout` | Bases des vues `.razor` : `Model`, `ViewData` (`Title`), `ViewContext`, `HttpContext`, `Request`, `ModelState`, `Url`, `Layout` ; `Body` pour un layout | [`asp-hack-razor-views.md`](asp-hack-razor-views.md) |
+| `HackLink`, `HackForm`, `HackAntiforgeryToken`, `HackValidationMessage`, `HackValidationSummary`, `HackSection`, `HackRenderSection`, `HackPartial`, `HackRoute.Values` | Helpers des vues `.razor` | [`asp-hack-razor-views.md`](asp-hack-razor-views.md) |
+| `HackRazorPage<TModel>` | Base des vues `.cshtml` : `Model`, `ViewData`, `Context`, `Layout`, `RenderBody`, `RenderSection(Async)`, `IsSectionDefined` ; `Html` (`ActionLink`, `BeginForm`, `TextBoxFor`, `LabelFor`, `ValidationMessageFor`, `ValidationSummary`, `PartialAsync`, `Raw`...), `Json.Serialize`, `Component.InvokeAsync<T>`, `Url` | [`asp-hack-cshtml-views.md`](asp-hack-cshtml-views.md) |
+| `[ValidateAntiForgeryToken]`, `[IgnoreAntiforgeryToken]`, `HackAntiforgery` | Jeton de formulaire (`__RequestVerificationToken` ou en-tête `RequestVerificationToken`) et cookie `.HackAntiforgery` | [`asp-hack-razor-views.md`](asp-hack-razor-views.md) |
+
+Une vue est rendue en HTML statique dans l'iframe du navigateur : pas de CSS
+scopé ni d'événement Blazor ; le CSS et le JavaScript viennent du `wwwroot`.
+
+### Données et journal (`.Data`, `.Logging`)
+
+| Type | Rôle |
+|---|---|
+| `AddHackWebDb(services, schema)` | Enregistre `HackWebDb`, la base `hackweb.<appId>` du site, avec ses versions ; en mémoire (`hackweb.in-memory`) hors de l'OS |
+| `HackWebDbSchemaBuilder`, `HackWebDbVersionBuilder` | `Version(n, v => ...)` ; `CreateStore(name, keyPath, autoIncrement)`, `DeleteStore`, `CreateIndex(store, name, keyPath, unique, multiEntry)`, `DeleteIndex` |
+| `HackWebDb` | `Name`, `Version`, `Store<T>(name)`, `BeginTransaction(stores)`, `OpenAsync` |
+| `HackWebDbStore<T>`, `HackWebDbIndex<T>` | `GetAsync`, `GetAllAsync`, `GetAllKeysAsync`, `CountAsync` ; magasin : `AddAsync`, `PutAsync`, `DeleteAsync`, `ClearAsync`, `Index(name)` |
+| `HackWebDbTransaction`, `HackWebDbTransactionStore<T>` | Lot d'écritures (`Add`, `Put`, `Delete`, `Clear`) envoyé par `CommitAsync`, tout ou rien |
+| `HackWebDbKey`, `HackWebDbKeyRange` | Clés (nombre, chaîne, `Array(...)`) et plages (`Only`, `LowerBound`, `UpperBound`, `Bound`) |
+| `HackWebDbException` (`HackerOs.AppSdk.WebData`) | `Name` d'une `DOMException` IndexedDB : `ConstraintError`, `NotFoundError`, `DataError`, `VersionError`… |
+| `HackWebDbInMemoryBackend` (`HackerOs.AppSdk.WebData`) | Passerelle en mémoire pour les tests |
+| `HackWebLoggingOptions`, `IHackWebDebugLogSink`, `HackWebDebugLogMemorySink` | Journal de débogage `/var/log/hackweb/<appId>.log` ; récepteur de test |
+
+Guide : [`asp-hack-site-data.md`](asp-hack-site-data.md).
 
 ## Composants et services Blazor
 
@@ -249,7 +404,8 @@ Interfaces qu'un composant fenêtré peut implémenter :
 | `SelectFolderDialogRequest` → `SelectFolderDialogResult` | `Title`, `InitialDirectory`, `AllowCreateFolder` |
 | `MessageBoxDialogRequest` → `MessageBoxDialogResult` | `Title`, `Content`, `DialogType` (`MessageBoxType`) ; résultat `MessageBoxResult` |
 | `TextInputDialogRequest` → `TextInputDialogResult` | `Title`, `Content`, `DefaultValue`, `Placeholder` ; résultat `Status` (`TextInputStatus`) et `Value` |
-| `IDialogService`, `IFileDialogService` | Services injectés dans `WindowAppBase` (`Dialogs`, `FileDialogs`) ; `CredentialPromptAsync` en plus |
+| `AppChooserDialogRequest` → `AppChooserDialogResult` | Sélecteur « Ouvrir avec » (ADR 0096) : `Title`, `Content`, `Candidates` (`AppChooserOption(AppId, Name, Description)`), `OfferAlwaysUse` ; résultat `Status` (`AppChooserStatus`), `AppId`, `AlwaysUse` |
+| `IDialogService`, `IFileDialogService` | Services injectés dans `WindowAppBase` (`Dialogs`, `FileDialogs`) ; `CredentialPromptAsync` et `ChooseAppAsync` en plus |
 
 `FileDialogStatus.Selected` indique un choix ; tout autre statut est une
 annulation.
@@ -261,14 +417,29 @@ annulation.
 | `HackLineChart` (`.Charts`) | Graphique SVG : `Series` (`HackChartSeries(Name, Values)`), `Title`, `Capacity`, `Maximum`, `MinimumScale`, `ValueFormatter`, `Filled`, `ShowLegend`, `TimeSpanLabel`, `Size`, `Class` ; couleurs `--hos-chart-series-0..7` | [`task-manager.md`](task-manager.md) |
 | `SettingOriginBadge` (`.Settings`) | Badge d'origine d'un paramètre (défaut, système, utilisateur, verrouillé) | [`settings-files.md`](settings-files.md) |
 | `BrowserFileDownloader` (`.Interop`) | `DownloadFileFromStreamAsync(fileName, stream)` : télécharger vers le vrai disque | [`file-explorer.md`](file-explorer.md) |
-| `BrowserClipboard` (`.Interop`) | `[Obsolete]` (ADR 0065) : utiliser `HackClipboard.SetTextAsync`, recopié vers l'hôte | [`clipboard.md`](clipboard.md) |
+| `BrowserFilePicker` (`.Interop`) | `PickAsync(accept)` → `BrowserPickedFile(Name, Content)` ou `null` : ouvrir un fichier du vrai disque ; seulement juste après un clic ou une touche (sinon `InvalidOperationException`) | [`system-backup.md`](system-backup.md) |
+| `IDisplaySurfaceService`, `IDisplaySurface`, `DisplaySurfaceContent` (`.Display`) | Fenêtres détachées du navigateur hôte (ADR 0078) : `OpenAsync(DisplaySurfaceOptions)` → `DisplaySurfaceOpenResult` (`Opened`, `Blocked`, `Unavailable`), `Surfaces`, `SurfacesChanged`, `CloseAllAsync` ; surface `Id`, `Title`, `Width`, `Height`, `HasFocus`, `State`, `Changed`, `SetTitleAsync`, `FocusAsync`, `CloseAsync` ; `<DisplaySurfaceContent Surface="…">` y dessine son contenu (`Surface` facultatif : sans surface ouverte, le contenu reste en place) | [`detached-display-windows.md`](detached-display-windows.md) |
+| `IAppWindowGateway` | Fenêtre d'une app vue par le SDK (SDK 1.1, ADR 0123) : `Title`, `DefaultTitle`, `SetTitleAsync`. Implémentée par la plateforme et donnée à `WindowAppBase` par valeur en cascade ; une app passe par `SetWindowTitleAsync` | [`window-model.md`](window-model.md) |
 | `HackEmbeddedComponent<TController>` (`.Components`) | Affiche le composant d'une autre app pour un contrat : `Contract`, `Options`, `ControllerChanged`, `Unavailable` ; `HackEmbeddableComponent` est la base du composant fourni (`Options`, `ControllerReady`, `HostContext`) | [`embedded-components.md`](embedded-components.md) |
+
+### Sites Blazor (`HackerOs.AppSdk.Web.Blazor.Sites`)
+
+| Type | Rôle |
+|---|---|
+| `WebAppDefinition.BlazorRoot` (`AppSdk.Web`) | Composant racine du site ; produit `web.blazor` dans le manifeste, la page hôte et `blazor.boot.json`. |
+| `HackSiteRouter` | Routeur du site : `AppAssembly`, `DefaultLayout`, `NotFound` ; gabarits `@page` de Blazor, valeurs de route vers les `[Parameter]` de la page, `@layout` imbriqués. |
+| `HackSiteLayoutBase`, `HackNavLink`, `HackPageTitle` | Mise en page (`Body`), lien marqué `active` (`Match`), titre de l'onglet. |
+| `HackWebSite` (cascadé) | `Navigation` (`NavigationManager` de l'onglet : `NavigateTo`, `LocationChanged`, `IsWithinSite`), `Http` (`HackHttpClient` avec `BaseAddress` et les cookies de l'onglet), `AppId`, `Name`, `Title`. |
+| Liens | Un `<a href>` du site navigue sans requête ; un lien dont `target` n'est pas `_self` (`target="_top"`) charge un nouveau document : c'est ainsi qu'une page Blazor rejoint les pages MVC du même site (ADR 0087 §1). |
+| `IHackWebSiteHost`, `IHackWebSiteProcess`, `HackWebSiteView` | Côté navigateur : démarre le processus de rendu d'une page hôte et dessine le site dans la zone de page. |
+
+Détails : [`blazor-sites.md`](blazor-sites.md).
 
 ### Vue de fichiers (`HackerOs.AppSdk.FileView`)
 
 | Type | Rôle |
 |---|---|
-| `FileView` | Liste de fichiers. Paramètres : `FileSystem`, `Watch`, `Intents`, `InitialDirectory`, `Mode` (`FileViewMode`), `FolderActivation`, `IconProvider`, `ContextMenuProviders`, `AllowMultiSelect`, `AllowDragDrop`, `Columns`, `Filter`, `CanPaste`, `CutPaths`, rappels `DeleteRequested`, `DropRequested`, `ClipboardRequested`. Méthodes `NavigateAsync`, `RefreshAsync` ; propriétés `CurrentDirectory`, `Items`, `SelectedItem(s)` ; événements `Navigating`, `OnPathChange`, `Opening`, `Opened`, `Renaming`, `Renamed`, `Creating`, `Created`, `Deleting`, `Deleted`, `Moving`, `Moved`, `Copying`, `Copied`, `SelectionChanging`, `SelectionChanged`, `ContextMenuOpening` (les formes `-ing` sont annulables). |
+| `FileView` | Liste de fichiers. Paramètres : `FileSystem`, `Watch`, `Intents`, `InitialDirectory`, `Mode` (`FileViewMode`), `FolderActivation`, `IconProvider`, `ContextMenuProviders`, `AllowMultiSelect`, `AllowDragDrop`, `Columns`, `Filter`, `CanPaste`, `CutPaths`, rappels `DeleteRequested`, `DropRequested`, `ClipboardRequested`. Méthodes `NavigateAsync`, `RefreshAsync`, `RevealAsync(path)` (ouvre le dossier parent, sélectionne l'élément et le fait défiler, ADR 0096 §1) ; propriétés `CurrentDirectory`, `Items`, `SelectedItem(s)` ; événements `Navigating`, `OnPathChange`, `Opening`, `Opened`, `Renaming`, `Renamed`, `Creating`, `Created`, `Deleting`, `Deleted`, `Moving`, `Moved`, `Copying`, `Copied`, `SelectionChanging`, `SelectionChanged`, `ContextMenuOpening` (les formes `-ing` sont annulables). |
 | `FileViewTree`, `FileViewBreadcrumb`, `FileViewDropZone`, `FileViewContextMenu` | Arbre de dossiers, fil d'Ariane, zone de dépôt, menu contextuel. |
 | `IFileViewContextMenuProvider`, `IShellIconProvider`, `ShellIcon` | Extensions : entrées de menu, icônes. |
 | `FileTransfer` | `CopyAsync`, `MoveAsync`, `TransferAsync`, `ImportAsync` (fichiers de l'hôte), `MoveToTrashAsync`, `GetCopyName` ; conflits de noms à la Nautilus. |
@@ -289,12 +460,46 @@ Détails : [`file-explorer.md`](file-explorer.md).
 | `HackerIcon` (`AppSdk.Icons`) | `Library` (`IconLibrary` : `Bootstrap`, `FontAwesome`, `Lucide`, `SimpleIcons`), `Name`, `Icon`, `Size`, `Title` ; voir [`old/icon-library.md`](old/icon-library.md). |
 | `VirtualKeyboard`, `VirtualKeyboardHost` (`AppSdk.VirtualKeyboard`) | `Options` (`VirtualKeyboardOptions` : rangées modificateurs, symboles, flèches, libellés), `OnKeyPressed` (`VirtualKeyPressedEvent`), `IsKeyboardVisible`, `ChildContent`. |
 
+## Thèmes (`HackerOs.Theming.Abstractions`)
+
+Pour lire ou écrire un thème utilisateur (ADR 0103, détail dans
+[`theme-editor.md`](theme-editor.md)) :
+
+| Type | Membres |
+|---|---|
+| `ThemeTokenCatalog` | `All`, `InGroup(ThemeTokenGroup)`, `TryGet(name, out ThemeTokenDefinition)` : les 68 jetons `--hos-*` modifiables |
+| `ThemeTokenDefinition` | `Name`, `Type` (`Color`, `Length`, `Duration`, `FontFamily`, `Number`), `Group`, `Label`, `Description` (anglais), `GetLabel(culture)`, `GetDescription(culture)`, `Example`, `RgbCompanion` |
+| `ThemeTokenValidator` | `TryValidate(type ou nom, valeur, out normalisée, out erreur)`, `TryValidate(type, valeur, culture, out normalisée, out erreur)`, `TryGetRgbTriplet`, `ToHexColor` |
+| `ThemeFile` | `Parse(texte, origine, chemin)` → `ThemeFileParseResult` (thème + diagnostics), `Serialize(UserTheme)`, `IsValidId`, `Extension` (`.theme`), `MediaType` |
+| `ThemeFileDiagnostic` | `Line`, `Message` (anglais), `IsError`, `Path`, `GetMessage(culture)`, `ToString(culture)` |
+| `UserTheme` | `Id`, `Name`, `BaseThemeId`, `Platforms`, `Tokens`, `Origin`, `SourcePath`, `Supports`, `ToCssProperties` |
+| `UserThemeLibrary` | `SystemDirectory`, `GetUserDirectory(home)`, `GetUserThemePath(home, id)`, `Build`, `LoadAsync(listFiles, readFile, home)` |
+| `ResolvedTheme` | `Resolve(id, plateforme, thèmes)` → `BaseThemeId`, `UserTheme`, `IsFallback` |
+
+`ThemeScope` et `ThemePreview` (`HackerOs.Theming.Blazor`) prennent un
+paramètre `Tokens` appliqué par-dessus le thème de base.
+`ThemeScope` prend aussi `HighContrast` et `TextScale` (ADR 0105) : attributs `data-contrast`
+(`high` ou `standard`) et `data-text-scale` (`100`, `125`, `150`, `200`), lus par `themes.css`.
+
 ## Tâches de ce document
 
 - [x] Lister les bibliothèques du SDK et leurs espaces de noms.
-- [x] Types de définition d'une app et table complète des 32 capacités.
+- [x] Types de définition d'une app et table complète des 36 capacités (`keyring.read-all` ajoutée par `v3/8`, `system.backup` par `v3/7`, `users.manage` par la suite de `v3/8`, ADR 0120).
 - [x] Membres de `IAppExecutionContext`.
 - [x] Chaque façade `Hack*` avec ses membres, sa capacité et son document.
 - [x] Classes de base des points d'entrée et interfaces des fenêtres.
 - [x] Composants Blazor : dialogues, graphiques, vue de fichiers, terminal, icônes, clavier virtuel.
 - [x] Hôte d'exécution (`AppExecutionHost`, ADR 0070) et `IAppProcessGateway.KillAsync`.
+- [x] Sites web ASP.Hack : démarrage, requête, contrôleurs, vues, anti-falsification, liens des sites Blazor (`web/11`).
+- [x] Base `HackWebDb`, journal de débogage d'un site, passerelle `WebDatabase`, bases des sites dans `HackStorageDiagnostics` (`web/12`).
+- [x] Réglages sensibles, `HackKeyring` et `keyring.read-all` (`v3/8-settings-security`, ADR 0100).
+- [x] `HackUserAccounts`, `users.manage`, `ITerminalInputMode` et `ReadSecretLineAsync` (`passwd`, ADR 0120).
+- [x] Intents de l'ADR 0096 : `HackApps.EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `ShowSettingsAsync`, `SendIntentAsync` ; `Intent`/`IntentReceived` ; sélecteur d'apps ; `FileView.RevealAsync` (`v3/4`).
+- [x] Défauts propres à l'utilisateur (ADR 0121, `v3/4b`) : `HackApps.GetDefaultHandlersAsync`, `SetDefaultHandlerAsync`, `ResetDefaultHandlerAsync`.
+- [x] Thèmes utilisateur : jetons, format `.theme`, bibliothèque et résolution (`v3/11`).
+- [x] `HackSystemBackup`, `BrowserFilePicker`, codes `NoSpace` et `FileTooLarge` (16 Mio) (`v3/7`).
+- [x] Localisation : `Culture`/`FormatCulture`, `HackLocale`, `GetLocalizer<T>`, `IShellSession.GetCommands(culture)` (`v3/12`, ADR 0104).
+- [x] Titre de fenêtre : `WindowTitle`, `SetWindowTitleAsync`, `FormatWindowTitle`, `IAppWindowGateway` (`v3.1/3`, SDK 1.1, versé dans `PublicAPI.Shipped.txt` par `v3.1/4-sdk-1-1`).
+- [x] Tâches en arrière-plan : `HackBackground`, `HackBackgroundContext`, `IAppExecutionContext.Background`, `HackProcessKilledException.Reason`, analyseur `HOSBG` (`exec/5`, ADR 0128 et 0140).
+- [x] SDK 1.2 (ADR 0132) : `HackWireContextAttribute` (`exec/1`), limites de processus et `TooManyOpenFiles` (`exec/2`), `OomScoreAdjust`/`OomScoreAdj` et `OutOfMemory` (`exec/3`), `nice` (`exec/4`), versés dans `PublicAPI.Shipped.txt` par `exec/10-final`.
+- [x] Relecture finale de la migration v3 (`v3/16-final`) : renvoi vers les fichiers `PublicAPI.Shipped.txt`, liste exhaustive de la surface 1.0.

@@ -101,20 +101,34 @@ public interface ISimulatedDns
 /// Distinct from <see cref="SimulatedHttpResponse"/> because the service
 /// follows redirects and applies cookie state before returning to callers.
 /// </summary>
+/// <param name="FinalUrl">Final URL after all redirects.</param>
+/// <param name="StatusCode">Final HTTP status code.</param>
+/// <param name="Page">Structured page content (null for non-content status codes).</param>
+/// <param name="NetworkError">Error description when the host is down or the DNS name is unknown.</param>
+/// <param name="RedirectCount">Number of redirects followed (max 10).</param>
+/// <param name="Body">Body of the final response (ADR 0074, section 1), or null.</param>
 public sealed record SimulatedNavigationResult(
-    /// <summary>Final URL after all redirects.</summary>
     string FinalUrl,
-    /// <summary>Final HTTP status code.</summary>
     int StatusCode,
-    /// <summary>Structured page content (null for non-content status codes).</summary>
     SimulatedPage? Page,
-    /// <summary>Error description when the host is down or the DNS name is unknown.</summary>
     string? NetworkError,
-    /// <summary>Number of redirects followed (max 10).</summary>
-    int RedirectCount)
+    int RedirectCount,
+    SimulatedHttpBody? Body = null)
 {
     /// <summary>True when navigation completed with a renderable page.</summary>
     public bool IsSuccess => NetworkError is null && Page is not null;
+}
+
+/// <summary>
+/// Outcome of one HTTP exchange through <see cref="ISimulatedNetworkService.Send"/>: the raw
+/// response (redirects are not followed), or the network error that prevented any answer.
+/// </summary>
+/// <param name="Response">The site's response; <see langword="null"/> when <paramref name="NetworkError"/> is set.</param>
+/// <param name="NetworkError">One of <see cref="SimulatedNetworkErrors"/>, or <see langword="null"/>.</param>
+public sealed record SimulatedExchangeResult(SimulatedHttpResponse? Response, string? NetworkError)
+{
+    /// <summary>Gets whether a response came back.</summary>
+    public bool Succeeded => NetworkError is null && Response is not null;
 }
 
 /// <summary>
@@ -122,10 +136,19 @@ public sealed record SimulatedNavigationResult(
 /// </summary>
 public static class SimulatedNetworkErrors
 {
+    /// <summary>DNS has no record for the host name.</summary>
     public const string UnknownHost      = "ERR_NAME_NOT_RESOLVED";
+
+    /// <summary>The host exists but is down: it does not answer at all.</summary>
     public const string HostDown         = "ERR_HOST_UNREACHABLE";
+
+    /// <summary>The host is up but nothing listens on the port (a TCP reset).</summary>
     public const string ConnectionRefused = "ERR_CONNECTION_REFUSED";
+
+    /// <summary>More than the allowed number of redirects (10) were chained.</summary>
     public const string TooManyRedirects = "ERR_TOO_MANY_REDIRECTS";
+
+    /// <summary>The network has no route to the destination address.</summary>
     public const string NoRoute          = "ERR_NO_ROUTE";
 }
 
@@ -159,6 +182,24 @@ public interface ISimulatedNetworkService
     SimulatedHttpResponse Post(
         string url,
         System.Collections.Immutable.ImmutableDictionary<string, string> formBody,
+        Dictionary<string, Dictionary<string, string>> sessionCookies);
+
+    /// <summary>
+    /// Sends one HTTP request with any method, headers and body (ADR 0074, section 1) and returns
+    /// the raw response: redirects are NOT followed, so the caller decides how a 303 or a 307
+    /// continues. Cookies of the target host are taken from, and Set-Cookie applied to,
+    /// <paramref name="sessionCookies"/>.
+    /// </summary>
+    /// <param name="method">HTTP method (any case).</param>
+    /// <param name="url">Absolute http(s) URL; a bare host gets <c>https://</c>.</param>
+    /// <param name="headers">Request headers; <c>Content-Type</c> and <c>Content-Length</c> come from <paramref name="body"/>.</param>
+    /// <param name="body">Request body, or <see langword="null"/>.</param>
+    /// <param name="sessionCookies">Per-host cookie jar, updated in place.</param>
+    SimulatedExchangeResult Send(
+        string method,
+        string url,
+        IEnumerable<KeyValuePair<string, string>>? headers,
+        SimulatedHttpBody? body,
         Dictionary<string, Dictionary<string, string>> sessionCookies);
 
     /// <summary>

@@ -3,28 +3,24 @@ using System.Text.Json.Serialization;
 namespace HackerOs.Server.Contracts.Proxy;
 
 // =============================================================================
-// HTTP/TCP/UDP Proxy Contracts — P5-PROXY-001 through P5-PROXY-006
+// HTTP/TCP/UDP relay contracts — P5-PROXY-001 through P5-PROXY-006, ADR 0102
 //
-// The proxy is an EXPLICIT opt-in feature. Apps must declare the
-// "network.external.proxy" capability in their manifest AND be explicitly
-// authorized in the build profile AND by the server-side device policy.
+// The relay is an EXPLICIT opt-in feature. The OS only relays for an app holding the dangerous
+// "network.real.access" capability, and the server checks on its own that the app is granted
+// network.real.access (ADR 0102 §4): client capability decisions are NEVER trusted.
 //
-// The server re-validates every request against its own stored policy.
-// Client capability decisions are NEVER trusted.
-//
-// Security rules enforced SERVER-SIDE (P5-PROXY-002 through P5-PROXY-004):
-//   - Loopback (127.0.0.0/8, ::1) → blocked
-//   - Link-local (169.254.0.0/16, fe80::/10) → blocked
-//   - RFC-1918 private ranges (10/8, 172.16/12, 192.168/16) → blocked
-//   - Cloud metadata endpoints (169.254.169.254, etc.) → blocked
-//   - DNS rebinding protection: resolve once, compare pre/post-TTL
-//   - Blocked ports: 0–1024 except 80, 443 (CONNECT only via allow-list)
-//   - Maximum redirect hops: 5
-//   - Maximum response payload: configurable, default 10 MiB
+// Security rules enforced SERVER-SIDE, with their defaults (HackerOs:Proxy in appsettings.json):
+//   - Loopback (127.0.0.0/8, ::1), link-local and cloud metadata (169.254.0.0/16, fe80::/10)
+//     → always blocked
+//   - Private ranges (10/8, 172.16/12, 192.168/16, 100.64/10, fc00::/7) → blocked unless
+//     AllowPrivateNetworks
+//   - DNS rebinding protection: every answer validated, the chosen address pinned for the connect
+//   - Ports: HTTP 80/443, TCP streams 80/443, UDP 53/123, unless AllowAllPorts
+//   - Maximum redirect hops: 5; request and response bodies: 10 MiB each
 //   - Maximum request duration: 30 seconds
-//   - Maximum concurrent requests per device: 8
-//   - Simulated-domain hostnames (.hackeros.local, .sim) → 403 Proxy Forbidden
-//     (prevents gameplay from accidentally reaching this proxy — P5-PROXY-006)
+//   - Maximum concurrent requests per device: 8; open TCP/UDP streams per device: 4
+//   - Simulated-domain hostnames (.hackeros.local, .sim, .hackeros) → refused
+//     (prevents simulated-network traffic from accidentally reaching this proxy — P5-PROXY-006)
 // =============================================================================
 
 /// <summary>
@@ -71,6 +67,12 @@ public sealed record ProxyHeader(string Name, string Value);
 /// every other proxy response). False for callers that only need status/headers (e.g. <c>curl -I</c>,
 /// <c>ping</c>'s HEAD probe) — the default, so existing callers are unaffected.
 /// </param>
+/// <param name="Body">
+/// The request body bytes (ADR 0102 §1), serialized as base64. The server checks that their length
+/// is <paramref name="BodyBytes"/> and their SHA-256 is <paramref name="BodyHash"/> before sending
+/// them; <see langword="null"/> for a request without a body.
+/// </param>
+/// <param name="ContentType">The body's <c>Content-Type</c>; <see langword="null"/> without a body.</param>
 public sealed record ProxyHttpRequest(
     Guid RequestId,
     ProxyProtocol Protocol,
@@ -81,7 +83,50 @@ public sealed record ProxyHttpRequest(
     long BodyBytes,
     int TimeoutSeconds,
     string AppId,
-    bool IncludeBody = false);
+    bool IncludeBody = false,
+    byte[]? Body = null,
+    string? ContentType = null)
+{
+    /// <summary>
+    /// Builds the request for <paramref name="body"/>, filling <see cref="BodyHash"/> and
+    /// <see cref="BodyBytes"/> from the bytes so the server's integrity check passes.
+    /// </summary>
+    /// <param name="requestId">Client-generated idempotency UUID.</param>
+    /// <param name="targetUrl">Fully-qualified target URL.</param>
+    /// <param name="httpMethod">HTTP method.</param>
+    /// <param name="headers">Request headers.</param>
+    /// <param name="body">Body bytes, or <see langword="null"/>/empty for none.</param>
+    /// <param name="contentType">The body's <c>Content-Type</c>.</param>
+    /// <param name="timeoutSeconds">Client-requested timeout.</param>
+    /// <param name="appId">Declaring app ID.</param>
+    /// <param name="includeBody">Whether the response body is wanted.</param>
+    public static ProxyHttpRequest Create(
+        Guid requestId,
+        string targetUrl,
+        string httpMethod,
+        IReadOnlyList<ProxyHeader> headers,
+        byte[]? body,
+        string? contentType,
+        int timeoutSeconds,
+        string appId,
+        bool includeBody)
+    {
+        bool hasBody = body is { Length: > 0 };
+        return new ProxyHttpRequest(
+            requestId,
+            ProxyProtocol.Http,
+            targetUrl,
+            httpMethod,
+            headers,
+            hasBody ? Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(body!)).ToLowerInvariant() : null,
+            hasBody ? body!.Length : 0,
+            timeoutSeconds,
+            appId,
+            includeBody,
+            hasBody ? body : null,
+            hasBody ? contentType : null);
+    }
+}
 
 /// <summary>
 /// Normalized proxy HTTP response. Metadata is always present; <see cref="BodyBase64"/> is
@@ -180,8 +225,26 @@ public static class ProxyErrorCode
     /// <summary>Device has exceeded the concurrent request quota.</summary>
     public const string QuotaExceeded = "QUOTA_EXCEEDED";
 
-    /// <summary>The app's capability grant was not found or has been revoked.</summary>
+    /// <summary>The device is not registered to the account, or no valid app identifier was given.</summary>
     public const string CapabilityDenied = "CAPABILITY_DENIED";
+
+    /// <summary>
+    /// The server does not grant <c>network.real.access</c> to the app for this account
+    /// (ADR 0102 §4); answered with <c>403</c>.
+    /// </summary>
+    public const string GrantMissing = "GRANT_MISSING";
+
+    /// <summary>The operator turned the relay off (<c>HackerOs:Proxy:Enabled</c> is <c>false</c>); <c>503</c>.</summary>
+    public const string RelayDisabled = "RELAY_DISABLED";
+
+    /// <summary>The request body does not match its announced size or SHA-256 hash.</summary>
+    public const string BodyMismatch = "BODY_MISMATCH";
+
+    /// <summary>The target actively refused the TCP connection (RST).</summary>
+    public const string ConnectionRefused = "CONNECTION_REFUSED";
+
+    /// <summary>The target did not answer the connection attempt (unreachable or filtered).</summary>
+    public const string HostUnreachable = "HOST_UNREACHABLE";
 
     /// <summary>The target hostname ends in a simulated-domain suffix (.hackeros.local, .sim).</summary>
     public const string SimulatedDomainBlocked = "SIMULATED_DOMAIN_BLOCKED";
@@ -218,6 +281,18 @@ public sealed record ProxyErrorResponse(
 /// <param name="AllowedProtocols">List of enabled protocols for this device.</param>
 /// <param name="AuditRetentionDays">Number of days proxy audit entries are retained.</param>
 /// <param name="OperatorWeakeningWarnings">Non-empty when the operator has disabled default safety rules.</param>
+/// <param name="Enabled">Whether the relay is on (<c>HackerOs:Proxy:Enabled</c>).</param>
+/// <param name="HttpPorts">Ports an HTTP request may target; empty when <paramref name="AllowAllPorts"/>.</param>
+/// <param name="TcpPorts">Ports a TCP stream may target; empty when <paramref name="AllowAllPorts"/>.</param>
+/// <param name="UdpPorts">Ports a UDP stream may target; empty when <paramref name="AllowAllPorts"/>.</param>
+/// <param name="AllowAllPorts">Whether every port is allowed ("tout autoriser").</param>
+/// <param name="AllowPrivateNetworks">Whether private ranges (the server's local network) are reachable.</param>
+/// <param name="QuotasEnabled">Whether size, concurrency, stream and idle limits apply.</param>
+/// <param name="MaxRequestBytes">Maximum request body size in bytes.</param>
+/// <param name="MaxStreamsPerDevice">Maximum TCP/UDP streams open at once for one device.</param>
+/// <param name="CurrentStreams">TCP/UDP streams this device has open now.</param>
+/// <param name="StreamIdleTimeoutSeconds">Seconds without traffic after which a stream is closed.</param>
+/// <param name="GrantedApps">App ids the server grants <c>network.real.access</c> to on its own (ADR 0102 §4).</param>
 public sealed record ProxyPolicyResponse(
     Guid DeviceId,
     int MaxConcurrentRequests,
@@ -227,7 +302,19 @@ public sealed record ProxyPolicyResponse(
     int MaxRedirectHops,
     IReadOnlyList<string> AllowedProtocols,
     int AuditRetentionDays,
-    IReadOnlyList<string> OperatorWeakeningWarnings);
+    IReadOnlyList<string> OperatorWeakeningWarnings,
+    bool Enabled = true,
+    IReadOnlyList<int>? HttpPorts = null,
+    IReadOnlyList<int>? TcpPorts = null,
+    IReadOnlyList<int>? UdpPorts = null,
+    bool AllowAllPorts = false,
+    bool AllowPrivateNetworks = false,
+    bool QuotasEnabled = true,
+    long MaxRequestBytes = 0,
+    int MaxStreamsPerDevice = 0,
+    int CurrentStreams = 0,
+    int StreamIdleTimeoutSeconds = 0,
+    IReadOnlyList<string>? GrantedApps = null);
 
 /// <summary>
 /// Source-generated JSON context for proxy contracts.
@@ -239,6 +326,8 @@ public sealed record ProxyPolicyResponse(
 [JsonSerializable(typeof(ProxyErrorResponse))]
 [JsonSerializable(typeof(ProxyPolicyResponse))]
 [JsonSerializable(typeof(ProxyHeader))]
+[JsonSerializable(typeof(ProxyStreamOpened))]
+[JsonSerializable(typeof(IReadOnlyList<int>))]
 [JsonSerializable(typeof(IReadOnlyList<ProxyHeader>))]
 [JsonSerializable(typeof(IReadOnlyList<string>))]
 [JsonSourceGenerationOptions(

@@ -1,0 +1,5 @@
+{
+  "name": "tail",
+  "description": "Affiche la fin des fichiers",
+  "terminalUsage": "tail [-n [+]nombre | -nombre] [-c octets] [-f] [-qv] [fichier...]"
+}

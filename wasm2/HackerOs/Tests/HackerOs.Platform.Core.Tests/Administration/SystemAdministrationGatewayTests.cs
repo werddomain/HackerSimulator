@@ -5,6 +5,7 @@ using HackerOs.AppSdk.Administration;
 using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Settings;
 using HackerOs.Platform.Core.Administration;
+using HackerOs.Platform.Core.Backup;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Elevation;
@@ -226,6 +227,27 @@ public sealed class SystemAdministrationGatewayTests
     }
 
     [Fact]
+    public async Task The_operation_shown_to_the_administrator_follows_the_calling_process_language()
+    {
+        AdminHarness harness = await AdminHarness.CreateAsync();
+        RecordingDevice device = new();
+        CountingAgent agent = new(succeed: true);
+        AdministratorGate french = new(
+            () => agent, harness.Catalog.Manifests[SettingsId], harness.Principal, isRootElevated: false,
+            language: () => System.Globalization.CultureInfo.GetCultureInfo("fr"));
+        AppSystemPowerGateway gateway = new(
+            () => new SystemPowerService(device, harness.Files.Session, auditLog: harness.Audit),
+            new FixedCapabilities(AppCapabilities.SystemPower),
+            french);
+
+        await gateway.FactoryResetAsync();
+
+        // ADR 0104: the prompt text is French; the audited action id stays stable.
+        Assert.Equal("Effacer cette machine (tous les comptes, fichiers et réglages) et la redémarrer", agent.LastRequest!.Operation);
+        Assert.Equal("system.factory-reset", agent.LastRequest.Action);
+    }
+
+    [Fact]
     public async Task Storage_inspection_requires_its_capability()
     {
         HackStorageSnapshot snapshot = new(DateTimeOffset.UnixEpoch, "hackeros", 3, [], new Dictionary<string, string>(), 0);
@@ -238,6 +260,108 @@ public sealed class SystemAdministrationGatewayTests
         await Assert.ThrowsAsync<NotSupportedException>(() => absent.GetSnapshotAsync().AsTask());
     }
 
+    // ---- HackSystemBackup (ADR 0099, section 1) ----
+
+    [Fact]
+    public async Task Backup_requires_its_capability_and_a_supporting_host()
+    {
+        AdminHarness harness = await AdminHarness.CreateAsync();
+        BackupDevice device = new();
+
+        await Assert.ThrowsAsync<AppGatewayAccessDeniedException>(
+            () => harness.CreateBackupGateway(device, new CountingAgent(succeed: true)).CreateAsync().AsTask());
+        AppSystemBackupGateway absent = new(null, new FixedCapabilities(AppCapabilities.SystemBackup), harness.Gate(new CountingAgent(succeed: true)));
+        Assert.False(absent.IsSupported);
+        await Assert.ThrowsAsync<NotSupportedException>(() => absent.CreateAsync().AsTask());
+        Assert.Empty(device.Calls);
+    }
+
+    [Fact]
+    public async Task A_backup_is_downloaded_to_the_host_and_audited()
+    {
+        AdminHarness harness = await AdminHarness.CreateAsync();
+        BackupDevice device = new();
+        CountingAgent agent = new(succeed: true);
+
+        HackBackupInfo info = await harness.CreateBackupGateway(device, agent, AppCapabilities.SystemBackup).CreateAsync();
+
+        Assert.Equal(SystemBackupService.CreateAction, agent.LastRequest!.Action);
+        Assert.Equal("hackeros-20261017-071200Z.hosbak", info.FileName);
+        Assert.Equal(["export", "save:hackeros-20261017-071200Z.hosbak"], device.Calls);
+        AuditEntry entry = Assert.Single(harness.Audit.Entries, audit => audit.Action == SystemBackupService.CreateAction);
+        Assert.Equal("admin", entry.Properties["admin"]);
+        Assert.Equal("alice", entry.Properties["requestedBy"]);
+        Assert.Equal("7", entry.Properties["records"]);
+    }
+
+    [Fact]
+    public async Task A_refused_administrator_prompt_downloads_nothing()
+    {
+        AdminHarness harness = await AdminHarness.CreateAsync();
+        BackupDevice device = new();
+
+        await Assert.ThrowsAsync<HackUnauthorizedAccessException>(
+            () => harness.CreateBackupGateway(device, new CountingAgent(succeed: false), AppCapabilities.SystemBackup).CreateAsync().AsTask());
+
+        Assert.Empty(device.Calls);
+        Assert.DoesNotContain(harness.Audit.Entries, audit => audit.Action == SystemBackupService.CreateAction);
+    }
+
+    [Fact]
+    public async Task A_closed_picker_or_an_invalid_file_asks_nobody_and_keeps_the_session()
+    {
+        AdminHarness harness = await AdminHarness.CreateAsync();
+        CountingAgent agent = new(succeed: true);
+        BackupDevice closed = new() { Picked = null };
+        BackupDevice invalid = new() { Invalid = true };
+
+        Assert.Null(await harness.CreateBackupGateway(closed, agent, AppCapabilities.SystemBackup).RestoreAsync(HackBackupRestoreMode.Replace));
+        await Assert.ThrowsAsync<HackBackupInvalidException>(
+            () => harness.CreateBackupGateway(invalid, agent, AppCapabilities.SystemBackup).RestoreAsync(HackBackupRestoreMode.Merge).AsTask());
+
+        Assert.Equal(0, agent.Calls);
+        Assert.Equal(["pick"], closed.Calls);
+        Assert.Equal(["pick"], invalid.Calls);
+        Assert.Equal(SessionState.Active, harness.Files.Session.State);
+    }
+
+    [Fact]
+    public async Task A_restore_picks_first_then_ends_the_session_restores_and_restarts()
+    {
+        AdminHarness harness = await AdminHarness.CreateAsync();
+        BackupDevice device = new();
+        CountingAgent agent = new(succeed: true);
+
+        HackBackupInfo? info = await harness.CreateBackupGateway(device, agent, AppCapabilities.SystemBackup)
+            .RestoreAsync(HackBackupRestoreMode.Replace);
+
+        Assert.Equal("old.hosbak", info!.FileName);
+        Assert.Equal(SystemBackupService.RestoreAction, agent.LastRequest!.Action);
+        Assert.Contains("Replace", agent.LastRequest.Operation, StringComparison.Ordinal);
+        Assert.Equal(["pick", "record:started", "restore:Replace", "record:success", "restart"], device.Calls);
+        Assert.NotEqual(SessionState.Active, harness.Files.Session.State);
+    }
+
+    [Fact]
+    public async Task A_failed_restore_still_restarts_and_the_next_boot_audits_the_failure()
+    {
+        AdminHarness harness = await AdminHarness.CreateAsync();
+        BackupDevice device = new() { FailRestore = true };
+        SystemBackupService service = harness.CreateBackupService(device);
+        SystemBackupCandidate candidate = (await service.PickAsync())!;
+
+        await service.RestoreAsync(candidate, HackBackupRestoreMode.Merge, "admin", harness.Principal);
+        await service.WritePendingRestoreRecordAsync();
+        await service.WritePendingRestoreRecordAsync();
+
+        Assert.Equal("restart", device.Calls[^1]);
+        AuditEntry entry = Assert.Single(harness.Audit.Entries, audit => audit.Action == SystemBackupService.RestoreAction);
+        Assert.Equal(AuditOutcome.Failed, entry.Outcome);
+        Assert.Equal("merge", entry.Properties["mode"]);
+        Assert.Equal("alice", entry.Properties["requestedBy"]);
+        Assert.StartsWith("failure:", entry.Properties["outcome"], StringComparison.Ordinal);
+    }
+
     private static AppManifest Manifest(string id, params string[] capabilities) => new()
     {
         Id = id,
@@ -247,7 +371,7 @@ public sealed class SystemAdministrationGatewayTests
         Description = "System-administration fixture.",
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("HackerOs.Apps.Sample", "HackerOs.Apps.Sample.SampleApp"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         Capabilities = capabilities
@@ -296,7 +420,15 @@ public sealed class SystemAdministrationGatewayTests
             ISystemPowerDevice device, IAdministratorAuthenticationAgent agent, params string[] capabilities) =>
             new(() => new SystemPowerService(device, Files.Session, auditLog: Audit), new FixedCapabilities(capabilities), Gate(agent));
 
-        private AdministratorGate Gate(IAdministratorAuthenticationAgent agent) =>
+        internal SystemBackupService CreateBackupService(ISystemBackupDevice device) =>
+            new(device, new SystemPowerService(new BackupPower(device), Files.Session, auditLog: Audit), Audit,
+                () => new DateTimeOffset(2026, 10, 17, 7, 12, 0, TimeSpan.Zero));
+
+        internal AppSystemBackupGateway CreateBackupGateway(
+            BackupDevice device, IAdministratorAuthenticationAgent agent, params string[] capabilities) =>
+            new(() => CreateBackupService(device), new FixedCapabilities(capabilities), Gate(agent));
+
+        internal AdministratorGate Gate(IAdministratorAuthenticationAgent agent) =>
             new(() => agent, Catalog.Manifests[SettingsId], Principal, isRootElevated: false);
     }
 
@@ -334,6 +466,76 @@ public sealed class SystemAdministrationGatewayTests
             Calls.Add("erase");
             return Task.CompletedTask;
         }
+    }
+
+    /// <summary>Stands in for the browser host of a backup: records every step in order.</summary>
+    private sealed class BackupDevice : ISystemBackupDevice
+    {
+        private static readonly DateTimeOffset Exported = new(2026, 10, 17, 7, 12, 0, TimeSpan.Zero);
+        private SystemRestoreRecord? _record;
+
+        public List<string> Calls { get; } = [];
+
+        public SystemBackupFile? Picked { get; init; } = new("old.hosbak", [1, 2, 3]);
+
+        public bool Invalid { get; init; }
+
+        public bool FailRestore { get; init; }
+
+        public Task<SystemBackupArchive> ExportAsync(CancellationToken cancellationToken = default)
+        {
+            Calls.Add("export");
+            return Task.FromResult(new SystemBackupArchive([0x1F, 0x8B], new SystemBackupSummary(Exported, 7)));
+        }
+
+        public Task SaveToHostAsync(string fileName, byte[] archive, CancellationToken cancellationToken = default)
+        {
+            Calls.Add($"save:{fileName}");
+            return Task.CompletedTask;
+        }
+
+        public Task<SystemBackupFile?> PickFromHostAsync(CancellationToken cancellationToken = default)
+        {
+            Calls.Add("pick");
+            return Task.FromResult(Picked);
+        }
+
+        public SystemBackupSummary Inspect(byte[] archive) =>
+            Invalid ? throw new HackBackupInvalidException("not a backup") : new SystemBackupSummary(Exported, 3);
+
+        public Task RestoreAsync(byte[] archive, HackBackupRestoreMode mode, CancellationToken cancellationToken = default)
+        {
+            Calls.Add($"restore:{mode}");
+            return FailRestore ? Task.FromException(new IOException("disk on fire")) : Task.CompletedTask;
+        }
+
+        public Task SaveRestoreRecordAsync(SystemRestoreRecord record, CancellationToken cancellationToken = default)
+        {
+            Calls.Add($"record:{record.Outcome.Split(':')[0]}");
+            _record = record;
+            return Task.CompletedTask;
+        }
+
+        public Task<SystemRestoreRecord?> TakeRestoreRecordAsync(CancellationToken cancellationToken = default)
+        {
+            SystemRestoreRecord? record = _record;
+            _record = null;
+            return Task.FromResult(record);
+        }
+
+        public void Restarted() => Calls.Add("restart");
+    }
+
+    /// <summary>Power device of the backup tests: a restart lands in the backup device's step list.</summary>
+    private sealed class BackupPower(ISystemBackupDevice device) : ISystemPowerDevice
+    {
+        public Task RestartAsync(CancellationToken cancellationToken = default)
+        {
+            ((BackupDevice)device).Restarted();
+            return Task.CompletedTask;
+        }
+
+        public Task EraseStorageAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class FixedInspector(HackStorageSnapshot snapshot) : IStorageInspector

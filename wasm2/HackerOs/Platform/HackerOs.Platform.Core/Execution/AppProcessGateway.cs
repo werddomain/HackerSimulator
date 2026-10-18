@@ -24,6 +24,15 @@ public sealed class AppProcessGateway : IAppProcessGateway
 
     private ProcessId OwnPid { get; }
 
+    /// <summary>Gets the limit table behind <see cref="SetResourceLimitAsync"/> (ADR 0125); without it the call is not supported.</summary>
+    public IProcessResourceLimitTable? ResourceLimits { get; init; }
+
+    /// <summary>
+    /// Gets whether the app runs as an elevated root (<c>sudo</c>): it may raise hard limits and act on any
+    /// user's process, and lower a niceness or renice another user's process (ADR 0127).
+    /// </summary>
+    public bool IsRootElevated { get; init; }
+
     /// <inheritdoc />
     public ProcessRecord OwnProcess =>
         _processManager.TryGetActive(OwnPid, out ProcessRecord process)
@@ -47,7 +56,8 @@ public sealed class AppProcessGateway : IAppProcessGateway
             return all;
         }
 
-        return [.. all.Where(p => p.Pid == OwnPid)];
+        // Its own process and its children (ADR 0140: its HackBackground tasks).
+        return [.. all.Where(p => p.Pid == OwnPid || IsDescendant(p.Pid))];
     }
 
     /// <inheritdoc />
@@ -65,11 +75,106 @@ public sealed class AppProcessGateway : IAppProcessGateway
         return _processManager.Kill(pid, reason);
     }
 
-    private void RequireManageUnlessOwn(ProcessId pid)
+    /// <inheritdoc />
+    public int GetNice(ProcessId pid)
     {
         if (pid != OwnPid)
         {
+            _capabilities.Require(AppCapabilities.ProcessList);
+        }
+
+        return _processManager.GetNice(pid);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The checks of Linux's <c>setpriority(2)</c>: <c>EPERM</c> for another user's process, and
+    /// <c>EACCES</c> for a lower value, unless the caller is root. Both surface as
+    /// <see cref="UnauthorizedAccessException"/>.
+    /// </remarks>
+    public int SetNice(ProcessId pid, int nice)
+    {
+        RequireManageUnlessOwn(pid);
+        if (!_processManager.TryGetActive(pid, out ProcessRecord target))
+        {
+            throw new KeyNotFoundException($"No active process with PID '{pid}'.");
+        }
+
+        int requested = ProcessNice.Clamp(nice);
+        if (!IsRootElevated)
+        {
+            if (target.UserId != OwnProcess.UserId)
+            {
+                throw new UnauthorizedAccessException("Operation not permitted");
+            }
+
+            if (requested < _processManager.GetNice(pid))
+            {
+                throw new UnauthorizedAccessException("Permission denied");
+            }
+        }
+
+        return _processManager.SetNice(pid, requested);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// ADR 0125 section 4, the rules of <c>prlimit(2)</c>: the app's own process, or another process of
+    /// the same user with <see cref="AppCapabilities.ProcessManage"/>, or any process when elevated.
+    /// </remarks>
+    public Task<ResourceLimitChangeResult> SetResourceLimitAsync(
+        ProcessId pid, ResourceLimitKind kind, ResourceLimit limit, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (ResourceLimits is not { } table)
+        {
+            throw new NotSupportedException("This host does not manage resource limits.");
+        }
+
+        RequireManageUnlessOwn(pid);
+        if (!_processManager.TryGetActive(pid, out ProcessRecord target))
+        {
+            return Task.FromResult(ResourceLimitChangeResult.NoSuchProcess);
+        }
+
+        if (!IsRootElevated && pid != OwnPid && target.UserId != OwnProcess.UserId)
+        {
+            return Task.FromResult(ResourceLimitChangeResult.PermissionDenied);
+        }
+
+        return Task.FromResult(table.TrySet(pid, kind, limit, privileged: IsRootElevated));
+    }
+
+    private void RequireManageUnlessOwn(ProcessId pid)
+    {
+        if (pid != OwnPid && !IsDescendant(pid))
+        {
             _capabilities.Require(AppCapabilities.ProcessManage);
         }
+    }
+
+    /// <summary>
+    /// ADR 0140: an app may stop or kill its own children (its HackBackground tasks), as a Unix
+    /// parent signals the processes it started, without <see cref="AppCapabilities.ProcessManage"/>.
+    /// </summary>
+    private bool IsDescendant(ProcessId pid)
+    {
+        // Bounded walk up the parent chain: a process table never holds a cycle, but stay safe.
+        for (int depth = 0; depth < 64 && _processManager.TryGetActive(pid, out ProcessRecord process); depth++)
+        {
+            if (process.ParentPid is not { } parent)
+            {
+                return false;
+            }
+
+            if (parent == OwnPid)
+            {
+                return true;
+            }
+
+            pid = parent;
+        }
+
+        return false;
     }
 }

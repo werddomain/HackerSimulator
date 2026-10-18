@@ -3,19 +3,33 @@ namespace HackerOs.AppSdk;
 /// <summary>Identifies renderer-independent keys delivered to a full-screen terminal command.</summary>
 public enum TerminalKey
 {
+    /// <summary>A printable character; the text is in <see cref="TerminalKeyEvent.Text"/>.</summary>
     Character,
+    /// <summary>The Enter (Return) key.</summary>
     Enter,
+    /// <summary>Backspace: deletes the character before the cursor.</summary>
     Backspace,
+    /// <summary>Delete: deletes the character under the cursor.</summary>
     Delete,
+    /// <summary>The left arrow key.</summary>
     ArrowLeft,
+    /// <summary>The right arrow key.</summary>
     ArrowRight,
+    /// <summary>The up arrow key.</summary>
     ArrowUp,
+    /// <summary>The down arrow key.</summary>
     ArrowDown,
+    /// <summary>The Home key.</summary>
     Home,
+    /// <summary>The End key.</summary>
     End,
+    /// <summary>The Page Up key.</summary>
     PageUp,
+    /// <summary>The Page Down key.</summary>
     PageDown,
+    /// <summary>Not a key: the terminal viewport changed size and the command should redraw, like <c>SIGWINCH</c>.</summary>
     Resize,
+    /// <summary>The Escape key.</summary>
     Escape
 }
 

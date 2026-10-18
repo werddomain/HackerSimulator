@@ -1,4 +1,5 @@
 using HackerOs.AppSdk.Diagnostics;
+using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.IO;
 
 namespace HackerOs.Apps.SystemMonitor.Processes;
@@ -91,7 +92,8 @@ public static class EndTaskRunner
         }
         catch (HackUnauthorizedAccessException)
         {
-            return new EndTaskFailure(row.Pid, row.Name, "Access denied: ending another app's process needs process.manage.");
+            // The reason is shown in the window: in the language of the process running this code.
+            return new EndTaskFailure(row.Pid, row.Name, HackLocalization.GetLocalizer<Strings>()["EndTask.AccessDenied"]);
         }
         catch (InvalidOperationException)
         {

@@ -3,12 +3,13 @@
 @using HackerOs.Simulation.Abstractions.FileSystem
 @using Microsoft.AspNetCore.Components.Web
 @using MudBlazor
+@inject IStringLocalizer<Strings> L
 
 <section class="file-dialog" role="dialog" aria-modal="true" aria-labelledby="@_titleId"
          tabindex="-1" @onkeydown="HandleKeyDown">
     <header>
         <MudIcon Icon="@Icons.Material.Filled.Save" />
-        <h2 id="@_titleId">@(Presentation.Request.Title ?? "Save file")</h2>
+        <h2 id="@_titleId">@(Presentation.Request.Title ?? L["FileDialog.SaveFile"])</h2>
     </header>
 
     <VirtualFolderBrowser FileSystem="@Presentation.FileSystem"
@@ -18,8 +19,8 @@
                           FileActivated="UseExistingName" />
 
     <label class="name-control">
-        <span>File name</span>
-        <input value="@_fileName" @oninput="ChangeName" aria-invalid="@(_error is not null)" />
+        <span>@L["FileDialog.FileName"]</span>
+        <input value="@_fileName" @oninput="ChangeName" aria-invalid="@(_error is not null ? "true" : "false")" />
     </label>
 
     @if (_error is not null)
@@ -29,16 +30,16 @@
 
     @if (_confirmPath is VirtualPath conflictPath)
     {
-        <div class="overwrite" role="alertdialog" aria-label="Confirm overwrite">
-            <span>@conflictPath.Value already exists. Replace it?</span>
-            <button type="button" @onclick="RejectOverwrite">No</button>
-            <button type="button" class="danger" @onclick="ConfirmOverwrite">Replace</button>
+        <div class="overwrite" role="alertdialog" aria-label="@L["FileDialog.ConfirmOverwrite"]">
+            <span>@L["FileDialog.AlreadyExists", conflictPath.Value]</span>
+            <button type="button" @onclick="RejectOverwrite">@L["Common.No"]</button>
+            <button type="button" class="danger" @onclick="ConfirmOverwrite">@L["FileDialog.Replace"]</button>
         </div>
     }
 
     <footer>
-        <button type="button" @onclick="Cancel">Cancel</button>
-        <button type="button" class="primary" disabled="@_checking" @onclick="SaveAsync">Save</button>
+        <button type="button" @onclick="Cancel">@L["Common.Cancel"]</button>
+        <button type="button" class="primary" disabled="@_checking" @onclick="SaveAsync">@L["FileDialog.Save"]</button>
     </footer>
 </section>
 
@@ -131,7 +132,7 @@
         }
         else
         {
-            _error = $"Unable to inspect the destination ({existing.Error?.Code}).";
+            _error = L["FileDialog.InspectFailed", existing.Error?.Code.ToString() ?? string.Empty];
         }
     }
 

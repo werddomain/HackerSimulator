@@ -13,7 +13,11 @@ public sealed record AggregationInput(string ManifestPath, bool IsSystemApp, str
 /// <summary>Result of an aggregation: the document when valid, diagnostics otherwise.</summary>
 /// <param name="Json">Canonical <c>BuiltInApplications.json</c>, or <see langword="null"/> on error.</param>
 /// <param name="Diagnostics">Every problem found.</param>
-public sealed record AggregationResult(string? Json, IReadOnlyList<GeneratorDiagnostic> Diagnostics);
+/// <param name="TrimmerRoots">
+/// The ILLink root descriptor of the same apps (ADR 0106 §2, <see cref="TrimmerRootDescriptorWriter"/>),
+/// or <see langword="null"/> on error.
+/// </param>
+public sealed record AggregationResult(string? Json, IReadOnlyList<GeneratorDiagnostic> Diagnostics, string? TrimmerRoots = null);
 
 /// <summary>
 /// Builds a host's <c>BuiltInApplications.json</c> (ADR 0047 §3): re-reads and validates each
@@ -41,7 +45,12 @@ public static class BuiltInApplicationsAggregator
 
             if (ManifestFileReader.TryRead(input.ManifestPath, out AppManifest? manifest, out IReadOnlyList<GeneratorDiagnostic> readErrors))
             {
-                applications.Add(new BuiltInApplication(input.IsSystemApp, manifest!, InspectImage(input)));
+                // ADR 0104 section 4: the translated texts travel with the catalog, so the launcher
+                // can show them before the app's assembly is ever loaded.
+                IReadOnlyDictionary<string, AppManifestText> localized =
+                    ManifestLocalizationGenerator.ReadReferenced(input.ManifestPath, manifest!, diagnostics);
+                applications.Add(new BuiltInApplication(
+                    input.IsSystemApp, manifest!, InspectImage(input), localized.Count > 0 ? localized : null));
             }
             else
             {
@@ -60,9 +69,74 @@ public static class BuiltInApplicationsAggregator
             diagnostics.Add(new(GeneratorCodes.InvalidCatalog, error.AppId, $"{error.Message} ({error.Code})"));
         }
 
+        // ADR 0098 §3: an app the host's own SDK would refuse at load fails the host build instead.
+        foreach (AppCatalogRejection rejection in catalog.Catalog?.Rejected ?? [])
+        {
+            diagnostics.Add(new(GeneratorCodes.InvalidCatalog, rejection.AppId, $"{rejection.Message} ({rejection.Code})"));
+        }
+
+        if (diagnostics.Count == 0)
+        {
+            diagnostics.AddRange(FindDuplicateCommands(applications.Select(item => item.Manifest)));
+            diagnostics.AddRange(FindNegativeOomScoreAdjust(applications));
+        }
+
         return diagnostics.Count > 0
             ? new AggregationResult(null, diagnostics)
-            : new AggregationResult(BuiltInApplicationsJsonSerializer.SerializeCanonical(applications), []);
+            : new AggregationResult(
+                BuiltInApplicationsJsonSerializer.SerializeCanonical(applications),
+                [],
+                TrimmerRootDescriptorWriter.Build(applications.Select(item => item.Manifest)));
+    }
+
+    /// <summary>
+    /// ADR 0098 §4, at build: every terminal command name and alias of the host's apps must be
+    /// unique (case-insensitive) and must not be a name the shell runs itself
+    /// (<see cref="HackerOs.Platform.Core.Shell.ShellInterpreter.ReservedNames"/>). One
+    /// <c>HOSAPP0022</c> per offending app and name, in app id order.
+    /// </summary>
+    /// <param name="manifests">The host's manifests.</param>
+    /// <returns>The diagnostics, empty when every name is unique.</returns>
+    public static IReadOnlyList<GeneratorDiagnostic> FindDuplicateCommands(IEnumerable<AppManifest> manifests)
+    {
+        ArgumentNullException.ThrowIfNull(manifests);
+        List<GeneratorDiagnostic> diagnostics = [];
+        Dictionary<string, string> owners = new(StringComparer.OrdinalIgnoreCase);
+        foreach (AppManifest manifest in manifests.Where(static item => item.Terminal is not null).OrderBy(static item => item.Id, StringComparer.Ordinal))
+        {
+            foreach (string name in manifest.Terminal!.Aliases.Prepend(manifest.Terminal.Name).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (HackerOs.Platform.Core.Shell.ShellInterpreter.ReservedNames.Contains(name))
+                {
+                    diagnostics.Add(new(GeneratorCodes.DuplicateCommand, manifest.Id, $"Command '{name}' is run by the shell itself (built-in); choose another name."));
+                }
+                else if (!owners.TryAdd(name, manifest.Id))
+                {
+                    diagnostics.Add(new(GeneratorCodes.DuplicateCommand, manifest.Id, $"Command '{name}' is already declared by '{owners[name]}'."));
+                }
+            }
+        }
+
+        return diagnostics;
+    }
+
+    /// <summary>
+    /// ADR 0126, section 4, at build: a negative <c>oomScoreAdj</c> shields an app from the OOM killer,
+    /// a right reserved to system apps. One <c>HOSAPP0024</c> per non-system app declaring one, in
+    /// app id order.
+    /// </summary>
+    /// <param name="applications">The host's apps with their system flag.</param>
+    /// <returns>The diagnostics, empty when no non-system app declares a negative value.</returns>
+    public static IReadOnlyList<GeneratorDiagnostic> FindNegativeOomScoreAdjust(IEnumerable<BuiltInApplication> applications)
+    {
+        ArgumentNullException.ThrowIfNull(applications);
+        return [.. applications
+            .Where(static item => !item.IsSystemApp && item.Manifest.OomScoreAdj < 0)
+            .OrderBy(static item => item.Manifest.Id, StringComparer.Ordinal)
+            .Select(static item => new GeneratorDiagnostic(
+                GeneratorCodes.NegativeOomScoreAdjust,
+                item.Manifest.Id,
+                $"oomScoreAdj {item.Manifest.OomScoreAdj} is negative: only a system app (IsSystemApp=\"true\" on the host's ProjectReference) may lower its OOM score."))];
     }
 
     /// <summary>

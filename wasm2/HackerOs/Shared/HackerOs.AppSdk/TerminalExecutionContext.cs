@@ -83,4 +83,51 @@ public sealed class TerminalExecutionContext
     /// <c>ExecuteCommandIntent</c> gets <see langword="null"/>.
     /// </summary>
     public IShellSession? Shell { get; }
+
+    /// <summary>
+    /// Reads one line without echoing it, as <c>getpass(3)</c> does for <c>passwd</c> (ADR 0120): writes
+    /// <paramref name="prompt"/> to standard output, turns the terminal's echo off while the line is
+    /// typed, then turns it back on. When standard input is not a terminal (a pipe), the line is
+    /// read as is.
+    /// </summary>
+    /// <param name="prompt">Text shown before the hidden input, e.g. <c>New password: </c>.</param>
+    /// <param name="cancellationToken">Cancels the read (Ctrl+C).</param>
+    /// <returns>The typed line, without its newline, or <see langword="null"/> at end of input.</returns>
+    public async ValueTask<string?> ReadSecretLineAsync(string prompt, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(prompt);
+        await StandardOutput.WriteAsync(prompt).ConfigureAwait(false);
+        await StandardOutput.FlushAsync(cancellationToken).ConfigureAwait(false);
+        ITerminalInputMode? tty = StandardInput as ITerminalInputMode;
+        bool echo = tty?.EchoEnabled ?? false;
+        if (tty is not null)
+        {
+            tty.EchoEnabled = false;
+        }
+
+        try
+        {
+            return await StandardInput.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (tty is not null)
+            {
+                tty.EchoEnabled = echo;
+            }
+        }
+    }
+}
+
+/// <summary>
+/// The mode of a terminal's standard input, the part of <c>termios</c> a command may change
+/// (ADR 0120): implemented by the terminal's input, absent on a pipe or a file.
+/// </summary>
+public interface ITerminalInputMode
+{
+    /// <summary>
+    /// Gets or sets whether typed characters are shown (<c>ECHO</c>). Off while a password is typed;
+    /// Enter still moves to the next line.
+    /// </summary>
+    bool EchoEnabled { get; set; }
 }

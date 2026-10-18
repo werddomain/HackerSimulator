@@ -73,4 +73,76 @@ internal sealed class AppIntentGateway(
             _ => new AppIntentOpenFileResult(AppIntentOpenFileOutcome.Faulted, ErrorCode: result.ErrorCode)
         };
     }
+
+    public async ValueTask<AppIntentOpenFileResult> EditFileAsync(
+        VirtualPath path, string? mediaType = null, CancellationToken cancellationToken = default)
+    {
+        AppIntentDispatchResult result = await DispatchAsync(new EditFileIntent(path, mediaType), cancellationToken);
+        return result.Status switch
+        {
+            AppIntentDispatchStatus.Dispatched =>
+                new AppIntentOpenFileResult(AppIntentOpenFileOutcome.Opened, FellBackToOpen: result.FellBackToOpen),
+            AppIntentDispatchStatus.ChooserRequired =>
+                new AppIntentOpenFileResult(AppIntentOpenFileOutcome.ChooserRequired, result.CandidateAppIds, FellBackToOpen: result.FellBackToOpen),
+            AppIntentDispatchStatus.NotFound or AppIntentDispatchStatus.TargetInvalid =>
+                new AppIntentOpenFileResult(AppIntentOpenFileOutcome.NoHandler, ErrorCode: result.ErrorCode),
+            AppIntentDispatchStatus.CapabilityDenied => throw AppsLaunchDenied(),
+            _ => new AppIntentOpenFileResult(AppIntentOpenFileOutcome.Faulted, ErrorCode: result.ErrorCode)
+        };
+    }
+
+    public async ValueTask<AppIntentResult> RevealFileAsync(VirtualPath path, CancellationToken cancellationToken = default) =>
+        ToIntentResult(await DispatchAsync(new RevealFileIntent(path), cancellationToken));
+
+    public async ValueTask<AppIntentResult> OpenUriAsync(Uri uri, string? preferredAppId = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(uri);
+        return ToIntentResult(await DispatchAsync(new OpenUriIntent(uri, preferredAppId), cancellationToken));
+    }
+
+    public async ValueTask<AppIntentResult> ShowAppSettingsAsync(string appId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        return ToIntentResult(await DispatchAsync(new ShowAppSettingsIntent(appId), cancellationToken));
+    }
+
+    public async ValueTask<AppIntentResult> SendIntentAsync(
+        string intentId,
+        string? payloadJson,
+        string? targetAppId = null,
+        bool rememberChoice = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(intentId);
+        return ToIntentResult(await DispatchAsync(
+            new CustomIntent(intentId, payloadJson, targetAppId, rememberChoice), cancellationToken));
+    }
+
+    private ValueTask<AppIntentDispatchResult> DispatchAsync(IAppIntent intent, CancellationToken cancellationToken) =>
+        dispatcherProvider().DispatchAsync(
+            new AppIntentRequest(Guid.NewGuid(), callerAppId, userId, intent),
+            principal,
+            fullScreen: null,
+            cancellationToken);
+
+    /// <summary>Maps a dispatch outcome onto the gateway's (ADR 0096); a missing <c>apps.launch</c> throws like the other members.</summary>
+    private static AppIntentResult ToIntentResult(AppIntentDispatchResult result) => result.Status switch
+    {
+        AppIntentDispatchStatus.Dispatched => new AppIntentResult(AppIntentOutcome.Dispatched),
+        AppIntentDispatchStatus.ChooserRequired =>
+            new AppIntentResult(AppIntentOutcome.ChooserRequired, result.CandidateAppIds, result.ErrorCode),
+        AppIntentDispatchStatus.NotFound when result.ErrorCode is { } code
+            && (code.EndsWith(".no-handler", StringComparison.Ordinal) || code == "intent.unknown") =>
+            new AppIntentResult(AppIntentOutcome.NoHandler, ErrorCode: code),
+        AppIntentDispatchStatus.NotFound => new AppIntentResult(AppIntentOutcome.NotFound, ErrorCode: result.ErrorCode),
+        AppIntentDispatchStatus.AccessDenied => new AppIntentResult(AppIntentOutcome.AccessDenied, ErrorCode: result.ErrorCode),
+        AppIntentDispatchStatus.Disabled => new AppIntentResult(AppIntentOutcome.Disabled, ErrorCode: result.ErrorCode),
+        AppIntentDispatchStatus.Invalid or AppIntentDispatchStatus.TargetInvalid =>
+            new AppIntentResult(AppIntentOutcome.Invalid, ErrorCode: result.ErrorCode),
+        AppIntentDispatchStatus.CapabilityDenied => throw AppsLaunchDenied(),
+        _ => new AppIntentResult(AppIntentOutcome.Faulted, ErrorCode: result.ErrorCode)
+    };
+
+    private static AppGatewayAccessDeniedException AppsLaunchDenied() =>
+        new(AppCapabilities.AppsLaunch, CapabilityPolicyEvaluation.DenyMissing(1));
 }

@@ -40,21 +40,19 @@ public sealed class ShellCommandResolver
             return null;
         }
 
-        foreach (AppManifest manifest in _catalog.Manifests.Values)
+        // ADR 0098 §4: a command name belongs to one app (the catalog decided which at load).
+        if (_catalog.FindCommandOwner(commandName) is { } owner
+            && _catalog.Manifests.TryGetValue(owner, out AppManifest? owned)
+            && IsInstalledCommand(owned))
         {
-            if (!IsInstalledCommand(manifest) || manifest.Terminal is null)
-            {
-                continue;
-            }
+            return new ShellCommandResolution(owned.Id, owned, commandName, arguments);
+        }
 
-            bool matchesName = string.Equals(manifest.Terminal.Name, commandName, StringComparison.OrdinalIgnoreCase);
-            bool matchesAlias = manifest.Terminal.Aliases.Any(alias => string.Equals(alias, commandName, StringComparison.OrdinalIgnoreCase));
-            bool matchesAppId = string.Equals(manifest.Id, commandName, StringComparison.OrdinalIgnoreCase);
-
-            if (matchesName || matchesAlias || matchesAppId)
-            {
-                return new ShellCommandResolution(manifest.Id, manifest, commandName, arguments);
-            }
+        // A terminal app can also be run by its full id.
+        if (_catalog.Manifests.Values.FirstOrDefault(manifest =>
+                IsInstalledCommand(manifest) && string.Equals(manifest.Id, commandName, StringComparison.OrdinalIgnoreCase)) is { } byId)
+        {
+            return new ShellCommandResolution(byId.Id, byId, commandName, arguments);
         }
 
         return null;
@@ -103,5 +101,7 @@ public sealed class ShellCommandResolver
     private bool IsInstalledCommand(AppManifest manifest) =>
         manifest.Kind == AppKind.Terminal
         && manifest.Terminal is not null
-        && (_enablement is null || _enablement.IsEnabled(manifest.Id));
+        && (_enablement is null || _enablement.IsEnabled(manifest.Id))
+        // ADR 0098 §4: an app whose every command name went to another app registers no command.
+        && manifest.Terminal.Aliases.Prepend(manifest.Terminal.Name).Any(name => _catalog.FindCommandOwner(name) == manifest.Id);
 }

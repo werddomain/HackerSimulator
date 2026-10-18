@@ -1,0 +1,5 @@
+{
+  "name": "touch",
+  "description": "Change l'horodatage des fichiers ou crée des fichiers vides",
+  "terminalUsage": "touch <fichier...>"
+}

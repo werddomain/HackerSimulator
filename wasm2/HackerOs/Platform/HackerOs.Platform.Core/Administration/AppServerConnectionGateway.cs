@@ -1,6 +1,9 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Administration;
 using HackerOs.Platform.Core.ServerConnection;
+using HackerOs.Server.Contracts.Proxy;
+using HackerOs.Platform.Core.Settings;
+using HackerOs.Simulation.Abstractions.Settings;
 using HackerOs.Simulation.Abstractions.Gateways;
 using ServerState = HackerOs.Simulation.Abstractions.ServerConnection.ServerConnectionState;
 
@@ -14,11 +17,19 @@ namespace HackerOs.Platform.Core.Administration;
 /// <param name="FileSystemSync">Home directory sync (ADR 0030).</param>
 /// <param name="GrantsSync">Grant pull (ADR 0031).</param>
 /// <param name="FileAssociationsSync">File association sync (ADR 0033).</param>
+/// <param name="Proxy">Network relay client, read for its policy (ADR 0102 §5).</param>
+/// <param name="Scheduler">Periodic synchronization (ADR 0101 section 4).</param>
+/// <param name="ConflictCenter">The OS conflict dialog's state (ADR 0101 section 2).</param>
+/// <param name="Settings">Writes <c>~/.config/hackeros/sync.config</c>.</param>
 public sealed record ServerConnectionGatewayServices(
     Func<IServerConnectionService> Connection,
     Func<IFileSystemSyncService>? FileSystemSync = null,
     Func<IGrantsSyncService>? GrantsSync = null,
-    Func<IFileAssociationsSyncService>? FileAssociationsSync = null);
+    Func<IFileAssociationsSyncService>? FileAssociationsSync = null,
+    Func<IProxyClient>? Proxy = null,
+    Func<SyncScheduler>? Scheduler = null,
+    Func<SyncConflictCenter>? ConflictCenter = null,
+    Func<IOsSettingsService>? Settings = null);
 
 /// <summary>
 /// Trusted <see cref="IAppServerConnectionGateway"/> (ADR 0056, section 10) over the server
@@ -39,14 +50,34 @@ internal sealed class AppServerConnectionGateway : IAppServerConnectionGateway
 {
     private readonly ServerConnectionGatewayServices? _services;
     private readonly ICapabilityChecker _capabilities;
+    private readonly Func<System.Globalization.CultureInfo> _language;
+
+    /// <summary>
+    /// The relay warnings the server writes (<c>ProxyRelayPolicy.OperatorWeakeningWarnings</c>, always
+    /// in English), with the core text that says each one in the app's language.
+    /// </summary>
+    private static readonly Dictionary<string, string> RelayWarningKeys = new(StringComparer.Ordinal)
+    {
+        ["HackerOs:Proxy:AllowAllPorts is on: the relay reaches every TCP and UDP port."] = "Relay.Warning.AllowAllPorts",
+        ["HackerOs:Proxy:AllowPrivateNetworks is on: the relay reaches the private networks of the server's machine (loopback and cloud metadata stay blocked)."] = "Relay.Warning.AllowPrivateNetworks",
+        ["HackerOs:Proxy:Quotas:Enabled is off: no size, concurrency, stream or idle limit applies."] = "Relay.Warning.QuotasDisabled"
+    };
 
     /// <summary>Creates the gateway for one app instance.</summary>
     /// <param name="services">Server services; <see langword="null"/> on a host without them.</param>
     /// <param name="capabilities">The app's capability checker.</param>
-    public AppServerConnectionGateway(ServerConnectionGatewayServices? services, ICapabilityChecker capabilities)
+    /// <param name="language">
+    /// Language of the calling process (ADR 0104), read at each call: the relay warnings are shown in
+    /// it. English when <see langword="null"/>.
+    /// </param>
+    public AppServerConnectionGateway(
+        ServerConnectionGatewayServices? services,
+        ICapabilityChecker capabilities,
+        Func<System.Globalization.CultureInfo>? language = null)
     {
         _services = services;
         _capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
+        _language = language ?? (static () => HackerOs.AppSdk.Globalization.HackLocale.DefaultLanguage);
     }
 
     /// <inheritdoc />
@@ -115,14 +146,152 @@ internal sealed class AppServerConnectionGateway : IAppServerConnectionGateway
     }
 
     /// <inheritdoc />
-    public ValueTask<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(CancellationToken cancellationToken = default)
+    public async ValueTask<IReadOnlyList<HackSyncConflict>> GetConflictsAsync(CancellationToken cancellationToken = default)
     {
         _capabilities.Require(AppCapabilities.ServerConnectionManage);
-        IReadOnlyList<HackSyncConflict> conflicts = _services?.FileSystemSync is { } fileSystemSync
-            ? [.. fileSystemSync().UnresolvedConflicts.Select(path => new HackSyncConflict(HackSyncDomain.FileSystem, path))]
-            : [];
-        return ValueTask.FromResult(conflicts);
+        if (_services?.FileSystemSync is not { } fileSystemSync)
+        {
+            return [];
+        }
+
+        IReadOnlyList<SyncFileConflict> conflicts = await fileSystemSync().GetConflictsAsync(cancellationToken).ConfigureAwait(false);
+        return [.. conflicts.Select(conflict => new HackSyncConflict(HackSyncDomain.FileSystem, conflict.RelativePath, conflict.DetectedAtUtc))];
     }
+
+    /// <inheritdoc />
+    public async ValueTask<HackServerRelayPolicy?> GetRelayPolicyAsync(CancellationToken cancellationToken = default)
+    {
+        _capabilities.Require(AppCapabilities.ServerConnectionManage);
+        if (_services?.Proxy is not { } proxyFactory)
+        {
+            return null;
+        }
+
+        IServerConnectionService connection = _services.Connection();
+        try
+        {
+            ServerState? state = await connection.GetStateAsync(cancellationToken).ConfigureAwait(false);
+            if (state is null || await connection.EnsureAccessTokenAsync(cancellationToken).ConfigureAwait(false) is not { } token)
+            {
+                return null;
+            }
+
+            ProxyPolicyResponse policy = await proxyFactory()
+                .GetPolicyAsync(new Uri(state.ServerBaseUrl), token, cancellationToken)
+                .ConfigureAwait(false);
+            return new HackServerRelayPolicy(
+                policy.Enabled,
+                policy.HttpPorts ?? [],
+                policy.TcpPorts ?? [],
+                policy.UdpPorts ?? [],
+                policy.AllowAllPorts,
+                policy.AllowPrivateNetworks,
+                policy.QuotasEnabled,
+                policy.MaxRequestBytes,
+                policy.MaxPayloadBytes,
+                policy.MaxConcurrentRequests,
+                policy.MaxStreamsPerDevice,
+                policy.CurrentStreams,
+                TimeSpan.FromSeconds(policy.StreamIdleTimeoutSeconds),
+                policy.GrantedApps ?? [],
+                LocalizeRelayWarnings(policy.OperatorWeakeningWarnings));
+        }
+        catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException)
+        {
+            throw new HackServerConnectionException($"Could not read the relay policy: {exception.Message}", exception);
+        }
+    }
+
+    /// <summary>
+    /// Rewrites the server's known relay warnings in the app's language; a warning this client
+    /// does not know (a newer server) is shown as the server wrote it.
+    /// </summary>
+    private IReadOnlyList<string> LocalizeRelayWarnings(IReadOnlyList<string>? warnings)
+    {
+        if (warnings is null || warnings.Count == 0)
+        {
+            return [];
+        }
+
+        Microsoft.Extensions.Localization.IStringLocalizer text = Strings.For(_language());
+        return [.. warnings.Select(warning => RelayWarningKeys.TryGetValue(warning, out string? key) ? text[key].Value : warning)];
+    }
+
+    public async ValueTask ShowConflictsAsync(CancellationToken cancellationToken = default)
+    {
+        _capabilities.Require(AppCapabilities.ServerConnectionManage);
+        if (_services?.ConflictCenter is { } center)
+        {
+            await center().OpenAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <inheritdoc />
+    public ValueTask<HackSyncStatus> GetSyncStatusAsync(CancellationToken cancellationToken = default)
+    {
+        _capabilities.Require(AppCapabilities.ServerConnectionManage);
+        return ValueTask.FromResult(_services?.Scheduler is { } scheduler ? ToPublic(scheduler().Status) : HackSyncStatus.Inactive);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask SetSyncPausedAsync(bool paused, CancellationToken cancellationToken = default)
+    {
+        _capabilities.Require(AppCapabilities.ServerConnectionManage);
+        if (_services?.Settings is not { } settings)
+        {
+            throw new HackServerConnectionException("This HackerOS host has no periodic synchronization.");
+        }
+
+        await settings().SetAsync(
+            SyncSettingsDocuments.Document, SyncSettingsDocuments.PausedKey, paused ? "true" : "false", SettingLayer.User,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!paused)
+        {
+            _services.Scheduler?.Invoke().RequestSync();
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<HackSyncStatus> SyncNowAsync(CancellationToken cancellationToken = default)
+    {
+        _capabilities.Require(AppCapabilities.ServerConnectionManage);
+        if (_services is null)
+        {
+            return HackSyncStatus.Inactive;
+        }
+
+        if (_services.Scheduler is not { } scheduler)
+        {
+            // A host without the scheduler: the same order, one domain after the other.
+            await SyncAsync(HackSyncDomain.FileSystem, HackSyncDirection.Push, cancellationToken).ConfigureAwait(false);
+            await SyncAsync(HackSyncDomain.FileSystem, HackSyncDirection.Pull, cancellationToken).ConfigureAwait(false);
+            await SyncAsync(HackSyncDomain.Grants, HackSyncDirection.Pull, cancellationToken).ConfigureAwait(false);
+            await SyncAsync(HackSyncDomain.FileAssociations, HackSyncDirection.Push, cancellationToken).ConfigureAwait(false);
+            await SyncAsync(HackSyncDomain.FileAssociations, HackSyncDirection.Pull, cancellationToken).ConfigureAwait(false);
+            return HackSyncStatus.Inactive;
+        }
+
+        try
+        {
+            await scheduler().SyncNowAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException or IOException)
+        {
+            throw new HackServerConnectionException($"Sync failed: {exception.Message}", exception);
+        }
+
+        return ToPublic(scheduler().Status);
+    }
+
+    private static HackSyncStatus ToPublic(SyncSchedulerStatus status) => new(
+        status.IsActive,
+        status.IsPaused,
+        status.IsOnline,
+        status.LastPassAtUtc,
+        status.LastResult?.Sent ?? 0,
+        status.LastResult?.Received ?? 0,
+        status.LastError,
+        status.Interval);
 
     private async ValueTask<HackServerConnectionState> ConnectCoreAsync(
         Uri serverUrl, string login, string password, bool createAccount, CancellationToken cancellationToken)
@@ -139,6 +308,9 @@ internal sealed class AppServerConnectionGateway : IAppServerConnectionGateway
             ServerState state = createAccount
                 ? await connection.ConnectWithNewAccountAsync(serverUrl, login, password, cancellationToken).ConfigureAwait(false)
                 : await connection.ConnectWithExistingAccountAsync(serverUrl, login, password, cancellationToken).ConfigureAwait(false);
+
+            // ADR 0101 section 4: a (re)connection triggers a pass.
+            _services.Scheduler?.Invoke().RequestSync();
             return ToPublic(state);
         }
         catch (Exception exception) when (exception is ServerConnectionException or HttpRequestException)

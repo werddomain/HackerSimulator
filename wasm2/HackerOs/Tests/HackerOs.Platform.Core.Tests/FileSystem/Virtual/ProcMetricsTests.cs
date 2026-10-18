@@ -265,7 +265,7 @@ public sealed class ProcMetricsTests
         Assert.Equal("Inter-|   Receive                                                |  Transmit", lines[0]);
         Assert.Equal("    lo:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0", lines[2]);
         Assert.Equal("  eth0:    4000       1    1    0    0     0          0         0      120       1    0    0    0     0       0          0", lines[3]);
-        Assert.Equal(["dev"], net.Value!.Entries.Select(static entry => entry.Name.Value));
+        Assert.Equal(["dev", "tcp"], net.Value!.Entries.Select(static entry => entry.Name.Value));
     }
 
     // ── /proc/mounts ──────────────────────────────────────────────────────

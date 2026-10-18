@@ -22,7 +22,9 @@ public static class AppEntryPointDiscovery
     {
         [AppKind.Window] = "HackerOs.AppSdk.Blazor.WindowAppBase",
         [AppKind.Terminal] = "HackerOs.AppSdk.TerminalAppBase",
-        [AppKind.Service] = "HackerOs.AppSdk.ServiceAppBase"
+        [AppKind.Service] = "HackerOs.AppSdk.ServiceAppBase",
+        // ADR 0073: a web site is a service-like process (WebServerAppBase derives from ServiceAppBase).
+        [AppKind.Web] = "HackerOs.AppSdk.ServiceAppBase"
     };
 
     private const string AppBackHandlerInterfaceFullName = "HackerOs.AppSdk.Blazor.IAppBackHandler";
@@ -48,14 +50,13 @@ public static class AppEntryPointDiscovery
     /// Resolves manifest-declared type names by name (<see cref="Assembly.GetType(string, bool)"/>),
     /// which is fundamentally reflection-based and cannot be statically analyzed for trimming. This
     /// is a bounded, explicit reflection boundary: only assemblies the host itself passes in
-    /// <paramref name="hostAssemblies"/> are consulted, matching the build profile's discovery list
-    /// (`P1-BLD-006`). A future host publish step (Phase 2/6) must add matching trim root
-    /// descriptors for every build-profile-selected entry-point type; see the Problem Register entry
-    /// linked from `P1-GATE-004` in `integration-task-list.md` until that exists.
+    /// <paramref name="hostAssemblies"/> are consulted, matching the apps the host references
+    /// (ADR 0047, 0048). A trimmed host publish keeps every such assembly whole through the root
+    /// descriptor the build generates from its manifests (ADR 0106 §2, ADR 0113).
     /// </remarks>
     [RequiresUnreferencedCode(
-        "Resolves manifest entry-point types by name from an explicit host assembly list; the " +
-        "eventual host publish step must add matching trim root descriptors (see P1-GATE-004).")]
+        "Resolves manifest entry-point types by name from an explicit host assembly list; a trimmed host " +
+        "keeps those assemblies whole through its generated root descriptor (ADR 0113).")]
     public static AppDiscoveryResult Discover(
         AppCatalog catalog,
         IReadOnlyDictionary<string, Assembly> hostAssemblies,

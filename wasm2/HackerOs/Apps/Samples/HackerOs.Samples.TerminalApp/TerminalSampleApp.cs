@@ -21,6 +21,9 @@ public sealed class TerminalSampleApp : AppDefinition
     /// <inheritdoc />
     public override Type EntryPoint => typeof(SampleTerminalApp);
 
+    /// <summary>A command is invoked by name, like every built-in command: not listed in the launcher.</summary>
+    public override AppLaunchVisibility LaunchVisibility => AppLaunchVisibility.Hidden;
+
     /// <inheritdoc />
     public override string PublisherId => "pub.hackeros";
 

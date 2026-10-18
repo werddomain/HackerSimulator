@@ -10,24 +10,35 @@ public partial class FileViewDetails
 {
     private const string NameColumnKey = "name";
 
-    private static readonly IReadOnlyList<FileViewColumn> DefaultColumns =
-    [
-        new(NameColumnKey, "Name", static item => item.FileName),
-        new("type", "Type", static item => FormatType(item)),
-        new("size", "Size", static item => item.Metadata is FileMetadata file ? file.Length : -1L),
-        new("modified", "Modified", static item => item.Metadata.Timestamps.ContentModifiedAtUtc)
-    ];
+    /// <summary>
+    /// The default columns, their headers and the Type values in the owner's language (ADR 0104);
+    /// keys stay stable for sorting and host persistence.
+    /// </summary>
+    private IReadOnlyList<FileViewColumn> DefaultColumns
+    {
+        get
+        {
+            Microsoft.Extensions.Localization.IStringLocalizer<Strings> text = Owner.L;
+            return
+            [
+                new(NameColumnKey, text["Column.Name"], static item => item.FileName),
+                new("type", text["Column.Type"], item => FormatType(item, text)),
+                new("size", text["Column.Size"], static item => item.Metadata is FileMetadata file ? file.Length : -1L),
+                new("modified", text["Column.Modified"], static item => item.Metadata.Timestamps.ContentModifiedAtUtc)
+            ];
+        }
+    }
 
     /// <summary>Formats one entry's Type column value: <c>"Folder"</c>, <c>".ext File"</c>, or plain <c>"File"</c> when it has no extension.</summary>
-    private static string FormatType(FileViewItem item)
+    private static string FormatType(FileViewItem item, Microsoft.Extensions.Localization.IStringLocalizer<Strings> text)
     {
         if (item.IsDirectory)
         {
-            return "Folder";
+            return text["Type.Folder"];
         }
 
         string? extension = GetExtension(item.FileName);
-        return extension is null ? "File" : $"{extension} File";
+        return extension is null ? text["Type.File"] : text["Type.Extension", extension];
     }
 
     private readonly Dictionary<FileViewItem, string> _renameBuffers = [];
@@ -203,21 +214,22 @@ public partial class FileViewDetails
         return lastDot > 0 ? fileName[lastDot..].ToLowerInvariant() : null;
     }
 
-    private static string FormatValue(FileViewColumn column, FileViewItem item)
+    private string FormatValue(FileViewColumn column, FileViewItem item)
     {
         IComparable value = column.SortAccessor(item);
         return value switch
         {
             DateTimeOffset timestamp => timestamp.ToString("yyyy-MM-dd HH:mm"),
             long size and < 0 => string.Empty,
-            long size => FormatBytes(size),
+            long size => FormatBytes(size, Owner.L),
             _ => value.ToString() ?? string.Empty
         };
     }
 
-    private static string FormatBytes(long bytes)
+    /// <summary>Formats a size with a binary unit, in the owner's language (<c>1,5 Ko</c> in French).</summary>
+    private static string FormatBytes(long bytes, Microsoft.Extensions.Localization.IStringLocalizer<Strings> text)
     {
-        string[] units = ["B", "KB", "MB", "GB"];
+        string[] units = ["Size.Bytes", "Size.Kilobytes", "Size.Megabytes", "Size.Gigabytes"];
         double size = bytes;
         int unitIndex = 0;
         while (size >= 1024 && unitIndex < units.Length - 1)
@@ -226,6 +238,6 @@ public partial class FileViewDetails
             unitIndex++;
         }
 
-        return $"{size:0.#} {units[unitIndex]}";
+        return text[units[unitIndex], size];
     }
 }

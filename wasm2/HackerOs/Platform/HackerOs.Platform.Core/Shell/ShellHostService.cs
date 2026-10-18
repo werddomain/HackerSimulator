@@ -45,7 +45,7 @@ public sealed class ShellHostService
         PublisherId = "pub.hackeros",
         Description = "HackerOS shell",
         Kind = AppKind.Terminal,
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("system", AppLaunchVisibility.Hidden, []),
         Resources = new AppResourceProfileManifest(0, 0.01, 0.01, 0.01, 0, 0, 0, 0),
         Terminal = new TerminalCommandManifest("hsh", [], "hsh")
@@ -99,7 +99,7 @@ public sealed class ShellHostService
                 await TryChangeDirectoryAsync(shellContext, session, options.WorkingDirectory, cancellationToken).ConfigureAwait(false);
             }
 
-            ShellHostPrompts? prompts = options.CredentialPrompt is { } prompt ? new ShellHostPrompts(prompt, _elevation) : null;
+            ShellHostPrompts? prompts = options.CredentialPrompt is { } prompt ? new ShellHostPrompts(prompt, _elevation, () => ShellText.Language(session)) : null;
             return new HostedShell(_interpreter, _processes, shellContext, session, prompts);
         }
         catch
@@ -174,7 +174,8 @@ public sealed class ShellHostService
 
         public string? NavigateHistory(int delta) => _session.NavigateHistory(delta);
 
-        public IReadOnlyList<ShellCommandInfo> GetInstalledCommands() => _interpreter.GetInstalledCommands();
+        public IReadOnlyList<ShellCommandInfo> GetInstalledCommands() =>
+            _interpreter.GetInstalledCommands(HackerOs.AppSdk.Globalization.HackLocale.ResolveLanguage(_session.GetVariable));
 
         public bool NeedsMoreInput(string text) => ShellParser.Parse(text ?? string.Empty).IsIncomplete;
 

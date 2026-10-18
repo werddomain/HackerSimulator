@@ -23,6 +23,10 @@ internal static class RemoteErrors
         writer.WriteString("em", exception.Message);
         switch (exception)
         {
+            case HackerOs.AppSdk.WebData.HackWebDbException database:
+                writer.WriteString("et", "webdb");
+                writer.WriteString("dn", database.Name);
+                break;
             case AppGatewayAccessDeniedException denied:
                 writer.WriteString("et", "denied");
                 writer.WriteString("cap", denied.Capability);
@@ -31,6 +35,17 @@ internal static class RemoteErrors
             case HackProcessKilledException killed:
                 writer.WriteString("et", "killed");
                 writer.WriteNumber("pid", killed.ProcessId);
+                writer.WriteNumber("rs", (int)killed.Reason);
+                break;
+            case HackerOs.AppSdk.Threading.HackBackgroundJobException fault:
+                // ADR 0128 section 4: the type, message and stack of what escaped the task.
+                writer.WriteString("et", "bgfault");
+                writer.WriteString("ty", fault.OriginalTypeName);
+                if (fault.OriginalStackTrace is { } stack)
+                {
+                    writer.WriteString("st", stack);
+                }
+
                 break;
             case OperationCanceledException:
                 writer.WriteString("et", "cancel");
@@ -92,7 +107,12 @@ internal static class RemoteErrors
             "denied" => new AppGatewayAccessDeniedException(
                 error.GetString("cap"),
                 CapabilityPolicyEvaluation.DenyMissing(Math.Max(1, error.GetOptional("rev")?.GetInt64() ?? 1))),
-            "killed" => new HackProcessKilledException(error.GetInt64("pid")),
+            "killed" => new HackProcessKilledException(
+                error.GetInt64("pid"),
+                error.GetOptional("rs") is { } reason ? (HackerOs.Simulation.Abstractions.Processes.ProcessExitReason)reason.GetInt32() : HackerOs.Simulation.Abstractions.Processes.ProcessExitReason.Killed),
+            "bgfault" => new HackerOs.AppSdk.Threading.HackBackgroundJobException(
+                error.GetOptionalString("ty") ?? "System.Exception", message, error.GetOptionalString("st")),
+            "webdb" => new HackerOs.AppSdk.WebData.HackWebDbException(error.GetOptionalString("dn") ?? HackerOs.AppSdk.WebData.HackWebDbException.InvalidStateError, StripName(message, error.GetOptionalString("dn"))),
             "cancel" => new OperationCanceledException(message),
             "arg" => new ArgumentException(message, error.GetOptionalString("pn")),
             "notsup" => new NotSupportedException(message),
@@ -105,6 +125,10 @@ internal static class RemoteErrors
             _ => new WorkerRemoteException(error.GetOptionalString("ty") ?? "Exception", message)
         };
     }
+
+    // HackWebDbException's message starts with its name; the rebuilt exception adds it again.
+    private static string StripName(string message, string? name) =>
+        name is not null && message.StartsWith(name + ": ", StringComparison.Ordinal) ? message[(name.Length + 2)..] : message;
 
     private static void WriteFileDetails(Utf8JsonWriter writer, FileSystemErrorCode? code, string? path)
     {

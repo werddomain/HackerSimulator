@@ -3,15 +3,15 @@
 
 <div class="svc">
     <div class="svc-toolbar">
-        <span class="sysmon-muted">@_services.Count service(s) installed</span>
-        <button class="sysmon-btn" @onclick="LoadAsync" disabled="@_busy">Reload</button>
+        <span class="sysmon-muted">@L["Services.Count", _services.Count]</span>
+        <button class="sysmon-btn" @onclick="LoadAsync" disabled="@_busy">@L["Services.Reload"]</button>
     </div>
 
     @if (_message is not null)
     {
         <div class="svc-message" role="alert">
             <span>@_message</span>
-            <button class="sysmon-btn sysmon-btn-ghost" @onclick="() => _message = null" aria-label="Dismiss">&#x2715;</button>
+            <button class="sysmon-btn sysmon-btn-ghost" @onclick="() => _message = null" aria-label="@L["Common.Dismiss"]">&#x2715;</button>
         </div>
     }
 
@@ -19,10 +19,11 @@
         <table class="sysmon-table">
             <thead>
                 <tr>
-                    <th>Service</th>
-                    <th class="num">PID</th>
-                    <th>Status</th>
-                    <th>Start type</th>
+                    <th>@L["Services.Column.Service"]</th>
+                    <th class="num">@L["Column.Pid"]</th>
+                    <th>@L["Services.Column.Status"]</th>
+                    <th>@L["Services.Column.Health"]</th>
+                    <th>@L["Services.Column.StartType"]</th>
                     <th></th>
                 </tr>
             </thead>
@@ -30,46 +31,67 @@
                 @foreach (HackServiceController service in _services)
                 {
                     HackServiceController current = service;
-                    HackServiceControllerStatus status = LiveStatus(current);
-                    <tr>
+                    HackServiceActiveState state = LiveState(current);
+                    <tr class="@(state == HackServiceActiveState.Failed ? "svc-row-failed" : null)">
                         <td>
                             <span class="svc-name">@current.DisplayName</span>
                             <span class="svc-id">@current.ServiceName</span>
                         </td>
                         <td class="num mono">@(LivePid(current)?.ToString() ?? "—")</td>
-                        <td><span class="svc-status svc-@status">@StatusText(status)</span></td>
+                        <td>
+                            <span class="svc-status svc-@state" title="@StateTitle(current, state)">@StateText(current, state)</span>
+                        </td>
+                        <td>
+                            @if (state is HackServiceActiveState.Active or HackServiceActiveState.Activating or HackServiceActiveState.Deactivating || current.StatusText is not null)
+                            {
+                                <span class="svc-health svc-health-@current.Health">@HealthText(current.Health)</span>
+                                @if (current.StatusText is { Length: > 0 } text)
+                                {
+                                    <span class="svc-status-text">@text</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="sysmon-muted">—</span>
+                            }
+                        </td>
                         <td>
                             @if (current.StartType is { } startType)
                             {
-                                <select class="svc-select" value="@startType" disabled="@_busy" aria-label="@($"Start type of {current.DisplayName}")"
+                                <select class="svc-select" value="@startType" disabled="@_busy" aria-label="@L["Services.StartTypeOf", current.DisplayName]"
                                         @onchange="e => SetStartTypeAsync(current, e.Value)">
                                     @foreach (ServiceStartMode mode in Enum.GetValues<ServiceStartMode>())
                                     {
-                                        <option value="@mode">@mode</option>
+                                        <option value="@mode">@StartModeLabel(mode)</option>
                                     }
                                 </select>
                             }
                             else
                             {
-                                <span class="sysmon-muted" title="Reading another app's start type needs services.manage">unknown</span>
+                                <span class="sysmon-muted" title="@L["Services.Unknown.Title"]">@L["Services.Unknown"]</span>
                             }
                         </td>
                         <td class="svc-actions">
-                            @if (status is HackServiceControllerStatus.Running or HackServiceControllerStatus.StartPending)
+                            @if (state is HackServiceActiveState.Active or HackServiceActiveState.Activating)
                             {
-                                <button class="sysmon-btn btn-danger" disabled="@_busy" @onclick='() => RunAsync(current, current.StopAsync, "stop")'>Stop</button>
+                                <button class="sysmon-btn btn-danger" disabled="@_busy" @onclick='() => RunAsync(current, current.StopAsync, "Services.Error.Stop")'>@L["Services.Stop"]</button>
                             }
                             else
                             {
+                                @if (state == HackServiceActiveState.Failed)
+                                {
+                                    <button class="sysmon-btn sysmon-btn-ghost" disabled="@_busy" title="@L["Services.Reset.Title"]"
+                                            @onclick='() => RunAsync(current, current.ResetFailedAsync, "Services.Error.Reset")'>@L["Services.Reset"]</button>
+                                }
                                 <button class="sysmon-btn" disabled="@(_busy || current.StartType == ServiceStartMode.Disabled)"
-                                        @onclick='() => RunAsync(current, current.StartAsync, "start")'>Start</button>
+                                        @onclick='() => RunAsync(current, current.StartAsync, "Services.Error.Start")'>@L["Services.Start"]</button>
                             }
                         </td>
                     </tr>
                 }
                 @if (_services.Count == 0 && !_busy)
                 {
-                    <tr class="svc-empty"><td colspan="5">No service installed.</td></tr>
+                    <tr class="svc-empty"><td colspan="6">@L["Services.Empty"]</td></tr>
                 }
             </tbody>
         </table>

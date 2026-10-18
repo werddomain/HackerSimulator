@@ -27,19 +27,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Server\HackerOs.Server.Contracts\HackerOs.Server.Contracts.csproj" />
+    <!--
+      ADR 0130: the browser receives the OS in WebAssembly. Referencing the standalone Ecosystem PWA
+      makes its published files (index.html, _framework/, service worker, every app) static web
+      assets of this server, served as they are by MapStaticAssets. Nothing of the OS runs here.
+    -->
     <ProjectReference Include="..\..\OS\HackerOs.Ecosystem\HackerOs.Ecosystem.csproj" />
-    <ProjectReference Include="..\..\Platform\HackerOs.Platform.Blazor\HackerOs.Platform.Blazor.csproj" />
-    <!-- Server-hosted Blazor UI (ADR 0027): the same shared component tree as OS/HackerOs.Ecosystem and test/test. -->
-    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Browser\HackerOs.Apps.Browser.csproj" />
-    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Calculator\HackerOs.Apps.Calculator.csproj" />
-    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\HackerOs.Apps.CodeEditor.csproj" />
-    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.ErrorLogViewer\HackerOs.Apps.ErrorLogViewer.csproj" />
-    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.FileExplorer\HackerOs.Apps.FileExplorer.csproj" />
-    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.HackPaint\HackerOs.Apps.HackPaint.csproj" />
-    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Settings\HackerOs.Apps.Settings.csproj" />
-    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.SystemMonitor\HackerOs.Apps.SystemMonitor.csproj" />
-    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Terminal\HackerOs.Apps.Terminal.csproj" />
-    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.TextEditor\HackerOs.Apps.TextEditor.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -55,9 +48,8 @@
     <!-- OpenAPI document generation (required for AddOpenApi/MapOpenApi). -->
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
     <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
+    <!-- Hosts the Blazor WebAssembly client (ADR 0130): MIME types and debugging proxy of _framework/. -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.10" />
   </ItemGroup>
-
-  <!-- ADR 0066: optional CPU/memory accounting (HackerOsCpuAccounting, HackerOsMemoryAccounting). -->
-  <Import Project="..\..\build\HackerOs.ResourceAccounting.targets" />
 
 </Project>

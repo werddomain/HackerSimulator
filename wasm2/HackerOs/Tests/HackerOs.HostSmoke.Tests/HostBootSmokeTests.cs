@@ -26,6 +26,9 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
     private const float BootTimeoutMs = 120_000;
     private const float StepTimeoutMs = 30_000;
 
+    /// <summary>stress allocates several hundred MiB in 1 MiB blocks before the OOM killer's two samples.</summary>
+    private const float OomTimeoutMs = 120_000;
+
     /// <summary>Boots the host to the desktop, runs the terminal and the task manager, closes everything.</summary>
     [HostSmokeFact]
     public async Task Host_boots_to_the_desktop_and_runs_the_terminal_and_task_manager()
@@ -53,6 +56,8 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
             await SignInAsync(page, firstVisit: false);
             AssertNoErrors(errors, "sign-in after reload");
             await AssertScopedStylesAppliedAsync(page, ".taskbar-container", "taskbar (HackerOs.Taskbar.Blazor)");
+            await CheckServerConnectionAsync(page, settings);
+            AssertNoErrors(errors, "server connection");
 
             await OpenAppAsync(page, "Terminal");
             // Read the rendered rows, but click the screen: xterm.js stacks it over the rows.
@@ -80,6 +85,18 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
             await CheckWorkersAsync(page, screen, rows, settings);
             AssertNoErrors(errors, "workers");
 
+            await CheckIsolationAsync(page, screen, rows, settings);
+            AssertNoErrors(errors, "cross-origin isolation");
+
+            await CheckLimitsAsync(page, screen, rows, settings);
+            AssertNoErrors(errors, "limits");
+
+            if (settings.ExpectsOomKill)
+            {
+                await CheckOomKillerAsync(page, screen, rows);
+                AssertNoErrors(errors, "OOM killer");
+            }
+
             await OpenAppAsync(page, "System Monitor");
             ILocator filter = page.GetByLabel("Filter processes");
             await filter.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -101,22 +118,56 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
     }
 
     /// <summary>
-    /// Completes onboarding (first visit) or the sign-in form, then waits for the desktop. A host
-    /// that keeps its session across a reload (the server host's circuit can) may go straight to
-    /// the desktop; that is accepted.
+    /// ADR 0134: the OS served by <c>HackerOs.Server</c> connects to it without any question, and
+    /// the notification-area icon says so ("Connected, not identified"); identifying from the icon's
+    /// panel (a new account) turns it to "Connected". A host that is not a HackerOS server shows no
+    /// server icon at all.
     /// </summary>
+    private async Task CheckServerConnectionAsync(IPage page, HostSmokeSettings settings)
+    {
+        ILocator icon = page.Locator(".server-status-trigger");
+        if (!settings.ExpectsServerConnection)
+        {
+            // The discovery answers at once on a static host; give it a moment, then nothing may show.
+            await Task.Delay(2_000);
+            Assert.Equal(0, await icon.CountAsync());
+            Log("no server icon on this host.");
+            return;
+        }
+
+        await page.Locator(".server-status-trigger.is-anonymous").WaitForAsync(
+            new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Log($"server icon: {await icon.GetAttributeAsync("aria-label")}");
+
+        await icon.ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Identify" }).ClickAsync();
+        await page.GetByLabel("Account name").FillAsync($"{LoginName}-{Guid.NewGuid():N}"[..24]);
+        await page.Locator("#server-status-password").FillAsync(Password);
+        await page.GetByRole(AriaRole.Button, new() { Name = "Create an account" }).ClickAsync();
+        await page.Locator(".server-status-trigger.is-connected").WaitForAsync(
+            new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Log($"identified from the icon: {await icon.GetAttributeAsync("aria-label")}");
+        await icon.ClickAsync(); // close the panel
+    }
+
     /// <summary>
-    /// ADR 0070/0071 (plan section 5.2): on a WebAssembly host, commands run in Web Workers — a
-    /// pipeline works, <c>/proc/hackeros/workers</c> lists the pool, and a command stuck in a loop
+    /// ADR 0070/0071 (plan section 5.2): on every host, commands run in Web Workers — a pipeline
+    /// works, <c>/proc/hackeros/workers</c> lists the pool, and a command stuck in a loop
     /// (<c>stress</c>) leaves the desktop responsive, shows "not-responding" and dies on
-    /// <c>kill -9</c> and on <c>kill</c> (escalation after the grace period). On the server host,
-    /// which has no Web Worker (section 6), the file does not exist and commands still run.
+    /// <c>kill -9</c> and on <c>kill</c> (escalation after the grace period). A host without
+    /// workers (none since ADR 0130) has no such file and commands still run.
     /// </summary>
     private async Task CheckWorkersAsync(IPage page, ILocator screen, ILocator rows, HostSmokeSettings settings)
     {
         await RunCommandAsync(page, screen, "clear; seq 30 | grep 1 | wc -l");
         await WaitForTerminalTextAsync(rows, text => Regex.IsMatch(text, @"^\s*12\s*$", RegexOptions.Multiline), "the pipeline's count");
         Log("pipeline ran.");
+
+        // ADR 0124, section 4: a command of a sample project, in an assembly of its own that no worker
+        // preloads; a pool worker fetches it on demand (the server host serves the same OS, ADR 0130).
+        await RunCommandAsync(page, screen, "clear; sample-cmd loaded-on-demand");
+        await WaitForTerminalTextAsync(rows, text => Regex.IsMatch(text, @"^loaded-on-demand\s*$", RegexOptions.Multiline), "the sample command's output");
+        Log("sample-cmd ran from its own assembly.");
 
         await RunCommandAsync(page, screen, "clear; cat /proc/hackeros/workers");
         if (!settings.ExpectsWorkers)
@@ -155,6 +206,152 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
         Log("kill (SIGTERM) ended the stuck command after the grace period.");
     }
 
+    /// <summary>
+    /// ADR 0131 (adjusted by ADR 0143): the page is cross-origin isolated exactly when the run expects
+    /// it, <c>/proc/hackeros/workers</c> says so on its first line, and what isolation adds follows:
+    /// isolated, a command in a worker lists processes synchronously and a long pipe through the
+    /// shared rings keeps every line; not isolated, the synchronous call is refused and the pipe
+    /// still works over messages.
+    /// </summary>
+    private async Task CheckIsolationAsync(IPage page, ILocator screen, ILocator rows, HostSmokeSettings settings)
+    {
+        if (settings.ExpectedIsolation is not { } expected)
+        {
+            return;
+        }
+
+        bool isolated = await page.EvaluateAsync<bool>("() => globalThis.crossOriginIsolated === true");
+        Assert.True(isolated == expected, $"crossOriginIsolated is {isolated}, the run expects {expected}.");
+        string answer = expected ? "yes" : "no";
+        await RunCommandAsync(page, screen, "clear; head -3 /proc/hackeros/workers");
+        string header = await WaitForTerminalTextAsync(rows, text => OutputFinished(text, "isolation-setting:"), "the isolation lines of /proc/hackeros/workers");
+        Assert.Contains($"cross-origin-isolated: {answer}", header, StringComparison.Ordinal);
+        Log($"isolation:\n{header.Trim()}");
+
+        await RunCommandAsync(page, screen, "clear; sample-cmd --processes");
+        if (expected)
+        {
+            await WaitForTerminalTextAsync(rows, text => Regex.IsMatch(text, @"^processes: \d", RegexOptions.Multiline), "the synchronous process list");
+            Log("sample-cmd --processes: synchronous call answered.");
+        }
+        else
+        {
+            await WaitForTerminalTextAsync(rows, text => text.Contains("ListProcesses", StringComparison.Ordinal), "the refused synchronous call");
+            Log("sample-cmd --processes: synchronous call refused without isolation.");
+        }
+
+        await RunCommandAsync(page, screen, "clear; seq 30000 | wc -l");
+        await WaitForTerminalTextAsync(rows, text => Regex.IsMatch(text, @"^\s*30000\s*$", RegexOptions.Multiline), "every line of the long pipe");
+        Log("seq 30000 | wc -l: 30000.");
+    }
+
+    /// <summary>
+    /// The <c>exit=N</c> line the CPU-limit step prints; the typed command line itself shows
+    /// <c>exit=$?</c>, which must not count.
+    /// </summary>
+    private static bool ExitStatusShown(string text) => ExitStatusPattern().IsMatch(text);
+
+    [GeneratedRegex(@"exit=\d")]
+    private static partial Regex ExitStatusPattern();
+
+    /// <summary>
+    /// ADR 0125: <c>/proc/self/limits</c> says how limits are enforced on this host, and the CPU
+    /// limit ends a command with <c>SIGXCPU</c> (exit 152) where CPU time is measured, strictly in a
+    /// Web Worker. Where it is not measured the limit is inactive and the command ends normally; with
+    /// limits switched off, <c>ulimit</c> cannot change anything.
+    /// </summary>
+    private async Task CheckLimitsAsync(IPage page, ILocator screen, ILocator rows, HostSmokeSettings settings)
+    {
+        await RunCommandAsync(page, screen, "clear; cat /proc/self/limits");
+        string limits = await WaitForTerminalTextAsync(
+            rows, text => OutputFinished(text, "# enforcement:"), "/proc/self/limits and the next prompt");
+        string expected = !settings.LimitsEnabled ? "# enforcement: off"
+            : settings.ExpectsWorkers ? "# enforcement: strict (worker)"
+            : "# enforcement: best-effort (main thread)";
+        Assert.Contains(expected, limits, StringComparison.Ordinal);
+        Log($"/proc/self/limits: {expected[2..]}.");
+
+        if (!settings.LimitsEnabled)
+        {
+            await RunCommandAsync(page, screen, "clear; ulimit -n 100");
+            await WaitForTerminalTextAsync(rows, text => text.Contains("cannot modify limit", StringComparison.Ordinal), "ulimit refused");
+            Log("limits off: ulimit cannot change anything.");
+            return;
+        }
+
+        // The child shell gets the limit, stress inherits it; the terminal's own shell keeps its own.
+        bool cpuMeasured = string.Equals(settings.ExpectedCpuSource, "measured", StringComparison.Ordinal);
+        await RunCommandAsync(page, screen, $"clear; sh -c 'ulimit -S -t 1; stress --yield -t {(cpuMeasured ? 30 : 2)}'; echo \"exit=$?\"");
+        if (cpuMeasured)
+        {
+            string ended = await WaitForTerminalTextAsync(rows, ExitStatusShown, "the end of the CPU-limited stress");
+            Assert.Contains("CPU time limit exceeded", ended, StringComparison.Ordinal);
+            Assert.Contains("exit=152", ended, StringComparison.Ordinal);
+            Log("ulimit -S -t 1; stress --yield: SIGXCPU, exit 152.");
+        }
+        else
+        {
+            string ended = await WaitForTerminalTextAsync(rows, ExitStatusShown, "the end of stress");
+            Assert.Contains("exit=0", ended, StringComparison.Ordinal);
+            Log("CPU not measured: the CPU limit is inactive, stress ran to its end.");
+        }
+    }
+
+    /// <summary>
+    /// ADR 0126: on a machine with a small simulated <c>MemTotal</c>, an administrator turns the OOM
+    /// killer on (<c>sudo tee /etc/hackeros/memory.config</c>), <c>stress --vm</c> allocates more than
+    /// the free memory, and the kernel kills it: the shell prints <c>Killed</c> (exit 137),
+    /// <c>dmesg</c> shows the <c>Out of memory</c> line and <c>/proc/vmstat</c> counts the kill.
+    /// </summary>
+    private async Task CheckOomKillerAsync(IPage page, ILocator screen, ILocator rows)
+    {
+        await RunCommandAsync(page, screen,
+            "clear; printf 'schemaVersion=1\\n[oom-killer]\\nenabled=true\\nmin-free-percent=5\\n' | sudo tee /etc/hackeros/memory.config");
+        ILocator dialog = page.Locator(".credential-prompt-dialog");
+        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await dialog.Locator("input[type=text]").FillAsync(LoginName);
+        await dialog.Locator("input[type=password]").FillAsync(Password);
+        await dialog.GetByRole(AriaRole.Button, new() { Name = "Authorize" }).ClickAsync();
+        await WaitForTerminalTextAsync(rows, text => OutputFinished(text, "min-free-percent=5"), "memory.config written by sudo tee");
+
+        await RunCommandAsync(page, screen, "clear; dmesg | grep oom-killer");
+        await WaitForTerminalTextAsync(rows, text => OutputFinished(text, "oom-killer: enabled, min-free-percent=5"), "the kernel line of the enabled OOM killer");
+        Log("OOM killer enabled through sudo tee; dmesg says so.");
+
+        await RunCommandAsync(page, screen, "clear; grep -E 'MemTotal|MemAvailable' /proc/meminfo");
+        string meminfo = await WaitForTerminalTextAsync(rows, text => OutputFinished(text, "MemAvailable:"), "/proc/meminfo");
+        long total = MemInfoKilobytes(meminfo, "MemTotal");
+        long available = MemInfoKilobytes(meminfo, "MemAvailable");
+        // Enough to bring MemAvailable well under 5 % of MemTotal.
+        long mebibytes = Math.Max(16, (available - (total * 5 / 100)) / 1024 + 64);
+        Log($"MemTotal {total} kB, MemAvailable {available} kB: stress --vm 1 --vm-bytes {mebibytes}M.");
+
+        await RunCommandAsync(page, screen, $"clear; stress --vm 1 --vm-bytes {mebibytes}M --vm-keep -t 120; echo \"exit=$?\"");
+        string ended = await WaitForTerminalTextAsync(rows, ExitStatusShown, "the OOM kill of stress", OomTimeoutMs);
+        Assert.Contains("exit=137", ended, StringComparison.Ordinal);
+        Assert.Contains("Killed", ended, StringComparison.Ordinal);
+        Log("stress --vm: killed by the OOM killer, exit 137.");
+
+        await RunCommandAsync(page, screen, "clear; dmesg | grep 'Out of memory'");
+        string kernel = await WaitForTerminalTextAsync(rows, text => OutputFinished(text, "Out of memory: Killed process"), "the Out of memory line of dmesg");
+        Assert.Contains("(stress)", kernel, StringComparison.Ordinal);
+
+        await RunCommandAsync(page, screen, "clear; grep oom_kill /proc/vmstat");
+        await WaitForTerminalTextAsync(rows, text => OutputFinished(text, "oom_kill 1"), "oom_kill 1 in /proc/vmstat");
+        Log("dmesg: Out of memory: Killed process (stress); /proc/vmstat: oom_kill 1.");
+    }
+
+    private static long MemInfoKilobytes(string meminfo, string key)
+    {
+        Match match = Regex.Match(meminfo, key + @":\s+(\d+) kB");
+        Assert.True(match.Success, $"{key} not found in /proc/meminfo:\n{meminfo}");
+        return long.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Completes onboarding (first visit) or the sign-in form, then waits for the desktop. A host
+    /// that keeps its session across a reload may go straight to the desktop; that is accepted.
+    /// </summary>
     private async Task SignInAsync(IPage page, bool firstVisit)
     {
         ILocator onboarding = page.GetByRole(AriaRole.Heading, new() { Name = "Create administrator" });
@@ -219,11 +416,11 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
     }
 
     /// <summary>Polls the terminal's rendered rows until <paramref name="done"/> holds.</summary>
-    private async Task<string> WaitForTerminalTextAsync(ILocator rows, Func<string, bool> done, string what)
+    private async Task<string> WaitForTerminalTextAsync(ILocator rows, Func<string, bool> done, string what, float timeoutMs = StepTimeoutMs)
     {
         Stopwatch elapsed = Stopwatch.StartNew();
         string text = string.Empty;
-        while (elapsed.ElapsedMilliseconds < StepTimeoutMs)
+        while (elapsed.ElapsedMilliseconds < timeoutMs)
         {
             text = (await rows.InnerTextAsync()).Replace(' ', ' ');
             if (done(text))

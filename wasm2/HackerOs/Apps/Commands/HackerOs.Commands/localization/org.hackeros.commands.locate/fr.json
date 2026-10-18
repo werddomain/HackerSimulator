@@ -1,0 +1,5 @@
+{
+  "name": "locate",
+  "description": "Trouve des fichiers par leur nom dans tout le système de fichiers",
+  "terminalUsage": "locate [-i] [-b] [-c] [-l nombre] motif..."
+}

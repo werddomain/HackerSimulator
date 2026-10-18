@@ -10,13 +10,17 @@
 @inject WindowCloseCoordinator CloseCoordinator
 @inject WindowCloseGuardRegistry CloseGuards
 @inject AppBackHandlerRegistry BackHandlers
+@inject WindowAppEventDispatcher WindowEvents
+@inject AppWindowGatewayFactory WindowGateways
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<Strings> L
 
 <div class="mobile-shell">
     <div class="mobile-shell-workspace">
         <SingleSurfaceArea Windows="WindowRuntime.Windows"
                            OnFocus="HandleFocus"
-                           OnGesture="HandleGesture">
+                           OnGesture="HandleGesture"
+                           WindowOverlay="UnresponsiveWindowOverlay.ForWindow">
             <WindowContent Context="window">
                 @if (window.Content is not null)
                 {
@@ -28,7 +32,9 @@
                                        Descriptor="descriptor"
                                        AppContext="context"
                                        CloseGuards="CloseGuards"
-                                       BackHandlers="BackHandlers" />
+                                       BackHandlers="BackHandlers"
+                                       WindowEvents="WindowEvents"
+                                       WindowGateways="WindowGateways" />
                 }
                 else
                 {
@@ -36,10 +42,12 @@
                 }
             </WindowContent>
         </SingleSurfaceArea>
+        @* ADR 0127 §2: samples which windows stop answering their inputs. *@
+        <WindowResponsivenessHost />
         <button type="button"
                 class="mobile-shade-handle"
                 @ref="_swipeHandleElement"
-                aria-label="Notifications, calendar, and platform mode"
+                aria-label="@L["Mobile.Shade"]"
                 aria-expanded="@(_isShadeOpen ? "true" : "false")"
                 @onclick="ToggleShade">
             <span class="mobile-shade-grabber" aria-hidden="true"></span>
@@ -66,6 +74,8 @@
     <MobileSystemNavigationBar Commands="_navigationCommands" />
 
     @* ADR 0049: secure-desktop approval, above every app screen and the navigation bar. *@
+    @* ADR 0101: synchronization conflicts and the session's periodic sync. *@
+    <HackerOs.Platform.Blazor.Sync.SyncConflictOverlay />
     <DangerousCapabilityApprovalOverlay />
     <AdministratorAuthenticationOverlay />
 </div>

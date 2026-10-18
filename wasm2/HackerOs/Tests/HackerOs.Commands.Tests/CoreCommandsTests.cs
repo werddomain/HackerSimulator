@@ -3,12 +3,15 @@ using System.Text;
 using HackerOs.App.Abstractions;
 using HackerOs.App.Abstractions.Policy;
 using HackerOs.AppSdk;
+using HackerOs.Commands.Ausearch;
 using HackerOs.Commands.Cat;
 using HackerOs.Commands.Cd;
+using HackerOs.Commands.Dmesg;
 using HackerOs.Commands.Echo;
 using HackerOs.Commands.Exit;
 using HackerOs.Commands.Ls;
 using HackerOs.Commands.Pwd;
+using HackerOs.Simulation.Abstractions.Diagnostics;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -133,6 +136,48 @@ public sealed class CoreCommandsTests
     }
 
     [Fact]
+    public async Task DmesgCommand_prints_the_kernel_ring_buffer_with_linux_stamps_levels_and_filters()
+    {
+        DmesgCommand command = new(CreateManifest("dmesg", "org.hackeros.cmd.dmesg"));
+        const string kmsg =
+            "6,0,1200000,-;oom-killer: enabled, min-free-percent=5\n"
+            + "6,1,12500000,-;oom-kill:constraint=CONSTRAINT_NONE,task=stress,pid=42,uid=1000\n"
+            + "3,2,12500100,-;Out of memory: Killed process 42 (stress) total-vm:901120kB\n"
+            + "not a record\n";
+        void Seed(TestAppFileSystemGateway files)
+        {
+            files.AddDirectory("/dev");
+            files.AddFile("/dev/kmsg", Encoding.UTF8.GetBytes(kmsg));
+        }
+
+        async Task<(int Code, string Out, string Err)> RunAsync(params string[] arguments)
+        {
+            using StringWriter stdout = new();
+            using StringWriter stderr = new();
+            using StringReader stdin = new(string.Empty);
+            TerminalExecutionContext context = CreateContext(arguments, stdout, stderr, stdin, "/", seed: Seed);
+            using IDisposable scope = HackExecutionContext.Enter(context.App);
+            int code = await command.ExecuteAsync(context, CancellationToken.None);
+            return (code, stdout.ToString(), stderr.ToString());
+        }
+
+        (int code, string all, _) = await RunAsync();
+        Assert.Equal(0, code);
+        Assert.Equal(
+            "[    1.200000] oom-killer: enabled, min-free-percent=5\n"
+            + "[   12.500000] oom-kill:constraint=CONSTRAINT_NONE,task=stress,pid=42,uid=1000\n"
+            + "[   12.500100] Out of memory: Killed process 42 (stress) total-vm:901120kB\n",
+            all);
+
+        (_, string errors, _) = await RunAsync("-x", "-l", "err");
+        Assert.Equal("kern  :err   : [   12.500100] Out of memory: Killed process 42 (stress) total-vm:901120kB\n", errors);
+
+        (int refused, _, string message) = await RunAsync("-l", "loud");
+        Assert.Equal(1, refused);
+        Assert.Contains("unknown level 'loud'", message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task CatCommand_outputs_file_content_or_error_for_missing_file()
     {
         CatCommand command = new(CreateManifest("cat", "org.hackeros.cmd.cat"));
@@ -187,13 +232,57 @@ public sealed class CoreCommandsTests
         Assert.Contains("notes.txt", stdout.ToString());
     }
 
+    [Fact]
+    public async Task AusearchCommand_filters_audit_records_by_path_and_origin_user()
+    {
+        // ADR 0100 section 3: ausearch reads auditd-style records from /var/log/audit.log.
+        DateTimeOffset at = new(2026, 10, 17, 8, 30, 0, TimeSpan.Zero);
+        string hosts = AuditLineFormat.Format(new AuditRecord(
+            at, 1, "write", "/etc/hosts", null, "root", "alice", 42, "nano", "org.hackeros.commands.nano", true, null));
+        string refused = AuditLineFormat.Format(new AuditRecord(
+            at, 2, "create", "/etc/hackeros/apps.config", null, "bob", "bob", 43, "settings", "org.hackeros.settings", false, "PermissionDenied"));
+        AusearchCommand command = new(CreateManifest("ausearch", "org.hackeros.commands.ausearch"));
+        void Seed(TestAppFileSystemGateway fs)
+        {
+            fs.AddDirectory("/var");
+            fs.AddDirectory("/var/log");
+            fs.AddFile("/var/log/audit.log", Encoding.UTF8.GetBytes(hosts + "\n" + refused + "\n"));
+        }
+
+        using StringWriter stdout = new();
+        using StringWriter stderr = new();
+        using StringReader stdin = new(string.Empty);
+        int found = await command.ExecuteAsync(
+            CreateContext(["-f", "/etc/hosts", "-ul", "alice"], stdout, stderr, stdin, "/", seed: Seed), CancellationToken.None);
+
+        Assert.Equal(0, found);
+        Assert.Contains(hosts, stdout.ToString());
+        Assert.DoesNotContain("apps.config", stdout.ToString());
+        Assert.Contains("time->Sat Oct 17 08:30:00 2026", stdout.ToString());
+
+        using StringWriter failedOut = new();
+        using StringWriter failedErr = new();
+        int failures = await command.ExecuteAsync(
+            CreateContext(["--success", "no"], failedOut, failedErr, stdin, "/", seed: Seed), CancellationToken.None);
+        Assert.Equal(0, failures);
+        Assert.Contains(refused, failedOut.ToString());
+
+        using StringWriter noneOut = new();
+        using StringWriter noneErr = new();
+        int none = await command.ExecuteAsync(
+            CreateContext(["-ua", "carol"], noneOut, noneErr, stdin, "/", seed: Seed), CancellationToken.None);
+        Assert.Equal(1, none);
+        Assert.Equal("<no matches>" + Environment.NewLine, noneErr.ToString());
+    }
+
     private static TerminalExecutionContext CreateContext(
         IReadOnlyList<string> arguments,
         TextWriter stdout,
         TextWriter stderr,
         TextReader stdin,
         string cwd,
-        IShellSession? shell = null)
+        IShellSession? shell = null,
+        Action<TestAppFileSystemGateway>? seed = null)
     {
         AppManifest manifest = CreateManifest("cmd", "org.hackeros.cmd.test");
         LocalUserId userId = LocalUserId.FromGuid(Guid.NewGuid());
@@ -202,6 +291,7 @@ public sealed class CoreCommandsTests
         fileSystem.AddDirectory("/home/user");
         fileSystem.AddFile("/home/user/notes.txt", Encoding.UTF8.GetBytes("Hello HackerOS"));
         fileSystem.AddDirectory("/home/user/.config");
+        seed?.Invoke(fileSystem);
 
         TestAppExecutionContext app = new(manifest, fileSystem);
 
@@ -224,7 +314,7 @@ public sealed class CoreCommandsTests
             Description = "Command line tool",
             Kind = AppKind.Terminal,
             EntryPoint = new AppEntryPointManifest("Assembly.dll", "Type"),
-            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
             Presentation = new PresentationManifest("utilities", AppLaunchVisibility.Hidden, []),
             Resources = AppResourceProfileManifest.None,
             Capabilities = [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite],

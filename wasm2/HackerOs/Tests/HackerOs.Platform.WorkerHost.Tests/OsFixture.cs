@@ -14,6 +14,7 @@ using HackerOs.Platform.Core.Intents;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Metrics;
 using HackerOs.Platform.Core.Network;
+using HackerOs.Platform.Core.Network.Local;
 using HackerOs.Platform.Core.Notifications;
 using HackerOs.Platform.Core.Policy;
 using HackerOs.Platform.Core.Processes;
@@ -29,6 +30,7 @@ using HackerOs.Simulation.Abstractions.Network;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
+using HackerOs.Simulation.Abstractions.Workers;
 
 namespace HackerOs.Platform.WorkerHost.Tests;
 
@@ -50,13 +52,19 @@ internal sealed class OsFixture : IAsyncDisposable
         AppCapabilities.AppsLaunch, AppCapabilities.ShellHost, AppCapabilities.ProcessList
     ];
 
+    /// <summary>Gets the page's isolation as the boot probe would record it (ADR 0146); not in a browser by default.</summary>
+    public HackerOs.Platform.Core.Isolation.CrossOriginIsolationState Isolation { get; } = new();
+
     private readonly LocalLoginName _alice = LocalLoginName.Parse("alice");
     private readonly CapabilityGrantRepository _grants;
     private readonly LocalSessionService _sessions;
     private int _entryId = 1;
     private int _transactionId = 1000;
 
-    private OsFixture(bool workers, WorkerPoolOptions? poolOptions, int hardwareConcurrency, TimeSpan? workerStartupDelay)
+    private OsFixture(
+        bool workers, WorkerPoolOptions? poolOptions, int hardwareConcurrency, TimeSpan? workerStartupDelay,
+        Func<HackerOs.Platform.WorkerHost.Worker.IWorkerAssemblyLoader>? loaderFactory, bool synchronousCalls = false,
+        Func<IWebWorkerRuntime, IWebWorkerRuntime>? wrapRuntime = null)
     {
         FixedTimeProvider timeProvider = new(Now);
         InMemoryFileSystemRepository repository = new(
@@ -69,7 +77,7 @@ internal sealed class OsFixture : IAsyncDisposable
             () => Manager!, resources, VirtualHardwareProfile.Default, Clock,
             environments: () => Manager?.Environments,
             transactionIdFactory: () => new Guid(_transactionId++, 0, 0, new byte[8]),
-            metrics: new ProcMetricsSources(Workers: () => Pool));
+            metrics: new ProcMetricsSources(Workers: () => Pool, Listeners: () => Ports) { BackgroundJobs = () => BackgroundJobs });
         FileSystemMountRouter router = new(repository,
         [
             new FileSystemMount(ProcFileSystemProvider.DefaultMountPath, proc),
@@ -77,6 +85,7 @@ internal sealed class OsFixture : IAsyncDisposable
         ]);
         _grants = new CapabilityGrantRepository(() => Now);
         InMemoryTopicMessageBus topicBus = new(_grants);
+        TopicBus = topicBus;
         FileSystemService fileSystem = new(
             router, new FileSystemPathResolver(router), new FileSystemAuthorizer(), topicBus,
             () => new Guid(_transactionId++, 0, 0, new byte[8]));
@@ -95,15 +104,23 @@ internal sealed class OsFixture : IAsyncDisposable
         Manager = new InMemoryProcessManager(Clock, _sessions, EventBus);
         Log = new LogFileWriter(Clock, new BoundedDiagnosticSink(maxEntries: 1000), EventBus);
 
-        AppManifest[] commands = [.. BuiltInCommands.Select(AppDefinitionMapper.ToManifest), .. TestCommands.Manifests];
+        // ADR 0077/0080: hackwebd, a system app of the host as in the Ecosystem build.
+        AppManifest hackwebd = AppDefinitionMapper.ToManifest(new HackerOs.Apps.WebServer.HackWebdApp());
+        // ADR 0124: two sample projects of their own assemblies, a command and a service, run in workers.
+        AppManifest sampleCommand = AppDefinitionMapper.ToManifest(new HackerOs.Samples.TerminalApp.TerminalSampleApp());
+        AppManifest sampleService = AppDefinitionMapper.ToManifest(new HackerOs.Samples.ServiceApp.ServiceSampleApp());
+        AppManifest[] commands = [.. BuiltInCommands.Select(AppDefinitionMapper.ToManifest), .. TestCommands.Manifests, hackwebd, sampleCommand, sampleService];
         AppManifest host = HostManifest();
-        Catalog = AppCatalog.Build([host, .. commands]).Catalog!;
+        Catalog = AppCatalog.Build([host, .. commands], [hackwebd.Id]).Catalog!;
         AppDiscoveryResult discovery = AppEntryPointDiscovery.Discover(
             AppCatalog.Build(commands).Catalog!,
             new Dictionary<string, Assembly>(StringComparer.Ordinal)
             {
                 ["HackerOs.Commands.dll"] = typeof(HackerOs.Commands.Cd.CdCommand).Assembly,
-                [TestCommands.AssemblyFile] = typeof(OsFixture).Assembly
+                [TestCommands.AssemblyFile] = typeof(OsFixture).Assembly,
+                ["HackerOs.Apps.WebServer.dll"] = typeof(HackerOs.Apps.WebServer.HackWebdApp).Assembly,
+                ["HackerOs.Samples.TerminalApp.dll"] = typeof(HackerOs.Samples.TerminalApp.TerminalSampleApp).Assembly,
+                ["HackerOs.Samples.ServiceApp.dll"] = typeof(HackerOs.Samples.ServiceApp.ServiceSampleApp).Assembly
             });
         Assert.True(discovery.IsSuccess, string.Join("; ", discovery.Errors.Select(error => error.ToString())));
         Dictionary<string, AppDescriptor> descriptors = new(discovery.Descriptors!, StringComparer.Ordinal)
@@ -112,21 +129,41 @@ internal sealed class OsFixture : IAsyncDisposable
         };
 
         AppEnablementRegistry enablement = new(Catalog);
+        // ADR 0074: the local network stack, as the Ecosystem host composes it.
+        InMemorySimulatedNetworkService network = new(SmokeTestNetworkSeed.Hosts, SmokeTestWebsites());
+        Ports = new ListeningPortTable(
+            pid => Manager.TryGetActive(pid, out _),
+            () => network.GetHost("127.0.0.1") is { } localhost
+                ? localhost.Ports.Where(static port => port.State == SimulatedPortState.Open).Select(static port => port.PortNumber)
+                : []);
+        Resolver = new HackDnsResolver(
+            network, fileSystem, Clock, () => Catalog.Manifests.Values.Where(manifest => enablement.IsEnabled(manifest.Id)),
+            new HostedSiteNameSource(fileSystem, Clock));
+        LocalNetworkServices localNetwork = new(Ports, Resolver, new WebAppActivator(() => Orchestrator!, Ports));
         AppExecutionContextFactory contextFactory = new(
             _grants, fileSystem, EventBus, topicBus, new InMemoryNotificationQueue(maxEntriesPerUser: 20),
             Diagnostics, Clock, Manager,
             intentDispatcherProvider: () => Dispatcher!,
             logWriter: Log,
-            network: new InMemorySimulatedNetworkService(SmokeTestNetworkSeed.Hosts, SmokeTestWebsites()),
+            network: network,
             appCatalog: new AppCatalogGatewayServices(Catalog, enablement),
             shellHostProvider: () => ShellHost!,
-            metrics: new SystemMetricsServices(Drives: new AppDriveGateway(() => router, VirtualHardwareProfile.Default)));
+            metrics: new SystemMetricsServices(Drives: new AppDriveGateway(() => router, VirtualHardwareProfile.Default))
+            {
+                // ADR 0146: HackCrossOriginIsolation reads what a test puts in Isolation.
+                CrossOriginIsolation = new HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway(() => Isolation.Status)
+            },
+            localNetwork: localNetwork)
+        {
+            // ADR 0128: HackBackground tasks as child processes, in a worker when the fixture has some.
+            BackgroundJobs = () => BackgroundJobs!
+        };
 
         if (workers)
         {
-            Runtime = new LoopbackWebWorkerRuntime(hardwareConcurrency, workerStartupDelay);
+            Runtime = new LoopbackWebWorkerRuntime(hardwareConcurrency, workerStartupDelay, loaderFactory, synchronousCalls);
             Pool = new WorkerPool(
-                Runtime,
+                wrapRuntime?.Invoke(Runtime) ?? Runtime,
                 poolOptions ?? FastOptions,
                 Clock,
                 () => Manager,
@@ -138,15 +175,21 @@ internal sealed class OsFixture : IAsyncDisposable
                 Startup);
         }
 
+        RemoteHost = Pool is null ? null : new WorkerRemoteProcessHost(Pool);
         Orchestrator = new AppLifecycleOrchestrator(
             Catalog, descriptors, enablement, Manager, _grants, contextFactory, EventBus,
             elevationTickets: new InMemoryElevationTicketStore(),
-            remoteHost: Pool is null ? null : new WorkerRemoteProcessHost(Pool));
+            remoteHost: RemoteHost);
+        BackgroundJobs = new BackgroundJobService(
+            Manager,
+            appId => Orchestrator.TryGetDescriptor(appId, out AppDescriptor? descriptor) ? descriptor : null,
+            () => RemoteHost,
+            maxConcurrentJobsPerApp: 2);
         Interpreter = new ShellInterpreter(Orchestrator, Catalog, enablement);
         ShellHost = new ShellHostService(Interpreter, Manager, new RefusingElevationService());
         Dispatcher = new AppIntentDispatcher(
             Orchestrator, Catalog, enablement,
-            new FileAssociationResolver(Catalog, enablement, new OsSettingsService(fileSystem, _sessions, Clock)),
+            new FileAssociationResolver(Catalog, enablement, new OsSettingsService(fileSystem, _sessions, Clock), fileSystem),
             _grants, fileSystem);
     }
 
@@ -178,6 +221,9 @@ internal sealed class OsFixture : IAsyncDisposable
 
     public InMemoryEventBus EventBus { get; }
 
+    /// <summary>Gets the app lane of the OS's events (ADR 0038), which workers reach by message (ADR 0124).</summary>
+    public InMemoryTopicMessageBus TopicBus { get; }
+
     public IFileSystemService FileSystem { get; }
 
     public LogFileWriter Log { get; }
@@ -199,6 +245,18 @@ internal sealed class OsFixture : IAsyncDisposable
 
     public WorkerPool? Pool { get; }
 
+    /// <summary>Gets the out-of-thread host of the fixture, when it has workers.</summary>
+    public WorkerRemoteProcessHost? RemoteHost { get; }
+
+    /// <summary>Gets the background tasks of the OS (ADR 0128), two at a time per app and user.</summary>
+    public BackgroundJobService BackgroundJobs { get; }
+
+    /// <summary>Gets the table of listening ports (ADR 0074).</summary>
+    public ListeningPortTable Ports { get; }
+
+    /// <summary>Gets the resolver hackdns.</summary>
+    public HackDnsResolver Resolver { get; }
+
     public SystemStartupSignal Startup { get; } = new();
 
     /// <summary>Gets the lines the worker pool wrote to <c>/var/log/syslog</c>, prefixed with their PID.</summary>
@@ -215,9 +273,12 @@ internal sealed class OsFixture : IAsyncDisposable
         bool workers,
         WorkerPoolOptions? poolOptions = null,
         int hardwareConcurrency = 4,
-        TimeSpan? workerStartupDelay = null)
+        TimeSpan? workerStartupDelay = null,
+        Func<HackerOs.Platform.WorkerHost.Worker.IWorkerAssemblyLoader>? loaderFactory = null,
+        bool synchronousCalls = false,
+        Func<IWebWorkerRuntime, IWebWorkerRuntime>? wrapRuntime = null)
     {
-        OsFixture fixture = new(workers, poolOptions, hardwareConcurrency, workerStartupDelay);
+        OsFixture fixture = new(workers, poolOptions, hardwareConcurrency, workerStartupDelay, loaderFactory, synchronousCalls, wrapRuntime);
         fixture.Principal = await fixture._sessions.LoginAsync(fixture._alice, "hunter2");
         foreach (string capability in HostCapabilities)
         {
@@ -383,7 +444,7 @@ internal sealed class OsFixture : IAsyncDisposable
         Description = "Hosts the shell.",
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.WorkerHost.Tests", "org.hackeros.terminal.EntryPoint"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         Capabilities = HostCapabilities

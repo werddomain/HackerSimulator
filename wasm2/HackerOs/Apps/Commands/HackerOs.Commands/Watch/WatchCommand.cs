@@ -1,6 +1,8 @@
 using System.Globalization;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Globalization;
+using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Commands.Watch;
 
@@ -18,9 +20,10 @@ public sealed class WatchCommand(AppManifest manifest) : TerminalAppBase(manifes
     public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
+        IStringLocalizer<Strings> messages = context.App.GetLocalizer<Strings>();
         if (context.Shell is not { } shell)
         {
-            await context.StandardError.WriteLineAsync("watch: no shell session");
+            await context.StandardError.WriteLineAsync(messages["NoShell"]);
             return 1;
         }
 
@@ -35,7 +38,7 @@ public sealed class WatchCommand(AppManifest manifest) : TerminalAppBase(manifes
             {
                 if (!double.TryParse(args[++index], NumberStyles.Float, CultureInfo.InvariantCulture, out interval))
                 {
-                    await context.StandardError.WriteLineAsync($"watch: failed to parse argument: '{args[index]}'");
+                    await context.StandardError.WriteLineAsync(messages["BadArgument", args[index]]);
                     return 1;
                 }
 
@@ -56,8 +59,8 @@ public sealed class WatchCommand(AppManifest manifest) : TerminalAppBase(manifes
 
         if (index >= args.Count)
         {
-            await context.StandardError.WriteLineAsync("watch: no command specified");
-            await context.StandardError.WriteLineAsync("Usage: watch [options] command");
+            await context.StandardError.WriteLineAsync(messages["NoCommand"]);
+            await context.StandardError.WriteLineAsync(messages["Usage"]);
             return 1;
         }
 
@@ -83,7 +86,7 @@ public sealed class WatchCommand(AppManifest manifest) : TerminalAppBase(manifes
                 }
                 else
                 {
-                    string header = string.Create(CultureInfo.InvariantCulture, $"Every {interval:0.0}s: {commandLine}");
+                    string header = messages["Header", interval, commandLine];
                     string clock = $"{HackEnvironment.MachineName}: {context.App.Clock.UtcNow:ddd MMM d HH:mm:ss yyyy}";
                     int columns = screen.Viewport.Columns;
                     List<string> lines = noTitle

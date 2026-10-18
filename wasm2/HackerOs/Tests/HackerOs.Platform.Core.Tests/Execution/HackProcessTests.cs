@@ -293,6 +293,44 @@ public sealed class HackProcessTests
         Assert.Equal(["set:org.hackeros.sync:Disabled", "start:org.hackeros.indexer", "stop:org.hackeros.sync"], services.Calls);
     }
 
+    [Fact]
+    public async Task A_service_reads_its_state_from_the_service_manager_and_can_be_reset()
+    {
+        VirtualFileSystemFixture fixture = await CreateSeededAsync();
+        DateTimeOffset since = new(2026, 10, 17, 8, 0, 0, TimeSpan.Zero);
+        FakeServices services = new()
+        {
+            Statuses =
+            {
+                ["org.hackeros.sync"] = new ServiceStatusSnapshot(
+                    ServiceActiveState.Failed, ServiceRunResult.Exception, ServiceHealth.Unknown, null, since, null, null),
+                ["org.hackeros.indexer"] = new ServiceStatusSnapshot(
+                    ServiceActiveState.Active, ServiceRunResult.Success, ServiceHealth.Degraded, "cache cold", since, 61, null)
+            }
+        };
+        FakeCatalog catalog = new(App("org.hackeros.sync", "Sync", AppKind.Service), App("org.hackeros.indexer", "Indexer", AppKind.Service));
+        using IDisposable scope = Enter(fixture, new RecordingProcessGateway(), catalog, services, AppCapabilities.ProcessList);
+
+        HackServiceController[] list = await HackServiceController.GetServicesAsync();
+        HackServiceController indexer = list[0];
+        HackServiceController sync = list[1];
+
+        // ADR 0097: the service manager's state wins over /proc, which shows neither failed nor health.
+        Assert.Equal(HackServiceActiveState.Active, indexer.ActiveState);
+        Assert.Equal(HackServiceHealth.Degraded, indexer.Health);
+        Assert.Equal("cache cold", indexer.StatusText);
+        Assert.Equal(61, indexer.ProcessId);
+        Assert.Equal(HackServiceActiveState.Failed, sync.ActiveState);
+        Assert.Equal(HackServiceResult.Exception, sync.Result);
+        Assert.Equal(HackServiceControllerStatus.Stopped, sync.Status);
+        Assert.Equal(since, sync.ActiveStateChangedAt);
+        Assert.Equal("exception", HackServiceStates.ToSystemdName(sync.Result));
+
+        await sync.ResetFailedAsync();
+        Assert.Equal(HackServiceActiveState.Inactive, sync.ActiveState);
+        Assert.Contains("reset:org.hackeros.sync", services.Calls);
+    }
+
     private static readonly ProcessId OwnProcessId = ProcessId.FromInt64(OwnPid);
 
     private static IDisposable Enter(VirtualFileSystemFixture fixture, params string[] capabilities) =>
@@ -342,7 +380,7 @@ public sealed class HackProcessTests
             Description = "HackProcess test application.",
             Kind = AppKind.Window,
             EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", "TaskManagerApp"),
-            SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
             Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
             Resources = AppResourceProfileManifest.None
         };
@@ -440,6 +478,20 @@ public sealed class HackProcessTests
         public List<string> Calls { get; } = [];
         public ServiceControlOutcome NextOutcome { get; set; } = ServiceControlOutcome.Succeeded;
         public bool DenyActions { get; set; }
+
+        /// <summary>States the service manager reports (ADR 0097); a service not listed falls back to /proc.</summary>
+        public Dictionary<string, ServiceStatusSnapshot> Statuses { get; } = new(StringComparer.Ordinal);
+
+        public ValueTask<ServiceStatusSnapshot> GetStatusAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
+            Statuses.TryGetValue(serviceAppId, out ServiceStatusSnapshot? status)
+                ? ValueTask.FromResult(status)
+                : throw new NotSupportedException();
+
+        public ValueTask<ServiceControlResult> ResetFailedAsync(string serviceAppId, CancellationToken cancellationToken = default)
+        {
+            Statuses[serviceAppId] = ServiceStatusSnapshot.NeverStarted;
+            return Act($"reset:{serviceAppId}");
+        }
 
         public ValueTask<ServiceControlResult> StartAsync(string serviceAppId, CancellationToken cancellationToken = default) =>
             Act($"start:{serviceAppId}");

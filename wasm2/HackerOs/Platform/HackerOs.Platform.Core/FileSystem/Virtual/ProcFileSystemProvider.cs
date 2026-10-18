@@ -48,9 +48,22 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     private const string WorkersFile = "workers";
 
-    private static readonly string[] SystemFiles = ["cpuinfo", "diskstats", "loadavg", "meminfo", "mounts", "stat", "uptime"];
-    private static readonly string[] NetFiles = ["dev"];
-    private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", "io", "stat", "status"];
+    private static readonly string[] SystemFiles = ["cpuinfo", "diskstats", "loadavg", "meminfo", "mounts", "stat", "uptime", "vmstat"];
+    private static readonly string[] NetFiles = ["dev", "tcp"];
+    private static readonly string[] ProcessEntries = ["cmdline", "cwd", "environ", FdDirectory, "io", "limits", OomScoreFile, OomScoreAdjustFile, "stat", "status"];
+
+    /// <summary><c>/proc/&lt;pid&gt;/oom_score</c> (ADR 0126, section 4): the OOM killer's badness, read-only.</summary>
+    private const string OomScoreFile = "oom_score";
+
+    /// <summary><c>/proc/&lt;pid&gt;/oom_score_adj</c> (ADR 0126, section 4): readable by all, writable by the owner.</summary>
+    private const string OomScoreAdjustFile = "oom_score_adj";
+
+    private const ushort OwnerWritableFileMode = 0b110_100_100; // 0644
+
+    /// <summary>The open descriptors of a process (ADR 0125): one link per descriptor, owner-only like Linux.</summary>
+    private const string FdDirectory = "fd";
+
+    private const ushort OwnerDirectoryMode = 0b101_000_000; // 0500
 
     /// <summary>Linux's <c>USER_HZ</c>, the unit of <c>utime</c>, <c>stime</c> and <c>starttime</c>.</summary>
     private const int UserHz = 100;
@@ -64,6 +77,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     private readonly Func<ProcessRecord, string?>? _userNameResolver;
     private readonly Func<IProcessEnvironmentTable?>? _environments;
     private readonly ProcMetricsSources _metrics;
+    private readonly Processes.SystemMemoryProbe _memory;
 
     /// <summary>Initializes the <c>/proc</c> provider.</summary>
     /// <param name="processManager">
@@ -105,6 +119,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         _userNameResolver = userNameResolver;
         _environments = environments;
         _metrics = metrics ?? new ProcMetricsSources();
+        _memory = new Processes.SystemMemoryProbe(processManager, resources, hardware, _metrics.MemoryAccountant);
     }
 
     /// <inheritdoc />
@@ -170,6 +185,9 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             [] => RootNames(context),
             [NetDirectory] => NetFiles,
             [HackerOsDirectory] => [WorkersFile],
+            [string pid, FdDirectory] => ParsePid(pid) is { } value && FindVisible(value, context) is { } process
+                ? DescriptorsOf(process).Select(static open => open.Number.ToString(CultureInfo.InvariantCulture))
+                : [],
             _ => ProcessEntries
         };
 
@@ -222,6 +240,9 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             [string pid, string entry] => ParsePid(pid) is { } value && FindVisible(value, context) is { } process
                 ? ProcessEntry(path, process, entry, context)
                 : null,
+            [string pid, FdDirectory, string number] => ParsePid(pid) is { } value && FindVisible(value, context) is { } process
+                ? DescriptorLink(path, process, number)
+                : null,
             _ => null
         };
 
@@ -240,7 +261,9 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         DateTimeOffset started = StartTime(process);
         return entry switch
         {
-            "status" or "cmdline" or "stat" => File(path, owner, owner, PublicFileMode, started),
+            "status" or "cmdline" or "stat" or "limits" or OomScoreFile => File(path, owner, owner, PublicFileMode, started),
+            OomScoreAdjustFile => File(path, owner, owner, OwnerWritableFileMode, started),
+            FdDirectory => Directory(path, owner, owner, OwnerDirectoryMode, started),
             // io is private like environ (ADR 0057 section 3): the owner, or System authority.
             "environ" or "io" => File(path, owner, owner, PrivateFileMode, started),
             "cwd" => Link(path, owner, owner, started,
@@ -248,6 +271,28 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             _ => null
         };
     }
+
+    /// <summary>One entry of <c>/proc/&lt;pid&gt;/fd</c>: a link to what the descriptor designates.</summary>
+    private SymbolicLinkMetadata? DescriptorLink(VirtualPath path, ProcessRecord process, string number)
+    {
+        if (!int.TryParse(number, NumberStyles.None, CultureInfo.InvariantCulture, out int descriptor))
+        {
+            return null;
+        }
+
+        foreach (ProcessFileDescriptor open in DescriptorsOf(process))
+        {
+            if (open.Number == descriptor)
+            {
+                return Link(path, Owner(process), Owner(process), StartTime(process), open.Target);
+            }
+        }
+
+        return null;
+    }
+
+    private IReadOnlyList<ProcessFileDescriptor> DescriptorsOf(ProcessRecord process) =>
+        (_metrics.FileDescriptors?.Invoke() ?? (_processManager() as Processes.InMemoryProcessManager)?.FileDescriptors)?.GetOpen(process.Pid) ?? [];
 
     private SymbolicLinkMetadata? SelfLink(VirtualPath path, FileSystemAuthorizationContext context)
     {
@@ -315,9 +360,61 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             ? string.Concat(environment.Variables.Select(static pair => $"{pair.Key}={pair.Value}\0"))
             : string.Empty,
         "io" => RenderProcessIo(process),
+        "limits" => RenderLimits(process),
+        OomScoreFile => string.Create(CultureInfo.InvariantCulture, $"{OomScoreOf(process)}\n"),
+        OomScoreAdjustFile => string.Create(CultureInfo.InvariantCulture, $"{OomScores()?.GetOrDefault(process.Pid) ?? 0}\n"),
         "stat" => RenderProcessStat(process),
         _ => throw new InvalidOperationException($"'{entry}' is not a readable /proc/<pid> file.")
     };
+
+    /// <summary>
+    /// Renders <c>/proc/&lt;pid&gt;/limits</c> (ADR 0125, section 4): the table of Linux for the four
+    /// limits HackerOS applies, then HackerOS's own comment lines on how they are enforced.
+    /// </summary>
+    private string RenderLimits(ProcessRecord process)
+    {
+        // The host's table, else the one the in-memory process manager keeps (headless compositions).
+        IProcessResourceLimitTable? table = _metrics.ResourceLimits?.Invoke() ?? (_processManager() as Processes.InMemoryProcessManager)?.ResourceLimits;
+        ProcessResourceLimits limits = table is not null && table.TryGet(process.Pid, out ProcessResourceLimits found)
+            ? found
+            : ProcessResourceLimits.None;
+        StringBuilder builder = new();
+        AppendLimit(builder, "Limit", "Soft Limit", "Hard Limit", "Units");
+        AppendRow(builder, "Max cpu time", limits.Cpu, "seconds");
+        AppendRow(builder, "Max resident set", limits.Rss, "bytes");
+        AppendRow(builder, "Max processes", limits.NProc, "processes");
+        AppendRow(builder, "Max open files", limits.NoFile, "files");
+
+        if (table is not { IsEnabled: true })
+        {
+            builder.Append("# enforcement: off (HackerOs:ResourceLimits:Enabled=false)\n");
+            return builder.ToString();
+        }
+
+        bool inWorker = WorkerPool()?.GetWorkers().Any(worker => worker.ProcessIds.Contains(process.Pid.Value)) == true;
+        builder.Append(inWorker ? "# enforcement: strict (worker)\n" : "# enforcement: best-effort (main thread)\n");
+        bool cpuMeasured = _metrics.CpuAccountant?.IsMeasuring == true;
+        bool memoryMeasured = _metrics.MemoryAccountant?.IsMeasuring == true;
+        string? inactive = (cpuMeasured, memoryMeasured) switch
+        {
+            (false, false) => "cpu, rss",
+            (false, true) => "cpu",
+            (true, false) => "rss",
+            _ => null
+        };
+        if (inactive is not null)
+        {
+            builder.Append(CultureInfo.InvariantCulture, $"# {inactive}: inactive (not measured)\n");
+        }
+
+        return builder.ToString();
+
+        static void AppendLimit(StringBuilder target, string name, object soft, object hard, string units) =>
+            target.Append(CultureInfo.InvariantCulture, $"{name,-25} {soft,-20} {hard,-20} {units,-10}\n");
+
+        static void AppendRow(StringBuilder target, string name, ResourceLimit limit, string units) =>
+            AppendLimit(target, name, ResourceLimit.Format(limit.Soft), ResourceLimit.Format(limit.Hard), units);
+    }
 
     private ProcessEnvironmentSnapshot? EnvironmentOf(ProcessRecord process) =>
         _environments?.Invoke() is { } table && table.TryGet(process.Pid, out ProcessEnvironmentSnapshot snapshot)
@@ -326,7 +423,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     private string RenderStatus(ProcessRecord process)
     {
-        // ADR 0066: a measured value wins; otherwise (measurement off, not built, or a game-content
+        // ADR 0066: a measured value wins; otherwise (measurement off, not built, or a simulated
         // process that runs no code) the simulator's sample applies, exactly as before phase 5.
         ProcessResourceSample? sample = _resources.GetHistory(process.Pid).LastOrDefault();
         ResourceMeasurementSource cpuSource = ResourceMeasurementSource.Simulated;
@@ -349,8 +446,14 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         long rssKb = (long)Math.Round(memoryBytes / 1024d, MidpointRounding.AwayFromZero);
         double cpuPercent = cpuUsage * 100d;
 
+        // ADR 0128 section 3: a background task is named after its app's command and the task.
+        HackerOs.Platform.Core.Execution.BackgroundJobInfo? job =
+            _metrics.BackgroundJobs?.Invoke() is { } jobs && jobs.TryGetJob(process.Pid, out HackerOs.Platform.Core.Execution.BackgroundJobInfo found)
+                ? found
+                : null;
+
         StringBuilder builder = new();
-        AppendField(builder, "Name", ShortName(process.AppId));
+        AppendField(builder, "Name", job is null ? ShortName(process.AppId) : Truncate(job.Name));
         AppendField(builder, "State", StateText(process.State));
         AppendField(builder, "Pid", process.Pid.ToString());
         AppendField(builder, "PPid", process.ParentPid?.ToString() ?? "0");
@@ -358,6 +461,12 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         AppendField(builder, "AppId", process.AppId);
         AppendField(builder, "Kind", process.Kind.ToString().ToLowerInvariant());
         AppendField(builder, "Session", process.SessionId.ToString());
+        if (job is not null)
+        {
+            AppendField(builder, "Job", job.Name);
+            AppendField(builder, "Host", job.Host == HackerOs.Platform.Core.Execution.BackgroundJobHost.MainThread ? "MainThread" : "Worker");
+        }
+
         AppendField(builder, "VmRSS", $"{rssKb.ToString(CultureInfo.InvariantCulture)} kB");
         AppendMeasuredMemory(builder, measuredMemory);
         AppendField(builder, "Cpu", cpuPercent.ToString("0.0", CultureInfo.InvariantCulture));
@@ -384,7 +493,8 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     /// Renders <c>/proc/&lt;pid&gt;/stat</c> (ADR 0067, section 3) in the single-line layout of
     /// <c>proc(5)</c>: 52 space-separated fields, <c>comm</c> in parentheses. <c>utime</c> (14) and
     /// <c>stime</c> (15) are in <c>USER_HZ</c>; <c>starttime</c> (22) counts <c>USER_HZ</c> since boot;
-    /// <c>vsize</c> (23) is in bytes and <c>rss</c> (24) in 4 KiB pages. Fields with no meaning here
+    /// <c>vsize</c> (23) is in bytes and <c>rss</c> (24) in 4 KiB pages; <c>priority</c> (18) and
+    /// <c>nice</c> (19) follow the process's niceness (ADR 0127). Fields with no meaning here
     /// (signals, addresses, page faults of a machine without paging) are <c>0</c>, as the kernel
     /// prints them for a task it hides them from.
     /// </summary>
@@ -419,6 +529,8 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         long ppid = process.ParentPid?.Value ?? 0;
         long pid = process.Pid.Value;
         char state = StateText(process.State)[0];
+        int nice = NiceOf(process);
+        int priority = ProcessNice.ToPriority(nice);
 
         // Fields 1-52 of proc(5). Order matters: readers split on spaces after the closing parenthesis.
         return string.Create(
@@ -426,21 +538,39 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             $"{pid} ({ShortName(process.AppId)}) {state} {ppid} {pid} {pid} 0 -1 0 "  // 1-9: pid comm state ppid pgrp session tty_nr tpgid flags
             + $"0 0 0 0 "                                                          // 10-13: minflt cminflt majflt cmajflt
             + $"{utime} {stime} 0 0 "                                             // 14-17: utime stime cutime cstime
-            + $"20 0 1 0 "                                                         // 18-21: priority nice num_threads itrealvalue
+            + $"{priority} {nice} 1 0 "                                            // 18-21: priority nice num_threads itrealvalue
             + $"{startTime} {vsize} {rssPages} 18446744073709551615 "            // 22-25: starttime vsize rss rsslim
             + $"0 0 0 0 0 0 0 0 0 0 0 0 0 "                                        // 26-38: startcode .. exit_signal
             + $"0 0 0 0 0 0 "                                                      // 39-44: processor rt_priority policy delayacct_blkio_ticks guest_time cguest_time
             + $"0 0 0 0 0 0 0 0\n");                                               // 45-52: start_data .. exit_code
     }
 
+    /// <summary>The niceness of a process (ADR 0127), or <c>0</c> when it ended between the listing and this read.</summary>
+    private int NiceOf(ProcessRecord process)
+    {
+        try
+        {
+            return _processManager().GetNice(process.Pid);
+        }
+        catch (KeyNotFoundException)
+        {
+            return ProcessNice.Default;
+        }
+    }
+
     private static long ToUserHz(TimeSpan time) => (long)(time.TotalSeconds * UserHz);
 
     /// <summary>The measured layers of one process (ADR 0068), or <see langword="null"/> when its memory is simulated.</summary>
     private ProcessMemoryUsage? MeasureMemory(ProcessRecord process) =>
-        _metrics.MemoryAccountant is { IsMeasuring: true } accountant
-        && accountant.TryGetProcessMemory(process, [.. ActiveProcesses()], out ProcessMemoryUsage usage)
-            ? usage
-            : null;
+        _memory.IsMeasuring ? _memory.ReadProcess(process).Layers : null;
+
+    /// <summary>The <c>oom_score_adj</c> table: the host's, else the in-memory process manager's.</summary>
+    private Processes.InMemoryProcessOomScoreTable? OomScores() =>
+        _metrics.OomScores?.Invoke() ?? (_processManager() as Processes.InMemoryProcessManager)?.OomScores;
+
+    /// <summary><c>VmRSS × 1000 / MemTotal + oom_score_adj</c>, bounded to <c>[0, 2000]</c> (ADR 0126, section 2).</summary>
+    private long OomScoreOf(ProcessRecord process) =>
+        _memory.OomScore(_memory.ReadProcess(process).ResidentBytes, OomScores()?.GetOrDefault(process.Pid) ?? 0);
 
     /// <summary>
     /// Appends the layer fields of a measured process after <c>VmRSS</c>, in Linux's order (ADR 0068):
@@ -474,10 +604,27 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         "stat" => RenderStat(),
         "diskstats" => RenderDiskStats(),
         "mounts" => RenderMounts(),
+        "vmstat" => RenderVmStat(),
         _ => throw new InvalidOperationException($"'{name}' is not a /proc system file.")
     };
 
     private HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus? WorkerPool() => _metrics.Workers?.Invoke();
+
+    /// <summary>
+    /// The first lines of <c>/proc/hackeros/workers</c> (ADR 0131, section 5): whether the page is
+    /// cross-origin isolated, why not, and what that gives the workers. Read by Diagnostic.
+    /// </summary>
+    private static void AppendIsolation(StringBuilder builder, HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus status)
+    {
+        builder.Append(CultureInfo.InvariantCulture, $"cross-origin-isolated: {(status.IsIsolated ? "yes" : "no")}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"isolation-reason: {HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.Format(status.Reason)}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"isolation-setting: {HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.Format(status.Mode)}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"embedder-policy: {status.EmbedderPolicy ?? "-"}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"shared-pipes: {(status.SharedPipes ? "yes" : "no")}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"sync-calls: {(status.SynchronousCalls ? "yes" : "no")}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"memory-measure: {(status.MemoryMeasurement ? "browser" : "estimated")}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"timer-resolution-us: {status.TimerResolution.TotalMicroseconds.ToString("0.##", CultureInfo.InvariantCulture)}\n");
+    }
 
     /// <summary>
     /// Renders <c>/proc/hackeros/workers</c> (ADR 0071, section 5): the ceiling and the pool size, then
@@ -489,6 +636,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus pool = WorkerPool()!;
         HashSet<long> visible = [.. VisibleProcesses(context).Select(static process => process.Pid.Value)];
         StringBuilder builder = new();
+        AppendIsolation(builder, _metrics.CrossOriginIsolation?.Invoke() ?? HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.NotBrowser);
         builder.Append(CultureInfo.InvariantCulture, $"capacity {pool.Capacity}\n");
         builder.Append(CultureInfo.InvariantCulture, $"pool_size {pool.PoolSize}\n");
         builder.Append("worker role       state          core memory_kb heartbeat_ms busy_ms pids\n");
@@ -513,6 +661,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
             HackerOs.Simulation.Abstractions.Workers.WorkerRole.Pool => "pool",
             HackerOs.Simulation.Abstractions.Workers.WorkerRole.Overflow => "overflow",
             HackerOs.Simulation.Abstractions.Workers.WorkerRole.Dedicated => "dedicated",
+            HackerOs.Simulation.Abstractions.Workers.WorkerRole.Web => "web",
             _ => "ready"
         };
 
@@ -529,6 +678,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     private string RenderNetFile(string name) => name switch
     {
         "dev" => RenderNetDev(),
+        "tcp" => RenderNetTcp(),
         _ => throw new InvalidOperationException($"'{name}' is not a /proc/net file.")
     };
 
@@ -624,6 +774,33 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     }
 
     /// <summary>
+    /// Renders <c>/proc/net/tcp</c> (ADR 0074 section 2) in the kernel's layout: one line per socket
+    /// in the <c>LISTEN</c> state (<c>0A</c>), the address as the little-endian hex of the IPv4
+    /// address (<c>0100007F</c> is 127.0.0.1), the port in hex, the owner's uid (0 for root and the
+    /// system daemons, 1000 for a user: HackerOS has no numeric uids) and the socket inode, which
+    /// <c>netstat -p</c> matches against <c>/proc/&lt;pid&gt;/fd</c> on Linux.
+    /// </summary>
+    private string RenderNetTcp()
+    {
+        StringBuilder builder = new();
+        builder.Append("  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode\n");
+        IReadOnlyList<HackerOs.Platform.Core.Network.Local.ListeningSocketRow> rows = _metrics.Listeners?.Invoke()?.Snapshot() ?? [];
+        for (int index = 0; index < rows.Count; index++)
+        {
+            HackerOs.Platform.Core.Network.Local.ListeningSocketRow row = rows[index];
+            byte[] octets = row.Address.GetAddressBytes();
+            Array.Reverse(octets);
+            string address = Convert.ToHexString(octets);
+            int uid = row.Owner is null || string.Equals(row.Owner.LoginName, "root", StringComparison.Ordinal) ? 0 : 1000;
+            builder.Append(
+                CultureInfo.InvariantCulture,
+                $"{index,4}: {address}:{row.Port:X4} 00000000:0000 0A 00000000:00000000 00:00000000 00000000 {uid,5} {0,8} {row.Inode} 1 0000000000000000 100 0 0 10 0\n");
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>
     /// Renders <c>/proc/mounts</c> (ADR 0057 section 6) in <c>fstab</c> format, one line per mount
     /// of the router, root first.
     /// </summary>
@@ -654,18 +831,17 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
 
     private string RenderMemInfo()
     {
-        long totalKb = (long)(_hardware.MemoryCapacityBytes / 1024d);
-        double usedBytes = _resources.GetSystemHistory().LastOrDefault()?.TotalMemoryUsageBytes ?? 0;
-        SystemMemoryUsage? measured = MeasureSystemMemory(ref usedBytes);
-        long freeKb = Math.Max(0, totalKb - (long)Math.Round(usedBytes / 1024d, MidpointRounding.AwayFromZero));
+        Processes.SystemMemorySnapshot memory = _memory.ReadSystem();
+        long totalKb = (long)(memory.TotalBytes / 1024d);
+        long freeKb = Math.Max(0, totalKb - ToKilobytes(memory.UsedBytes));
 
         // There is no page cache to reclaim in the simulation, so available memory equals free memory.
-        // Exceeding MemTotal only saturates the graphs: there is no OOM killer (ADR 0068, section 3).
+        // Going under it is what the OOM killer watches when it is enabled (ADR 0126).
         StringBuilder builder = new();
         AppendMemInfoLine(builder, "MemTotal", totalKb);
         AppendMemInfoLine(builder, "MemFree", freeKb);
         AppendMemInfoLine(builder, "MemAvailable", freeKb);
-        if (measured is { } system)
+        if (memory.Measured is { } system)
         {
             AppendMemInfoLine(builder, "AnonPages", ToKilobytes(system.AnonymousBytes));
             AppendMemInfoLine(builder, "Mapped", ToKilobytes(system.MappedBytes));
@@ -673,41 +849,85 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         }
 
         return builder.ToString();
+    }
 
-        static long ToKilobytes(long bytes) => (long)Math.Round(bytes / 1024d, MidpointRounding.AwayFromZero);
+    private static long ToKilobytes(long bytes) => (long)Math.Round(bytes / 1024d, MidpointRounding.AwayFromZero);
+
+    /// <summary>
+    /// Renders <c>/proc/vmstat</c> (ADR 0126, section 3): <c>name value</c> lines in pages of 4 KiB, as
+    /// Linux does, from the same figures as <c>meminfo</c>, then the <c>oom_kill</c> counter (kills
+    /// since boot). The measured lines appear only when memory is measured.
+    /// </summary>
+    private string RenderVmStat()
+    {
+        Processes.SystemMemorySnapshot memory = _memory.ReadSystem();
+        StringBuilder builder = new();
+        Append("nr_free_pages", memory.AvailableBytes / PageSize);
+        if (memory.Measured is { } system)
+        {
+            Append("nr_anon_pages", system.AnonymousBytes / PageSize);
+            Append("nr_mapped", system.MappedBytes / PageSize);
+            Append("nr_slab_unreclaimable", system.KernelBytes / PageSize);
+        }
+
+        Append("oom_kill", _metrics.OomKills?.Invoke() ?? 0);
+        return builder.ToString();
+
+        void Append(string name, long value) =>
+            builder.Append(CultureInfo.InvariantCulture, $"{name} {value}\n");
     }
 
     /// <summary>
-    /// When memory is measured (ADR 0068, section 2), replaces the simulated total with the measured
-    /// one (shared images counted once, the OS's own heap included) plus the simulated memory of the
-    /// processes that stay simulated (game content that runs no code).
+    /// Writes <c>/proc/&lt;pid&gt;/oom_score_adj</c> (ADR 0126, section 4), the only writable file of
+    /// <c>/proc</c>: a decimal from <c>-1000</c> to <c>1000</c>. The owner (mode <c>0644</c>, checked by
+    /// the filesystem before this call) may raise it; going below the process's floor needs an elevated
+    /// <c>root</c> or the system, like <c>CAP_SYS_RESOURCE</c>. Every other path refuses writes.
     /// </summary>
-    /// <param name="usedBytes">The simulated total, replaced when memory is measured.</param>
-    /// <returns>The measured totals, or <see langword="null"/> when memory is simulated.</returns>
-    private SystemMemoryUsage? MeasureSystemMemory(ref double usedBytes)
+    public override async ValueTask<FileSystemMutationResult> WriteAsync(
+        FileSystemWriteRequest request,
+        IFileSystemContentSource content,
+        FileSystemAuthorizationContext context,
+        CancellationToken cancellationToken = default)
     {
-        if (_metrics.MemoryAccountant is not { IsMeasuring: true } accountant)
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(content);
+        ArgumentNullException.ThrowIfNull(context);
+        string[] segments = RelativeSegments(request.Path);
+        if (segments is not [string pidText, OomScoreAdjustFile]
+            || ParsePid(pidText) is not { } pid
+            || FindVisible(pid, context) is not { } process
+            || OomScores() is not { } table)
         {
-            return null;
+            return Rejected(FileSystemOperation.Write, FileSystemErrorCode.PermissionDenied, request.Path);
         }
 
-        ProcessRecord[] active = [.. ActiveProcesses()];
-        if (!accountant.TryGetSystemMemory(active, out SystemMemoryUsage system))
+        string text;
+        try
         {
-            return null;
+            await using Stream stream = await content.OpenReadAsync(cancellationToken).ConfigureAwait(false);
+            using StreamReader reader = new(stream, Encoding.UTF8);
+            text = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return Rejected(FileSystemOperation.Write, FileSystemErrorCode.Cancelled, request.Path);
         }
 
-        double simulated = 0;
-        foreach (ProcessRecord process in active)
+        if (!int.TryParse(text.Trim(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out int value))
         {
-            if (!accountant.TryGetProcessMemory(process, active, out _))
-            {
-                simulated += _resources.GetHistory(process.Pid).LastOrDefault()?.MemoryUsageBytes ?? 0;
-            }
+            return Rejected(FileSystemOperation.Write, FileSystemErrorCode.InvalidContent, request.Path);
         }
 
-        usedBytes = system.UsedBytes + simulated;
-        return system;
+        bool privileged = context.OperationContext.IsRootElevated
+            || context.OperationContext.EffectiveAuthority == AppAuthority.System;
+        return table.TrySet(process.Pid, value, privileged) switch
+        {
+            ResourceLimitChangeResult.Applied => Committed(new FileSystemEntrySnapshot(
+                request.Path, ProcessEntry(request.Path, process, OomScoreAdjustFile, context)!)),
+            ResourceLimitChangeResult.InvalidArgument => Rejected(FileSystemOperation.Write, FileSystemErrorCode.InvalidContent, request.Path),
+            ResourceLimitChangeResult.NoSuchProcess => Rejected(FileSystemOperation.Write, FileSystemErrorCode.NotFound, request.Path),
+            _ => Rejected(FileSystemOperation.Write, FileSystemErrorCode.PermissionDenied, request.Path)
+        };
     }
 
     private string RenderCpuInfo()
@@ -792,6 +1012,10 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         && pid > 0
             ? pid
             : null;
+
+    /// <summary>Cuts a process name to 15 characters, like Linux's <c>comm</c>.</summary>
+    private static string Truncate(string name) =>
+        name.Length > MaximumProcessNameLength ? name[..MaximumProcessNameLength] : name;
 
     /// <summary>Gets the last dotted segment of an app ID, cut to 15 characters like Linux's <c>comm</c>.</summary>
     private static string ShortName(string appId)

@@ -57,6 +57,38 @@ public sealed class AppCatalogGatewayTests
     }
 
     [Fact]
+    public async Task Default_handlers_need_file_associations_read_and_a_change_also_needs_home_write()
+    {
+        Harness harness = await Harness.CreateAsync();
+        AuthenticatedPrincipal alice = await harness.LoginAsync();
+
+        await Assert.ThrowsAsync<AppGatewayAccessDeniedException>(() =>
+            harness.CreateCatalogGateway(alice).GetDefaultHandlersAsync().AsTask());
+        AppCatalogGateway readOnly = harness.CreateCatalogGateway(alice, AppCapabilities.FileAssociationsRead);
+        await readOnly.GetDefaultHandlersAsync();
+        AppGatewayAccessDeniedException denied = await Assert.ThrowsAsync<AppGatewayAccessDeniedException>(() =>
+            readOnly.SetUserDefaultHandlerAsync(".txt", "open", Viewer).AsTask());
+        Assert.Equal(AppCapabilities.FileSystemUserHomeWrite, denied.Capability);
+    }
+
+    [Fact]
+    public async Task A_users_default_comes_first_in_the_defaults_and_in_open_with()
+    {
+        Harness harness = await Harness.CreateAsync();
+        AuthenticatedPrincipal alice = await harness.LoginAsync();
+        AppCatalogGateway gateway = harness.CreateCatalogGateway(
+            alice, AppCapabilities.FileAssociationsRead, AppCapabilities.FileSystemUserHomeWrite);
+
+        Assert.Equal(HackDefaultHandlerStatus.Changed, await gateway.SetUserDefaultHandlerAsync(".TXT", "open", Viewer));
+        Assert.Equal(HackDefaultHandlerStatus.AppCannotHandle, await gateway.SetUserDefaultHandlerAsync(".txt", "open", Lib));
+
+        HackFileAssociation first = (await gateway.GetDefaultHandlersAsync())[0];
+        Assert.Equal(new HackFileAssociation(".txt", "open", Viewer, HackFileAssociationLayer.User), first);
+        IReadOnlyList<HackAppInfo> handlers = await gateway.GetHandlersAsync(VirtualPath.Parse("/home/alice/notes.txt"));
+        Assert.Equal([Viewer, Calc], handlers.Select(app => app.Id));
+    }
+
+    [Fact]
     public async Task Management_requires_apps_manage()
     {
         Harness harness = await Harness.CreateAsync();
@@ -164,7 +196,7 @@ public sealed class AppCatalogGatewayTests
         Description = name,
         Kind = AppKind.Window,
         EntryPoint = new AppEntryPointManifest("HackerOs.Platform.Core.Tests", $"{id}.EntryPoint"),
-        SdkCompatibility = new AppSdkCompatibilityManifest("1.0.0"),
+        SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
         Dependencies = dependencies,
@@ -248,7 +280,7 @@ public sealed class AppCatalogGatewayTests
             Installation = new AppInstallationService(
                 Catalog, Enablement, orchestrator, settings.FileSystem, settings.Session, settings.Clock,
                 settings.TopicBus, settings.EventBus);
-            Resolver = new HackerOs.Platform.Core.Intents.FileAssociationResolver(Catalog, Enablement, settings.Settings);
+            Resolver = new HackerOs.Platform.Core.Intents.FileAssociationResolver(Catalog, Enablement, settings.Settings, settings.FileSystem);
         }
 
         internal SettingsFilesHarness Settings { get; }
@@ -275,6 +307,9 @@ public sealed class AppCatalogGatewayTests
 
         internal AppCatalogGateway CreateCatalogGateway() =>
             new(Catalog, Enablement, () => Resolver, () => Installation);
+
+        internal AppCatalogGateway CreateCatalogGateway(AuthenticatedPrincipal principal, params string[] capabilities) =>
+            new(Catalog, Enablement, () => Resolver, () => Installation, principal, new FixedCapabilities(capabilities));
 
         internal AppManagementGateway CreateManagementGateway(AuthenticatedPrincipal principal, params string[] capabilities) =>
             CreateManagementGateway(principal, new CountingAgent(succeed: false), capabilities);

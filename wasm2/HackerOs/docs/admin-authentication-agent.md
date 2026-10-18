@@ -47,8 +47,9 @@ l'orchestrateur sinon).
 - **Trois essais** au plus, comme la fenêtre d'approbation de l'ADR 0049 ; au
   troisième échec la fenêtre se ferme, raison `too-many-attempts`, et les
   essais suivants sont refusés sans vérification.
-- **Annuler**, Échap, ou la fermeture du shell : raison `cancelled`, rien
-  n'est écrit.
+- **Annuler** (**Cancel** dans une session anglaise : la fenêtre suit la
+  langue de la session, ADR 0104), Échap, ou la fermeture du shell : raison
+  `cancelled`, rien n'est écrit.
 - **Préremplissage** : le nom de l'utilisateur de la session s'il est
   administrateur. Il retape quand même son mot de passe (ADR 0049, D24). Un
   autre compte administrateur peut répondre, comme avec `sudo`.

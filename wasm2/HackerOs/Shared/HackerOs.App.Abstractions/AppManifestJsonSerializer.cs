@@ -9,6 +9,13 @@ namespace HackerOs.App.Abstractions;
 /// </summary>
 public static class AppManifestJsonSerializer
 {
+    /// <summary>
+    /// Serializes a manifest in canonical form: camelCase, compact, null members omitted, enums as
+    /// strings, and unordered collections (icon paths, settings fields, ...) sorted ordinally, so the
+    /// same manifest always produces byte-identical JSON (one trailing newline included).
+    /// </summary>
+    /// <param name="manifest">The manifest to serialize.</param>
+    /// <returns>The canonical JSON text.</returns>
     public static string SerializeCanonical(AppManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
@@ -16,6 +23,13 @@ public static class AppManifestJsonSerializer
         return JsonSerializer.Serialize(canonical, AppManifestJsonSerializerContext.Default.AppManifest) + "\n";
     }
 
+    /// <summary>
+    /// Deserializes a manifest, rejecting any duplicate or unknown property at every level before
+    /// binding, so a typo in a manifest fails loudly instead of being silently ignored.
+    /// </summary>
+    /// <param name="json">The manifest JSON.</param>
+    /// <returns>The deserialized manifest.</returns>
+    /// <exception cref="JsonException">The JSON is malformed, has a duplicate or unknown property, or deserializes to null.</exception>
     public static AppManifest DeserializeStrict(string json)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
@@ -49,8 +63,12 @@ public static class AppManifestJsonSerializer
             "components",
             "singleInstancePerUser",
             "autoStart",
+            "serviceStartup",
             "supportsBack",
-            "execution"
+            "window",
+            "execution",
+            "web",
+            "oomScoreAdj"
         });
 
         return JsonSerializer.Deserialize(document.RootElement.GetRawText(), AppManifestJsonSerializerContext.Default.AppManifest)
@@ -76,7 +94,8 @@ public static class AppManifestJsonSerializer
             Dependencies = manifest.Dependencies ?? [],
             Assets = manifest.Assets ?? [],
             FileHandlers = manifest.FileHandlers ?? [],
-            Terminal = manifest.Terminal is null ? null : manifest.Terminal with { Aliases = manifest.Terminal.Aliases ?? [] }
+            Terminal = manifest.Terminal is null ? null : manifest.Terminal with { Aliases = manifest.Terminal.Aliases ?? [] },
+            Web = manifest.Web is null ? null : manifest.Web with { Urls = manifest.Web.Urls ?? [] }
         };
     }
 
@@ -136,7 +155,9 @@ public static class AppManifestJsonSerializer
             Components = manifest.Components is null
                 ? null
                 : [.. manifest.Components.OrderBy(item => item.Contract, StringComparer.Ordinal)
-                    .ThenBy(item => item.Type, StringComparer.Ordinal)]
+                    .ThenBy(item => item.Type, StringComparer.Ordinal)],
+            // The first URL is the site's primary address: the declared order is kept.
+            Web = manifest.Web
         };
     }
 
@@ -211,6 +232,18 @@ public static class AppManifestJsonSerializer
                 case "components":
                     ValidateArray(property.Value, $"{path}.components", ["contract", "assembly", "type"]);
                     break;
+                case "window":
+                    ValidateObject(property.Value, $"{path}.window", ["defaultWidth", "defaultHeight", "minWidth", "minHeight", "maxWidth", "maxHeight", "resizable", "rememberGeometry"]);
+                    break;
+                case "web":
+                    ValidateObject(property.Value, $"{path}.web", ["urls", "blazor"]);
+                    if (property.Value.ValueKind == JsonValueKind.Object
+                        && property.Value.TryGetProperty("blazor", out JsonElement blazor))
+                    {
+                        ValidateObject(blazor, $"{path}.web.blazor", ["assembly", "type"]);
+                    }
+
+                    break;
                 default:
                     break;
             }
@@ -233,6 +266,10 @@ public static class AppManifestJsonSerializer
     }
 }
 
+/// <summary>
+/// Source-generated (trim- and AOT-safe) JSON metadata for <see cref="AppManifest"/> and every type it
+/// contains: camelCase names, null members omitted, enums as strings.
+/// </summary>
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -256,6 +293,9 @@ public static class AppManifestJsonSerializer
 [JsonSerializable(typeof(FileHandlerManifest))]
 [JsonSerializable(typeof(TerminalCommandManifest))]
 [JsonSerializable(typeof(AppComponentManifest))]
+[JsonSerializable(typeof(WindowOptions))]
+[JsonSerializable(typeof(WebAppManifest))]
+[JsonSerializable(typeof(WebBlazorManifest))]
 [JsonSerializable(typeof(AppKind))]
 [JsonSerializable(typeof(AppExecutionHost))]
 [JsonSerializable(typeof(AppLaunchVisibility))]

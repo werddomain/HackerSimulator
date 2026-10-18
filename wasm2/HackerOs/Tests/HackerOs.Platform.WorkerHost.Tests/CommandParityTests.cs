@@ -15,6 +15,7 @@ public sealed class CommandParityTests
     private static readonly Scenario[] All =
     [
         new("alias", ["alias ll='ls -l'", "alias", "alias ll"]),
+        new("ausearch", ["ausearch --help", "ausearch -f /etc/hostname", "ausearch --bogus"]),
         new("basename", ["basename /a/b/c.txt .txt", "basename -a /x/y /z"]),
         new("cat", ["cat notes.txt", "cat missing.txt", "cat notes.txt numbers.txt | cat"]),
         new("cd", ["cd docs && pwd", "cd /nope"]),
@@ -24,7 +25,10 @@ public sealed class CommandParityTests
         new("curl", ["curl http://example.hackeros/", "curl -I http://example.hackeros/", "curl http://nowhere.invalid/"]),
         new("cut", ["cut -d, -f2 table.csv", "cut -c1-3 notes.txt"]),
         new("df", ["df", "df -h -T"]),
+        new("localectl", ["localectl", "localectl list-locales", "localectl set-locale LANG=xx_YY.UTF-8", "localectl set-locale LANG=fr_FR.UTF-8", "localectl bogus"]),
+        new("hackbackup", ["hackbackup", "hackbackup create", "hackbackup restore --bogus"]),
         new("diff", ["diff notes.txt notes.txt", "diff -u notes.txt numbers.txt"]),
+        new("dmesg", ["dmesg -l emerg", "dmesg -l nosuch", "dmesg --bogus"]),
         new("dirname", ["dirname /a/b/c /d"]),
         new("du", ["du -s docs", "du -a -h docs"]),
         new("echo", ["echo hello world", "echo -n no newline"]),
@@ -48,17 +52,22 @@ public sealed class CommandParityTests
         new("mv", ["mv notes.txt moved.txt", "mv missing.txt x"]),
         new("nano", ["nano notes.txt"]),
         new("netstat", ["netstat", "netstat -i"]),
+        new("nice", ["nice", "nice -n 5 echo hi", "nice -n 5 nice", "nice -n 5 ps -o ni,comm", "nice -n bogus echo hi", "nice -n -5 echo hi"]),
+        new("nslookup", ["nslookup example.hackeros", "nslookup nowhere.invalid", "nslookup"]),
         new("nmap", ["nmap example.hackeros", "nmap -p 80-443 -sV 10.0.0.10"]),
+        new("passwd", ["passwd -S", "passwd bob", "passwd -x"]),
         new("ping", ["ping example.hackeros", "ping nowhere.invalid"]),
+        new("prlimit", ["prlimit --nofile --nproc", "prlimit --nofile=512:1024 --nofile", "prlimit --pid 99999", "prlimit --bogus"]),
         new("printf", ["printf '%s-%d\\n' a 1 b 2"]),
-        new("ps", ["ps", "ps -a -u"]),
+        new("ps", ["ps", "ps -a -u", "ps -o pid,ni,comm", "ps -o bogus"]),
         new("pwd", ["pwd"]),
         new("read", ["read -r first rest && echo \"$first|$rest\""], Input: "one two three\n"),
+        new("renice", ["renice", "renice 5 99999", "renice -n 5 -g 1"]),
         new("rm", ["rm copy-of-nothing", "rm -r docs/sub", "rm --permanent numbers.txt"]),
         new("seq", ["seq 5", "seq -s , 2 2 10", "seq -w 8 11"]),
         new("sleep", ["sleep 2 && echo awake"], UsesClock: true),
         new("sort", ["sort words.txt", "sort -r -u words.txt", "sort -n numbers.txt", "sort -t, -k2 table.csv"]),
-        new("stress", ["stress -c 1 -t 0", "stress --yield -t 0", "stress --bogus"]),
+        new("stress", ["stress -c 1 -t 0", "stress --yield -t 0", "stress --vm 1 --vm-bytes 1M --vm-keep -t 0", "stress --vm 1 --vm-bytes 12Q", "stress --bogus"]),
         new("sudo", ["sudo echo hi"]),
         new("systemctl", ["systemctl list-units", "systemctl status org.test.ticker", "systemctl is-active org.test.ticker"]),
         new("tail", ["tail -n 2 notes.txt", "tail -c 6 notes.txt", "seq 20 | tail -n 3"]),
@@ -76,6 +85,9 @@ public sealed class CommandParityTests
         new("wget", ["wget -q -O page.html http://example.hackeros/", "wget --spider http://example.hackeros/", "wget http://nowhere.invalid/"]),
         new("which", ["which ls", "which -a cd nope"]),
         new("whoami", ["whoami"]),
+        new("xdg-open", ["xdg-open missing.txt", "xdg-open", "xdg-open notes.txt", "xdg-open docs", "xdg-open nope://thing"]),
+        new("xdg-mime", ["xdg-mime", "xdg-mime query filetype notes.txt", "xdg-mime query filetype docs", "xdg-mime query filetype missing.txt",
+            "xdg-mime default org.example.missing text/plain", "xdg-mime query default x-scheme-handler/https"]),
         new("zip", ["zip -q notes.zip notes.txt words.txt", "zip -r docs.zip docs", "unzip -l docs.zip"])
     ];
 
@@ -102,7 +114,7 @@ public sealed class CommandParityTests
             .Where(name => !covered.Contains(name))];
 
         Assert.Empty(missing);
-        Assert.Equal(63, OsFixture.BuiltInCommands.Count);
+        Assert.Equal(74, OsFixture.BuiltInCommands.Count);
     }
 
     [Fact]

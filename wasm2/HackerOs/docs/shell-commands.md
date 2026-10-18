@@ -81,7 +81,9 @@ shell :
 
 1. résout la commande cible (`sudo: x: command not found`, code `1`) ;
 2. refuse une commande qui déclare `shell.control` (`sudo: cd: shell builtin`,
-   code `1`), sans demander d'identifiants ;
+   code `1`), sans demander d'identifiants, sauf `nice` (ADR 0136) : `nice`
+   reçoit l'accès au shell et le ticket root, qu'il passe à la commande qu'il
+   lance ;
 3. appelle `ShellExecutionOptions.CredentialPrompt` (le terminal ouvre la
    fenêtre d'identifiants d'un administrateur et obtient un ticket `SudoRoot`,
    ADR 0042) ; un refus donne `sudo: authentication failed`, code `1` ;
@@ -131,6 +133,15 @@ l'utilisateur (`~/.hackeros/aliases`) reste dans le shell.
 | `kill [-SIG] pid\|%job` | `org.hackeros.commands.kill` | `process.manage`, `shell.control` | ADR 0064 : `%n` passe par `IShellSession.KillJob`. ADR 0069 : sans option (ou `-15`, `-TERM`), `SIGTERM` — la cible reçoit `StopRequested` (raison `Terminated`, échéance à 5 s simulées), puis son jeton est annulé, et elle est tuée si elle ne s'est pas terminée ; `-9`/`-KILL` tue tout de suite, sans `StopRequested`. Une commande tuée sort avec `137`, une commande qui s'arrête sur son jeton avec `130`. |
 | `which nom…`, `watch cmd` | `org.hackeros.commands.which`, `…watch` | `shell.control` | ADR 0064 : liste des commandes du shell ; `watch` relance la ligne par `IShellSession.RunAsync`. |
 
+Ouvrir un fichier, un dossier ou une URI depuis le shell passe par
+`xdg-open` (ADR 0096 §3, [`linux-commands.md`](linux-commands.md)) : la
+commande n'a pas besoin du shell (`shell.control`), elle envoie un
+`OpenFileIntent` ou un `OpenUriIntent` avec `apps.launch` et rend la main
+(codes 0, 1, 3, 4 de freedesktop). Un `ExecuteCommandIntent` qui lance
+`xdg-open` se comporte de même. `launch <app-id> [args]` reste le moyen
+d'ouvrir une app précise. `xdg-mime default <app-id> <type>` choisit l'app
+qui ouvre un type pour l'utilisateur (ADR 0121).
+
 Un nom de variable valide suit `[A-Za-z_][A-Za-z0-9_]*` (ADR 0050, section 3) :
 `IShellSession.SetVariable` et `UnsetVariable` lèvent `ArgumentException`
 sinon.
@@ -172,7 +183,7 @@ disparu.
 - `Tests/HackerOs.Commands.Tests/CoreCommandsTests.cs` et
   `Tests/HackerOs.Commands.Wave5.Tests/Wave5Tests.cs` : `cd`, `clear`, `help`
   avec `FakeShellSession` (`Tests/HackerOs.Tests.Support/`).
-- `Tests/HackerOs.Ecosystem.Tests` : 75 apps intégrées, 63 commandes (`stress` depuis `rebuild/5-worker-processes`).
+- `Tests/HackerOs.Ecosystem.Tests` : 87 apps intégrées, 70 commandes (`stress` depuis `rebuild/5-worker-processes`, `ausearch` depuis `v3/8`, `xdg-open` depuis `v3/4`, `hackbackup` depuis `v3/7`, `localectl` depuis `v3/12`, `xdg-mime` depuis `v3/4b`, `passwd` depuis `v3/8`).
 
 ## Liste des tâches
 

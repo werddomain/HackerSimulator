@@ -1,7 +1,8 @@
 @namespace HackerOs.Windowing.Blazor
 @using HackerOs.Windowing.Core
+@inject IServiceProvider LocalizationServices
 
-<main class="single-surface-area" aria-label="Application surface">
+<main class="single-surface-area" aria-label="@L["Surface.Application"]">
     @if (Primary is not null)
     {
         <WindowHost @key="Primary.Id"
@@ -12,7 +13,8 @@
                     OnMinimize="OnMinimize"
                     OnToggleMaximize="OnToggleMaximize"
                     OnClose="OnClose"
-                    OnGesture="OnGesture">
+                    OnGesture="OnGesture"
+                    Overlay="@(WindowOverlay?.Invoke(Primary))">
             @if (WindowContent is not null)
             {
                 @WindowContent(Primary)
@@ -33,6 +35,13 @@
     /// <summary>Gets or sets content rendered for the single visible window snapshot.</summary>
     [Parameter]
     public RenderFragment<WindowRuntimeState>? WindowContent { get; set; }
+
+    /// <summary>
+    /// Gets or sets content layered over one window's content area, such as the platform's
+    /// "not responding" dialog (ADR 0127 §3); rendered through <see cref="WindowHost.Overlay"/>.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<WindowRuntimeState>? WindowOverlay { get; set; }
 
     /// <summary>Gets or sets the focus request callback.</summary>
     [Parameter]
@@ -88,4 +97,8 @@
             await OnGesture.InvokeAsync(new MaximizeWindowCommand(primary));
         }
     }
+
+    /// <summary>Gets the package's texts: the host's session language, or English without localization (ADR 0104).</summary>
+    private IStringLocalizer L => _localizer ??= PackageStringLocalizer.Resolve<Strings>(LocalizationServices);
+    private IStringLocalizer? _localizer;
 }

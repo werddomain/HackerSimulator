@@ -13,6 +13,16 @@ public sealed class WindowRuntime
     /// <summary>Event raised whenever window state or active windows change.</summary>
     public event Action? StateChanged;
 
+    /// <summary>
+    /// Event raised with the ordered facts of every command that changed something, before
+    /// <see cref="StateChanged"/>. Observers that need the transitions themselves (focus moving from
+    /// one window to another, the end of a resize) listen here instead of diffing snapshots.
+    /// </summary>
+    public event Action<IReadOnlyList<WindowEvent>>? EventsApplied;
+
+    /// <summary>Gets the current desktop work area.</summary>
+    public WindowBounds WorkArea => _workArea;
+
     /// <summary>Creates a runtime for the supplied desktop work area.</summary>
     public WindowRuntime(WindowBounds workArea) => _workArea = workArea;
 
@@ -35,6 +45,7 @@ public sealed class WindowRuntime
             FocusWindowCommand focus => Focus(focus.WindowId),
             MoveWindowCommand move => Move(move),
             ResizeWindowCommand resize => Resize(resize),
+            CompleteWindowResizeCommand complete => CompleteResize(complete.WindowId),
             MinimizeWindowCommand minimize => ChangeVisualState(minimize.WindowId, WindowVisualState.Minimized),
             MaximizeWindowCommand maximize => ChangeVisualState(maximize.WindowId, WindowVisualState.Maximized),
             RestoreWindowCommand restore => ChangeVisualState(restore.WindowId, WindowVisualState.Normal),
@@ -42,17 +53,30 @@ public sealed class WindowRuntime
             CancelWindowCloseCommand close => CancelClose(close.WindowId),
             ForceWindowCloseCommand close => ForceClose(close.WindowId),
             ChangeViewportCommand viewport => ChangeViewport(viewport.WorkArea),
+            SetWindowTitleCommand title => ChangeTitle(title.WindowId, title.Title),
+            SetWindowRespondingCommand responding => ChangeResponding(responding.WindowId, responding.IsResponding),
             null => throw new ArgumentNullException(nameof(command)),
             _ => throw new ArgumentOutOfRangeException(nameof(command), command, "Unknown window command."),
         };
 
         if (events.Count > 0)
         {
+            EventsApplied?.Invoke(events);
             StateChanged?.Invoke();
         }
 
         return events;
     }
+
+    /// <summary>
+    /// Replaces the displayed title of <paramref name="windowId"/> (ADR 0117 §3). The title is cleaned
+    /// with <see cref="WindowTitles.Sanitize"/>; an unchanged title produces no event.
+    /// </summary>
+    /// <param name="windowId">The window to rename.</param>
+    /// <param name="title">The new title; must not be empty once cleaned.</param>
+    /// <returns>A <see cref="WindowTitleChangedEvent"/>, or nothing when the title did not change.</returns>
+    public IReadOnlyList<WindowEvent> SetTitle(WindowId windowId, string title) =>
+        Apply(new SetWindowTitleCommand(windowId, title));
 
     private IReadOnlyList<WindowEvent> Create(WindowRuntimeState initialState)
     {
@@ -130,6 +154,12 @@ public sealed class WindowRuntime
         return [new WindowResizedEvent(current.Id, current.Bounds, bounds)];
     }
 
+    private IReadOnlyList<WindowEvent> CompleteResize(WindowId id)
+    {
+        WindowRuntimeState current = Get(id);
+        return [new WindowResizeCompletedEvent(id, current.Bounds)];
+    }
+
     private IReadOnlyList<WindowEvent> ChangeVisualState(WindowId id, WindowVisualState requestedState)
     {
         WindowRuntimeState current = Get(id);
@@ -166,8 +196,9 @@ public sealed class WindowRuntime
         {
             events.AddRange(FocusTopVisible(id));
         }
-        else if (!retainFocus)
+        else if (requestedState != WindowVisualState.Minimized && !retainFocus)
         {
+            // Minimizing a background window leaves the focus where it is.
             events.AddRange(Focus(id));
         }
 
@@ -237,6 +268,38 @@ public sealed class WindowRuntime
         return [new WindowViewportChangedEvent(workArea, Windows)];
     }
 
+    private IReadOnlyList<WindowEvent> ChangeTitle(WindowId id, string requestedTitle)
+    {
+        string title = WindowTitles.Sanitize(requestedTitle);
+        if (title.Length == 0)
+        {
+            throw new ArgumentException("A window title cannot be empty.", nameof(requestedTitle));
+        }
+
+        WindowRuntimeState current = Get(id);
+        if (string.Equals(current.Title, title, StringComparison.Ordinal))
+        {
+            return [];
+        }
+
+        _windows[id] = Copy(current, title: title);
+        return [new WindowTitleChangedEvent(id, current.Title, title)];
+    }
+
+    private IReadOnlyList<WindowEvent> ChangeResponding(WindowId id, bool isResponding)
+    {
+        WindowRuntimeState current = Get(id);
+        if (current.IsResponding == isResponding)
+        {
+            return [];
+        }
+
+        // The flag is display state only (ADR 0127 §3): it never touches Title, so no
+        // WindowTitleChangedEvent is raised for the "(Not responding)" suffix.
+        _windows[id] = Copy(current) with { IsResponding = isResponding };
+        return [new WindowRespondingChangedEvent(id, isResponding)];
+    }
+
     private IReadOnlyList<WindowEvent> FocusTopVisible(WindowId excludedId)
     {
         WindowRuntimeState? next = _windows.Values
@@ -268,16 +331,21 @@ public sealed class WindowRuntime
 
     private int NextZOrder() => checked(++_nextZOrder);
 
+    /// <summary>
+    /// Keeps a normal window inside the work area. The declared minimum always wins (ADR 0095 §2):
+    /// on a work area smaller than it, the window keeps its minimum size and overflows to the right
+    /// and bottom, as on a small real screen, with its title bar kept reachable at the top-left.
+    /// </summary>
     private WindowBounds Constrain(WindowBounds requested, WindowConstraints constraints)
     {
-        double minimumWidth = Math.Min(constraints.MinWidth, _workArea.Width);
-        double minimumHeight = Math.Min(constraints.MinHeight, _workArea.Height);
-        double maximumWidth = Math.Min(constraints.MaxWidth ?? _workArea.Width, _workArea.Width);
-        double maximumHeight = Math.Min(constraints.MaxHeight ?? _workArea.Height, _workArea.Height);
+        double minimumWidth = constraints.MinWidth;
+        double minimumHeight = constraints.MinHeight;
+        double maximumWidth = Math.Max(minimumWidth, Math.Min(constraints.MaxWidth ?? _workArea.Width, _workArea.Width));
+        double maximumHeight = Math.Max(minimumHeight, Math.Min(constraints.MaxHeight ?? _workArea.Height, _workArea.Height));
         double width = Math.Clamp(requested.Width, minimumWidth, maximumWidth);
         double height = Math.Clamp(requested.Height, minimumHeight, maximumHeight);
-        double x = Math.Clamp(requested.X, _workArea.X, _workArea.X + _workArea.Width - width);
-        double y = Math.Clamp(requested.Y, _workArea.Y, _workArea.Y + _workArea.Height - height);
+        double x = Math.Max(_workArea.X, Math.Min(requested.X, _workArea.X + _workArea.Width - width));
+        double y = Math.Max(_workArea.Y, Math.Min(requested.Y, _workArea.Y + _workArea.Height - height));
         return new WindowBounds(x, y, width, height);
     }
 
@@ -288,12 +356,13 @@ public sealed class WindowRuntime
         bool replaceRestoreBounds = false,
         int? zOrder = null,
         WindowVisualState? visualState = null,
-        bool? isFocused = null) =>
+        bool? isFocused = null,
+        string? title = null) =>
         new(
             state.Id,
             state.AppId,
             state.OwnerInstanceId,
-            state.Title,
+            title ?? state.Title,
             state.IconAssetPath,
             bounds ?? state.Bounds,
             replaceRestoreBounds ? restoreBounds : state.RestoreBounds,
@@ -305,5 +374,8 @@ public sealed class WindowRuntime
             isFocused ?? state.IsFocused,
             state.Content,
             state.OnRequestClose,
-            state.SupportsBack);
+            state.SupportsBack)
+        {
+            IsResponding = state.IsResponding,
+        };
 }

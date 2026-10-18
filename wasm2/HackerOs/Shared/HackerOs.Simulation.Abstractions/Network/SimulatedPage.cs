@@ -104,7 +104,17 @@ public sealed record AlertSection(
     AlertLevel Level = AlertLevel.Warning) : SimulatedPageSection;
 
 /// <summary>Severity level for an <see cref="AlertSection"/>.</summary>
-public enum AlertLevel { Info, Warning, Error }
+public enum AlertLevel
+{
+    /// <summary>Neutral information.</summary>
+    Info,
+
+    /// <summary>Something the visitor should pay attention to (the default).</summary>
+    Warning,
+
+    /// <summary>A failure, e.g. a rejected login.</summary>
+    Error,
+}
 
 /// <summary>
 /// Structured response returned by a simulated website controller.

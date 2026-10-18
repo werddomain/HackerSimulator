@@ -1,5 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="../../Platform/Packaging.props" />
+
+  <PropertyGroup>
+    <PackageId>HackerOs.Server.Contracts</PackageId>
+    <PackageTags>hackeros;server;contracts</PackageTags>
+  </PropertyGroup>
+
   <PropertyGroup>
     <!-- Shared contracts used by both server and browser client; no Blazor/UI dependency. -->
     <TargetFramework>net10.0</TargetFramework>

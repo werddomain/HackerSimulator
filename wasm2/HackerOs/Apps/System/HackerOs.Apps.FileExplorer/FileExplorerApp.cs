@@ -29,7 +29,7 @@ public sealed class FileExplorerApp : AppDefinition
 
     /// <inheritdoc />
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.AppsLaunch, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite, AppCapabilities.DialogFileOpen, AppCapabilities.DialogFileSave, AppCapabilities.DialogFolderSelect, AppCapabilities.ClipboardRead, AppCapabilities.ClipboardWrite, AppCapabilities.NotificationsPost];
+        [AppCapabilities.AppsLaunch, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite, AppCapabilities.DialogFileOpen, AppCapabilities.DialogFileSave, AppCapabilities.DialogFolderSelect, AppCapabilities.ClipboardRead, AppCapabilities.ClipboardWrite, AppCapabilities.NotificationsPost, AppCapabilities.FileAssociationsRead];
 
     /// <inheritdoc />
     public override IReadOnlyList<FileHandler> FileHandlers => [new("inode/directory", [], ["open"])];

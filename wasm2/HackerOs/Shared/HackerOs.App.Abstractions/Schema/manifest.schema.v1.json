@@ -24,7 +24,7 @@
     "version": { "$ref": "#/$defs/semanticVersion" },
     "publisherId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$" },
     "description": { "type": "string", "minLength": 1 },
-    "kind": { "enum": ["window", "terminal", "service"] },
+    "kind": { "enum": ["window", "terminal", "service", "web"] },
     "entryPoint": {
       "type": "object",
       "additionalProperties": false,
@@ -234,8 +234,57 @@
     },
     "singleInstancePerUser": { "type": "boolean" },
     "autoStart": { "type": "boolean" },
+    "serviceStartup": {
+      "description": "When an automatic service starts (ADR 0097): after a login (default) or at boot (system apps only).",
+      "enum": ["login", "boot"]
+    },
     "supportsBack": { "type": "boolean" },
-    "execution": { "enum": ["mainThread", "pool", "dedicated"] }
+    "window": {
+      "description": "Window sizes of a window app in CSS pixels (ADR 0095 §2). Omitted: 800x560, minimum 360x240, no maximum, resizable.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "defaultWidth": { "type": "integer", "minimum": 1 },
+        "defaultHeight": { "type": "integer", "minimum": 1 },
+        "minWidth": { "type": "integer", "minimum": 1 },
+        "minHeight": { "type": "integer", "minimum": 1 },
+        "maxWidth": { "type": "integer", "minimum": 1 },
+        "maxHeight": { "type": "integer", "minimum": 1 },
+        "resizable": { "type": "boolean" },
+        "rememberGeometry": { "description": "Whether the OS remembers the window size and maximized state, not its position (ADR 0116, ADR 0122). Omitted: true.", "type": "boolean" }
+      }
+    },
+    "execution": { "enum": ["mainThread", "pool", "dedicated", "web"] },
+    "oomScoreAdj": {
+      "description": "oom_score_adj the app's processes start with (ADR 0126): -1000 (never killed by the OOM killer) to 1000 (killed first). Negative values are reserved to system apps. Omitted: the OS default.",
+      "type": "integer",
+      "minimum": -1000,
+      "maximum": 1000
+    },
+    "web": {
+      "description": "Web part of a web app (ADR 0073): the URLs the site answers on, published by the OS resolver (ADR 0074).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["urls"],
+      "properties": {
+        "urls": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^https?://[a-z0-9.-]+(:[0-9]{1,5})?/([^?#\\s]*/)?$" }
+        },
+        "blazor": {
+          "description": "Root component of the site's interactive Blazor part (ADR 0084), in the entry-point assembly.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["assembly", "type"],
+          "properties": {
+            "assembly": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
   },
   "allOf": [
     {
@@ -248,9 +297,24 @@
     {
       "if": {
         "required": ["kind"],
+        "properties": { "kind": { "const": "web" } }
+      },
+      "then": { "required": ["web"] },
+      "else": { "not": { "required": ["web"] } }
+    },
+    {
+      "if": {
+        "required": ["kind"],
         "properties": { "kind": { "not": { "const": "window" } } }
       },
       "then": { "not": { "required": ["fileHandlers"] } }
+    },
+    {
+      "if": {
+        "required": ["kind"],
+        "properties": { "kind": { "not": { "const": "window" } } }
+      },
+      "then": { "not": { "required": ["window"] } }
     },
     {
       "description": "Exactly one of entryPoint (legacy, single-platform) or platform (MOB-003, multi-platform) must be present. See docs/mobile-interface-platform-plan.md §4.3.",
