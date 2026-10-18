@@ -52,7 +52,7 @@ $ ps -o pid,ni,comm
 | Héritage | Un enfant prend la valeur de son parent, sauf si la demande de lancement en donne une (`ProcessStartRequest.Nice`, `AppLaunchRequest.Nice`). |
 | Baisser | Seul root (`sudo`, ADR 0042) baisse une valeur (`EACCES` sinon : « Permission denied »). |
 | Autre utilisateur | Seul root change la valeur d'un processus d'un autre utilisateur (`EPERM` : « Operation not permitted »). |
-| Capacités | Lire ou changer **un autre** processus demande `process.list` / `process.manage`, comme `kill`. |
+| Capacités | Lire un autre processus demande `process.list` ; changer un processus qui n'est ni le sien ni un de ses enfants demande `process.manage`, comme `kill` (ADR 0140). |
 | Effet | Ordre de la file des workers (ADR 0071), commandes et tâches de fond `HackBackground.RunAsync` (ADR 0128, valeur `HackBackgroundOptions.Nice`, 0 par défaut) : la plus petite valeur d'abord, puis l'ordre d'arrivée. |
 | Worker toujours prêt | Une commande à valeur **positive** ne prend pas le worker toujours prêt pendant qu'un autre worker démarre : il reste pour la prochaine commande interactive. |
 | Thread principal | **Aucun effet.** Un processus du thread principal (fenêtres, commandes `MainThread`) tourne quand il est appelé ; il n'y a pas d'ordonnanceur à pondérer. |

@@ -95,13 +95,17 @@ public sealed partial class InMemoryProcessManagerTests
     {
         Fixture fixture = new();
         ProcessRecord shell = fixture.Manager.Start(fixture.RequestFor("com.hackeros.terminal"));
-        ProcessRecord job = fixture.Manager.Start(fixture.RequestFor("com.hackeros.ls", shell.Pid));
+        ProcessRecord child = fixture.Manager.Start(fixture.RequestFor("com.hackeros.ls", shell.Pid));
+        ProcessRecord other = fixture.Manager.Start(fixture.RequestFor("com.hackeros.ls"));
         AppProcessGateway gateway = new(fixture.Manager, new FixedCapabilities(), shell.Pid);
 
         Assert.Equal(0, gateway.GetNice(shell.Pid));
         Assert.Equal(3, gateway.SetNice(shell.Pid, 3));
-        Assert.Throws<AppGatewayAccessDeniedException>(() => gateway.GetNice(job.Pid));
-        Assert.Throws<AppGatewayAccessDeniedException>(() => gateway.SetNice(job.Pid, 3));
+        Assert.Throws<AppGatewayAccessDeniedException>(() => gateway.GetNice(other.Pid));
+        Assert.Throws<AppGatewayAccessDeniedException>(() => gateway.SetNice(other.Pid, 3));
+
+        // ADR 0140: like kill, a parent renices its own children without process.manage.
+        Assert.Equal(7, gateway.SetNice(child.Pid, 7));
     }
 
     /// <summary>Grants exactly the listed capabilities (the priority calls only use <see cref="Require"/>).</summary>
