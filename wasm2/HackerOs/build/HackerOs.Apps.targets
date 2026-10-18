@@ -109,6 +109,21 @@
   </ItemGroup>
 
   <!--
+    HackBackground analyzer (ADR 0128 §2, ADR 0140): every app compiles with the HOSBG rules. In
+    package mode it is the HackerOs.AppSdk package's analyzer (analyzers/dotnet/cs).
+  -->
+  <PropertyGroup Condition="'$(HackerOsBuildFromPackage)' != 'true'">
+    <HackerOsBackgroundAnalyzerProject Condition="'$(HackerOsBackgroundAnalyzerProject)' == ''">$(_HackerOsRepoRoot)Tools/HackerOs.Tools.BackgroundAnalyzer/HackerOs.Tools.BackgroundAnalyzer.csproj</HackerOsBackgroundAnalyzerProject>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(HackerOsBuildFromPackage)' != 'true' and '$(HackerOsAppProject)' == 'true'">
+    <ProjectReference Include="$(HackerOsBackgroundAnalyzerProject)"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--
     ASP.Hack wwwroot (ADR 0073 §2, ADR 0083 §6): a site's wwwroot/ is embedded in its assembly as resources
     named "wwwroot/<relative path>" and served read-only by UseStaticFiles; it is never a static web asset
     of the host (an app's wwwroot would otherwise land under _content/). On by default for a project that
@@ -297,7 +312,7 @@
         The generator references are build order / analyzer only (ReferenceOutputAssembly=false), added by this file.
       -->
       <_HackerOsBoundaryReference Include="@(_HackerOsDirectProjectReference->'%(FullPath)')"
-                                  Condition="'%(Filename)' != 'HackerOs.Tools.ManifestGenerator' and '%(Filename)' != 'HackerOs.Tools.WebRouteGenerator'" />
+                                  Condition="'%(Filename)' != 'HackerOs.Tools.ManifestGenerator' and '%(Filename)' != 'HackerOs.Tools.WebRouteGenerator' and '%(Filename)' != 'HackerOs.Tools.BackgroundAnalyzer'" />
       <_HackerOsBoundaryReference>
         <RelativePath>$([MSBuild]::MakeRelative('$(_HackerOsRepoRoot)', '%(Identity)').Replace('\', '/'))</RelativePath>
       </_HackerOsBoundaryReference>

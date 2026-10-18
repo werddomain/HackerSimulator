@@ -239,8 +239,9 @@ public partial class CodeEditorSearchView
                 await BeforeSearch();
             }
 
+            // ADR 0128/0140: read and match in a background task, so a large folder never freezes the desktop.
             CodeEditorSearchResult result = await new CodeEditorWorkspaceSearch(workspace)
-                .SearchAsync(query, OpenContent, cancellationToken);
+                .SearchInBackgroundAsync(query, OpenContent, progress: null, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             _result = result;
             _collapsed.Clear();

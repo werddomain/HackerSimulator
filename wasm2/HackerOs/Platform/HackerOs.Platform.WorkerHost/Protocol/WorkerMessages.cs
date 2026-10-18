@@ -64,6 +64,12 @@ internal static class WorkerMessageType
     /// </summary>
     public const string Event = "ev";
 
+    /// <summary>
+    /// A progress report <c>f</c>, <c>m</c> of the background task <c>j</c> that process <c>p</c> started
+    /// from its worker with a <c>bg.run</c> call (ADR 0128, section 6).
+    /// </summary>
+    public const string BackgroundJobProgress = "bgp";
+
     // ---- worker → OS ------------------------------------------------------------------------
 
     /// <summary>The worker's .NET side is up and its assemblies are loaded.</summary>
@@ -149,6 +155,9 @@ internal static class WorkerMessage
 
     /// <summary>Gets a required 32-bit integer property.</summary>
     public static int GetInt32(this JsonElement element, string name) => element.GetProperty(name).GetInt32();
+
+    /// <summary>Gets a required number property.</summary>
+    public static double GetDouble(this JsonElement element, string name) => element.GetProperty(name).GetDouble();
 
     /// <summary>Gets a required string property.</summary>
     public static string GetString(this JsonElement element, string name) =>

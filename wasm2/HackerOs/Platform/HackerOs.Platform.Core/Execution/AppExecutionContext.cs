@@ -244,6 +244,13 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     public IAppConsoleGateway Console { get => Guarded(field); internal set; } = DetachedAppConsoleGateway.Instance;
 
     /// <inheritdoc />
+    public HackerOs.AppSdk.Threading.IAppBackgroundGateway Background
+    {
+        get => Guarded(field ??= new HackerOs.AppSdk.Threading.InlineAppBackgroundGateway(this));
+        internal set;
+    }
+
+    /// <inheritdoc />
     /// <remarks>
     /// Bound by <c>AppLifecycleOrchestrator</c> when it starts a service (ADR 0097, section 2): the
     /// messages reach the service's state table under this process's PID. Every other process keeps

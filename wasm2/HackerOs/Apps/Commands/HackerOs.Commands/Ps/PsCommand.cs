@@ -81,7 +81,8 @@ public sealed class PsCommand : TerminalAppBase
             string stat = proc.Field("State").Split(' ')[0].PadRight(8);
             TimeSpan elapsed = now > proc.StartedAtUtc ? now - proc.StartedAtUtc : TimeSpan.Zero;
             string time = elapsed.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture);
-            string command = proc.Field("AppId");
+            // A background task (ADR 0128) shows as <app command>:<task>, like a named thread of its app.
+            string command = proc.Status.TryGetValue("Job", out string? job) ? job : proc.Field("AppId");
 
             context.StandardOutput.WriteLine(userFormat
                 ? $"{proc.Field("Uid"),-10} {pid} {stat} {time} {command}"

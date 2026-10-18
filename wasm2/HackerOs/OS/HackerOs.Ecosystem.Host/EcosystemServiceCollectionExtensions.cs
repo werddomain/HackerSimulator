@@ -240,7 +240,11 @@ public static class EcosystemServiceCollectionExtensions
                         // ADR 0071, section 5: /proc/hackeros/workers, on the hosts that have workers.
                         () => provider.GetService<IWorkerPoolStatus>(),
                         // ADR 0074, section 2: /proc/net/tcp lists the listening ports.
-                        () => provider.GetService<ListeningPortTable>()))),
+                        () => provider.GetService<ListeningPortTable>())
+                    {
+                        // ADR 0128: Job and Host of a background task's /proc/<pid>/status.
+                        BackgroundJobs = () => provider.GetService<BackgroundJobService>(),
+                    })),
                 new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
                     provider.GetRequiredService<ISimulationClock>()))
             ]));
@@ -634,7 +638,16 @@ public static class EcosystemServiceCollectionExtensions
                 OperatingSystem.IsBrowser() ? () => provider.GetRequiredService<SystemBackupService>() : null)
             {
                 Passwords = () => provider.GetRequiredService<LocalPasswordService>(),
-            }));
+            })
+        {
+            // HackBackground (ADR 0128): each task a child process, in a worker when the host has some.
+            BackgroundJobs = () => provider.GetRequiredService<BackgroundJobService>(),
+        });
+        services.AddScoped<BackgroundJobService>(provider => new BackgroundJobService(
+            provider.GetRequiredService<IProcessManager>(),
+            // Lazy: the orchestrator depends on the context factory, which carries this service.
+            appId => provider.GetRequiredService<AppLifecycleOrchestrator>().TryGetDescriptor(appId, out AppDescriptor? descriptor) ? descriptor : null,
+            () => provider.GetService<IRemoteProcessHost>()));
         services.AddScoped<HackerOs.Platform.Core.Clipboard.SystemClipboard>(provider =>
             new HackerOs.Platform.Core.Clipboard.SystemClipboard(
                 provider.GetRequiredService<IEventBus>(),

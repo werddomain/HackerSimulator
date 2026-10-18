@@ -27,6 +27,11 @@
     <ProjectReference Include="..\..\..\Shared\HackerOs.Simulation.Abstractions\HackerOs.Simulation.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The background search task and its DTOs are internal (ADR 0140); the tests run them inline. -->
+    <InternalsVisibleTo Include="HackerOs.Apps.CodeEditor.Tests" />
+  </ItemGroup>
+
   <Target Name="ValidateCodeEditorAssets" BeforeTargets="PrepareForBuild">
     <Error Condition="!Exists('package-lock.json')"
            Text="Code Editor requires the pinned package-lock.json for reproducible Monaco assets." />

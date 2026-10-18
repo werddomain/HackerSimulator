@@ -1,4 +1,50 @@
 #nullable enable
+const HackerOs.Platform.Core.Execution.BackgroundJobService.MaxPayloadBytes = 16777216 -> int
+HackerOs.Platform.Core.Execution.AppExecutionContextFactory.BackgroundJobs.get -> System.Func<HackerOs.Platform.Core.Execution.BackgroundJobService!>?
+HackerOs.Platform.Core.Execution.AppExecutionContextFactory.BackgroundJobs.init -> void
+HackerOs.Platform.Core.Execution.BackgroundJobHost
+HackerOs.Platform.Core.Execution.BackgroundJobHost.MainThread = 0 -> HackerOs.Platform.Core.Execution.BackgroundJobHost
+HackerOs.Platform.Core.Execution.BackgroundJobHost.Worker = 1 -> HackerOs.Platform.Core.Execution.BackgroundJobHost
+HackerOs.Platform.Core.Execution.BackgroundJobInfo
+HackerOs.Platform.Core.Execution.BackgroundJobInfo.AppId.get -> string!
+HackerOs.Platform.Core.Execution.BackgroundJobInfo.AppId.init -> void
+HackerOs.Platform.Core.Execution.BackgroundJobInfo.BackgroundJobInfo(HackerOs.Simulation.Abstractions.Processes.ProcessId Pid, HackerOs.Simulation.Abstractions.Processes.ProcessId ParentPid, string! AppId, string! Name, HackerOs.Platform.Core.Execution.BackgroundJobHost Host, int Nice) -> void
+HackerOs.Platform.Core.Execution.BackgroundJobInfo.Host.get -> HackerOs.Platform.Core.Execution.BackgroundJobHost
+HackerOs.Platform.Core.Execution.BackgroundJobInfo.Host.init -> void
+HackerOs.Platform.Core.Execution.BackgroundJobInfo.Name.get -> string!
+HackerOs.Platform.Core.Execution.BackgroundJobInfo.Name.init -> void
+HackerOs.Platform.Core.Execution.BackgroundJobInfo.Nice.get -> int
+HackerOs.Platform.Core.Execution.BackgroundJobInfo.Nice.init -> void
+HackerOs.Platform.Core.Execution.BackgroundJobInfo.ParentPid.get -> HackerOs.Simulation.Abstractions.Processes.ProcessId
+HackerOs.Platform.Core.Execution.BackgroundJobInfo.ParentPid.init -> void
+HackerOs.Platform.Core.Execution.BackgroundJobInfo.Pid.get -> HackerOs.Simulation.Abstractions.Processes.ProcessId
+HackerOs.Platform.Core.Execution.BackgroundJobInfo.Pid.init -> void
+HackerOs.Platform.Core.Execution.BackgroundJobService
+HackerOs.Platform.Core.Execution.BackgroundJobService.BackgroundJobService(HackerOs.Simulation.Abstractions.Processes.IProcessManager! processManager, System.Func<string!, HackerOs.Platform.Core.Discovery.AppDescriptor?>? descriptorOf = null, System.Func<HackerOs.Platform.Core.Execution.IRemoteProcessHost?>? remoteHost = null, int? maxConcurrentJobsPerApp = null) -> void
+HackerOs.Platform.Core.Execution.BackgroundJobService.GetJobs() -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Execution.BackgroundJobInfo!>!
+HackerOs.Platform.Core.Execution.BackgroundJobService.MaxConcurrentJobsPerApp.get -> int
+HackerOs.Platform.Core.Execution.BackgroundJobService.TryGetJob(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, out HackerOs.Platform.Core.Execution.BackgroundJobInfo! job) -> bool
+HackerOs.Platform.Core.Execution.IRemoteProcessHost.CanRunBackgroundJobs.get -> bool
+HackerOs.Platform.Core.Execution.IRemoteProcessHost.RunBackgroundJobAsync(HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch! launch, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<HackerOs.Platform.Core.Execution.RemoteProcessExit!>!
+HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch
+HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch.Context.get -> HackerOs.AppSdk.IAppExecutionContext!
+HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch.Context.init -> void
+HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch.Control.get -> HackerOs.Platform.Core.Processes.ProcessControlBlock?
+HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch.Control.init -> void
+HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch.Progress.get -> System.Action<HackerOs.AppSdk.Threading.HackBackgroundProgress>?
+HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch.Progress.init -> void
+HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch.RemoteBackgroundJobLaunch(HackerOs.AppSdk.IAppExecutionContext! Context, HackerOs.Platform.Core.Processes.ProcessControlBlock? Control, HackerOs.AppSdk.Threading.HackBackgroundJobRequest! Request, System.Action<HackerOs.AppSdk.Threading.HackBackgroundProgress>? Progress) -> void
+HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch.Request.get -> HackerOs.AppSdk.Threading.HackBackgroundJobRequest!
+HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch.Request.init -> void
+HackerOs.Platform.Core.Execution.RemoteProcessExit.JobFault.get -> HackerOs.AppSdk.Threading.HackBackgroundJobException?
+HackerOs.Platform.Core.Execution.RemoteProcessExit.JobFault.init -> void
+HackerOs.Platform.Core.Execution.RemoteProcessExit.JobRejected.get -> bool
+HackerOs.Platform.Core.Execution.RemoteProcessExit.JobRejected.init -> void
+HackerOs.Platform.Core.Execution.RemoteProcessExit.JobResult.get -> string?
+HackerOs.Platform.Core.Execution.RemoteProcessExit.JobResult.init -> void
+HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.BackgroundJobs.get -> System.Func<HackerOs.Platform.Core.Execution.BackgroundJobService?>?
+HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.BackgroundJobs.init -> void
+static HackerOs.Platform.Core.Execution.BackgroundJobService.ProcessNameOf(HackerOs.App.Abstractions.AppManifest! manifest, string! task) -> string!
 HackerOs.Platform.Core.ServerConnection.HttpHostInfoClient
 HackerOs.Platform.Core.ServerConnection.HttpHostInfoClient.FindServingServerAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
 HackerOs.Platform.Core.ServerConnection.HttpHostInfoClient.GetHostInfoAsync(System.Uri! serverBaseUrl, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Server.Contracts.Hosting.HostInfoResponse!>!
