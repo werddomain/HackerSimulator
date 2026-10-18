@@ -17,6 +17,7 @@
 @inject AppLifecycleOrchestrator Orchestrator
 @inject IProcessManager ProcessManager
 @inject WindowCloseCoordinator CloseCoordinator
+@inject WindowResponsivenessMonitor Responsiveness
 @inject WindowCloseGuardRegistry CloseGuards
 @inject AppBackHandlerRegistry BackHandlers
 @inject WindowAppEventDispatcher WindowEvents
@@ -40,7 +41,8 @@
                      OnClose="HandleClose"
                      OnBack="HandleBack"
                      OnWindowMenu="HandleWindowMenu"
-                     OnGesture="HandleGesture">
+                     OnGesture="HandleGesture"
+                     WindowOverlay="UnresponsiveWindowOverlay.ForWindow">
             <WindowContent Context="window">
                 @if (window.Content is not null)
                 {
@@ -99,6 +101,9 @@
             }
         </div>
     }
+
+    @* ADR 0127 §2: samples which windows stop answering their inputs. *@
+    <WindowResponsivenessHost />
 
     @* ADR 0095 §3: window switcher, keyboard move/resize and window menu. *@
     <WindowManagerOverlays Commands="KeyboardCommands" />
@@ -221,6 +226,13 @@
 
     private async Task HandleClose(WindowId id)
     {
+        // ADR 0127 §3: the close button of a window that does not answer opens "Attendre |
+        // Terminer l'application" instead of a close the frozen app could not answer.
+        if (Responsiveness.InterceptClose(id))
+        {
+            return;
+        }
+
         WindowRuntimeState? window = WindowRuntime.Windows.FirstOrDefault(w => w.Id == id);
         if (window?.OnRequestClose is { } onRequestClose)
         {
@@ -296,6 +308,7 @@
 
     private IDisposable? _processSubscription;
     private Func<WindowId, Task>? _closeWindow;
+
 
     protected override void OnInitialized()
     {

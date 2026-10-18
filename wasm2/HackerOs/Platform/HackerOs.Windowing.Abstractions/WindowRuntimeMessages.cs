@@ -52,6 +52,15 @@ public sealed record ChangeViewportCommand(WindowBounds WorkArea) : WindowComman
 /// <param name="Title">The new title; must not be empty once cleaned.</param>
 public sealed record SetWindowTitleCommand(WindowId WindowId, string Title) : WindowCommand;
 
+/// <summary>
+/// Marks a window as answering its inputs or not (ADR 0127 §2), the way a window manager flags a
+/// client that missed its <c>_NET_WM_PING</c>. Issued by the platform's responsiveness monitor,
+/// never by the app itself.
+/// </summary>
+/// <param name="WindowId">The window whose state changes.</param>
+/// <param name="IsResponding">Whether the window answers its inputs.</param>
+public sealed record SetWindowRespondingCommand(WindowId WindowId, bool IsResponding) : WindowCommand;
+
 /// <summary>Base contract for an immutable fact emitted after a window transition.</summary>
 public abstract record WindowEvent;
 
@@ -89,6 +98,9 @@ public sealed record WindowClosedEvent(WindowId WindowId, bool WasForced) : Wind
 
 /// <summary>Reports that a window's displayed title changed (ADR 0117 §3).</summary>
 public sealed record WindowTitleChangedEvent(WindowId WindowId, string PreviousTitle, string Title) : WindowEvent;
+
+/// <summary>Reports that a window started or stopped answering its inputs (ADR 0127 §2).</summary>
+public sealed record WindowRespondingChangedEvent(WindowId WindowId, bool IsResponding) : WindowEvent;
 
 /// <summary>Reports a work-area change and the resulting window snapshots.</summary>
 public sealed record WindowViewportChangedEvent(WindowBounds WorkArea, IReadOnlyList<WindowRuntimeState> Windows) : WindowEvent;

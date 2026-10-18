@@ -217,3 +217,9 @@
 .chrome-button-menu .window-icon {
     pointer-events: none;
 }
+
+/* ADR 0127 §3: the "(Not responding)" suffix shown after an unresponsive window's title. */
+.window-title-state {
+    font-weight: 500;
+    opacity: 0.85;
+}
