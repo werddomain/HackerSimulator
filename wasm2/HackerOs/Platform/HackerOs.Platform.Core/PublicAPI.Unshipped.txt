@@ -1,1 +1,42 @@
 #nullable enable
+HackerOs.Platform.Core.ServerConnection.HttpHostInfoClient
+HackerOs.Platform.Core.ServerConnection.HttpHostInfoClient.FindServingServerAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
+HackerOs.Platform.Core.ServerConnection.HttpHostInfoClient.GetHostInfoAsync(System.Uri! serverBaseUrl, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Server.Contracts.Hosting.HostInfoResponse!>!
+HackerOs.Platform.Core.ServerConnection.HttpHostInfoClient.HttpHostInfoClient(System.Net.Http.HttpClient! httpClient, System.Uri? ownOrigin) -> void
+HackerOs.Platform.Core.ServerConnection.IHostInfoClient
+HackerOs.Platform.Core.ServerConnection.IHostInfoClient.FindServingServerAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
+HackerOs.Platform.Core.ServerConnection.IHostInfoClient.GetHostInfoAsync(System.Uri! serverBaseUrl, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Server.Contracts.Hosting.HostInfoResponse!>!
+HackerOs.Platform.Core.ServerConnection.ServerPresence
+HackerOs.Platform.Core.ServerConnection.ServerPresence.AccountId.get -> System.Guid?
+HackerOs.Platform.Core.ServerConnection.ServerPresence.AccountId.init -> void
+HackerOs.Platform.Core.ServerConnection.ServerPresence.Detail.get -> string?
+HackerOs.Platform.Core.ServerConnection.ServerPresence.Detail.init -> void
+HackerOs.Platform.Core.ServerConnection.ServerPresence.ServedByServer.get -> bool
+HackerOs.Platform.Core.ServerConnection.ServerPresence.ServedByServer.init -> void
+HackerOs.Platform.Core.ServerConnection.ServerPresence.ServerPresence(HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus Status, System.Uri? ServerUrl = null, System.Guid? AccountId = null, bool ServedByServer = false, string? ServerVersion = null, string? Detail = null) -> void
+HackerOs.Platform.Core.ServerConnection.ServerPresence.ServerUrl.get -> System.Uri?
+HackerOs.Platform.Core.ServerConnection.ServerPresence.ServerUrl.init -> void
+HackerOs.Platform.Core.ServerConnection.ServerPresence.ServerVersion.get -> string?
+HackerOs.Platform.Core.ServerConnection.ServerPresence.ServerVersion.init -> void
+HackerOs.Platform.Core.ServerConnection.ServerPresence.Status.get -> HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
+HackerOs.Platform.Core.ServerConnection.ServerPresence.Status.init -> void
+HackerOs.Platform.Core.ServerConnection.ServerPresenceService
+HackerOs.Platform.Core.ServerConnection.ServerPresenceService.Changed -> System.Action?
+HackerOs.Platform.Core.ServerConnection.ServerPresenceService.Current.get -> HackerOs.Platform.Core.ServerConnection.ServerPresence!
+HackerOs.Platform.Core.ServerConnection.ServerPresenceService.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Platform.Core.ServerConnection.ServerPresenceService.IdentifyAsync(string! login, string! password, bool createAccount, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.ServerConnection.ServerPresenceService.ReconnectAsync() -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.ServerConnection.ServerPresenceService.ServerPresenceService(HackerOs.Platform.Core.ServerConnection.IServerConnectionService! connection, HackerOs.Platform.Core.ServerConnection.IHostInfoClient! hostInfo, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<string?>>? readConfig = null, Microsoft.Extensions.Logging.ILogger<HackerOs.Platform.Core.ServerConnection.ServerPresenceService!>? logger = null, System.Func<System.TimeSpan, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? delay = null) -> void
+HackerOs.Platform.Core.ServerConnection.ServerPresenceService.StartAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.ServerConnection.ServerPresenceService.StopAsync() -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
+HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.Connected = 2 -> HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
+HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.ConnectedAnonymous = 3 -> HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
+HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.Connecting = 1 -> HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
+HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.Error = 5 -> HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
+HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.NotConfigured = 0 -> HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
+HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus.Offline = 4 -> HackerOs.Platform.Core.ServerConnection.ServerPresenceStatus
+const HackerOs.Platform.Core.ServerConnection.ServerPresenceService.SupportedApiMajorVersion = "1" -> string!
+static HackerOs.Platform.Core.ServerConnection.ServerPresence.NotConfigured.get -> HackerOs.Platform.Core.ServerConnection.ServerPresence!
+static HackerOs.Platform.Core.ServerConnection.ServerPresenceService.ConfigFile.get -> HackerOs.Platform.Core.Settings.OsSettingsFile!
+static HackerOs.Platform.Core.ServerConnection.ServerPresenceService.ParseAutoConnect(string? content) -> bool

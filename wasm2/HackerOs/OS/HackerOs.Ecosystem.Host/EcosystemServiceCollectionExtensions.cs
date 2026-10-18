@@ -274,10 +274,8 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<IServerConnectionRepository>(provider =>
             new IndexedDbServerConnectionRepository(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddSingleton<HttpClient>();
-        // TryAdd, not Add: the server-hosted host (ADR 0036) registers its own direct-injection
-        // implementations before calling this method, so it never gets the HTTP-backed defaults
-        // below. Both WASM hosts register nothing here first, so they get the same Http*Client
-        // defaults as before this change — zero behavior change for them.
+        // TryAdd, not Add: a host or a test may register its own clients first. Every host reaches
+        // the server over HTTP and WebSocket since ADR 0130 retired the direct injection of ADR 0036.
         services.TryAddSingleton<IAccountClient, HttpAccountClient>();
         services.TryAddSingleton<IProxyClient, HttpProxyClient>();
         services.AddScoped<IServerConnectionService>(provider =>
@@ -289,6 +287,16 @@ public static class EcosystemServiceCollectionExtensions
                 asyncPasswordHasher: (password, salt, iterations, length, ct) =>
                     hasher.DeriveKeyAsync(password, salt, iterations, length, ct));
         });
+
+        // ADR 0134: automatic connection to the server that served the OS, and the state the
+        // notification-area icon shows. A browser host registers the client with its own origin
+        // first (AddHackerOsBrowserHost); without one, only a server linked in Settings is used.
+        services.TryAddScoped<IHostInfoClient>(provider => new HttpHostInfoClient(provider.GetRequiredService<HttpClient>(), ownOrigin: null));
+        services.AddScoped<ServerPresenceService>(provider => new ServerPresenceService(
+            provider.GetRequiredService<IServerConnectionService>(),
+            provider.GetRequiredService<IHostInfoClient>(),
+            cancellationToken => provider.GetRequiredService<IOsSettingsService>().ReadFileAsync(ServerPresenceService.ConfigFile, cancellationToken),
+            provider.GetService<Microsoft.Extensions.Logging.ILogger<ServerPresenceService>>()));
 
         // Sync plumbing shared by every domain below; each is a no-op when disconnected. Settings
         // have no domain of their own anymore: user settings are home files carried by FileSystem
@@ -413,9 +421,9 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<IStorageInspector>(provider =>
             new IndexedDbStorageInspector(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         // Whole-machine backup and restore behind HackSystemBackup (ADR 0099 section 1): IndexedDB
-        // export/import, download to the host and the host's file picker. Browser hosts only: the
-        // server-rendered host (ADR 0027) would carry the whole database over its circuit, so it
-        // leaves the gateway unsupported and Settings hides the page.
+        // export/import, download to the host and the host's file picker. Every host runs the OS in
+        // the browser since ADR 0130; a host without a browser leaves the gateway unsupported and
+        // Settings hides the page.
         services.AddScoped<ISystemBackupDevice>(provider =>
             new BrowserSystemBackupDevice(provider.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
         services.AddScoped<SystemBackupService>(provider => new SystemBackupService(

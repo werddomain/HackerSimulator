@@ -45,11 +45,12 @@ relues par `exec/1-remote-gateways` et tiennent toujours (ADR 0138 §9). Le
 service d'exemple et `hackwebd` tournent en worker dédié depuis que `HackEvents`
 et `Watch` traversent la frontière (ADR 0124).
 
-`HackerOs.Server` n'a pas de Web Worker .NET : `AppExecutionHost` y est ignoré
-et le démarrage écrit dans `/var/log/syslog` « workers: no Web Worker on this
-host: AppExecutionHost (pool, dedicated) is ignored, every process runs in the
-host process (ADR 0070, section 6) ». `test/test` exécute côté navigateur le
-`Program.cs` de l'Ecosystem : il a les workers.
+Les trois hôtes ont les workers : `test/test` exécute côté navigateur le
+`Program.cs` de l'Ecosystem, et `HackerOs.Server` sert l'OS de l'Ecosystem en
+WebAssembly depuis l'ADR 0130 (son ancien rendu Interactive Server, sans
+worker, a été retiré). Un hôte composé sans `IWebWorkerRuntime` écrit dans
+`/var/log/syslog` « workers: no Web Worker on this host: AppExecutionHost
+(pool, dedicated) is ignored, every process runs in the host process ».
 
 ## Architecture
 

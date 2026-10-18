@@ -95,9 +95,26 @@ public sealed class AccountService : IAccountService
 
         var device = await _db.Devices
             .FirstOrDefaultAsync(d => d.AccountId == account.AccountId
-                                   && d.DeviceFingerprint == request.DeviceFingerprint
-                                   && !d.IsRevoked, ct)
-            ?? throw new UnauthorizedAccessException("DEVICE_NOT_REGISTERED");
+                                   && d.DeviceFingerprint == request.DeviceFingerprint, ct);
+        if (device is { IsRevoked: true })
+            throw new UnauthorizedAccessException("DEVICE_REVOKED");
+
+        if (device is null)
+        {
+            // ADR 0137 §4: a new browser (another device, or the OS a server served, ADR 0134) logs
+            // into an existing account. The password was just verified, which is what registering a
+            // device through POST /api/devices proves with an access token, so the login registers it.
+            device = new DeviceEntity
+            {
+                DeviceId = Guid.NewGuid(),
+                AccountId = account.AccountId,
+                DeviceName = "HackerOS",
+                DeviceFingerprint = request.DeviceFingerprint,
+                RegisteredUtc = DateTimeOffset.UtcNow
+            };
+            _db.Devices.Add(device);
+            await _audit.RecordAsync(account.AccountId, device.DeviceId, "DEVICE_REGISTERED_AT_LOGIN", null, ct);
+        }
 
         device.LastSeenUtc = DateTimeOffset.UtcNow;
 

@@ -73,7 +73,7 @@ recompiler : voir [`resource-accounting.md`](resource-accounting.md).
 |---|---|---|
 | PWA autonome | `dotnet run --project OS/HackerOs.Ecosystem` | L'hôte livré, sans serveur. |
 | Hôte de débogage | `dotnet run --project test/test` | Débogueur WebAssembly du navigateur ou de l'IDE ([`old/webassembly-debugging.md`](old/webassembly-debugging.md)). `dotnet run --project test/test -- --test-demo` affiche le bouton qui crée les fichiers de test E2E ([`old/e2e-test-demo-mode.md`](old/e2e-test-demo-mode.md)). |
-| Serveur optionnel | `dotnet run --project Server/HackerOs.Server` | Synchronisation, comptes, relais réseau, et interface servie en `InteractiveServer`. |
+| Serveur optionnel | `dotnet run --project Server/HackerOs.Server` | Synchronisation, comptes, relais réseau, et l'OS de l'Ecosystem servi tel quel en WebAssembly ([`server-hosting.md`](server-hosting.md)). |
 
 Publier la PWA (Release trimmée, voir [Publier en Release trimmée](#publier-en-release-trimmée)) :
 
@@ -124,10 +124,13 @@ Déroulé :
    manque), Terminal avec `ps` puis `cat /proc/self/status` (valeurs de `CpuSource:` et
    `MemSource:` vérifiées ; chaque sortie est lue une fois l'invite suivante
    affichée, car une commande dans un Web Worker écrit en plusieurs messages), System Monitor (le processus du terminal est
-   listé), fermeture de chaque fenêtre. Toute erreur de la console ou de la
-   page fait échouer le parcours, comme toute ligne `fail:` ou « Unhandled
-   exception » du journal de l'hôte (erreurs d'un circuit `InteractiveServer`,
-   invisibles côté navigateur).
+   listé), fermeture de chaque fenêtre. Sur le parcours `server`, l'icône du
+   serveur de la zone de notification doit passer seule à « Connected, not
+   identified », puis à « Connected » après « Identify » et la création d'un
+   compte depuis son panneau (ADR 0134) ; sur les autres hôtes, aucune icône
+   de serveur. Toute erreur de la console ou de la page fait échouer le
+   parcours, comme toute ligne `fail:` ou « Unhandled exception » du journal de
+   l'hôte (erreurs d'une requête de l'API, invisibles côté navigateur).
 4. L'hôte est arrêté (SIGTERM au groupe, SIGKILL après 15 s), puis le
    parcours suivant commence. Le script sort avec un code non nul au moindre
    échec et affiche une ligne par étape :
@@ -154,7 +157,7 @@ RESULT: PASS
 | `ecosystem-build-off` | PWA publiée avec `-p:HackerOsCpuAccounting=false -p:HackerOsMemoryAccounting=false` | coupées au build ; aucun `HackerOs.Platform.ResourceAccounting*` ne doit être publié | `simulated` |
 | `ecosystem-settings-off` | même publication que `ecosystem`, `wwwroot/appsettings.json` réécrit avec `Enabled: false` pour `Cpu` et `Memory` | coupées au démarrage | `simulated` |
 | `test-host` | `test/test` | réglage de l'hôte (activées) | `measured` |
-| `server` | `HackerOs.Server` (`InteractiveServer`) | réglage de l'hôte (coupées) | `simulated` |
+| `server` | `HackerOs.Server` (sert l'OS de l'Ecosystem en WebAssembly, ADR 0130) | `appsettings.json` de l'Ecosystem (activées) | `measured` |
 
 Sur un arbre sans les interrupteurs de l'ADR 0066
 (`build/HackerOs.ResourceAccounting.targets`, section
