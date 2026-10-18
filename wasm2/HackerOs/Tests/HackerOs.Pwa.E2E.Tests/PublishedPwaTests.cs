@@ -53,8 +53,7 @@ public sealed class PublishedPwaTests(PwaPublishFixture fixture)
         failures.Clear();
 
         string version = await PwaTestSupport.GetAssetsManifestVersionAsync(page);
-        string[] cacheKeys = await PwaTestSupport.GetCacheKeysAsync(page);
-        Assert.Equal([$"hackeros-cache-{version}"], cacheKeys);
+        await PwaTestSupport.AssertOnlyReleaseCacheAsync(page, $"hackeros-cache-{version}");
 
         Assert.Empty(failures);
     }
@@ -198,8 +197,7 @@ public sealed class PublishedPwaTests(PwaPublishFixture fixture)
 
         string v2Version = await PwaTestSupport.GetAssetsManifestVersionAsync(page);
         Assert.NotEqual(v1Version, v2Version);
-        string[] cacheKeys = await PwaTestSupport.GetCacheKeysAsync(page);
-        Assert.Equal([$"hackeros-cache-{v2Version}"], cacheKeys);
+        await PwaTestSupport.AssertOnlyReleaseCacheAsync(page, $"hackeros-cache-{v2Version}");
 
         await PwaTestSupport.AssertFileContentAsync(page, directory, "update-proof.txt", content);
 
@@ -249,7 +247,7 @@ public sealed class PublishedPwaTests(PwaPublishFixture fixture)
         // Our reload, then exactly one recovery reload.
         Assert.Equal(2, loads);
         Assert.True(await PwaTestSupport.GetCachedLengthAsync(page, cacheName, damagedUrl) > PwaTestSupport.CorruptedBody.Length);
-        Assert.Equal([cacheName], await PwaTestSupport.GetCacheKeysAsync(page));
+        await PwaTestSupport.AssertOnlyReleaseCacheAsync(page, cacheName);
         // A successful boot clears the one-reload guard again.
         Assert.Null(await page.EvaluateAsync<string?>("() => sessionStorage.getItem('hackeros.bootRecovery')"));
     }
