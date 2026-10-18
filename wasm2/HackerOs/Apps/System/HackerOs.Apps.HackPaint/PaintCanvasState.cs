@@ -141,6 +141,13 @@ public sealed class PaintCanvasState
     public void PanBy(int deltaX, int deltaY) { PanX += deltaX; PanY += deltaY; }
 
     /// <summary>Rotates the actual pixels clockwise, retaining them in history.</summary>
+    /// <remarks>
+    /// Stays on the window's thread rather than in a HackBackground task (ADR 0140, see
+    /// docs/background-jobs.md): Hack Paint has no filter yet, and its whole-image operations (rotate,
+    /// crop) are one pass of copies over the buffer. A 4096×4096 image is 64 MiB of RGBA, four times
+    /// what a task's input may carry as JSON (16 MiB, ADR 0128 section 4), and the copy back would cost
+    /// more than the pass itself. A future filter goes through a task with a temporary file instead.
+    /// </remarks>
     public void Rotate90()
     {
         var source = _history[_historyIndex].Buffer;

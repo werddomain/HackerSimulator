@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using HackerOs.AppSdk.Diagnostics;
+using HackerOs.AppSdk.Threading;
 using HackerOs.App.Abstractions;
 
 namespace HackerOs.Apps.CodeEditor;
@@ -244,7 +245,7 @@ public sealed class CodeEditorWorkspaceSearch
         _files = new CodeEditorFileService(workspace.FileSystem);
     }
 
-    /// <summary>Runs <paramref name="query"/> over the folder.</summary>
+    /// <summary>Runs <paramref name="query"/> over the folder, on the calling thread.</summary>
     /// <param name="query">What to look for.</param>
     /// <param name="openContent">The content of an open tab for a path, or null to read the file.</param>
     /// <param name="cancellationToken">Cancels a search superseded by new typing.</param>
@@ -260,18 +261,79 @@ public sealed class CodeEditorWorkspaceSearch
             return error is null ? CodeEditorSearchResult.Empty : CodeEditorSearchResult.Empty with { Error = error };
         }
 
+        CodeEditorWorkspaceListing listing = await _workspace.ListFilesAsync(cancellationToken);
+        // ADR 0069: a folder-wide search is long work on the UI thread; let the UI paint and honor a
+        // stop request between files.
+        return await SearchFilesAsync(
+            listing, query, matcher, openContent, _files,
+            () => HackProcess.CheckpointAsync(cancellationToken), progress: null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs <paramref name="query"/> over the folder in a background task (ADR 0128, ADR 0140): the
+    /// folder is listed here, then the files are read and matched by a child process of the editor
+    /// (<c>code:search</c> in <c>ps</c>), in a Web Worker when the host has some, so a large folder or
+    /// a slow pattern never freezes the desktop. Cancelling (new typing) cancels the task.
+    /// </summary>
+    /// <param name="query">What to look for.</param>
+    /// <param name="openContent">The content of an open tab for a path, or null to read the file.</param>
+    /// <param name="progress">Receives the share of files searched, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">Cancels a search superseded by new typing.</param>
+    internal async Task<CodeEditorSearchResult> SearchInBackgroundAsync(
+        CodeEditorSearchQuery query,
+        Func<VirtualPath, string?>? openContent,
+        IProgress<HackBackgroundProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        // An invalid pattern is reported at once, without starting a process.
+        if (CodeEditorTextSearch.BuildMatcher(query, out string? error) is null)
+        {
+            return error is null ? CodeEditorSearchResult.Empty : CodeEditorSearchResult.Empty with { Error = error };
+        }
+
+        CodeEditorWorkspaceListing listing = await _workspace.ListFilesAsync(cancellationToken);
+        // The task sees nothing of the window: the files cross as paths, unsaved tabs as their text.
+        List<CodeEditorSearchJobFile> files = [.. listing.Files.Select(file =>
+            new CodeEditorSearchJobFile(file.Path.Value, file.RelativePath, file.Length, openContent?.Invoke(file.Path)))];
+        CodeEditorSearchJobOutput output = await HackBackground.RunAsync<CodeEditorSearchJobInput, CodeEditorSearchJobOutput>(
+            CodeEditorSearchJobs.Search,
+            new CodeEditorSearchJobInput(query, files, listing.Truncated),
+            progress,
+            new HackBackgroundOptions { Name = "search" },
+            cancellationToken);
+        return new CodeEditorSearchResult(
+            [.. output.Files.Select(found => new CodeEditorSearchFileResult(listing.Files[found.FileIndex], found.Matches))],
+            output.MatchCount,
+            output.FilesSearched,
+            output.Truncated);
+    }
+
+    /// <summary>
+    /// The search proper, shared by <see cref="SearchAsync"/> (on the calling thread) and
+    /// <see cref="CodeEditorSearchJobs.Search"/> (in the background task).
+    /// </summary>
+    internal static async Task<CodeEditorSearchResult> SearchFilesAsync(
+        CodeEditorWorkspaceListing listing,
+        CodeEditorSearchQuery query,
+        Regex matcher,
+        Func<VirtualPath, string?>? openContent,
+        CodeEditorFileService fileService,
+        Func<ValueTask> checkpoint,
+        Action<int>? progress,
+        CancellationToken cancellationToken)
+    {
         CodeEditorGlob include = CodeEditorGlob.Parse(query.Include);
         CodeEditorGlob exclude = CodeEditorGlob.Parse(query.Exclude);
-        CodeEditorWorkspaceListing listing = await _workspace.ListFilesAsync(cancellationToken);
         List<CodeEditorSearchFileResult> results = [];
         int total = 0;
         int searched = 0;
+        int visited = 0;
         bool truncated = listing.Truncated;
         foreach (CodeEditorWorkspaceFile file in listing.Files)
         {
-            // ADR 0069: a folder-wide search is long work on the UI thread; let the UI paint and
-            // honor a stop request between files.
-            await HackProcess.CheckpointAsync(cancellationToken);
+            await checkpoint();
+            progress?.Invoke(visited++);
             if ((!include.IsEmpty && !include.Matches(file)) || exclude.Matches(file))
             {
                 continue;
@@ -285,7 +347,7 @@ public sealed class CodeEditorWorkspaceSearch
                     continue;
                 }
 
-                CodeEditorLoadResult loaded = await _files.LoadAsync(file.Path, cancellationToken);
+                CodeEditorLoadResult loaded = await fileService.LoadAsync(file.Path, cancellationToken);
                 if (!loaded.Succeeded || loaded.Content is null)
                 {
                     continue;
