@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Apps\Samples\HackerOs.Samples.WindowApp\HackerOs.Samples.WindowApp.csproj" />
+    <ProjectReference Include="..\HackerOs.Tests.Support\HackerOs.Tests.Support.csproj" />
   </ItemGroup>
 
 </Project>

@@ -73,48 +73,112 @@ public sealed class WorkerRemoteProcessHost : IRemoteProcessHost
     {
         worker.Add(session);
         session.Attach();
-        IAppExecutionContext context = session.Launch.Context;
-        IAppEnvironmentGateway processEnvironment = context.Environment;
-        Type entryType = session.Launch.Descriptor.EntryPointType;
+        RemoteProcessLaunch launch = session.Launch!;
+        IAppExecutionContext context = launch.Context;
+        Type entryType = launch.Descriptor.EntryPointType;
         worker.Post(WorkerMessage.Create(WorkerMessageType.Start, writer =>
         {
             writer.WriteNumber("p", session.Pid);
             writer.WriteNumber("k", isService ? 1 : 0);
             writer.WriteString("asm", entryType.Assembly.GetName().Name + ".dll");
             writer.WriteString("ty", entryType.FullName);
-            writer.WriteString("mf", AppManifestJsonSerializer.SerializeCanonical(context.Manifest));
-            writer.WriteBoolean("in", session.InputAttached);
-            WireCodec.WriteTime(writer, "cu", _pool.Clock.UtcNow);
-            writer.WriteNumber("ck", _pool.Clock.CurrentTick);
-            WireCodec.WriteStrings(writer, "argv", arguments);
-            writer.WriteString("cwd", workingDirectory);
-            WireCodec.WriteDictionary(writer, "envs", environment);
-
-            writer.WriteStartObject("id");
-            writer.WriteString("in", context.InstanceId.ToString("N"));
-            writer.WriteString("u", context.UserId);
-            writer.WriteString("home", context.HomeDirectory);
-            writer.WriteBoolean("root", context.IsRootElevated);
-            writer.WriteString("login", context.UserLoginName);
-            writer.WriteString("disp", context.UserDisplayName);
-            writer.WriteNumber("auth", (int)context.UserAuthority);
-            WireCodec.WriteStrings(writer, "caps", context.GrantedCapabilities.Order(StringComparer.Ordinal));
-            writer.WriteString("s", context.SessionId.Value.ToString("N"));
-            WireCodec.WriteProcess(writer, "pr", context.Processes.OwnProcess);
-            if (context.Intent is { } intent)
-            {
-                WireCodec.WriteIntentDelivery(writer, "it", intent);
-            }
-            writer.WriteEndObject();
-
-            writer.WriteStartObject("env");
-            WireCodec.WriteStrings(writer, "argv", processEnvironment.GetCommandLineArgs());
-            writer.WriteString("cwd", processEnvironment.CurrentDirectory);
-            WireCodec.WriteDictionary(writer, "vars", processEnvironment.GetVariables());
-            writer.WriteString("user", processEnvironment.UserName);
-            writer.WriteString("host", processEnvironment.MachineName);
-            writer.WriteEndObject();
+            WriteStart(writer, session, context, arguments, workingDirectory, environment);
         }));
+    }
+
+    /// <inheritdoc />
+    public bool CanRunBackgroundJobs => true;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// ADR 0128 section 3: the task takes a core of the pool like a command (the ready worker when none
+    /// is free), and gives it back when it ends. Its <c>start</c> message names the task instead of an
+    /// entry point; the caller's cancellation is a Ctrl+C of the task's process.
+    /// </remarks>
+    public async Task<RemoteProcessExit> RunBackgroundJobAsync(RemoteBackgroundJobLaunch launch, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(launch);
+        WorkerConnection worker = await _pool.AcquireForCommandAsync(null, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            RemoteProcessSession session = new(worker, launch);
+            worker.Add(session);
+            session.Attach();
+            IAppExecutionContext context = launch.Context;
+            IAppEnvironmentGateway processEnvironment = context.Environment;
+            HackerOs.AppSdk.Threading.HackBackgroundJobTarget target = launch.Request.Target;
+            worker.Post(WorkerMessage.Create(WorkerMessageType.Start, writer =>
+            {
+                writer.WriteNumber("p", session.Pid);
+                writer.WriteNumber("k", HackerOs.Platform.WorkerHost.Worker.WorkerProcessHost.JobKind);
+                writer.WriteString("asm", target.AssemblyName + ".dll");
+                writer.WriteString("ty", target.TypeName);
+                writer.WriteStartObject("jt");
+                writer.WriteString("asm", target.AssemblyName);
+                writer.WriteString("ty", target.TypeName);
+                if (target.MethodName is { } method)
+                {
+                    writer.WriteString("me", method);
+                }
+
+                writer.WriteString("it", target.InputTypeName);
+                writer.WriteEndObject();
+                writer.WriteString("ji", launch.Request.InputJson);
+                WriteStart(
+                    writer, session, context, processEnvironment.GetCommandLineArgs(), processEnvironment.CurrentDirectory,
+                    processEnvironment.GetVariables());
+            }));
+            using CancellationTokenRegistration interrupt = cancellationToken.Register(session.Interrupt);
+            return await session.Exit.ConfigureAwait(false);
+        }
+        finally
+        {
+            _pool.Release(null);
+        }
+    }
+
+    /// <summary>The identity, environment and clock every <c>start</c> message carries.</summary>
+    private void WriteStart(
+        System.Text.Json.Utf8JsonWriter writer,
+        RemoteProcessSession session,
+        IAppExecutionContext context,
+        IReadOnlyList<string> arguments,
+        string workingDirectory,
+        IReadOnlyDictionary<string, string> environment)
+    {
+        IAppEnvironmentGateway processEnvironment = context.Environment;
+        writer.WriteString("mf", AppManifestJsonSerializer.SerializeCanonical(context.Manifest));
+        writer.WriteBoolean("in", session.InputAttached);
+        WireCodec.WriteTime(writer, "cu", _pool.Clock.UtcNow);
+        writer.WriteNumber("ck", _pool.Clock.CurrentTick);
+        WireCodec.WriteStrings(writer, "argv", arguments);
+        writer.WriteString("cwd", workingDirectory);
+        WireCodec.WriteDictionary(writer, "envs", environment);
+
+        writer.WriteStartObject("id");
+        writer.WriteString("in", context.InstanceId.ToString("N"));
+        writer.WriteString("u", context.UserId);
+        writer.WriteString("home", context.HomeDirectory);
+        writer.WriteBoolean("root", context.IsRootElevated);
+        writer.WriteString("login", context.UserLoginName);
+        writer.WriteString("disp", context.UserDisplayName);
+        writer.WriteNumber("auth", (int)context.UserAuthority);
+        WireCodec.WriteStrings(writer, "caps", context.GrantedCapabilities.Order(StringComparer.Ordinal));
+        writer.WriteString("s", context.SessionId.Value.ToString("N"));
+        WireCodec.WriteProcess(writer, "pr", context.Processes.OwnProcess);
+        if (context.Intent is { } intent)
+        {
+            WireCodec.WriteIntentDelivery(writer, "it", intent);
+        }
+        writer.WriteEndObject();
+
+        writer.WriteStartObject("env");
+        WireCodec.WriteStrings(writer, "argv", processEnvironment.GetCommandLineArgs());
+        writer.WriteString("cwd", processEnvironment.CurrentDirectory);
+        WireCodec.WriteDictionary(writer, "vars", processEnvironment.GetVariables());
+        writer.WriteString("user", processEnvironment.UserName);
+        writer.WriteString("host", processEnvironment.MachineName);
+        writer.WriteEndObject();
     }
 
     /// <summary>A service running in a worker of its own (ADR 0070, section 3), or a web app in the web worker (ADR 0074).</summary>

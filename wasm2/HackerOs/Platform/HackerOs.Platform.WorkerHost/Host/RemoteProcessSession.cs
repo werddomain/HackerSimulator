@@ -64,16 +64,35 @@ internal sealed class RemoteProcessSession
         TextWriter output,
         TextWriter error,
         bool inputAttached)
+        : this(worker, launch.Context, launch.Control, input, output, error, inputAttached)
+    {
+        Launch = launch;
+    }
+
+    /// <summary>A background task's process (ADR 0128): no entry point, no streams of its own.</summary>
+    public RemoteProcessSession(WorkerConnection worker, RemoteBackgroundJobLaunch job)
+        : this(worker, job.Context, job.Control, TextReader.Null, TextWriter.Null, TextWriter.Null, inputAttached: false)
+    {
+        JobProgress = job.Progress;
+    }
+
+    private RemoteProcessSession(
+        WorkerConnection worker,
+        IAppExecutionContext context,
+        ProcessControlBlock? control,
+        TextReader input,
+        TextWriter output,
+        TextWriter error,
+        bool inputAttached)
     {
         _worker = worker;
-        Launch = launch;
-        _context = launch.Context;
-        _control = launch.Control;
+        _context = context;
+        _control = control;
         _input = input;
         _output = output;
         _error = error;
         InputAttached = inputAttached;
-        Pid = launch.Context.ProcessId.Value;
+        Pid = context.ProcessId.Value;
         _events = new RemoteEventRouter(Pid, worker.Post, worker.Log);
         _outputPump = PumpOutputAsync();
     }
@@ -81,8 +100,11 @@ internal sealed class RemoteProcessSession
     /// <summary>Gets the process.</summary>
     public long Pid { get; }
 
-    /// <summary>Gets what the OS handed to the worker.</summary>
-    public RemoteProcessLaunch Launch { get; }
+    /// <summary>Gets what the OS handed to the worker; <see langword="null"/> for a background task.</summary>
+    public RemoteProcessLaunch? Launch { get; }
+
+    /// <summary>Receives the reports of a background task (ADR 0128), or <see langword="null"/>.</summary>
+    public Action<HackerOs.AppSdk.Threading.HackBackgroundProgress>? JobProgress { get; }
 
     /// <summary>Gets whether the process reads a real standard input (a pipe or the terminal).</summary>
     public bool InputAttached { get; }
@@ -418,6 +440,43 @@ internal sealed class RemoteProcessSession
     }
 
     /// <summary>
+    /// ADR 0128 section 6: a process in a worker starts a background task. The OS places it like any
+    /// other (the pool, or the main thread) through this process's own gateway, and forwards its
+    /// reports to the worker as <c>bgp</c> messages keyed by the caller's job number <c>j</c>.
+    /// </summary>
+    private async Task<Action<Utf8JsonWriter>> RunBackgroundJobAsync(JsonElement a, CancellationToken cancellationToken)
+    {
+        JsonElement target = a.GetProperty("jt");
+        HackerOs.AppSdk.Threading.HackBackgroundJobRequest request = new(
+            new HackerOs.AppSdk.Threading.HackBackgroundJobTarget(
+                target.GetString("asm"), target.GetString("ty"), target.GetOptionalString("me"), target.GetString("it")),
+            a.GetString("ji"),
+            a.GetOptionalString("n"),
+            a.GetOptional("ni")?.GetInt32() ?? 0);
+        int job = a.GetInt32("j");
+        Action<HackerOs.AppSdk.Threading.HackBackgroundProgress>? progress = a.GetFlag("pg")
+            ? report => _worker.Post(WorkerMessage.Create(WorkerMessageType.BackgroundJobProgress, writer =>
+            {
+                writer.WriteNumber("p", Pid);
+                writer.WriteNumber("j", job);
+                writer.WriteNumber("f", report.Fraction);
+                if (report.Message is { } message)
+                {
+                    writer.WriteString("m", message);
+                }
+            }))
+            : null;
+        string? result = await _context.Background.RunAsync(request, progress, cancellationToken).ConfigureAwait(false);
+        return writer =>
+        {
+            if (result is not null)
+            {
+                writer.WriteString("r", result);
+            }
+        };
+    }
+
+    /// <summary>
     /// Opens a listening socket for the process (ADR 0074, section 2) and starts carrying its
     /// requests to the worker as <c>hreq</c> messages; the worker buffers a request that arrives
     /// before the answer naming the socket.
@@ -536,6 +595,14 @@ internal sealed class RemoteProcessSession
                     }
                 };
             }
+
+            case RemoteOps.BackgroundProgress:
+                // ADR 0128 section 4: the task's own process reports; already throttled in the worker.
+                JobProgress?.Invoke(new HackerOs.AppSdk.Threading.HackBackgroundProgress(
+                    Math.Clamp(a.GetDouble("f"), 0d, 1d), a.GetOptionalString("m")));
+                return static _ => { };
+            case RemoteOps.BackgroundRun:
+                return await RunBackgroundJobAsync(a, cancellationToken).ConfigureAwait(false);
 
             case RemoteOps.EnvSetDirectory:
                 c.Environment.SetCurrentDirectory(WireCodec.ReadPath(a, "p"));

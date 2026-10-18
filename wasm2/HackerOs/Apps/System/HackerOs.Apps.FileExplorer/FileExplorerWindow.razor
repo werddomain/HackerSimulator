@@ -243,7 +243,7 @@
 
     private string GetHomePath() => HackUser.Describe(AppContext).HomeDirectory;
 
-    /// <summary>Copies, moves, imports and trash moves in flight (ADR 0069).</summary>
+    /// <summary>Copies, moves, imports, trash moves and archive tasks in flight (ADR 0069).</summary>
     private readonly HashSet<Task> _operations = [];
 
     /// <summary>
@@ -251,7 +251,7 @@
     /// <see cref="FileTransfer"/> stops between two when the process is asked to stop, so the window
     /// closes after the current item, with nothing half-copied and the rest reported as not done.
     /// </summary>
-    private async Task<FileTransferResult> TrackOperation(Task<FileTransferResult> operation)
+    private async Task<T> TrackOperation<T>(Task<T> operation)
     {
         _operations.Add(operation);
         try
@@ -797,6 +797,9 @@
         if (list is null || list.Paths.Count == 0) return;
 
         bool cut = list.Operation == HackClipboardFileOperation.Cut;
+        // Copies stay on the window's thread, not in a HackBackground task (ADR 0140): each item is an
+        // awaited OS call with a checkpoint between two (no long CPU stretch), and a name conflict asks
+        // the user in this window between two items, which a task in another process cannot do.
         FileTransferResult result = await TrackOperation(FileTransfer.TransferAsync(
             list.Paths,
             destination.Value,
@@ -1003,6 +1006,11 @@
         await _fileView.RefreshAsync();
     }
 
+    /// <remarks>
+    /// The download archive is built here, not in a HackBackground task (ADR 0140): the bytes must end
+    /// in this window for the browser's download, and a large selection would exceed the 16 MiB a
+    /// task's result may carry (ADR 0128 section 4). Compress (to a file) uses the task.
+    /// </remarks>
     private async Task DownloadSelectedAsync()
     {
         if (_downloader is null || _fileView is null) return;
@@ -1083,47 +1091,21 @@
             return;
         }
 
-        using MemoryStream ms = new();
-        using (ZipArchive archive = new(ms, ZipArchiveMode.Create, true))
+        // ADR 0128/0140: deflating is CPU work; a child process of the explorer does it, off the window's thread.
+        string? error = await TrackOperation(FileExplorerZipService.CompressInBackgroundAsync(
+            [.. selected.Select(item => new ZipSource(item.FullPath.Value, item.FileName, item.IsDirectory))],
+            destPath,
+            L,
+            AppContext.CancellationToken));
+        if (error is not null)
         {
-            foreach (FileViewItem item in selected)
-            {
-                if (!item.IsDirectory)
-                {
-                    await FileExplorerZipService.AddFileToZipAsync(AppContext.FileSystem, archive, item.FullPath, item.FileName, AppContext.CancellationToken);
-                }
-                else
-                {
-                    await FileExplorerZipService.AddDirectoryToZipAsync(AppContext.FileSystem, archive, item.FullPath, item.FileName, AppContext.CancellationToken);
-                }
-            }
-        }
-        ms.Position = 0;
-
-        FileSystemMutationResult createResult = await AppContext.FileSystem.CreateAsync(
-            new FileSystemCreateRequest(destPath, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_100_100)),
-            AppContext.CancellationToken);
-
-        if (!createResult.Succeeded)
-        {
-            ReportError(L["Error.CreateArchive"]);
+            ReportError(error);
             return;
         }
 
-        MemoryStreamContentSource source = new(FileSystemContentDescriptor.Binary("application/zip"), ms);
-        FileSystemMutationResult writeResult = await AppContext.FileSystem.WriteAsync(
-            new FileSystemWriteRequest(destPath), source, AppContext.CancellationToken);
-
-        if (writeResult.Succeeded)
-        {
-            _errorMessage = null;
-            _fileView.ClearSelect();
-            await _fileView.RefreshAsync();
-        }
-        else
-        {
-            ReportError(L["Error.WriteArchive"]);
-        }
+        _errorMessage = null;
+        _fileView.ClearSelect();
+        await _fileView.RefreshAsync();
     }
 
     private async Task ExtractSelectedAsync()
@@ -1134,7 +1116,8 @@
         string folderName = item.FileName[..^".zip".Length];
         VirtualPath destDir = CombineChild(_fileView.CurrentDirectory, folderName);
 
-        string? error = await FileExplorerZipService.ExtractAsync(AppContext.FileSystem, item.FullPath, destDir, L, AppContext.CancellationToken);
+        // ADR 0128/0140: inflating and writing every entry happen in a child process of the explorer.
+        string? error = await TrackOperation(FileExplorerZipService.ExtractInBackgroundAsync(item.FullPath, destDir, L, AppContext.CancellationToken));
         if (error is not null)
         {
             ReportError(error);

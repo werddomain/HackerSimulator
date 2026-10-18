@@ -1,4 +1,5 @@
 using System.Globalization;
+using HackerOs.Simulation.Abstractions.Processes;
 
 namespace HackerOs.AppSdk.Diagnostics;
 
@@ -20,8 +21,24 @@ public sealed class HackProcessKilledException : OperationCanceledException
         : base($"Process {processId.ToString(CultureInfo.InvariantCulture)} was killed; the OS refuses its calls.")
     {
         ProcessId = processId;
+        Reason = ProcessExitReason.Killed;
+    }
+
+    /// <summary>Initializes the exception for one process killed for a given reason (ADR 0128, section 4).</summary>
+    /// <param name="processId">PID of the killed process.</param>
+    /// <param name="reason">
+    /// Why the OS killed it: <see cref="ProcessExitReason.Killed"/> for <c>kill -9</c> or the task
+    /// manager, or the limit it crossed (ADR 0125, ADR 0126).
+    /// </param>
+    public HackProcessKilledException(long processId, ProcessExitReason reason)
+        : this(processId)
+    {
+        Reason = reason;
     }
 
     /// <summary>Gets the PID of the killed process.</summary>
     public long ProcessId { get; }
+
+    /// <summary>Gets why the OS killed the process; <see cref="ProcessExitReason.Killed"/> unless a limit is named.</summary>
+    public ProcessExitReason Reason { get; }
 }

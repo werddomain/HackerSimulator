@@ -1,6 +1,8 @@
 #nullable enable
 HackerOs.AppSdk.Diagnostics.HackProcess.GetResourceLimitsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Diagnostics.HackResourceLimits!>!
 HackerOs.AppSdk.Diagnostics.HackProcess.SetResourceLimitAsync(HackerOs.Simulation.Abstractions.Processes.ResourceLimitKind kind, long soft, long hard, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.AppSdk.Diagnostics.HackProcessKilledException.HackProcessKilledException(long processId, HackerOs.Simulation.Abstractions.Processes.ProcessExitReason reason) -> void
+HackerOs.AppSdk.Diagnostics.HackProcessKilledException.Reason.get -> HackerOs.Simulation.Abstractions.Processes.ProcessExitReason
 HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement
 HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement.BestEffort = 1 -> HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement
 HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement.Off = 0 -> HackerOs.AppSdk.Diagnostics.HackResourceLimitEnforcement
@@ -25,4 +27,60 @@ HackerOs.AppSdk.Diagnostics.HackResourceLimits.this[HackerOs.Simulation.Abstract
 HackerOs.AppSdk.HackWireContextAttribute
 HackerOs.AppSdk.HackWireContextAttribute.ContextType.get -> System.Type!
 HackerOs.AppSdk.HackWireContextAttribute.HackWireContextAttribute(System.Type! contextType) -> void
+HackerOs.AppSdk.IAppExecutionContext.Background.get -> HackerOs.AppSdk.Threading.IAppBackgroundGateway!
+HackerOs.AppSdk.Threading.HackBackground
+HackerOs.AppSdk.Threading.HackBackgroundContext
+HackerOs.AppSdk.Threading.HackBackgroundContext.CancellationToken.get -> System.Threading.CancellationToken
+HackerOs.AppSdk.Threading.HackBackgroundContext.CheckpointAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.AppSdk.Threading.HackBackgroundContext.ProcessId.get -> long
+HackerOs.AppSdk.Threading.HackBackgroundContext.Report(double fraction, string? message = null) -> void
+HackerOs.AppSdk.Threading.HackBackgroundJob<TInput, TResult>
+HackerOs.AppSdk.Threading.HackBackgroundJob<TInput, TResult>.HackBackgroundJob() -> void
+HackerOs.AppSdk.Threading.HackBackgroundJobException
+HackerOs.AppSdk.Threading.HackBackgroundJobException.HackBackgroundJobException(string! originalTypeName, string! message, string? originalStackTrace) -> void
+HackerOs.AppSdk.Threading.HackBackgroundJobException.OriginalStackTrace.get -> string?
+HackerOs.AppSdk.Threading.HackBackgroundJobException.OriginalTypeName.get -> string!
+HackerOs.AppSdk.Threading.HackBackgroundJobRequest
+HackerOs.AppSdk.Threading.HackBackgroundJobRequest.HackBackgroundJobRequest(HackerOs.AppSdk.Threading.HackBackgroundJobTarget! Target, string! InputJson, string? Name = null, int Nice = 0) -> void
+HackerOs.AppSdk.Threading.HackBackgroundJobRequest.InputJson.get -> string!
+HackerOs.AppSdk.Threading.HackBackgroundJobRequest.InputJson.init -> void
+HackerOs.AppSdk.Threading.HackBackgroundJobRequest.Name.get -> string?
+HackerOs.AppSdk.Threading.HackBackgroundJobRequest.Name.init -> void
+HackerOs.AppSdk.Threading.HackBackgroundJobRequest.Nice.get -> int
+HackerOs.AppSdk.Threading.HackBackgroundJobRequest.Nice.init -> void
+HackerOs.AppSdk.Threading.HackBackgroundJobRequest.Target.get -> HackerOs.AppSdk.Threading.HackBackgroundJobTarget!
+HackerOs.AppSdk.Threading.HackBackgroundJobRequest.Target.init -> void
+HackerOs.AppSdk.Threading.HackBackgroundJobTarget
+HackerOs.AppSdk.Threading.HackBackgroundJobTarget.AssemblyName.get -> string!
+HackerOs.AppSdk.Threading.HackBackgroundJobTarget.AssemblyName.init -> void
+HackerOs.AppSdk.Threading.HackBackgroundJobTarget.DisplayName.get -> string!
+HackerOs.AppSdk.Threading.HackBackgroundJobTarget.HackBackgroundJobTarget(string! AssemblyName, string! TypeName, string? MethodName, string! InputTypeName) -> void
+HackerOs.AppSdk.Threading.HackBackgroundJobTarget.InputTypeName.get -> string!
+HackerOs.AppSdk.Threading.HackBackgroundJobTarget.InputTypeName.init -> void
+HackerOs.AppSdk.Threading.HackBackgroundJobTarget.MethodName.get -> string?
+HackerOs.AppSdk.Threading.HackBackgroundJobTarget.MethodName.init -> void
+HackerOs.AppSdk.Threading.HackBackgroundJobTarget.TypeName.get -> string!
+HackerOs.AppSdk.Threading.HackBackgroundJobTarget.TypeName.init -> void
+HackerOs.AppSdk.Threading.HackBackgroundOptions
+HackerOs.AppSdk.Threading.HackBackgroundOptions.Name.get -> string?
+HackerOs.AppSdk.Threading.HackBackgroundOptions.Name.init -> void
+HackerOs.AppSdk.Threading.HackBackgroundOptions.Nice.get -> int
+HackerOs.AppSdk.Threading.HackBackgroundOptions.Nice.init -> void
+HackerOs.AppSdk.Threading.HackBackgroundProgress
+HackerOs.AppSdk.Threading.HackBackgroundProgress.Fraction.get -> double
+HackerOs.AppSdk.Threading.HackBackgroundProgress.Fraction.init -> void
+HackerOs.AppSdk.Threading.HackBackgroundProgress.HackBackgroundProgress() -> void
+HackerOs.AppSdk.Threading.HackBackgroundProgress.HackBackgroundProgress(double Fraction, string? Message = null) -> void
+HackerOs.AppSdk.Threading.HackBackgroundProgress.Message.get -> string?
+HackerOs.AppSdk.Threading.HackBackgroundProgress.Message.init -> void
+HackerOs.AppSdk.Threading.IAppBackgroundGateway
+HackerOs.AppSdk.Threading.IAppBackgroundGateway.RunAsync(HackerOs.AppSdk.Threading.HackBackgroundJobRequest! request, System.Action<HackerOs.AppSdk.Threading.HackBackgroundProgress>? progress, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<string?>!
+abstract HackerOs.AppSdk.Threading.HackBackgroundJob<TInput, TResult>.RunAsync(TInput input, HackerOs.AppSdk.Threading.HackBackgroundContext! context) -> System.Threading.Tasks.Task<TResult>!
+override HackerOs.AppSdk.Threading.HackBackgroundJobException.ToString() -> string!
+override HackerOs.AppSdk.Threading.HackBackgroundProgress.ToString() -> string!
 static HackerOs.AppSdk.Diagnostics.HackResourceLimits.Parse(string! text) -> HackerOs.AppSdk.Diagnostics.HackResourceLimits!
+static HackerOs.AppSdk.Threading.HackBackground.RunAsync<TInput, TResult>(System.Func<TInput, HackerOs.AppSdk.Threading.HackBackgroundContext!, System.Threading.Tasks.Task<TResult>!>! job, TInput input, System.IProgress<HackerOs.AppSdk.Threading.HackBackgroundProgress>? progress = null, HackerOs.AppSdk.Threading.HackBackgroundOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+static HackerOs.AppSdk.Threading.HackBackground.RunAsync<TInput, TResult>(System.Func<TInput, HackerOs.AppSdk.Threading.HackBackgroundContext!, TResult>! job, TInput input, System.IProgress<HackerOs.AppSdk.Threading.HackBackgroundProgress>? progress = null, HackerOs.AppSdk.Threading.HackBackgroundOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+static HackerOs.AppSdk.Threading.HackBackground.RunAsync<TInput>(System.Action<TInput, HackerOs.AppSdk.Threading.HackBackgroundContext!>! job, TInput input, System.IProgress<HackerOs.AppSdk.Threading.HackBackgroundProgress>? progress = null, HackerOs.AppSdk.Threading.HackBackgroundOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Threading.HackBackground.RunAsync<TInput>(System.Func<TInput, HackerOs.AppSdk.Threading.HackBackgroundContext!, System.Threading.Tasks.Task!>! job, TInput input, System.IProgress<HackerOs.AppSdk.Threading.HackBackgroundProgress>? progress = null, HackerOs.AppSdk.Threading.HackBackgroundOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Threading.HackBackground.RunAsync<TJob, TInput, TResult>(TInput input, System.IProgress<HackerOs.AppSdk.Threading.HackBackgroundProgress>? progress = null, HackerOs.AppSdk.Threading.HackBackgroundOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!

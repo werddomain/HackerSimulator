@@ -71,7 +71,8 @@ public sealed class ZipFileContextMenuProvider : IFileViewContextMenuProvider
         VirtualPath destinationDirectory = VirtualPath.Parse(
             currentDirectory == "/" ? $"/{folderName}" : $"{currentDirectory}/{folderName}");
 
-        string? error = await FileExplorerZipService.ExtractAsync(_fileSystem, item.FullPath, destinationDirectory, _text, CancellationToken.None);
+        // The same background task as the toolbar's Extract (ADR 0140).
+        string? error = await FileExplorerZipService.ExtractInBackgroundAsync(item.FullPath, destinationDirectory, _text, CancellationToken.None);
         if (error is not null)
         {
             _reportError(error);

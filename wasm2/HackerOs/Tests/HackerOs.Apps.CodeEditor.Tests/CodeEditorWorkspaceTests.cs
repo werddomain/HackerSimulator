@@ -117,6 +117,40 @@ public sealed class CodeEditorWorkspaceTests
     }
 
     [Fact]
+    public async Task The_background_search_finds_what_the_inline_search_finds()
+    {
+        // ADR 0140: the Search view runs the search as a HackBackground task; without the OS (a unit
+        // test) the task runs inline, with the same JSON crossing of its input and result.
+        FakeAppFileSystemGateway fileSystem = Project();
+        CodeEditorWorkspaceSearch search = new(new CodeEditorWorkspace(Root, fileSystem));
+        VirtualPath readme = VirtualPath.Parse("/home/user/project/README.md");
+        Func<VirtualPath, string?> open = path => path == readme ? "todo typed but unsaved" : null;
+        using IDisposable scope = HackerOs.AppSdk.HackExecutionContext.Enter(new MinimalAppExecutionContext(
+            AppDefinitionMapper.ToManifest(new CodeEditorApp()), fileSystem: fileSystem));
+        List<HackerOs.AppSdk.Threading.HackBackgroundProgress> reports = [];
+
+        CodeEditorSearchResult inline = await search.SearchAsync(new CodeEditorSearchQuery("todo"), open);
+        CodeEditorSearchResult background = await search.SearchInBackgroundAsync(
+            new CodeEditorSearchQuery("todo"), open, new Collect(reports), CancellationToken.None);
+        CodeEditorSearchResult invalid = await search.SearchInBackgroundAsync(
+            new CodeEditorSearchQuery("(", UseRegex: true), null, null, CancellationToken.None);
+
+        Assert.Equal(inline.MatchCount, background.MatchCount);
+        Assert.Equal(inline.FilesSearched, background.FilesSearched);
+        Assert.Equal(
+            inline.Files.Select(file => (file.File, string.Join('|', file.Matches))).ToArray(),
+            background.Files.Select(file => (file.File, string.Join('|', file.Matches))).ToArray());
+        Assert.Contains(background.Files, file => file.File.RelativePath == "README.md");
+        Assert.Equal(1d, reports[^1].Fraction);
+        Assert.NotNull(invalid.Error);
+    }
+
+    private sealed class Collect(List<HackerOs.AppSdk.Threading.HackBackgroundProgress> reports) : IProgress<HackerOs.AppSdk.Threading.HackBackgroundProgress>
+    {
+        public void Report(HackerOs.AppSdk.Threading.HackBackgroundProgress value) => reports.Add(value);
+    }
+
+    [Fact]
     public async Task Search_uses_unsaved_tab_content_and_reports_invalid_patterns()
     {
         CodeEditorWorkspaceSearch search = new(new CodeEditorWorkspace(Root, Project()));

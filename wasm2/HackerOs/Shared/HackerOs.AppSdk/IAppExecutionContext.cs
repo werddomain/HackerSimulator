@@ -354,6 +354,14 @@ public interface IAppExecutionContext
     /// factory overrides it.
     /// </summary>
     HackerOs.AppSdk.Accessibility.IAppAccessibilityGateway Accessibility => HackerOs.AppSdk.Accessibility.DefaultAppAccessibilityGateway.Instance;
+
+    /// <summary>
+    /// Gets the app's background tasks, behind <see cref="Threading.HackBackground"/> (ADR 0128). The
+    /// trusted platform factory runs each one as a child process (in a Web Worker when the host has
+    /// some); this default runs it at once on the calling thread, with the same serialization, so an
+    /// app's unit tests exercise the same contract.
+    /// </summary>
+    HackerOs.AppSdk.Threading.IAppBackgroundGateway Background => new HackerOs.AppSdk.Threading.InlineAppBackgroundGateway(this);
 }
 
 /// <summary>

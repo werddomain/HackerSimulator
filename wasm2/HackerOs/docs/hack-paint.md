@@ -60,6 +60,16 @@ l'éditeur de texte : un fichier choisi dans un dialogue hors du dossier
 personnel n'est accessible que par le jeton remis par le dialogue, que `HackFile`
 ne sait pas porter. Le JS ne reçoit que des octets et rend des pixels.
 
+### Calculs hors de la fenêtre (ADR 0140)
+
+Hack Paint n'a pas de filtre d'image. Ses opérations sur toute l'image
+(rotation, recadrage) restent dans la fenêtre plutôt que dans une tâche
+`HackBackground` ([`background-jobs.md`](background-jobs.md)) : ce sont des
+passes de copies sur le tampon, qui peut faire 64 Mio (4096 × 4096 en RGBA),
+quatre fois ce qu'une entrée de tâche peut porter en JSON (16 Mio), et le
+retour coûterait plus que la passe. Un futur filtre passera par une tâche et un
+fichier temporaire.
+
 ## Langues (ADR 0104)
 
 Barre d'outils, barre d'état, dialogues et erreurs viennent de

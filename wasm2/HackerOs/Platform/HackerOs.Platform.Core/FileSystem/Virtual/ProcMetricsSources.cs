@@ -58,6 +58,13 @@ public sealed record ProcMetricsSources(
     /// <c>/proc/&lt;pid&gt;/fd</c>; missing, the directory is empty.
     /// </summary>
     public Func<IProcessFileDescriptorTable?>? FileDescriptors { get; init; }
+
+    /// <summary>
+    /// Gets the background tasks of ADR 0128 behind the <c>Job</c> and <c>Host</c> lines of
+    /// <c>/proc/&lt;pid&gt;/status</c> (and the task's name in <c>Name</c>); missing, a task reads like
+    /// any process of its app.
+    /// </summary>
+    public Func<HackerOs.Platform.Core.Execution.BackgroundJobService?>? BackgroundJobs { get; init; }
 }
 
 /// <summary>One line of <c>/proc/mounts</c>: what is mounted where, with which type and options.</summary>

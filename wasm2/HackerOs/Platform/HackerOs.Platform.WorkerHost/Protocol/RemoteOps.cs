@@ -88,6 +88,11 @@ internal static class RemoteOps
     public const string EventAcknowledge = "ev.ack";
     public const string WatchOpen = "watch.open";
 
+    // Background tasks (ADR 0128): a task's reports (note, from the task's own process), and a task
+    // started by a process already in a worker (call, section 6; reports come back as `bgp` messages).
+    public const string BackgroundProgress = "bg.progress";
+    public const string BackgroundRun = "bg.run";
+
     // Browser database of a web site (IAppWebDatabaseGateway, ADR 0088): the schema or the batch as JSON.
     public const string WebDbOpen = "wdb.open";
     public const string WebDbExecute = "wdb.exec";

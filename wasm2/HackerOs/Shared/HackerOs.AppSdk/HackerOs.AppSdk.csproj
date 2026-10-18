@@ -36,7 +36,33 @@
     <InternalsVisibleTo Include="HackerOs.Platform.WorkerHost.Tests" />
   </ItemGroup>
 
+  <!--
+    ADR 0128 section 2 / ADR 0140: the HackBackground analyzer (HOSBG rules) ships in this package,
+    so every app that references the SDK package builds with it. Build order only here: the
+    analyzer is packed from its output folder into analyzers/dotnet/cs. In-repo apps get it through
+    build/HackerOs.Apps.targets.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Tools\HackerOs.Tools.BackgroundAnalyzer\HackerOs.Tools.BackgroundAnalyzer.csproj"
+                      ReferenceOutputAssembly="false" Private="false" PrivateAssets="all"
+                      SkipGetTargetFrameworkProperties="true"
+                      GlobalPropertiesToRemove="TargetFramework;RuntimeIdentifier;SelfContained" />
+  </ItemGroup>
+
+  <Target Name="_HackerOsPackBackgroundAnalyzer">
+    <MSBuild Projects="..\..\Tools\HackerOs.Tools.BackgroundAnalyzer\HackerOs.Tools.BackgroundAnalyzer.csproj"
+             Targets="GetTargetPath"
+             Properties="Configuration=$(Configuration)"
+             RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained">
+      <Output TaskParameter="TargetOutputs" PropertyName="_HackerOsBackgroundAnalyzerPath" />
+    </MSBuild>
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(_HackerOsBackgroundAnalyzerPath)" PackagePath="analyzers/dotnet/cs/" />
+    </ItemGroup>
+  </Target>
+
   <PropertyGroup>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_HackerOsPackBackgroundAnalyzer</TargetsForTfmSpecificContentInPackage>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

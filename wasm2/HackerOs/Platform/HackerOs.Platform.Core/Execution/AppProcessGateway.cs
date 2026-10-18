@@ -53,7 +53,8 @@ public sealed class AppProcessGateway : IAppProcessGateway
             return all;
         }
 
-        return [.. all.Where(p => p.Pid == OwnPid)];
+        // Its own process and its children (ADR 0140: its HackBackground tasks).
+        return [.. all.Where(p => p.Pid == OwnPid || IsDescendant(p.Pid))];
     }
 
     /// <inheritdoc />
@@ -101,9 +102,34 @@ public sealed class AppProcessGateway : IAppProcessGateway
 
     private void RequireManageUnlessOwn(ProcessId pid)
     {
-        if (pid != OwnPid)
+        if (pid != OwnPid && !IsDescendant(pid))
         {
             _capabilities.Require(AppCapabilities.ProcessManage);
         }
+    }
+
+    /// <summary>
+    /// ADR 0140: an app may stop or kill its own children (its HackBackground tasks), as a Unix
+    /// parent signals the processes it started, without <see cref="AppCapabilities.ProcessManage"/>.
+    /// </summary>
+    private bool IsDescendant(ProcessId pid)
+    {
+        // Bounded walk up the parent chain: a process table never holds a cycle, but stay safe.
+        for (int depth = 0; depth < 64 && _processManager.TryGetActive(pid, out ProcessRecord process); depth++)
+        {
+            if (process.ParentPid is not { } parent)
+            {
+                return false;
+            }
+
+            if (parent == OwnPid)
+            {
+                return true;
+            }
+
+            pid = parent;
+        }
+
+        return false;
     }
 }

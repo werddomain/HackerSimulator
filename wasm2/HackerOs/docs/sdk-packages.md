@@ -43,7 +43,7 @@ bibliothèque liste sa surface dans `PublicAPI.Shipped.txt` (la 1.0, gelée) et
 
 | Paquets | Contenu |
 |---|---|
-| `HackerOs.App.Abstractions`, `HackerOs.Simulation.Abstractions`, `HackerOs.Theming.Abstractions`, `HackerOs.AppSdk`, `.Blazor`, `.Terminal`, `.Web`, `.Web.Blazor`, `.FileView`, `.Icons`, `.VirtualKeyboard` | le SDK public, ce qu'une app référence |
+| `HackerOs.App.Abstractions`, `HackerOs.Simulation.Abstractions`, `HackerOs.Theming.Abstractions`, `HackerOs.AppSdk`, `.Blazor`, `.Terminal`, `.Web`, `.Web.Blazor`, `.FileView`, `.Icons`, `.VirtualKeyboard` | le SDK public, ce qu'une app référence ; `HackerOs.AppSdk` porte aussi l'analyseur `HOSBG` de `HackBackground` dans `analyzers/dotnet/cs/` (ADR 0140, [`background-jobs.md`](background-jobs.md)) |
 | `HackerOs.App.Build` | l'intégration de build (voir plus bas) |
 | `HackerOs.Platform.Core`, `.Blazor`, `.ResourceAccounting`, `.WorkerHost`, `HackerOs.Infrastructure.Browser`, `HackerOs.Windowing.Abstractions`, `.Core`, `.Blazor`, `HackerOs.Taskbar.Blazor`, `HackerOs.Theming.Blazor`, `HackerOs.MobileShell.Blazor`, `HackerOs.Server.Contracts` | la plateforme, ce qu'un hôte compose (`Server.Contracts` est une dépendance de `Platform.Core`) |
 | `HackerOs.Ecosystem.Host` | l'OS lui-même : bureau, démarrage, services, adaptateurs du navigateur, jetons de design |
