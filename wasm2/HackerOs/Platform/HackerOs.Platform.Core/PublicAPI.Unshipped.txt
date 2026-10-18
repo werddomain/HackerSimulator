@@ -1,1 +1,8 @@
 #nullable enable
+HackerOs.Platform.Core.Execution.AppProcessGateway.AppProcessGateway(HackerOs.Simulation.Abstractions.Processes.IProcessManager! processManager, HackerOs.Simulation.Abstractions.Gateways.ICapabilityChecker! capabilities, HackerOs.Simulation.Abstractions.Processes.ProcessId ownPid, bool isRoot) -> void
+HackerOs.Platform.Core.Execution.AppProcessGateway.GetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> int
+HackerOs.Platform.Core.Execution.AppProcessGateway.SetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, int nice) -> int
+HackerOs.Platform.Core.Lifecycle.AppLaunchRequest.Nice.get -> int?
+HackerOs.Platform.Core.Lifecycle.AppLaunchRequest.Nice.init -> void
+HackerOs.Platform.Core.Processes.InMemoryProcessManager.GetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> int
+HackerOs.Platform.Core.Processes.InMemoryProcessManager.SetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, int nice) -> int

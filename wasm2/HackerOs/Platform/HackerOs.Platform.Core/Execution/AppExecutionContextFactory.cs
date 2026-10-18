@@ -297,7 +297,7 @@ public sealed class AppExecutionContextFactory
                 isSystemApp: _appCatalog?.Catalog.IsSystemApp(manifest.Id) == true,
                 isWebApp: manifest.Kind == AppKind.Web),
             clock,
-            new AppProcessGateway(_processManager, capabilities, process.Pid),
+            new AppProcessGateway(_processManager, capabilities, process.Pid, isRootElevated),
             intents,
             new AppFileSystemWatchGateway(_fileSystem, _topicBus, _clock, operationContext, groupIds, process.Pid.ToString()),
             permissionErrors,

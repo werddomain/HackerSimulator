@@ -185,7 +185,7 @@ public sealed class TopCommand(AppManifest manifest) : TerminalAppBase(manifest)
             string name = process.ProcessName.Length > 0 ? process.ProcessName : process.AppId;
             string line = string.Create(
                 CultureInfo.InvariantCulture,
-                $"{process.Id,7} {Truncate(process.UserName.Length > 0 ? process.UserName : process.UserId, 8),-8}  20   0 {resKb * 3,7} {resKb,6} {resKb / 4,6} {process.StateCode} {process.CpuUsage,5:0.0} {memPercent,5:0.0} {SystemSnapshot.FormatCpuTime(process, now),9} {name}");
+                $"{process.Id,7} {Truncate(process.UserName.Length > 0 ? process.UserName : process.UserId, 8),-8} {process.BasePriority,3} {process.Nice,3} {resKb * 3,7} {resKb,6} {resKb / 4,6} {process.StateCode} {process.CpuUsage,5:0.0} {memPercent,5:0.0} {SystemSnapshot.FormatCpuTime(process, now),9} {name}");
             lines.Add(line.Length > columns ? line[..columns] : line);
         }
 

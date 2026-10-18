@@ -38,7 +38,7 @@ public sealed class WorkerRemoteProcessHost : IRemoteProcessHost
         Guid? group = dedicated ? null : launch.PlacementGroup;
         WorkerConnection worker = dedicated
             ? await _pool.AcquireDedicatedAsync(cancellationToken).ConfigureAwait(false)
-            : await _pool.AcquireForCommandAsync(group, cancellationToken).ConfigureAwait(false);
+            : await _pool.AcquireForCommandAsync(group, _pool.NiceOf(launch.Context.ProcessId), cancellationToken).ConfigureAwait(false);
         try
         {
             RemoteProcessSession session = new(

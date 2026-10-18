@@ -27,7 +27,10 @@ public enum ProcessColumn
     DiskRead,
 
     /// <summary>Disk bytes written per second.</summary>
-    DiskWrite
+    DiskWrite,
+
+    /// <summary>Niceness (ADR 0127), hidden until <see cref="ProcessTable.ShowPriority"/> is set.</summary>
+    Priority
 }
 
 /// <summary>One line of the process table, as displayed.</summary>
@@ -72,6 +75,9 @@ public sealed record ProcessRow(
 
     /// <summary>Gets the state column's text: <see cref="NotRespondingText"/> or <see cref="State"/>.</summary>
     public string DisplayState => Responding ? State : NotRespondingText;
+
+    /// <summary>Gets the niceness (<c>NI</c>, field 19 of <c>/proc/&lt;pid&gt;/stat</c>, ADR 0127): <c>-20</c> to <c>19</c>.</summary>
+    public int Nice { get; init; }
 }
 
 /// <summary>
@@ -98,6 +104,28 @@ public sealed class ProcessTable
 
     /// <summary>Gets whether the sort is descending.</summary>
     public bool SortDescending { get; private set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether the "Priority" column (niceness, ADR 0127) is shown. Hidden by default,
+    /// like the optional columns of a desktop task manager; hiding it while the rows are sorted on
+    /// it goes back to the CPU sort.
+    /// </summary>
+    public bool ShowPriority
+    {
+        get => _showPriority;
+        set
+        {
+            _showPriority = value;
+            if (!value && SortColumn == ProcessColumn.Priority)
+            {
+                SortColumn = ProcessColumn.Cpu;
+                SortDescending = true;
+                _visible = null;
+            }
+        }
+    }
+
+    private bool _showPriority;
 
     /// <summary>
     /// Gets or sets the filter text, matched case-insensitively against the name, the app id and
@@ -265,6 +293,7 @@ public sealed class ProcessTable
             ProcessColumn.Memory => Order(rows, static row => row.MemoryBytes, Comparer<long>.Default),
             ProcessColumn.DiskRead => Order(rows, static row => row.ReadPerSecond, Comparer<double>.Default),
             ProcessColumn.DiskWrite => Order(rows, static row => row.WritePerSecond, Comparer<double>.Default),
+            ProcessColumn.Priority => Order(rows, static row => row.Nice, Comparer<int>.Default),
             _ => Order(rows, static row => row.Pid, Comparer<long>.Default)
         };
 

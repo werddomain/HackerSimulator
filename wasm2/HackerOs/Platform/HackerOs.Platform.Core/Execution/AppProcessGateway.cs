@@ -13,13 +13,28 @@ public sealed class AppProcessGateway : IAppProcessGateway
 {
     private readonly IProcessManager _processManager;
     private readonly ICapabilityChecker _capabilities;
+    private readonly bool _isRoot;
+
+    /// <summary>Initializes a process gateway bound to the process hosting this app instance, for a process that is not root.</summary>
+    public AppProcessGateway(IProcessManager processManager, ICapabilityChecker capabilities, ProcessId ownPid)
+        : this(processManager, capabilities, ownPid, isRoot: false)
+    {
+    }
 
     /// <summary>Initializes a process gateway bound to the process hosting this app instance.</summary>
-    public AppProcessGateway(IProcessManager processManager, ICapabilityChecker capabilities, ProcessId ownPid)
+    /// <param name="processManager">The process table.</param>
+    /// <param name="capabilities">The app's capability checks.</param>
+    /// <param name="ownPid">The process hosting the app.</param>
+    /// <param name="isRoot">
+    /// Whether the process runs as root (<c>sudo</c>, ADR 0042): only root may lower a niceness or
+    /// renice another user's process (ADR 0127).
+    /// </param>
+    public AppProcessGateway(IProcessManager processManager, ICapabilityChecker capabilities, ProcessId ownPid, bool isRoot)
     {
         _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
         _capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
         OwnPid = ownPid;
+        _isRoot = isRoot;
     }
 
     private ProcessId OwnPid { get; }
@@ -63,6 +78,48 @@ public sealed class AppProcessGateway : IAppProcessGateway
     {
         RequireManageUnlessOwn(pid);
         return _processManager.Kill(pid, reason);
+    }
+
+    /// <inheritdoc />
+    public int GetNice(ProcessId pid)
+    {
+        if (pid != OwnPid)
+        {
+            _capabilities.Require(AppCapabilities.ProcessList);
+        }
+
+        return _processManager.GetNice(pid);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The checks of Linux's <c>setpriority(2)</c>: <c>EPERM</c> for another user's process, and
+    /// <c>EACCES</c> for a lower value, unless the caller is root. Both surface as
+    /// <see cref="UnauthorizedAccessException"/>.
+    /// </remarks>
+    public int SetNice(ProcessId pid, int nice)
+    {
+        RequireManageUnlessOwn(pid);
+        if (!_processManager.TryGetActive(pid, out ProcessRecord target))
+        {
+            throw new KeyNotFoundException($"No active process with PID '{pid}'.");
+        }
+
+        int requested = ProcessNice.Clamp(nice);
+        if (!_isRoot)
+        {
+            if (target.UserId != OwnProcess.UserId)
+            {
+                throw new UnauthorizedAccessException("Operation not permitted");
+            }
+
+            if (requested < _processManager.GetNice(pid))
+            {
+                throw new UnauthorizedAccessException("Permission denied");
+            }
+        }
+
+        return _processManager.SetNice(pid, requested);
     }
 
     private void RequireManageUnlessOwn(ProcessId pid)

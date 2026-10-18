@@ -342,6 +342,9 @@
   <data name="LoginStep.StartingSession" xml:space="preserve">
     <value>Starting Session</value>
   </data>
+  <data name="Nice.PermissionDenied" xml:space="preserve">
+    <value>cannot set niceness: Permission denied</value>
+  </data>
   <data name="Prompt.Dangerous.Approved" xml:space="preserve">
     <value>Capabilities allowed by an administrator.</value>
   </data>

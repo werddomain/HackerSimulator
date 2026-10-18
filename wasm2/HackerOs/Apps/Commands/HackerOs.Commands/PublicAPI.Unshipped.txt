@@ -1,1 +1,31 @@
 #nullable enable
+HackerOs.Commands.Nice.NiceApp
+HackerOs.Commands.Nice.NiceApp.NiceApp() -> void
+HackerOs.Commands.Nice.NiceCommand
+HackerOs.Commands.Nice.NiceCommand.NiceCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
+override HackerOs.Commands.Nice.NiceApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Commands.Nice.NiceApp.Description.get -> string!
+override HackerOs.Commands.Nice.NiceApp.EntryPoint.get -> System.Type!
+override HackerOs.Commands.Nice.NiceApp.Id.get -> string!
+override HackerOs.Commands.Nice.NiceApp.Kind.get -> HackerOs.App.Abstractions.AppKind
+override HackerOs.Commands.Nice.NiceApp.LaunchVisibility.get -> HackerOs.App.Abstractions.AppLaunchVisibility
+override HackerOs.Commands.Nice.NiceApp.Name.get -> string!
+override HackerOs.Commands.Nice.NiceApp.PublisherId.get -> string!
+override HackerOs.Commands.Nice.NiceApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
+override HackerOs.Commands.Nice.NiceApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
+override HackerOs.Commands.Nice.NiceCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
+HackerOs.Commands.Renice.ReniceApp
+HackerOs.Commands.Renice.ReniceApp.ReniceApp() -> void
+HackerOs.Commands.Renice.ReniceCommand
+HackerOs.Commands.Renice.ReniceCommand.ReniceCommand(HackerOs.App.Abstractions.AppManifest! manifest) -> void
+override HackerOs.Commands.Renice.ReniceApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Commands.Renice.ReniceApp.Description.get -> string!
+override HackerOs.Commands.Renice.ReniceApp.EntryPoint.get -> System.Type!
+override HackerOs.Commands.Renice.ReniceApp.Id.get -> string!
+override HackerOs.Commands.Renice.ReniceApp.Kind.get -> HackerOs.App.Abstractions.AppKind
+override HackerOs.Commands.Renice.ReniceApp.LaunchVisibility.get -> HackerOs.App.Abstractions.AppLaunchVisibility
+override HackerOs.Commands.Renice.ReniceApp.Name.get -> string!
+override HackerOs.Commands.Renice.ReniceApp.PublisherId.get -> string!
+override HackerOs.Commands.Renice.ReniceApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
+override HackerOs.Commands.Renice.ReniceApp.Terminal.get -> HackerOs.App.Abstractions.TerminalCommand?
+override HackerOs.Commands.Renice.ReniceCommand.ExecuteAsync(HackerOs.AppSdk.TerminalExecutionContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>

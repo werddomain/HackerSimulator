@@ -89,7 +89,14 @@ public sealed record AppLaunchRequest(
     string? CommandName = null,
     Action<ProcessRecord>? ProcessStarted = null,
     bool SystemScope = false,
-    AppIntentDelivery? Intent = null);
+    AppIntentDelivery? Intent = null)
+{
+    /// <summary>
+    /// Gets the niceness the new process starts with (ADR 0127): <c>nice -n 5 make</c> sets it;
+    /// <see langword="null"/> inherits the parent's (<see cref="ProcessStartRequest.Nice"/>).
+    /// </summary>
+    public int? Nice { get; init; }
+}
 
 /// <summary>Identifies the stable outcome of one launch attempt.</summary>
 public enum AppLaunchStatus

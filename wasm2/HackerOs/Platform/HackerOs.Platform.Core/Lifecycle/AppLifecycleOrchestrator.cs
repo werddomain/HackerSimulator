@@ -464,7 +464,10 @@ public sealed class AppLifecycleOrchestrator
             [request.CommandName ?? descriptor.Manifest.Terminal?.Name ?? request.AppId, .. request.Arguments],
             workingDirectory,
             environment,
-            SystemScope: request.SystemScope));
+            SystemScope: request.SystemScope)
+        {
+            Nice = request.Nice,
+        });
 
         IAppExecutionContext context = _contextFactory.Create(
             descriptor.Manifest, request.Principal, process, grantedCapabilities, process.AppInstanceId.Value,

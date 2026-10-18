@@ -1,1 +1,14 @@
 #nullable enable
+HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway.GetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> int
+HackerOs.Simulation.Abstractions.Gateways.IAppProcessGateway.SetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, int nice) -> int
+HackerOs.Simulation.Abstractions.Processes.IProcessManager.GetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid) -> int
+HackerOs.Simulation.Abstractions.Processes.IProcessManager.SetNice(HackerOs.Simulation.Abstractions.Processes.ProcessId pid, int nice) -> int
+HackerOs.Simulation.Abstractions.Processes.ProcessNice
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.Nice.get -> int?
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.Nice.init -> void
+const HackerOs.Simulation.Abstractions.Processes.ProcessNice.Default = 0 -> int
+const HackerOs.Simulation.Abstractions.Processes.ProcessNice.DefaultAdjustment = 10 -> int
+const HackerOs.Simulation.Abstractions.Processes.ProcessNice.Max = 19 -> int
+const HackerOs.Simulation.Abstractions.Processes.ProcessNice.Min = -20 -> int
+static HackerOs.Simulation.Abstractions.Processes.ProcessNice.Clamp(int nice) -> int
+static HackerOs.Simulation.Abstractions.Processes.ProcessNice.ToPriority(int nice) -> int

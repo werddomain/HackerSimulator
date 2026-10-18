@@ -253,7 +253,10 @@ public partial class SystemMonitorWindow
         rate.WritePerSecond,
         CpuEstimated: !IsMeasured(process, "CpuSource"),
         MemoryEstimated: !IsMeasured(process, "MemSource"),
-        Responding: process.Responding);
+        Responding: process.Responding)
+    {
+        Nice = process.Nice,
+    };
 
     /// <summary>
     /// Reads a <c>CpuSource:</c>/<c>MemSource:</c> line of <c>/proc/&lt;pid&gt;/status</c> (ADR 0066).
