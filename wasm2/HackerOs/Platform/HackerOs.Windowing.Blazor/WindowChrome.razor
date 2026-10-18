@@ -43,7 +43,7 @@
         <h2 id="@TitleId">@Window.Title@if (!Window.IsResponding)
             {
                 @* Display only (ADR 0127 §3): Window.Title keeps the app's own title. *@
-                <span class="window-title-state"> @L["Chrome.NotResponding"]</span>
+                <span class="window-title-state">@(" " + L["Chrome.NotResponding"])</span>
             }</h2>
     </div>
     <div class="window-actions" aria-label="@L["Chrome.Controls"]">
