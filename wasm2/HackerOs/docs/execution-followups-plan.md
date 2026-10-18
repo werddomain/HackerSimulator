@@ -7,6 +7,15 @@ migration wasm v3** ([`wasm-v3-completion-plan.md`](wasm-v3-completion-plan.md),
 branche `v3/base`). Aucun chantier ne commence avant que ce plan-là soit
 terminé.
 
+**Mise à jour du 2026-10-18 :** la migration wasm v3 et la série v3.1 sont
+terminées. La branche d'intégration `exec/base` est créée depuis `v3.1/base`,
+et le chantier des ADR (`exec/0-adr`, mené sur la branche `exec/1-adr`) a
+écrit les ADR [0124](adr/0124-remote-event-and-watch-gateways.md) à
+[0132](adr/0132-exec-series-sdk-1-2-and-merge-rules.md) (section 7) ; l'ADR
+0133 est réservé à la décision de l'essai de rendu en worker. Quatre questions
+nées de l'écriture des ADR sont posées à Benoit (section 6.1) ; les ADR
+appliquent la réponse recommandée en attendant.
+
 Il reprend les points que [`execution-isolation-plan.md`](execution-isolation-plan.md)
 (phase 5, ADR 0066 à 0072) a laissés hors périmètre (sa section 7), ainsi que
 ceux que les ADR de la phase 5 et la mise en œuvre des workers ont notés comme
@@ -43,6 +52,17 @@ Sur `web/base` au 2026-10-17 (phase 5 et phase web fusionnées) :
 | `HackerOs.Server` | Mesures coupées par défaut, pas de worker : `AppExecutionHost` est ignoré, une ligne dans `/var/log/syslog`, pas de `/proc/hackeros`. | ADR 0066 §3, ADR 0067 §6, ADR 0070 §6, ADR 0072 §7 |
 | Cross-origin | Aucun hôte n'envoie `Cross-Origin-Opener-Policy` ni `Cross-Origin-Embedder-Policy` ; `crossOriginIsolated` est faux, donc pas de `SharedArrayBuffer`, pas de `performance.measureUserAgentSpecificMemory()`, `performance.now()` arrondi. Les échanges avec les workers passent par `postMessage` (crédit de 64 Kio par flux). | ADR 0072 §2 |
 | Trimming | `PublishTrimmed=False` : le coût d'un worker en dépend. Le point appartient à la migration wasm v3, pas à ce plan. Fait par `v3/14` (2026-10-17, [`trimmed-publish.md`](trimmed-publish.md)) : 50,9 → 26,5 Mio de WebAssembly. | `/mnt/project-files/wasm-v3/wasm-v3-remaining-work.md` n° 12 |
+
+### 2.1 Ce que v3 et v3.1 ont changé (2026-10-18, `exec/base`)
+
+| Sujet | Changement | Effet sur ce plan |
+|---|---|---|
+| Passerelles d'un worker | Catalogue et applications par défaut, intents, contrôle et notification des services, presse-papiers, notifications, ports à l'écoute, base d'un site passent désormais par messages. Restent refusés : `HackEvents`, `Watch`, `StartChild`, `Kill` et `ListProcesses` synchrones, `WithSelectedHandle`. | La décision 1 se limite aux événements et à la surveillance (ADR 0124). |
+| SDK | Gelé en 1.0 (ADR 0114), puis 1.1.0 publié (ADR 0117) ; `PublicAPI.Shipped.txt` vérifié au build. | Les ajouts de la série vont en `Unshipped` et sont publiés en 1.2 par `exec/10-final` (ADR 0132). |
+| Localisation, accessibilité | Anglais et français (ADR 0104), préférences d'accessibilité et tests axe (ADR 0105). | La boîte « ne répond pas » et les notifications de l'OOM killer sont traduites et testées (ADR 0126, 0127). |
+| Titre de fenêtre | Posé par l'app (`SetWindowTitleAsync`, ADR 0117). | Le suffixe « (Ne répond pas) » est un affichage du gestionnaire de fenêtres (ADR 0127). |
+| Relais du serveur | Corps HTTP, TCP et UDP en WebSocket (ADR 0102, 0108). | Rien à changer : le relais est déjà une API, indépendante de la façon dont le serveur sert l'OS (ADR 0130). |
+| Installation au runtime | Toujours différée (ADR 0094). | Le pool s'ouvre aux assemblies connues au build seulement (ADR 0124 §4). |
 
 ## 3. Principes
 
@@ -96,8 +116,9 @@ de l'écriture (section 7).
 
 ## 5. Chantiers
 
-Branches `exec/<n>-<topic>`, chacune partant de la branche d'intégration en
-usage au moment de l'exécution, et sa PR la visant (question Q9) ; le fil
+Branches `exec/<n>-<topic>`, chacune partant de la branche d'intégration
+`exec/base` (créée le 2026-10-18 depuis `v3.1/base`), et sa PR la visant
+(question Q9, ADR 0132) ; le fil
 fusionne lui-même quand la build et les tests passent en local, jamais dans
 `main`. Les ADR de la
 phase sont écrits et acceptés avant le code (`exec/0-adr`), comme pour les
@@ -105,7 +126,7 @@ phases précédentes.
 
 | Branche | Contenu | Dépend de |
 |---|---|---|
-| `exec/0-adr` | ADR des décisions 1 à 10 ; mise à jour de ce plan et de l'index. | fin de la migration wasm v3 |
+| `exec/0-adr` | **Fait** (branche `exec/1-adr`, 2026-10-18) : ADR 0124 à 0132 des décisions 1 à 10, mise à jour de ce plan et de l'index. | fin de la migration wasm v3 |
 | `exec/1-remote-gateways` | Décision 1 : passerelles distantes `HackEvents` (abonnement côté worker, livraison par message, désabonnement à la fin du processus) et `Watch` ; tests de parité pour ces deux passerelles ; service d'exemple et `hackwebd` en worker ; chargement à la demande de toute assembly d'app dans le pool ; une commande d'un projet d'exemple tiers exécutée en worker. | `0` |
 | `exec/2-process-limits` | Décision 2 : contrat de limites dans Simulation Abstractions, lecture de `/etc/security/limits.conf` (et `limits.d/`), héritage au `fork`, `ulimit` et `prlimit`, `/proc/<pid>/limits`, `SIGXCPU`, application stricte en worker et au mieux sur le fil principal, sortie 152 (`SIGXCPU`) et 137 ; erreur `EMFILE`/`EAGAIN` pour `NOFILE`/`NPROC` par les passerelles. | `0` |
 | `exec/3-oom-killer` | Décisions 3 et 4 : réglage d'activation dans `/etc` (désactivé par défaut), seuil de mémoire disponible, `oom_score`, `oom_score_adj` (fichier modifiable, `-1000` exempte, réservé à l'administrateur pour baisser), choix et mise à mort, ligne du noyau dans `/var/log/kern.log` et `syslog`, `dmesg`, notification à l'utilisateur pour une fenêtre tuée, garde du vrai navigateur, compteur `oom_kill` dans `/proc/vmstat`. | `2` |
@@ -115,7 +136,7 @@ phases précédentes.
 | `exec/7-window-workers` | Seulement si `6` réussit : `AppExecutionHost.Dedicated` permis pour une fenêtre sans interop JavaScript propre, gestion du clavier, du focus et des dialogues, tests sur la Calculatrice. | `6` |
 | `exec/8-server-wasm` | Décision 8 : `HackerOs.Server` sert l'OS en WebAssembly (rendu `InteractiveWebAssembly` ou fichiers publiés de l'Ecosystem, selon l'ADR), retrait du mode Interactive Server et de l'injection directe, l'OS appelle l'API du serveur par HTTP comme l'Ecosystem, `build/verify-hosts.sh` et `HackerOs.HostSmoke.Tests` adaptés (workers et `/proc/hackeros` présents sur cet hôte), docs d'hébergement à jour. | `0` |
 | `exec/9-cross-origin-isolation` | Décisions 9 et 10 : audit de compatibilité (iframes des sites ASP.Hack et du navigateur, fenêtres détachées, repli sur le réseau réel, workers de Monaco, téléchargements, PWA), en-têtes dans les trois hôtes et le service worker, repli, puis tubes partagés, appels synchrones, mémoire réelle par worker et minuteries. | `3`, `5` |
-| `exec/10-final` | Vérification de bout en bout, documents à jour (`system-metrics.md`, `task-manager.md`, `worker-processes.md`, `app-sdk.md`, `sdk-reference.md`, `linux-commands.md`, `virtual-proc-and-dev.md`, `building-and-testing.md`), index, cette liste. | tous |
+| `exec/10-final` | Publication du SDK 1.2 (ADR 0132), app de compatibilité 1.1 ; vérification de bout en bout, documents à jour (`system-metrics.md`, `task-manager.md`, `worker-processes.md`, `app-sdk.md`, `sdk-reference.md`, `linux-commands.md`, `virtual-proc-and-dev.md`, `building-and-testing.md`), index, cette liste. | tous |
 
 Ordre :
 
@@ -166,31 +187,48 @@ contexte et conséquences de chaque choix ; ses réponses (05:55 à 06:19 UTC) :
 | Q6 | Isolation cross-origin | **Optionnelle, active par défaut si l'audit passe** | Décisions 9 et 10. |
 | Q7 | Isolation sur l'hôte Server | **Server = OS en WebAssembly + API** (Benoit pensait que le serveur hébergeait déjà un client WebAssembly) | Décision 8, chantier `exec/8-server-wasm` ; remplace les ADR 0027 et 0036. |
 | Q8 | Threads .NET WebAssembly | **Non** | Décision 10. |
-| Q9 | Branches | **`exec/<n>-<sujet>`** | Section 5. |
+| Q9 | Branches | **`exec/<n>-<sujet>`** | Section 5 ; intégration sur `exec/base` (carte « Lancer maintenant les suites de l'étape 5 », réponse « Oui », 2026-10-18). |
 
-## 7. ADR à écrire
+### 6.1 Questions nées de l'écriture des ADR (2026-10-18)
 
-Dans `exec/0-adr`, numéros pris au moment de l'écriture (le prochain libre
-selon `docs/adr/`) :
+Posées à Benoit dans le fil « ADR des suites de l'étape 5 », avec le contexte
+et les conséquences de chaque choix. Les ADR appliquent la réponse
+recommandée (⭐) en attendant ; une autre réponse donne un ADR court qui
+remplace le paragraphe visé.
+
+| # | Question | Choix | ADR |
+|---|---|---|---|
+| E1 | Comment le serveur sert l'OS | Fichiers publiés de l'Ecosystem tels quels ⭐ \| Blazor Web App en `InteractiveWebAssembly` comme `test/test` | 0130 §2 |
+| E2 | L'OS servi par le serveur se connecte-t-il à lui | Adresse préremplie, l'utilisateur choisit de se connecter ⭐ \| Rien de spécial, saisie manuelle | 0130 §4 |
+| E3 | Limites par défaut | Valeurs Linux pour `nofile` et `nproc`, CPU et mémoire illimités ⭐ \| Tout illimité | 0125 §6 |
+| E4 | Publication du SDK 1.2 | Une fois, à la fin (`exec/10`) ⭐ \| Une mineure par chantier qui ajoute une API | 0132 §2 |
+
+## 7. ADR de la série
+
+Écrits par `exec/0-adr` le 2026-10-18 (numéros 0124 à 0133 réservés à ce
+chantier) :
 
 | ADR | Contenu | Complète ou remplace |
 |---|---|---|
-| Passerelles distantes d'événements et de surveillance | décision 1 | remplace l'ADR 0072 §3 en partie, complète 0070 |
-| Limites par processus | décision 2 | remplace le principe « mesurer, pas contraindre » de la phase 5 pour les limites, complète 0067, 0068, 0069 |
-| OOM killer | décisions 3 et 4 | remplace l'ADR 0068 §3 |
-| Priorité et fenêtre sans réponse | décisions 5 et 6 | complète l'ADR 0067 §4 |
-| Tâches lourdes en arrière-plan (`HackBackground`) | décision 7, étape 1 | complète l'ADR 0070 §1 |
-| Rendu de fenêtre dans un worker | décision 7, étape 2, après l'essai | remplace l'ADR 0070 §1 (fenêtres) si on y va |
-| `HackerOs.Server` servi en WebAssembly | décision 8 | remplace l'ADR 0027 et l'ADR 0036 ; rend sans objet l'ADR 0066 §3 (défaut Server), 0067 §6, 0070 §6, 0072 §7 |
-| Isolation cross-origin | décisions 9 et 10 | complète l'ADR 0072 §2 (tubes) et l'ADR 0068 (mémoire réelle par worker) |
+| [0124](adr/0124-remote-event-and-watch-gateways.md) Passerelles distantes d'événements et de surveillance | décision 1 | remplace l'ADR 0072 §3 en partie, complète 0070 |
+| [0125](adr/0125-process-resource-limits.md) Limites par processus | décision 2 | remplace le principe « mesurer, pas contraindre » de la phase 5 pour les limites, complète 0067, 0068, 0069 |
+| [0126](adr/0126-oom-killer.md) OOM killer | décisions 3 et 4 | remplace l'ADR 0068 §3 |
+| [0127](adr/0127-priority-and-not-responding-dialog.md) Priorité et fenêtre sans réponse | décisions 5 et 6 | complète l'ADR 0067 §4 |
+| [0128](adr/0128-background-jobs-hack-background.md) Tâches lourdes en arrière-plan (`HackBackground`) | décision 7, étape 1 | complète l'ADR 0070 §1 |
+| [0129](adr/0129-window-rendering-in-worker-trial.md) Essai du rendu de fenêtre dans un worker, critères ; **0133** (réservé) décision après l'essai | décision 7, étape 2 | 0133 remplace l'ADR 0070 §1 (fenêtres) si on y va |
+| [0130](adr/0130-server-serves-webassembly-os-and-api.md) `HackerOs.Server` servi en WebAssembly | décision 8 | remplace l'ADR 0027 et l'ADR 0036 ; rend sans objet l'ADR 0066 §3 (défaut Server), 0067 §6, 0070 §6, 0072 §7 |
+| [0131](adr/0131-cross-origin-isolation.md) Isolation cross-origin | décisions 9 et 10 | complète l'ADR 0072 §2 (tubes) et l'ADR 0068 (mémoire réelle par worker) |
+| [0132](adr/0132-exec-series-sdk-1-2-and-merge-rules.md) Ajouts du SDK 1.2, branches et barre de fusion | sections 5 et 8 | applique les ADR 0114 et 0117 |
 
 ## 8. Liste des tâches
 
 ### Préparation
 - [x] Écrire ce plan (2026-10-17, fil « Plan : suites de l'étape 5 »).
 - [x] Faire valider le plan et trancher les questions Q1 à Q9 avec Benoit (2026-10-17, section 6).
-- [ ] Attendre la fin de la migration wasm v3.
-- [ ] `exec/0-adr` : écrire et faire accepter les ADR de la section 7.
+- [x] Attendre la fin de la migration wasm v3 (terminée le 2026-10-17, puis série v3.1).
+- [x] Créer `exec/base` depuis `v3.1/base` (2026-10-18).
+- [x] `exec/0-adr` : écrire et faire accepter les ADR de la section 7 (0124 à 0132, 2026-10-18).
+- [ ] Réponses de Benoit aux questions E1 à E4 (section 6.1).
 
 ### Passerelles distantes
 - [ ] `HackEvents` et `Watch` en worker, tests de parité.
@@ -218,6 +256,7 @@ selon `docs/adr/`) :
 - [ ] Tubes partagés, appels synchrones, mémoire réelle par worker, minuteries.
 
 ### Fin
+- [ ] Publication du SDK 1.2 et app de compatibilité 1.1 (ADR 0132).
 - [ ] `build/verify-hosts.sh` étendu (section 5.2), vérification finale, documents et index.
 
 ## 9. Hors périmètre

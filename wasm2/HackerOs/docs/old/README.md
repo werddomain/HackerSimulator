@@ -151,7 +151,7 @@ rather than an edit to the old one (see the doc-maintenance rule in
 | [0024](../adr/0024-server-identity-and-device-registration.md) | Server identity and device registration |
 | [0025](../adr/0025-record-synchronization-envelope-and-conflict-model.md) | Record synchronization envelope, conflict model, and cursor strategy |
 | [0026](../adr/0026-icon-library-support.md) | Shared icon library support (Bootstrap, Font Awesome, Lucide, Simple Icons) |
-| [0027](../adr/0027-server-hosted-blazor-ui.md) | Server-hosted Blazor UI (third host, single-tenant phase) |
+| [0027](../adr/0027-server-hosted-blazor-ui.md) | Server-hosted Blazor UI (third host, single-tenant phase) — remplacé par l'[ADR 0130](../adr/0130-server-serves-webassembly-os-and-api.md) |
 | [0028](../adr/0028-client-side-server-connection.md) | Client-side optional-server connection and proxy bridge |
 | [0029](../adr/0029-settings-sync.md) | Settings domain sync (first client sync implementation) |
 | [0030](../adr/0030-filesystem-sync.md) | FileSystem domain sync |
@@ -160,7 +160,7 @@ rather than an edit to the old one (see the doc-maintenance rule in
 | [0033](../adr/0033-appcatalog-and-fileassociations-sync.md) | AppCatalog and FileAssociations domain sync |
 | [0034](../adr/0034-wire-terminal-command-catalog.md) | Wire the terminal command catalog |
 | [0035](../adr/0035-nmap-tcp-probe-fallback.md) | Single-port TCP reachability probe for nmap's real-network fallback |
-| [0036](../adr/0036-direct-service-injection-for-server-host.md) | Direct service injection for the server-hosted UI |
+| [0036](../adr/0036-direct-service-injection-for-server-host.md) | Direct service injection for the server-hosted UI — remplacé par l'[ADR 0130](../adr/0130-server-serves-webassembly-os-and-api.md) |
 | [0037](../adr/0037-reusable-file-view-control.md) | `FileView` as the canonical file-listing control |
 | [0038](../adr/0038-emitter-authorized-topic-messaging.md) | Emitter-authorized topic messaging |
 | [0039](../adr/0039-directory-open-file-association.md) | `inode/directory` media-type convention for directory file association |
