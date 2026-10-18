@@ -372,10 +372,31 @@ Dans un worker, `IAppExecutionContext` est servi par des passerelles distantes
 qui envoient chaque appel à l'OS, où **les mêmes vérifications de capacités**
 s'appliquent ; `stdin`/`stdout`/`stderr` passent par messages. `StopRequested`,
 `CheckpointAsync`, les codes 130/137 et `OnStoppingAsync` se comportent comme
-sur le fil principal. Ce qui n'est pas disponible dans un worker (événements
-typés, abonnements de fichiers, hôte de shell, administration, page HTTP du
-navigateur simulé) lève `NotSupportedException` : une app qui en a besoin
-déclare `MainThread`. Détails : [`worker-processes.md`](worker-processes.md).
+sur le fil principal. Ce qui n'est pas disponible dans un worker (hôte de
+shell, administration, page HTTP du navigateur simulé, `StartChild`, formes
+synchrones de `Kill` et `ListProcesses`, `WithSelectedHandle`) lève
+`NotSupportedException` : une app qui en a besoin déclare `MainThread`.
+Détails : [`worker-processes.md`](worker-processes.md).
+
+**Événements et surveillance de fichiers dans un worker (ADR 0124, ADR
+0138).** `HackEvents` et `HackFileSystemWatcher` marchent dans un worker : l'OS
+tient l'abonnement au nom du processus et lui envoie chaque message. La charge
+traverse en JSON ; les événements de l'OS sont déjà pris en charge, un type de
+l'app doit être déclaré par un `JsonSerializerContext` de son assembly :
+
+```csharp
+[assembly: HackWireContext(typeof(MyEventsJsonContext))]
+
+[JsonSerializable(typeof(MyTickEvent))]
+internal sealed partial class MyEventsJsonContext : JsonSerializerContext;
+```
+
+Sans déclaration, l'abonnement ou la publication lève dans le worker une
+`NotSupportedException` qui nomme le type et l'attribut ; sur le fil principal,
+rien ne change. Dans un worker, `Publish` renvoie un résultat provisoire
+(`Delivered`) : un refus de l'OS (sujet d'une autre app, canal verrouillé) est
+écrit dans le journal de l'app, et un abonnement par canal refusé se termine
+avec l'exception. Les livraisons y sont toujours asynchrones.
 
 ### Graphiques (ADR 0058 §2)
 

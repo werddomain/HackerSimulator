@@ -7,6 +7,7 @@ using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Shell;
 using HackerOs.Platform.WorkerHost.Protocol;
+using HackerOs.Simulation.Abstractions.Events;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -46,6 +47,7 @@ internal sealed class RemoteProcessSession
     private readonly Dictionary<int, FileSystemContentReadHandle> _reads = [];
     private readonly Dictionary<int, HackerOs.AppSdk.Net.IHackHttpListenerSocket> _listeners = [];
     private readonly CancellationTokenSource _listening = new();
+    private readonly RemoteEventRouter _events;
     private int _nextReadHandle;
     private int _nextListener;
     private bool _listenersClosed;
@@ -70,6 +72,7 @@ internal sealed class RemoteProcessSession
         _error = error;
         InputAttached = inputAttached;
         Pid = launch.Context.ProcessId.Value;
+        _events = new RemoteEventRouter(Pid, worker.Post, worker.Log);
         _outputPump = PumpOutputAsync();
     }
 
@@ -99,6 +102,9 @@ internal sealed class RemoteProcessSession
             }
         }
     }
+
+    /// <summary>Gets the process's open event subscriptions and watches (ADR 0124).</summary>
+    public int EventSubscriptionCount => _events.Count;
 
     /// <summary>Gets the task the worker completes when <c>OnStoppingAsync</c> of a hosted service returned.</summary>
     public Task ServiceStopped => _serviceStopped.Task;
@@ -292,8 +298,10 @@ internal sealed class RemoteProcessSession
             _listenersClosed = true;
         }
 
-        // The kernel closes the sockets of a process that ends: the port is free again.
+        // The kernel closes the sockets of a process that ends: the port is free again. Its
+        // subscriptions leave the bus too, without waiting for the worker (ADR 0124, section 1).
         _listening.Cancel();
+        _events.CloseAll();
         foreach (HackerOs.AppSdk.Net.IHackHttpListenerSocket listener in listeners)
         {
             _ = listener.DisposeAsync();
@@ -345,6 +353,8 @@ internal sealed class RemoteProcessSession
             return;
         }
 
+        // A killed process receives nothing more, even if its worker is slow to drop it.
+        _events.CloseAll();
         _worker.Post(WorkerMessage.Create(WorkerMessageType.Kill, writer => writer.WriteNumber("p", Pid)));
         _ = _worker.EnsureKilledAsync(this);
     }
@@ -741,6 +751,45 @@ internal sealed class RemoteProcessSession
             case RemoteOps.ClipboardClear:
                 await c.Clipboard.ClearAsync(cancellationToken).ConfigureAwait(false);
                 return static _ => { };
+            case RemoteOps.EventSubscribe:
+                Subscribe(a);
+                return static _ => { };
+            case RemoteOps.EventUnsubscribe:
+                _events.Close(a.GetInt32("s"));
+                return static _ => { };
+            case RemoteOps.EventAcknowledge:
+                _events.Acknowledge(a.GetInt32("s"), a.GetInt32("n"));
+                return static _ => { };
+            case RemoteOps.EventPublish:
+                PublishFromWorker(a);
+                return static _ => { };
+            case RemoteOps.EventSharedChannel:
+                try
+                {
+                    c.Events.RegisterSharedChannel(WirePayloadCodec.ParseTopic(a.GetString("top")), Worker.RemoteEventGateway.ReadPolicy(a));
+                }
+                catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
+                {
+                    // The call is synchronous and returns nothing in the worker: the refusal goes to the app's log.
+                    c.Logging.Log(HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Warning,
+                        $"The OS refused to register the shared channel '{a.GetString("top")}': {exception.Message}");
+                }
+
+                return static _ => { };
+            case RemoteOps.WatchOpen:
+            {
+                int id = a.GetInt32("s");
+                ITopicChannelSubscription<FileSystemChangeEvent> watch = await c.Watch.WatchAsync(
+                    WireCodec.ReadPath(a, "p"), (FileSystemWatchScope)a.GetInt32("sc"), cancellationToken).ConfigureAwait(false);
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    await watch.DisposeAsync().ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
+                _events.OpenWatch(id, watch);
+                return static _ => { };
+            }
             case RemoteOps.WebDbOpen:
                 await c.WebDatabase.OpenAsync(
                     JsonSerializer.Deserialize(a.GetString("j"), HackerOs.AppSdk.WebData.HackWebDbJsonContext.Default.HackWebDbSchemaDefinition)
@@ -760,6 +809,50 @@ internal sealed class RemoteProcessSession
                 throw new NotSupportedException($"Unknown remote operation '{operation}'.");
         }
     }
+
+    /// <summary>
+    /// <c>ev.sub</c> (ADR 0124, section 1): a real subscription of the OS's bus, made by the process's
+    /// own trusted gateway (its identity, its rights), whose deliveries are queued for the worker.
+    /// </summary>
+    private void Subscribe(JsonElement a)
+    {
+        AppEventGateway events = TrustedEvents();
+        int id = a.GetInt32("s");
+        string wireName = a.GetString("w");
+        if (a.GetString("k") == Worker.RemoteEventGateway.EventKind)
+        {
+            _events.Open(id, boundedCapacity: null, enqueue =>
+                events.SubscribeEventWire(wireName, (type, @event) => enqueue(_events.EventMessage(id, type, @event))));
+            return;
+        }
+
+        TopicName topic = WirePayloadCodec.ParseTopic(a.GetString("top"));
+        int? capacity = a.GetOptional("c")?.GetInt32();
+        _events.Open(id, capacity, enqueue =>
+            events.SubscribeWire(topic, wireName, delivery => enqueue(_events.TopicMessage(id, delivery))));
+    }
+
+    /// <summary>
+    /// <c>ev.pub</c>: publishes what the process serialized in its worker, with its identity. Nobody
+    /// waits for the answer in the worker (ADR 0138), so a refusal goes to the app's log, where the
+    /// developer looks when a message never arrives.
+    /// </summary>
+    private void PublishFromWorker(JsonElement a)
+    {
+        string json = a.GetString("j");
+        string topic = a.GetString("top");
+        TopicPublishResult result = TrustedEvents().PublishWire(
+            WirePayloadCodec.ParseTopic(topic), a.GetString("w"), json, type => WirePayloadCodec.Deserialize(type, json));
+        if (result.Outcome != TopicPublishOutcome.Delivered)
+        {
+            _context.Logging.Log(HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Warning,
+                $"The OS refused a publication on '{topic}': {result.Outcome}.");
+        }
+    }
+
+    private AppEventGateway TrustedEvents() =>
+        _context.Events as AppEventGateway
+        ?? throw new NotSupportedException("This process's event gateway cannot serve a worker.");
 
     private static Action<Utf8JsonWriter> Mutation(FileSystemMutationResult result) => writer => WireCodec.WriteMutation(writer, result);
 

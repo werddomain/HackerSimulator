@@ -1,1 +1,3 @@
 #nullable enable
+HackerOs.Platform.WorkerHost.Host.WorkerPoolOptions.KnownAssemblies.get -> System.Collections.Generic.IReadOnlyList<string!>!
+HackerOs.Platform.WorkerHost.Host.WorkerPoolOptions.KnownAssemblies.init -> void

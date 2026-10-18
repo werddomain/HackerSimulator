@@ -57,6 +57,13 @@ internal static class WorkerMessageType
     /// </summary>
     public const string HttpRequest = "hreq";
 
+    /// <summary>
+    /// One delivery of the subscription <c>s</c> of process <c>p</c> (ADR 0124, section 1): the payload
+    /// <c>j</c> as JSON, and for a topic message its topic <c>top</c>, publisher <c>pa</c> and time <c>at</c>.
+    /// The worker answers with an <c>ev.ack</c> note once it delivered it.
+    /// </summary>
+    public const string Event = "ev";
+
     // ---- worker → OS ------------------------------------------------------------------------
 
     /// <summary>The worker's .NET side is up and its assemblies are loaded.</summary>

@@ -828,36 +828,3 @@ internal sealed class RemotePermissionErrorGateway : IAppPermissionErrorGateway
 
     public void Raise(FileSystemError error) => PermissionDenied?.Invoke(this, new AppPermissionErrorEventArgs(error));
 }
-
-/// <summary>
-/// <see cref="IAppEventGateway"/> in a worker: not offered. Typed events are .NET objects of the OS's
-/// own heap; a process that needs them stays on the main thread.
-/// </summary>
-internal sealed class RemoteEventGateway : IAppEventGateway
-{
-    public IDisposable Subscribe<TEvent>(Action<TEvent> handler) where TEvent : notnull =>
-        throw RemoteUnsupported.Member("IAppEventGateway.Subscribe");
-
-    public IReadOnlyList<EventDispatchFault> Publish<TEvent>(TEvent @event) where TEvent : notnull =>
-        throw RemoteUnsupported.Member("IAppEventGateway.Publish");
-
-    public IDisposable Subscribe<TPayload>(TopicName topic, Action<TopicMessage<TPayload>> handler) where TPayload : notnull =>
-        throw RemoteUnsupported.Member("IAppEventGateway.Subscribe");
-
-    public ITopicChannelSubscription<TPayload> SubscribeChannel<TPayload>(TopicName topic, int? boundedCapacity = null) where TPayload : notnull =>
-        throw RemoteUnsupported.Member("IAppEventGateway.SubscribeChannel");
-
-    public TopicPublishResult Publish<TPayload>(TopicName topic, TPayload payload) where TPayload : notnull =>
-        throw RemoteUnsupported.Member("IAppEventGateway.Publish");
-
-    public void RegisterSharedChannel(TopicName root, SharedChannelPolicy policy) =>
-        throw RemoteUnsupported.Member("IAppEventGateway.RegisterSharedChannel");
-}
-
-/// <summary><see cref="IAppFileSystemWatchGateway"/> in a worker: not offered (the change feed is an event of the OS's heap).</summary>
-internal sealed class RemoteWatchGateway : IAppFileSystemWatchGateway
-{
-    public ValueTask<ITopicChannelSubscription<FileSystemChangeEvent>> WatchAsync(
-        VirtualPath path, FileSystemWatchScope scope, CancellationToken cancellationToken = default) =>
-        throw RemoteUnsupported.Member("IAppFileSystemWatchGateway.WatchAsync");
-}

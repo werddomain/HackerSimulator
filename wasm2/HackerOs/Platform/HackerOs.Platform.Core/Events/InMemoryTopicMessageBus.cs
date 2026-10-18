@@ -24,7 +24,7 @@ namespace HackerOs.Platform.Core.Events;
 /// filesystem-change channel added in Phase 2) is enforced by exact <see cref="PublisherIdentity.AppId"/>
 /// ownership matching, not by a capability grant, so it does not depend on this assumption.
 /// </remarks>
-public sealed class InMemoryTopicMessageBus : ITopicMessageBus
+public sealed class InMemoryTopicMessageBus : ITopicMessageBus, IWireTopicMessageBus
 {
     private readonly Lock _gate = new();
     private readonly ICapabilityGrantRepository _grantRepository;
@@ -44,20 +44,43 @@ public sealed class InMemoryTopicMessageBus : ITopicMessageBus
         ArgumentNullException.ThrowIfNull(handler);
         EnsureSubscribeAllowed(topic.Value, subscriber);
 
-        Subscription subscription = new(typeof(TPayload), message => handler((TopicMessage<TPayload>)message));
+        Subscription subscription = Subscription.Local<TPayload>(handler);
+        return Add(topic.Value, subscription);
+    }
 
+    /// <inheritdoc />
+    IDisposable IWireTopicMessageBus.SubscribeWire(
+        TopicName topic, PublisherIdentity subscriber, string payloadWireName, Action<WireTopicDelivery> handler)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(payloadWireName);
+        ArgumentNullException.ThrowIfNull(handler);
+        EnsureSubscribeAllowed(topic.Value, subscriber);
+        return Add(topic.Value, Subscription.Wire(payloadWireName, handler));
+    }
+
+    /// <inheritdoc />
+    int IWireTopicMessageBus.CountSubscriptions(TopicName topic)
+    {
         lock (_gate)
         {
-            if (!_subscriptionsByTopic.TryGetValue(topic.Value, out List<Subscription>? subscriptions))
+            return _subscriptionsByTopic.TryGetValue(topic.Value, out List<Subscription>? subscriptions) ? subscriptions.Count : 0;
+        }
+    }
+
+    private Unsubscriber Add(string topicValue, Subscription subscription)
+    {
+        lock (_gate)
+        {
+            if (!_subscriptionsByTopic.TryGetValue(topicValue, out List<Subscription>? subscriptions))
             {
                 subscriptions = [];
-                _subscriptionsByTopic[topic.Value] = subscriptions;
+                _subscriptionsByTopic[topicValue] = subscriptions;
             }
 
             subscriptions.Add(subscription);
         }
 
-        return new Unsubscriber(this, topic.Value, subscription);
+        return new Unsubscriber(this, topicValue, subscription);
     }
 
     /// <inheritdoc />
@@ -97,26 +120,97 @@ public sealed class InMemoryTopicMessageBus : ITopicMessageBus
         }
 
         TopicMessage<TPayload> message = new(topic, payload, publisher.AppId, DateTimeOffset.UtcNow);
+        string? wireName = null;
 
         List<EventDispatchFault>? faults = null;
         foreach (Subscription subscription in snapshot)
         {
-            // A topic string carries no compile-time payload type; skip a subscriber that requested a
-            // different TPayload for the same topic rather than risk an invalid cast, mirroring how
-            // InMemoryEventBus dispatches strictly by CLR type.
-            if (subscription.PayloadType != typeof(TPayload))
+            try
+            {
+                if (subscription.PayloadType is { } payloadType)
+                {
+                    // A topic string carries no compile-time payload type; skip a subscriber that requested a
+                    // different TPayload for the same topic rather than risk an invalid cast, mirroring how
+                    // InMemoryEventBus dispatches strictly by CLR type.
+                    if (payloadType == typeof(TPayload))
+                    {
+                        subscription.Invoke!(message);
+                    }
+                }
+                else if (subscription.WireName == (wireName ??= WirePayloadNames.Of(typeof(TPayload))))
+                {
+                    // ADR 0124: a subscriber in a worker gets the object; its side of the protocol
+                    // serializes it, with the codec its own runtime will use to read it back.
+                    subscription.WireInvoke!(new WireTopicDelivery(
+                        topic, message.PublisherAppId, message.PublishedAtUtc, typeof(TPayload), payload, Json: null));
+                }
+            }
+            catch (Exception exception)
+            {
+                faults ??= [];
+                faults.Add(new EventDispatchFault(typeof(TPayload), exception));
+            }
+        }
+
+        return new TopicPublishResult(TopicPublishOutcome.Delivered, faults ?? (IReadOnlyList<EventDispatchFault>)[]);
+    }
+
+    /// <inheritdoc />
+    TopicPublishResult IWireTopicMessageBus.PublishWire(
+        TopicName topic, string payloadWireName, string json, Func<Type, object> materialize, PublisherIdentity publisher)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(payloadWireName);
+        ArgumentNullException.ThrowIfNull(json);
+        ArgumentNullException.ThrowIfNull(materialize);
+
+        TopicPublishOutcome? denial = EvaluatePublishDenial(topic.Value, publisher);
+        if (denial is { } deniedOutcome)
+        {
+            return new TopicPublishResult(deniedOutcome, []);
+        }
+
+        List<Subscription> snapshot;
+        lock (_gate)
+        {
+            snapshot = _subscriptionsByTopic.TryGetValue(topic.Value, out List<Subscription>? subscriptions)
+                ? [.. subscriptions]
+                : [];
+        }
+
+        DateTimeOffset publishedAt = DateTimeOffset.UtcNow;
+        Dictionary<Type, object>? materialized = null;
+        List<EventDispatchFault>? faults = null;
+        foreach (Subscription subscription in snapshot)
+        {
+            if (!string.Equals(subscription.WireName, payloadWireName, StringComparison.Ordinal))
             {
                 continue;
             }
 
             try
             {
-                subscription.Invoke(message);
+                if (subscription.PayloadType is { } payloadType)
+                {
+                    // A subscriber on this thread gets a real object of its own payload type, rebuilt
+                    // once per type from the JSON, as a reader of a pipe parses what it reads.
+                    materialized ??= [];
+                    if (!materialized.TryGetValue(payloadType, out object? payload))
+                    {
+                        payload = materialize(payloadType);
+                        materialized[payloadType] = payload;
+                    }
+
+                    subscription.Invoke!(subscription.CreateMessage!(topic, payload, publisher.AppId, publishedAt));
+                }
+                else
+                {
+                    subscription.WireInvoke!(new WireTopicDelivery(topic, publisher.AppId, publishedAt, PayloadType: null, Payload: null, json));
+                }
             }
             catch (Exception exception)
             {
                 faults ??= [];
-                faults.Add(new EventDispatchFault(typeof(TPayload), exception));
+                faults.Add(new EventDispatchFault(subscription.PayloadType ?? typeof(object), exception));
             }
         }
 
@@ -249,10 +343,50 @@ public sealed class InMemoryTopicMessageBus : ITopicMessageBus
         public string OwnerAppId { get; } = ownerAppId;
     }
 
-    private sealed class Subscription(Type payloadType, Action<object> invoke)
+    /// <summary>
+    /// One subscription: a local one has a CLR payload type and a typed handler; a wire one (a process
+    /// in a worker, ADR 0124) has only the payload's wire name and receives a <see cref="WireTopicDelivery"/>.
+    /// </summary>
+    private sealed class Subscription
     {
-        public Type PayloadType { get; } = payloadType;
-        public void Invoke(object message) => invoke(message);
+        private Subscription(
+            Type? payloadType,
+            string wireName,
+            Action<object>? invoke,
+            Func<TopicName, object, string, DateTimeOffset, object>? createMessage,
+            Action<WireTopicDelivery>? wireInvoke)
+        {
+            PayloadType = payloadType;
+            WireName = wireName;
+            Invoke = invoke;
+            CreateMessage = createMessage;
+            WireInvoke = wireInvoke;
+        }
+
+        /// <summary>Gets the CLR payload type of a local subscription; <see langword="null"/> for a wire one.</summary>
+        public Type? PayloadType { get; }
+
+        /// <summary>Gets the payload type's wire name (both kinds), matched by <see cref="IWireTopicMessageBus.PublishWire"/>.</summary>
+        public string WireName { get; }
+
+        /// <summary>Gets the typed handler of a local subscription, taking a <see cref="TopicMessage{TPayload}"/>.</summary>
+        public Action<object>? Invoke { get; }
+
+        /// <summary>Gets the factory of the local subscription's <see cref="TopicMessage{TPayload}"/> from an untyped payload.</summary>
+        public Func<TopicName, object, string, DateTimeOffset, object>? CreateMessage { get; }
+
+        /// <summary>Gets the handler of a wire subscription.</summary>
+        public Action<WireTopicDelivery>? WireInvoke { get; }
+
+        public static Subscription Local<TPayload>(Action<TopicMessage<TPayload>> handler) where TPayload : notnull => new(
+            typeof(TPayload),
+            WirePayloadNames.Of(typeof(TPayload)),
+            message => handler((TopicMessage<TPayload>)message),
+            static (topic, payload, publisherAppId, publishedAt) => new TopicMessage<TPayload>(topic, (TPayload)payload, publisherAppId, publishedAt),
+            wireInvoke: null);
+
+        public static Subscription Wire(string wireName, Action<WireTopicDelivery> handler) =>
+            new(payloadType: null, wireName, invoke: null, createMessage: null, handler);
     }
 
     private sealed class Unsubscriber(InMemoryTopicMessageBus bus, string topicValue, Subscription subscription) : IDisposable
