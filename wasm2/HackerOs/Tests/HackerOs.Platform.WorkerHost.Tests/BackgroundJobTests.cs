@@ -134,6 +134,21 @@ public sealed class BackgroundJobTests
 
     [Theory]
     [MemberData(nameof(BothModes))]
+    public async Task An_app_kills_its_own_task_without_the_process_management_capability(bool workers)
+    {
+        await using OsFixture os = await StartAsync(workers);
+        BackgroundJobCommands.Reset();
+        Assert.DoesNotContain(AppCapabilities.ProcessManage, os.Catalog.Manifests["org.test.bg-selfkill"].Capabilities);
+
+        ShellRun run = await os.RunAsync("bg-selfkill").WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.True(run.ExitCode == 0, run.Stderr);
+        Assert.Equal("killed Killed\n", run.Stdout);
+        BackgroundJobCommands.Release();
+    }
+
+    [Theory]
+    [MemberData(nameof(BothModes))]
     public async Task Ending_the_app_kills_its_tasks(bool workers)
     {
         await using OsFixture os = await StartAsync(workers);
@@ -233,6 +248,7 @@ internal static class BackgroundJobCommands
 {
     private static int s_started;
     private static volatile bool s_release;
+    private static long s_lastPid;
 
     public static IReadOnlyList<AppManifest> Manifests { get; } =
     [
@@ -242,7 +258,8 @@ internal static class BackgroundJobCommands
         TestCommands.Command<CancelCommand>("bg-cancel"),
         TestCommands.Command<HoldCommand>("bg-hold"),
         TestCommands.Command<UndeclaredCommand>("bg-undeclared"),
-        TestCommands.Command<ForeignCommand>("bg-foreign")
+        TestCommands.Command<ForeignCommand>("bg-foreign"),
+        TestCommands.Command<SelfKillCommand>("bg-selfkill")
     ];
 
     /// <summary>Gets how many <c>Hold</c> tasks started since <see cref="Reset"/>.</summary>
@@ -291,6 +308,7 @@ internal static class BackgroundJobCommands
     /// <summary>Waits for the test to release it, ignoring its token: only a kill ends it early.</summary>
     public static async Task<int> Hold(int input, HackBackgroundContext context)
     {
+        Volatile.Write(ref s_lastPid, context.ProcessId);
         Interlocked.Increment(ref s_started);
         while (!s_release)
         {
@@ -443,6 +461,32 @@ internal static class BackgroundJobCommands
             {
                 await context.StandardOutput.WriteLineAsync(
                     $"refused: {(exception.Message.Contains("ADR 0128", StringComparison.Ordinal) ? "names ADR 0128" : exception.Message)}");
+            }
+
+            return 0;
+        }
+    }
+
+    /// <summary><c>bg-selfkill</c>: kills its own task, without <c>process.manage</c> (ADR 0140), and keeps running.</summary>
+    public sealed class SelfKillCommand(AppManifest manifest) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            Task<int> task = HackBackground.RunAsync<int, int>(Hold, 1, cancellationToken: cancellationToken);
+            while (Started == 0)
+            {
+                await Task.Delay(10, cancellationToken);
+            }
+
+            // The task's own pid, as the sample window reads it from a report (ListProcesses is main-thread only).
+            await context.App.Processes.KillAsync(ProcessId.FromInt64(Volatile.Read(ref s_lastPid)), cancellationToken: cancellationToken);
+            try
+            {
+                await task;
+            }
+            catch (HackProcessKilledException exception)
+            {
+                await context.StandardOutput.WriteLineAsync($"killed {exception.Reason}");
             }
 
             return 0;

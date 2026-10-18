@@ -1,8 +1,11 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
+@using HackerOs.AppSdk.Diagnostics
+@using HackerOs.AppSdk.Threading
 @using HackerOs.Simulation.Abstractions
 @using HackerOs.Simulation.Abstractions.FileSystem
+@using HackerOs.Simulation.Abstractions.Processes
 @inherits WindowAppBase
 
 <div class="sample-window-container">
@@ -31,6 +34,21 @@
                     <li>@entry</li>
                 }
             </ul>
+        </section>
+
+        <section class="sample-section" data-sample-background>
+            <h3>Background Task (HackBackground)</h3>
+            <div class="button-row">
+                <label class="sample-label">
+                    Primes below
+                    <input class="sample-input" type="number" min="1000" step="1000000" @bind="_primeLimit" disabled="@IsTaskRunning" />
+                </label>
+                <button class="sample-btn" @onclick="StartPrimeCountAsync" disabled="@IsTaskRunning">Start</button>
+                <button class="sample-btn" @onclick="CancelPrimeCount" disabled="@(!IsTaskRunning)">Cancel</button>
+                <button class="sample-btn sample-btn-danger" @onclick="KillPrimeCountAsync" disabled="@(_taskPid is null)">Kill</button>
+            </div>
+            <progress class="sample-progress" max="1" value="@_taskProgress.Fraction"></progress>
+            <div class="output-box" data-sample-background-status>@_taskStatus</div>
         </section>
 
         <section class="sample-section">
@@ -69,6 +87,87 @@
         StateHasChanged();
     }
     private string _capabilityStatus = "Click button to test capability access.";
+
+    // ADR 0128: the prime count runs as a child process (sample-window-app:CountPrimes), in a Web
+    // Worker when the host has some; the window only awaits it and shows its reports.
+    private int _primeLimit = 3_000_000;
+    private CancellationTokenSource? _taskCancel;
+    private HackBackgroundProgress _taskProgress;
+    private long? _taskPid;
+    private string _taskStatus = "Counts primes off the window's thread: watch it in ps or the task manager.";
+
+    private bool IsTaskRunning => _taskCancel is not null;
+
+    private async Task StartPrimeCountAsync()
+    {
+        _taskCancel = new CancellationTokenSource();
+        _taskProgress = default;
+        _taskStatus = "Starting…";
+        // Delivered on the renderer's synchronization context, at most ten times a second.
+        Progress<HackBackgroundProgress> progress = new(report =>
+        {
+            _taskProgress = report;
+            _taskPid ??= ParsePid(report.Message);
+            _taskStatus = report.ToString();
+            StateHasChanged();
+        });
+
+        try
+        {
+            PrimeCountResult result = await HackBackground.RunAsync<PrimeCountInput, PrimeCountResult>(
+                SampleJobs.CountPrimes,
+                new PrimeCountInput(Math.Max(1000, _primeLimit)),
+                progress,
+                cancellationToken: _taskCancel.Token);
+            _taskStatus = $"{result.Count} primes below {_primeLimit}; the largest is {result.Largest}.";
+        }
+        catch (HackProcessKilledException exception)
+        {
+            // kill -9, the task manager, or the Kill button: the task's process is gone, the window is not.
+            _taskStatus = $"The task's process was killed ({exception.Reason}).";
+        }
+        catch (OperationCanceledException)
+        {
+            _taskStatus = "Cancelled.";
+        }
+        catch (HackBackgroundJobException exception)
+        {
+            _taskStatus = $"The task failed: {exception.OriginalTypeName}: {exception.Message}";
+        }
+        finally
+        {
+            _taskCancel.Dispose();
+            _taskCancel = null;
+            _taskPid = null;
+        }
+    }
+
+    private void CancelPrimeCount() => _taskCancel?.Cancel();
+
+    private async Task KillPrimeCountAsync()
+    {
+        if (_taskPid is not { } pid)
+        {
+            return;
+        }
+
+        try
+        {
+            // A parent may kill its own children without the process-management capability (ADR 0140).
+            await AppContext.Processes.KillAsync(ProcessId.FromInt64(pid));
+        }
+        catch (Exception exception) when (exception is KeyNotFoundException or InvalidOperationException)
+        {
+            // It ended in the meantime.
+        }
+    }
+
+    /// <summary>The task reports "pid N · …": its process id, so the window can kill it.</summary>
+    private static long? ParsePid(string? message) =>
+        message is not null && message.StartsWith("pid ", StringComparison.Ordinal)
+            && long.TryParse(message.AsSpan(4, message.IndexOf(' ', 4) is var end and > 4 ? end - 4 : message.Length - 4), out long pid)
+            ? pid
+            : null;
 
     private async Task OpenFileAsync()
     {
