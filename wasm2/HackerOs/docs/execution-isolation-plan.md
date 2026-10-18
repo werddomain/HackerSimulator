@@ -242,7 +242,7 @@ RESULT: PASS
 - Workers et mesures sur `HackerOs.Server`.
 
 Ces points sont repris par [`execution-followups-plan.md`](execution-followups-plan.md)
-(plan proposé le 2026-10-17, exécuté après la migration wasm v3).
+(plan validé le 2026-10-17, exécuté après la migration wasm v3).
 
 ## 8. Références
 
