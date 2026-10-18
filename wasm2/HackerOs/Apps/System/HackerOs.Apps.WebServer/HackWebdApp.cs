@@ -8,11 +8,11 @@ namespace HackerOs.Apps.WebServer;
 /// build generates its manifest from this class; it is never instantiated at runtime.
 /// </summary>
 /// <remarks>
-/// ADR 0080, section 1: it runs on the main thread, not in a dedicated worker as ADR 0077 planned,
-/// because it follows its configuration directories with <c>HackFileSystemWatcher</c> and a worker
-/// does not offer file-system watches yet (the change feed is an event of the OS's heap).
+/// ADR 0124, section 6: it runs in a worker of its own, as ADR 0077 planned (the default of a
+/// service); its <c>HackFileSystemWatcher</c> receives the changes of its configuration directories by
+/// message, and its listening sockets live in the OS's port table (ADR 0074).
 /// </remarks>
-[AppManifest(Execution = AppExecutionHost.MainThread)]
+[AppManifest]
 public sealed class HackWebdApp : AppDefinition
 {
     /// <summary>The service name (<c>systemctl status hackwebd</c>).</summary>

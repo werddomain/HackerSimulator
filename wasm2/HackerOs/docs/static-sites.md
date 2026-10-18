@@ -29,7 +29,7 @@ Publier un dossier comme site web, comme avec IIS, Apache ou nginx :
                      ├─ HackServiceController (start/stop/restart hackwebd)
                      └─ HackIPGlobalProperties (sockets de hackwebd → état des sites)
 
- hackwebd (service, MainThread, AutoStart)
+ hackwebd (service, worker dédié, AutoStart)
    ├─ HackFileSystemWatcher "*.site" sur les deux dossiers ─► rechargement à chaud
    ├─ HackHttpListener par préfixe normalisé ─► StaticFileHandler
    │      └─ WwwDataAccess (droits « other » pour un site système)
@@ -174,8 +174,11 @@ IReadOnlyList<string> errors = HackWebSiteFile.Validate(site, HackWebSiteScope.U
   exactement ce que montre `cat` (ADR 0077 §1).
 - Un seul démon pour tous les sites statiques, un listener par préfixe : le
   routage par hôte et par chemin reste celui de `http.sys` (ADR 0074).
-- `hackwebd` sur le fil principal, `www-data` simulé, journaux par
-  `AppendToLogFile`, résolveur asynchrone : [ADR 0080](adr/0080-hosted-static-sites-adjustments.md).
+- `www-data` simulé, journaux par `AppendToLogFile`, résolveur asynchrone :
+  [ADR 0080](adr/0080-hosted-static-sites-adjustments.md). `hackwebd` tourne
+  en worker dédié depuis que la surveillance de fichiers traverse la frontière
+  du worker ([ADR 0124](adr/0124-remote-event-and-watch-gateways.md) §6,
+  qui rend sans objet le fil principal de l'ADR 0080 §1).
 - `enabled` est une propriété à `set` (pas `init`) : le générateur JSON donne
   `default` à une propriété `init` absente, ce qui aurait arrêté tout site
   dont le fichier omet `enabled`.
@@ -186,8 +189,6 @@ IReadOnlyList<string> errors = HackWebSiteFile.Validate(site, HackWebSiteScope.U
   réécriture d'URL.
 - L'Error Log Viewer ne liste pas `/var/log/hackweb` (lire par `cat`/`tail`
   ou l'onglet Logs du Manager).
-- `hackwebd` n'est pas dans un Web Worker tant que les workers n'offrent pas
-  la surveillance de fichiers (ADR 0080 §1).
 
 ## Tests
 

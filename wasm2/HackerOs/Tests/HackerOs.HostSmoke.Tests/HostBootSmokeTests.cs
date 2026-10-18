@@ -118,6 +118,12 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
         await WaitForTerminalTextAsync(rows, text => Regex.IsMatch(text, @"^\s*12\s*$", RegexOptions.Multiline), "the pipeline's count");
         Log("pipeline ran.");
 
+        // ADR 0124, section 4: a command of a sample project, in an assembly of its own that no worker
+        // preloads; a pool worker fetches it on demand (in-process on the server host).
+        await RunCommandAsync(page, screen, "clear; sample-cmd loaded-on-demand");
+        await WaitForTerminalTextAsync(rows, text => Regex.IsMatch(text, @"^loaded-on-demand\s*$", RegexOptions.Multiline), "the sample command's output");
+        Log("sample-cmd ran from its own assembly.");
+
         await RunCommandAsync(page, screen, "clear; cat /proc/hackeros/workers");
         if (!settings.ExpectsWorkers)
         {

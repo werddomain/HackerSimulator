@@ -29,6 +29,7 @@ public sealed class WorkerProcessHost
     private readonly WorkerRpcClient _rpc;
     private readonly Lock _gate = new();
     private readonly Dictionary<long, WorkerProcess> _processes = [];
+    private HashSet<string> _knownAssemblies = new(StringComparer.Ordinal);
     private WorkerClock? _clock;
     private WorkerCpuMeter? _meter;
     private TimeSpan _heartbeatPeriod = TimeSpan.FromMilliseconds(250);
@@ -116,6 +117,9 @@ public sealed class WorkerProcessHost
                 case WorkerMessageType.PipeClosed:
                     Find(root)?.Output.Close(root.GetInt32("f"));
                     break;
+                case WorkerMessageType.Event:
+                    Find(root)?.Context.EventTable.Deliver(root.GetInt32("s"), root);
+                    break;
                 case WorkerMessageType.HttpRequest:
                     Find(root)?.Channel.Listeners.Deliver(root.GetInt32("sk"), WireCodec.ReadListenerExchange(root.GetProperty("ex")));
                     break;
@@ -144,6 +148,11 @@ public sealed class WorkerProcessHost
         {
             _meter = new WorkerCpuMeter();
             HackExecutionContext.InstallContextSwitchHook(_meter);
+        }
+
+        if (root.TryGetProperty("known", out _))
+        {
+            _knownAssemblies = new HashSet<string>(WireCodec.ReadStrings(root, "known"), StringComparer.Ordinal);
         }
 
         _ = WarmUpAsync(WireCodec.ReadStrings(root, "pre"));
@@ -277,11 +286,19 @@ public sealed class WorkerProcessHost
         RemoteProcessExit exit;
         try
         {
+            EnsureKnownAssembly(start.Assembly);
             Type entryType = await _loader.LoadEntryTypeAsync(start.Assembly, start.TypeName).ConfigureAwait(true);
             object instance = CreateInstance(entryType, process.Context.Manifest);
             exit = start.Kind == AppKind.Service
                 ? await process.RunServiceAsync((ServiceAppBase)instance).ConfigureAwait(true)
                 : await process.RunTerminalAsync((TerminalAppBase)instance, start).ConfigureAwait(true);
+        }
+        catch (TypeLoadException exception)
+        {
+            // ADR 0124, section 4: an assembly the worker cannot load is a launch failure, like a
+            // command the shell cannot find (exit code 127), not a crash of the program.
+            process.Output.StandardError.WriteLine($"{start.Assembly}: {exception.Message}");
+            exit = RemoteProcessExit.Exited(LaunchFailedExitCode);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
@@ -291,6 +308,32 @@ public sealed class WorkerProcessHost
 
         End(process, exit);
     }
+
+    /// <summary>Exit code of a process whose assembly the worker refused or could not load (ADR 0124, section 4).</summary>
+    internal const int LaunchFailedExitCode = 127;
+
+    /// <summary>
+    /// ADR 0124, section 4: a worker loads any assembly known to the build, or one already part of its
+    /// runtime (the boot set); anything else is refused before a byte of it is fetched.
+    /// </summary>
+    /// <exception cref="TypeLoadException">The assembly is not known to this build.</exception>
+    private void EnsureKnownAssembly(string assemblyFile)
+    {
+        if (!IsLoadable(_knownAssemblies, assemblyFile, static name =>
+            AppDomain.CurrentDomain.GetAssemblies().Any(assembly => string.Equals(assembly.GetName().Name, name, StringComparison.Ordinal))))
+        {
+            throw new TypeLoadException($"'{assemblyFile}' is not an app assembly known to this build.");
+        }
+    }
+
+    /// <summary>The rule of <see cref="EnsureKnownAssembly"/>: no list, in the list, or already in the runtime.</summary>
+    /// <param name="known">The build's app assemblies; empty when no list is enforced.</param>
+    /// <param name="assemblyFile">The file name the OS asks for (<c>HackerOs.Commands.dll</c>).</param>
+    /// <param name="isInRuntime">Whether an assembly of that simple name is already loaded.</param>
+    internal static bool IsLoadable(IReadOnlySet<string> known, string assemblyFile, Func<string, bool> isInRuntime) =>
+        known.Count == 0
+        || known.Contains(assemblyFile)
+        || isInRuntime(Path.GetFileNameWithoutExtension(assemblyFile));
 
     /// <summary>
     /// Creates the app's entry point with its manifest, as the OS does in-process (ADR 0055: an app's
@@ -307,6 +350,7 @@ public sealed class WorkerProcessHost
     private void End(WorkerProcess process, RemoteProcessExit exit)
     {
         process.Channel.Listeners.CloseAll();
+        process.Context.EventTable.Close();
         process.Output.Flush();
         process.Output.Abort();
         lock (_gate)
@@ -500,6 +544,7 @@ internal sealed class WorkerProcess
     public void Kill()
     {
         Control.MarkKilled();
+        Context.EventTable.Close();
         Output.Abort();
         Interrupt();
     }

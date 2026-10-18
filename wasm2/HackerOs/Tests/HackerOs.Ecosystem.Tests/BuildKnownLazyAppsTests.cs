@@ -52,8 +52,10 @@ public sealed class BuildKnownLazyAppsTests
         Assert.All(catalog.Manifests.Values, manifest => Assert.Equal(
             manifest.Kind is AppKind.Terminal or AppKind.Service or AppKind.Web ? AppLaunchVisibility.Hidden : AppLaunchVisibility.Visible,
             manifest.Presentation.LaunchVisibility));
-        // One assembly per window app, the two sample sites, plus the single HackerOs.Commands assembly (ADR 0051).
-        Assert.Equal(17, BuildKnownLazyAssemblies.Names.Count);
+        // One assembly per window app, the two sample sites, the sample command (ADR 0124), plus the
+        // single HackerOs.Commands assembly (ADR 0051).
+        Assert.Equal(18, BuildKnownLazyAssemblies.Names.Count);
+        Assert.Contains("HackerOs.Samples.TerminalApp.dll", BuildKnownLazyAssemblies.Names);
         Assert.Contains("HackerOs.Samples.BlazorSite.dll", BuildKnownLazyAssemblies.Names);
         Assert.Contains("HackerOs.Samples.Intranet.dll", BuildKnownLazyAssemblies.Names);
         Assert.Contains("HackerOs.Commands.dll", BuildKnownLazyAssemblies.Names);

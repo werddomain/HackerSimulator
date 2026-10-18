@@ -6,9 +6,9 @@ namespace HackerOs.Samples.ServiceApp;
 /// Manifest of "Sample Ticker Service" (ADR 0047). The build generates <c>manifest.json</c> from this
 /// class; it is never instantiated at runtime.
 /// </summary>
-// ADR 0070: stays on the main thread: it publishes typed topic messages (SampleTickerEvent), .NET
-// objects of the OS's heap that a worker cannot hand to their subscribers.
-[AppManifest(Execution = AppExecutionHost.MainThread)]
+// ADR 0124: runs in a worker of its own (the default of a service); its SampleTickerEvent crosses to
+// the subscribers as JSON, declared by SampleTickerJsonContext.
+[AppManifest]
 public sealed class ServiceSampleApp : AppDefinition
 {
     /// <inheritdoc />

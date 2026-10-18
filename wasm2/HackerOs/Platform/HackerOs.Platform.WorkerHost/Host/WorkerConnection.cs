@@ -178,6 +178,7 @@ internal sealed class WorkerConnection
             writer.WriteNumber("hb", (int)_pool.Options.HeartbeatPeriod.TotalMilliseconds);
             writer.WriteBoolean("cpu", _pool.Options.MeterCpu);
             WireCodec.WriteStrings(writer, "pre", _pool.Options.PreloadAssemblies);
+            WireCodec.WriteStrings(writer, "known", _pool.Options.KnownAssemblies);
         }));
     }
 

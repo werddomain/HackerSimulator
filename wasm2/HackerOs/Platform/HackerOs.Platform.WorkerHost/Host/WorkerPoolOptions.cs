@@ -42,6 +42,14 @@ public sealed record WorkerPoolOptions
     /// <summary>Gets the lazy-loaded assemblies a worker loads while warming up (the built-in commands).</summary>
     public IReadOnlyList<string> PreloadAssemblies { get; init; } = [];
 
+    /// <summary>
+    /// Gets the app assemblies known to this build (<c>BuildKnownLazyAssemblies</c>, ADR 0124, section 4):
+    /// a worker loads any of them on demand and keeps it loaded, and refuses an assembly that is neither
+    /// in this list nor already part of its runtime (exit code 127, like a command that is not found).
+    /// Empty: no list is enforced (a host that composes its apps as ordinary references, the tests).
+    /// </summary>
+    public IReadOnlyList<string> KnownAssemblies { get; init; } = [];
+
     /// <summary>Gets whether workers measure the CPU time of their processes (follows the CPU measurement, ADR 0066).</summary>
     public bool MeterCpu { get; init; } = true;
 }
