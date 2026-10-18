@@ -52,4 +52,11 @@ public sealed record WorkerPoolOptions
 
     /// <summary>Gets whether workers measure the CPU time of their processes (follows the CPU measurement, ADR 0066).</summary>
     public bool MeterCpu { get; init; } = true;
+
+    /// <summary>
+    /// Gets the period of the browser's memory measurement of the workers
+    /// (<c>performance.measureUserAgentSpecificMemory()</c>, ADR 0131 section 4), when the runtime
+    /// offers it. A measurement older than three periods is dropped for the heartbeat's figure.
+    /// </summary>
+    public TimeSpan MemoryMeasurePeriod { get; init; } = TimeSpan.FromSeconds(20);
 }

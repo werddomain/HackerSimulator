@@ -321,3 +321,57 @@ HackerOs.Platform.Core.Processes.BrowserRuntimeMemorySource.ReleaseProcess(long 
 HackerOs.Platform.Core.Processes.IRuntimeMemorySource.ReleaseProcess(long pid) -> void
 HackerOs.Platform.Core.Processes.IWorkerMemoryReclaimer
 HackerOs.Platform.Core.Processes.IWorkerMemoryReclaimer.RecycleAfterOomKill(long pid) -> bool
+HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.CrossOriginIsolation.get -> System.Func<HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus?>?
+HackerOs.Platform.Core.FileSystem.Virtual.ProcMetricsSources.CrossOriginIsolation.init -> void
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode.Auto = 0 -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode.On = 1 -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode.Off = 2 -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason.None = 0 -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason.Setting = 1 -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason.MissingHeaders = 2 -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason.InsecureContext = 3 -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason.Browser = 4 -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason.NotBrowser = 5 -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy
+const HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.SettingKey = "HackerOs:CrossOriginIsolation" -> string!
+const HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.AuditPassed = true -> bool
+const HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.OpenerPolicyHeader = "Cross-Origin-Opener-Policy" -> string!
+const HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.EmbedderPolicyHeader = "Cross-Origin-Embedder-Policy" -> string!
+const HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.OpenerPolicy = "same-origin" -> string!
+const HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.EmbedderPolicy = "credentialless" -> string!
+const HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.StrictEmbedderPolicy = "require-corp" -> string!
+static HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.Parse(string? value) -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode
+static HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.SendsHeaders(HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode mode, bool auditPassed = true) -> bool
+static HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.ServerHeaders(HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode mode) -> System.Collections.Generic.IReadOnlyList<System.Collections.Generic.KeyValuePair<string!, string!>>!
+static HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.Format(HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode mode) -> string!
+static HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.Format(HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason reason) -> string!
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.CrossOriginIsolationStatus(HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode Mode, bool IsIsolated, HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason Reason, string? EmbedderPolicy, bool SharedPipes, bool SynchronousCalls, bool MemoryMeasurement, System.TimeSpan TimerResolution) -> void
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.Mode.get -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.Mode.init -> void
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.IsIsolated.get -> bool
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.IsIsolated.init -> void
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.Reason.get -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationReason
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.Reason.init -> void
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.EmbedderPolicy.get -> string?
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.EmbedderPolicy.init -> void
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.SharedPipes.get -> bool
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.SharedPipes.init -> void
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.SynchronousCalls.get -> bool
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.SynchronousCalls.init -> void
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.MemoryMeasurement.get -> bool
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.MemoryMeasurement.init -> void
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.TimerResolution.get -> System.TimeSpan
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.TimerResolution.init -> void
+static HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.NotBrowser.get -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus!
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationState
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationState.CrossOriginIsolationState() -> void
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationState.Status.get -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus!
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationState.Status.set -> void
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationProbe
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationProbe.CrossOriginIsolationProbe(HackerOs.Platform.Core.Isolation.CrossOriginIsolationState! state, System.Func<System.Threading.Tasks.Task<HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus!>!>! probe) -> void
+HackerOs.Platform.Core.Isolation.CrossOriginIsolationProbe.RunAsync() -> System.Threading.Tasks.Task<HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus!>!
+static HackerOs.Platform.Core.Isolation.CrossOriginIsolationProbe.Describe(HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus! status) -> string!
+static HackerOs.Platform.Core.Isolation.CrossOriginIsolationProbe.Read(HackerOs.Platform.Core.Isolation.CrossOriginIsolationMode mode, string? json) -> HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus!

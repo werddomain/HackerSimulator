@@ -6,6 +6,7 @@ using HackerOs.Platform.Core.Apps;
 using HackerOs.Platform.Core.Backup;
 using HackerOs.Platform.Core.Diagnostics;
 using HackerOs.Platform.Core.Execution;
+using HackerOs.Platform.Core.Isolation;
 using HackerOs.Platform.Core.Lifecycle;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.Core.Processes.Accounting;
@@ -44,6 +45,7 @@ public sealed class EcosystemBootCoordinator
     private readonly SystemBackupService? _backup;
     private readonly OomKiller? _oomKiller;
     private readonly IOsSettingsService? _settings;
+    private readonly CrossOriginIsolationProbe? _isolation;
 
     /// <summary>Initializes the coordinator with every boot-critical persistent boundary.</summary>
     /// <param name="fileSystemBootstrapper">Mounts the IndexedDB-backed filesystem, the first step of the boot.</param>
@@ -95,6 +97,7 @@ public sealed class EcosystemBootCoordinator
     /// settings files exist, then started. Optional for headless tests.
     /// </param>
     /// <param name="settings">The settings service <paramref name="oomKiller"/> reads and watches.</param>
+    /// <param name="isolation">Asks the page at boot whether it is cross-origin isolated (ADR 0131); absent outside a browser.</param>
     public EcosystemBootCoordinator(
         IndexedDbFileSystemBootstrapper fileSystemBootstrapper,
         SettingsStoreToFilesMigration settingsMigration,
@@ -117,7 +120,8 @@ public sealed class EcosystemBootCoordinator
         StorageSpaceMonitor? spaceMonitor = null,
         SystemBackupService? backup = null,
         OomKiller? oomKiller = null,
-        IOsSettingsService? settings = null)
+        IOsSettingsService? settings = null,
+        CrossOriginIsolationProbe? isolation = null)
     {
         _fileSystemBootstrapper = fileSystemBootstrapper
             ?? throw new ArgumentNullException(nameof(fileSystemBootstrapper));
@@ -142,6 +146,7 @@ public sealed class EcosystemBootCoordinator
         _backup = backup;
         _oomKiller = oomKiller;
         _settings = settings;
+        _isolation = isolation;
     }
 
     /// <summary>
@@ -180,6 +185,7 @@ public sealed class EcosystemBootCoordinator
         await AttachLogWriterAsync(cancellationToken).ConfigureAwait(false);
         WriteResourceAccountingNotices();
         WriteWorkerNotice();
+        await ProbeCrossOriginIsolationAsync().ConfigureAwait(false);
         WriteCatalogNotices();
         _spaceMonitor?.Start();
         await WritePendingRestoreRecordAsync(cancellationToken).ConfigureAwait(false);
@@ -297,6 +303,28 @@ public sealed class EcosystemBootCoordinator
                 ? "workers: commands and services run in Web Workers"
                 : $"workers: {_workers.PoolSize} pool worker(s), one per virtual core, plus one ready worker once the system is started; ceiling {_workers.Capacity} (navigator.hardwareConcurrency)";
         _logWriter.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "workers", notice);
+    }
+
+    /// <summary>
+    /// ADR 0131: asks the page whether it is cross-origin isolated, before any worker starts placing
+    /// processes, and writes the answer to <c>/var/log/syslog</c>. A failure leaves the exact fallback.
+    /// </summary>
+    private async ValueTask ProbeCrossOriginIsolationAsync()
+    {
+        if (_isolation is null)
+        {
+            return;
+        }
+
+        try
+        {
+            CrossOriginIsolationStatus status = await _isolation.RunAsync().ConfigureAwait(false);
+            _logWriter?.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "kernel", CrossOriginIsolationProbe.Describe(status));
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            _logWriter?.Write(LogFileTarget.Syslog, DiagnosticSeverity.Warning, "kernel", $"isolation: probe failed, workers use messages: {exception.Message}");
+        }
     }
 
     /// <summary>

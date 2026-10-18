@@ -87,3 +87,48 @@ public sealed class WebWorkerStartException : Exception
     {
     }
 }
+
+/// <summary>
+/// A worker that may wait for the OS's answer to one call (ADR 0131, section 4): when the page is
+/// cross-origin isolated, the worker blocks in <c>Atomics.wait</c> and the OS answers through
+/// shared memory instead of a message. The OS never waits.
+/// </summary>
+public interface ISynchronousWebWorker
+{
+    /// <summary>Gets whether the worker can wait for a synchronous answer (shared memory is available).</summary>
+    bool SupportsSynchronousCalls { get; }
+
+    /// <summary>Answers synchronous call <paramref name="callId"/>, which the worker is waiting for.</summary>
+    /// <param name="callId">The call's number (<c>i</c> of the protocol).</param>
+    /// <param name="reply">The <c>result</c> message (JSON text of the WorkerHost protocol).</param>
+    /// <returns>What happened to the answer.</returns>
+    SynchronousAnswerOutcome AnswerSynchronousCall(int callId, string reply);
+}
+
+/// <summary>What happened to a synchronous answer (<see cref="ISynchronousWebWorker.AnswerSynchronousCall"/>).</summary>
+public enum SynchronousAnswerOutcome
+{
+    /// <summary>Written; the worker is woken.</summary>
+    Delivered,
+
+    /// <summary>The worker no longer waits for this call (timed out, terminated).</summary>
+    Late,
+
+    /// <summary>The answer is larger than the shared slot; send a short error instead.</summary>
+    TooLarge
+}
+
+/// <summary>
+/// A worker runtime that measures each worker's memory with the browser's own meter
+/// (<c>performance.measureUserAgentSpecificMemory()</c>, ADR 0131 section 4, ADR 0126 section 6).
+/// </summary>
+public interface IWebWorkerMemoryMeter
+{
+    /// <summary>
+    /// Measures every live worker; <see langword="null"/> when the browser does not offer the meter
+    /// here (the page is not cross-origin isolated, or another browser than Chromium).
+    /// </summary>
+    /// <param name="cancellationToken">Abandons the wait (the browser may take several seconds).</param>
+    /// <returns>Bytes by <see cref="IWebWorker.Id"/>; a worker the browser did not report is absent.</returns>
+    Task<IReadOnlyDictionary<int, long>?> MeasureWorkersAsync(CancellationToken cancellationToken = default);
+}

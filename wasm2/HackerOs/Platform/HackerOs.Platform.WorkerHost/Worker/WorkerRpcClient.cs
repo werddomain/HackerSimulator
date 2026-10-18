@@ -12,13 +12,28 @@ namespace HackerOs.Platform.WorkerHost.Worker;
 internal sealed class WorkerRpcClient
 {
     private readonly Action<string> _post;
+    private readonly WorkerSynchronousCall? _callSync;
     private readonly Lock _gate = new();
     private readonly Dictionary<int, PendingCall> _pending = [];
     private int _nextId;
 
     /// <summary>Initializes the client over the worker's outgoing pipe.</summary>
     /// <param name="post">Posts one message to the OS.</param>
-    public WorkerRpcClient(Action<string> post) => _post = post ?? throw new ArgumentNullException(nameof(post));
+    /// <param name="callSync">
+    /// Waits for the OS's answer to one call (ADR 0131, section 4), or <see langword="null"/> when the
+    /// page is not cross-origin isolated: synchronous members are then refused.
+    /// </param>
+    public WorkerRpcClient(Action<string> post, WorkerSynchronousCall? callSync = null)
+    {
+        _post = post ?? throw new ArgumentNullException(nameof(post));
+        _callSync = callSync;
+    }
+
+    /// <summary>The longest wait of a synchronous call before it fails: the OS may be busy, never stuck.</summary>
+    public static TimeSpan SynchronousCallTimeout { get; } = TimeSpan.FromSeconds(10);
+
+    /// <summary>Gets whether this worker may wait for an answer of the OS (<see cref="CallSync"/>).</summary>
+    public bool CanCallSynchronously => _callSync is not null;
 
     /// <summary>Gets the number of calls waiting for their answer.</summary>
     public int PendingCount
@@ -64,6 +79,46 @@ internal sealed class WorkerRpcClient
             WriteArguments(writer, arguments);
         }));
         return call.Completion.Task;
+    }
+
+    /// <summary>
+    /// Calls <paramref name="operation"/> and blocks this worker's thread until the OS answers
+    /// (ADR 0131, section 4): <c>Atomics.wait</c> in a real worker, like a blocking system call.
+    /// Other processes of this worker wait too, so only short calls are made this way.
+    /// </summary>
+    /// <param name="pid">The calling process.</param>
+    /// <param name="operation">One of <see cref="RemoteOps"/>.</param>
+    /// <param name="arguments">Writes the <c>a</c> object, or <see langword="null"/> for none.</param>
+    /// <returns>The <c>v</c> object of the result.</returns>
+    /// <exception cref="NotSupportedException">The page is not cross-origin isolated.</exception>
+    /// <exception cref="TimeoutException">The OS did not answer within <see cref="SynchronousCallTimeout"/>.</exception>
+    public JsonElement CallSync(long pid, string operation, Action<Utf8JsonWriter>? arguments)
+    {
+        WorkerSynchronousCall callSync = _callSync ?? throw new NotSupportedException("Synchronous calls need a cross-origin isolated page (ADR 0131).");
+        int id;
+        lock (_gate)
+        {
+            id = ++_nextId;
+        }
+
+        string message = WorkerMessage.Create(WorkerMessageType.Call, writer =>
+        {
+            writer.WriteNumber("i", id);
+            writer.WriteNumber("p", pid);
+            writer.WriteString("o", operation);
+            writer.WriteBoolean("s", true);
+            WriteArguments(writer, arguments);
+        });
+        string reply = callSync(id, message, SynchronousCallTimeout)
+            ?? throw new TimeoutException($"The OS did not answer {operation} within {SynchronousCallTimeout.TotalSeconds:0} s.");
+        using JsonDocument document = WorkerMessage.Parse(reply, out _);
+        JsonElement root = document.RootElement;
+        if (root.GetOptional("e") is { } error)
+        {
+            throw RemoteErrors.Read(error);
+        }
+
+        return root.GetOptional("v")?.Clone() ?? EmptyObject;
     }
 
     /// <summary>Posts a call that has no answer (log line, environment change), in order with the others.</summary>
@@ -158,3 +213,13 @@ internal sealed class WorkerRpcClient
         public CancellationTokenRegistration Registration { get; set; }
     }
 }
+
+/// <summary>
+/// Sends call <paramref name="callId"/> (its JSON text, <paramref name="message"/>) and waits for the
+/// OS's <c>result</c> message (ADR 0131, section 4); returns <see langword="null"/> after
+/// <paramref name="timeout"/>.
+/// </summary>
+/// <param name="callId">The call's number.</param>
+/// <param name="message">The <c>call</c> message.</param>
+/// <param name="timeout">The longest wait.</param>
+public delegate string? WorkerSynchronousCall(int callId, string message, TimeSpan timeout);

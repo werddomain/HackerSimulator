@@ -256,8 +256,11 @@ internal sealed class RemoteProcessSession
         call?.Cancel();
     }
 
-    /// <summary>Serves one call and posts its answer.</summary>
-    public async Task OnCallAsync(int id, string operation, JsonElement arguments)
+    /// <summary>
+    /// Serves one call and posts its answer; a <paramref name="synchronous"/> call (ADR 0131,
+    /// section 4) is answered in the worker's shared slot instead, where its thread waits.
+    /// </summary>
+    public async Task OnCallAsync(int id, string operation, JsonElement arguments, bool synchronous = false)
     {
         using CancellationTokenSource cancellation = new();
         lock (_gate)
@@ -293,7 +296,15 @@ internal sealed class RemoteProcessSession
             }
         }
 
-        _worker.Post(reply);
+        if (synchronous)
+        {
+            // ADR 0131, section 4: the worker waits in Atomics.wait; the answer goes to its shared slot.
+            _worker.AnswerSynchronously(id, reply);
+        }
+        else
+        {
+            _worker.Post(reply);
+        }
     }
 
     /// <summary>Serves one call that has no answer; a failure is logged, as nobody waits for it.</summary>
@@ -668,6 +679,11 @@ internal sealed class RemoteProcessSession
                     ProcessId.FromInt64(a.GetInt64("pid")), TimeSpan.FromTicks(a.GetInt64("to")),
                     (ProcessExitReason)a.GetInt32("r"), cancellationToken).ConfigureAwait(false);
                 return writer => WireCodec.WriteProcess(writer, "pr", stopped);
+            }
+            case RemoteOps.ProcessList:
+            {
+                IReadOnlyList<ProcessRecord> processes = c.Processes.ListProcesses();
+                return writer => WireCodec.WriteProcesses(writer, "ps", processes);
             }
             case RemoteOps.ProcessKill:
             {

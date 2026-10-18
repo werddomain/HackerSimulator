@@ -30,6 +30,7 @@ using HackerOs.Simulation.Abstractions.Network;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Processes;
 using HackerOs.Simulation.Abstractions.Sessions;
+using HackerOs.Simulation.Abstractions.Workers;
 
 namespace HackerOs.Platform.WorkerHost.Tests;
 
@@ -59,7 +60,8 @@ internal sealed class OsFixture : IAsyncDisposable
 
     private OsFixture(
         bool workers, WorkerPoolOptions? poolOptions, int hardwareConcurrency, TimeSpan? workerStartupDelay,
-        Func<HackerOs.Platform.WorkerHost.Worker.IWorkerAssemblyLoader>? loaderFactory)
+        Func<HackerOs.Platform.WorkerHost.Worker.IWorkerAssemblyLoader>? loaderFactory, bool synchronousCalls = false,
+        Func<IWebWorkerRuntime, IWebWorkerRuntime>? wrapRuntime = null)
     {
         FixedTimeProvider timeProvider = new(Now);
         InMemoryFileSystemRepository repository = new(
@@ -152,9 +154,9 @@ internal sealed class OsFixture : IAsyncDisposable
 
         if (workers)
         {
-            Runtime = new LoopbackWebWorkerRuntime(hardwareConcurrency, workerStartupDelay, loaderFactory);
+            Runtime = new LoopbackWebWorkerRuntime(hardwareConcurrency, workerStartupDelay, loaderFactory, synchronousCalls);
             Pool = new WorkerPool(
-                Runtime,
+                wrapRuntime?.Invoke(Runtime) ?? Runtime,
                 poolOptions ?? FastOptions,
                 Clock,
                 () => Manager,
@@ -265,9 +267,11 @@ internal sealed class OsFixture : IAsyncDisposable
         WorkerPoolOptions? poolOptions = null,
         int hardwareConcurrency = 4,
         TimeSpan? workerStartupDelay = null,
-        Func<HackerOs.Platform.WorkerHost.Worker.IWorkerAssemblyLoader>? loaderFactory = null)
+        Func<HackerOs.Platform.WorkerHost.Worker.IWorkerAssemblyLoader>? loaderFactory = null,
+        bool synchronousCalls = false,
+        Func<IWebWorkerRuntime, IWebWorkerRuntime>? wrapRuntime = null)
     {
-        OsFixture fixture = new(workers, poolOptions, hardwareConcurrency, workerStartupDelay, loaderFactory);
+        OsFixture fixture = new(workers, poolOptions, hardwareConcurrency, workerStartupDelay, loaderFactory, synchronousCalls, wrapRuntime);
         fixture.Principal = await fixture._sessions.LoginAsync(fixture._alice, "hunter2");
         foreach (string capability in HostCapabilities)
         {

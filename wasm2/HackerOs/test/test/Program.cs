@@ -40,6 +40,28 @@ builder.Services.AddHackerOsEcosystem(
 
 var app = builder.Build();
 
+// ADR 0131, section 2: COOP/COEP on every response, so the OS's page and its Web Workers are
+// cross-origin isolated (HackerOs:CrossOriginIsolation: auto, on or off). The PWA's service worker
+// adds the same headers once it is installed; this covers the first load and a host without it.
+IReadOnlyList<KeyValuePair<string, string>> isolationHeaders = HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.ServerHeaders(
+    HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.Parse(app.Configuration[HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.SettingKey]));
+if (isolationHeaders.Count > 0)
+{
+    app.Use((context, next) =>
+    {
+        context.Response.OnStarting(() =>
+        {
+            foreach ((string name, string value) in isolationHeaders)
+            {
+                context.Response.Headers[name] = value;
+            }
+
+            return Task.CompletedTask;
+        });
+        return next(context);
+    });
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

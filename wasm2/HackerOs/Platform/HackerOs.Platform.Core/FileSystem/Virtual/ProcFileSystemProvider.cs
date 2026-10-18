@@ -611,6 +611,22 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
     private HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus? WorkerPool() => _metrics.Workers?.Invoke();
 
     /// <summary>
+    /// The first lines of <c>/proc/hackeros/workers</c> (ADR 0131, section 5): whether the page is
+    /// cross-origin isolated, why not, and what that gives the workers. Read by Diagnostic.
+    /// </summary>
+    private static void AppendIsolation(StringBuilder builder, HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus status)
+    {
+        builder.Append(CultureInfo.InvariantCulture, $"cross-origin-isolated: {(status.IsIsolated ? "yes" : "no")}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"isolation-reason: {HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.Format(status.Reason)}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"isolation-setting: {HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.Format(status.Mode)}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"embedder-policy: {status.EmbedderPolicy ?? "-"}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"shared-pipes: {(status.SharedPipes ? "yes" : "no")}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"sync-calls: {(status.SynchronousCalls ? "yes" : "no")}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"memory-measure: {(status.MemoryMeasurement ? "browser" : "estimated")}\n");
+        builder.Append(CultureInfo.InvariantCulture, $"timer-resolution-us: {status.TimerResolution.TotalMicroseconds.ToString("0.##", CultureInfo.InvariantCulture)}\n");
+    }
+
+    /// <summary>
     /// Renders <c>/proc/hackeros/workers</c> (ADR 0071, section 5): the ceiling and the pool size, then
     /// one line per Web Worker with its role, state, virtual core, runtime memory, heartbeat age, busy
     /// time and the processes it hosts (only those the caller may see, like <c>/proc/&lt;pid&gt;</c>).
@@ -620,6 +636,7 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus pool = WorkerPool()!;
         HashSet<long> visible = [.. VisibleProcesses(context).Select(static process => process.Pid.Value)];
         StringBuilder builder = new();
+        AppendIsolation(builder, _metrics.CrossOriginIsolation?.Invoke() ?? HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus.NotBrowser);
         builder.Append(CultureInfo.InvariantCulture, $"capacity {pool.Capacity}\n");
         builder.Append(CultureInfo.InvariantCulture, $"pool_size {pool.PoolSize}\n");
         builder.Append("worker role       state          core memory_kb heartbeat_ms busy_ms pids\n");

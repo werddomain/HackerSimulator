@@ -60,6 +60,23 @@ internal sealed class RemoteProcessChannel
         }
     }
 
+    /// <summary>Gets whether this process may wait for the OS's answer (ADR 0131, section 4).</summary>
+    public bool CanCallSynchronously => _rpc.CanCallSynchronously;
+
+    /// <summary>
+    /// Calls the OS and blocks the worker until it answers (ADR 0131, section 4); only on a cross-origin
+    /// isolated page (<see cref="CanCallSynchronously"/>). Output is flushed first, as before any call.
+    /// </summary>
+    public JsonElement CallSync(string operation, Action<Utf8JsonWriter>? arguments)
+    {
+        _control.ThrowIfKilled();
+        _output.Flush();
+        using (HackExecutionContext.EnterKernel())
+        {
+            return _rpc.CallSync(Pid, operation, arguments);
+        }
+    }
+
     /// <summary>Posts a call that has no answer, in order with the others.</summary>
     public void Notify(string operation, Action<Utf8JsonWriter>? arguments)
     {
@@ -296,10 +313,13 @@ internal sealed class WorkerClock
 }
 
 /// <summary>
-/// <see cref="IAppProcessGateway"/> in a worker. Listing and stopping are calls to the OS; the
-/// synchronous members cannot wait for it from a worker's single thread: <see cref="Kill"/> sends the
-/// <c>SIGKILL</c> and returns the expected record (use <c>HackProcess.KillAsync</c>, which goes through
-/// <see cref="KillAsync"/>, to see a refusal), <see cref="StartChild"/> is not offered.
+/// <see cref="IAppProcessGateway"/> in a worker. Listing and stopping are calls to the OS. Without
+/// cross-origin isolation the synchronous members cannot wait for it from a worker's single thread:
+/// <see cref="Kill"/> of the process itself sends the <c>SIGKILL</c> and returns the expected record,
+/// <see cref="ListProcesses"/> and <see cref="Kill"/> of another process are refused (use
+/// <c>HackProcess.GetProcessesAsync</c> and <c>HackProcess.KillAsync</c>). On an isolated page
+/// (ADR 0131, section 4) both wait for the OS with <c>Atomics.wait</c>, like local calls.
+/// <see cref="StartChild"/> is not offered.
 /// </summary>
 internal sealed class RemoteProcessGateway(RemoteProcessChannel channel, ProcessRecord ownProcess) : IAppProcessGateway
 {
@@ -309,7 +329,9 @@ internal sealed class RemoteProcessGateway(RemoteProcessChannel channel, Process
         throw RemoteUnsupported.Member("IAppProcessGateway.StartChild");
 
     public IReadOnlyList<ProcessRecord> ListProcesses() =>
-        throw RemoteUnsupported.Member("IAppProcessGateway.ListProcesses (synchronous; read /proc or use HackProcess.GetProcessesAsync)");
+        channel.CanCallSynchronously
+            ? WireCodec.ReadProcesses(channel.CallSync(RemoteOps.ProcessList, null), "ps")
+            : throw RemoteUnsupported.Member("IAppProcessGateway.ListProcesses (synchronous; read /proc or use HackProcess.GetProcessesAsync)");
 
     public async Task<ProcessRecord> StopAsync(
         ProcessId pid, TimeSpan timeout, ProcessExitReason reason = ProcessExitReason.CloseRequested, CancellationToken cancellationToken = default)
@@ -325,6 +347,16 @@ internal sealed class RemoteProcessGateway(RemoteProcessChannel channel, Process
 
     public ProcessRecord Kill(ProcessId pid, ProcessExitReason reason = ProcessExitReason.Killed)
     {
+        if (ownProcess.Pid != pid && channel.CanCallSynchronously)
+        {
+            JsonElement value = channel.CallSync(RemoteOps.ProcessKill, writer =>
+            {
+                writer.WriteNumber("pid", pid.Value);
+                writer.WriteNumber("r", (int)reason);
+            });
+            return WireCodec.ReadProcess(value.GetProperty("pr"));
+        }
+
         channel.Notify(RemoteOps.ProcessKill, writer =>
         {
             writer.WriteNumber("pid", pid.Value);

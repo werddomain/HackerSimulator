@@ -75,6 +75,12 @@ public sealed record ProcMetricsSources(
 
     /// <summary>Gets the number of OOM kills since boot (ADR 0126), the <c>oom_kill</c> line of <c>/proc/vmstat</c>; missing, <c>0</c>.</summary>
     public Func<long>? OomKills { get; init; }
+
+    /// <summary>
+    /// Gets the page's cross-origin isolation (ADR 0131, section 5), the first lines of
+    /// <c>/proc/hackeros/workers</c>; missing, they read <c>no</c> with the reason <c>not-browser</c>.
+    /// </summary>
+    public Func<HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus?>? CrossOriginIsolation { get; init; }
 }
 
 /// <summary>One line of <c>/proc/mounts</c>: what is mounted where, with which type and options.</summary>

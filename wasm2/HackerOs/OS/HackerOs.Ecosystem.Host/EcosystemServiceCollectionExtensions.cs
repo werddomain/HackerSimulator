@@ -24,6 +24,7 @@ using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Elevation;
 using HackerOs.Platform.Core.Events;
 using HackerOs.Platform.Core.Execution;
+using HackerOs.Platform.Core.Isolation;
 using HackerOs.Platform.Core.Keyring;
 using HackerOs.Platform.Core.FileSystem;
 using HackerOs.Platform.Core.FileSystem.Virtual;
@@ -252,7 +253,9 @@ public static class EcosystemServiceCollectionExtensions
                         BackgroundJobs = () => provider.GetService<BackgroundJobService>(),
                         // ADR 0126: /proc/<pid>/oom_score(_adj) and oom_kill of /proc/vmstat.
                         OomScores = () => provider.GetService<InMemoryProcessOomScoreTable>(),
-                        OomKills = () => provider.GetService<OomKiller>()?.KillCount ?? 0
+                        OomKills = () => provider.GetService<OomKiller>()?.KillCount ?? 0,
+                        // ADR 0131, section 5: the first lines of /proc/hackeros/workers.
+                        CrossOriginIsolation = () => provider.GetService<CrossOriginIsolationState>()?.Status
                     })),
                 // ADR 0126: /dev/kmsg is the kernel ring buffer that dmesg reads.
                 new FileSystemMount(DevFileSystemProvider.DefaultMountPath, new DevFileSystemProvider(
@@ -613,6 +616,8 @@ public static class EcosystemServiceCollectionExtensions
         // ADR 0071, section 2: "the system is started", raised by EcosystemBootCoordinator once the
         // desktop is shown; the worker pool (WebAssembly hosts only) warms up after it.
         services.TryAddSingleton<SystemStartupSignal>();
+        // ADR 0131: what the page found at boot; the browser host also registers the probe.
+        services.TryAddSingleton<CrossOriginIsolationState>();
         services.AddScoped<EcosystemBootCoordinator>();
 
         services.AddSingleton(_ => catalog ?? CreateEmptyCatalog());
