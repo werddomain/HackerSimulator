@@ -20,6 +20,9 @@ namespace HackerOs.Samples.TerminalApp;
 ///   answer only on a cross-origin isolated page (ADR 0131, section 4); elsewhere it is refused.
 ///   <c>--kill &lt;pid&gt;</c> does the same with <c>Kill</c>, whose refusal (no <c>process.manage</c>)
 ///   comes back from the OS as for a local call.</item>
+///   <item><c>--isolation</c>: the page's cross-origin isolation through
+///   <see cref="HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolation"/> (ADR 0146), which needs no
+///   capability and answers the same in a worker and on the main thread.</item>
 /// </list>
 /// </remarks>
 public class SampleTerminalApp : TerminalAppBase
@@ -43,13 +46,22 @@ public class SampleTerminalApp : TerminalAppBase
             context.Arguments.Contains("-h", StringComparer.OrdinalIgnoreCase))
         {
             await context.StandardOutput.WriteLineAsync(
-                "Usage: sample-cmd [--verbose] [--processes | --kill <pid>] [message]".AsMemory(), cancellationToken);
+                "Usage: sample-cmd [--verbose] [--processes | --kill <pid> | --isolation] [message]".AsMemory(), cancellationToken);
             return 0;
         }
 
         if (context.Arguments.Contains("--processes", StringComparer.OrdinalIgnoreCase))
         {
             return await ListProcessesAsync(context, cancellationToken);
+        }
+
+        if (context.Arguments.Contains("--isolation", StringComparer.OrdinalIgnoreCase))
+        {
+            HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus isolation =
+                await HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolation.GetStatusAsync(cancellationToken);
+            await context.StandardOutput.WriteLineAsync(
+                $"isolation: {(isolation.IsIsolated ? "yes" : "no")} {isolation.Reason}".AsMemory(), cancellationToken);
+            return 0;
         }
 
         int kill = Array.FindIndex(context.Arguments.ToArray(), static arg => string.Equals(arg, "--kill", StringComparison.OrdinalIgnoreCase));

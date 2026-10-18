@@ -69,6 +69,7 @@ internal static class RemoteOps
     public const string ServiceResetFailed = "svc.resetfailed";
     public const string ServiceNotify = "svc.notify";
     public const string Drives = "drv.list";
+    public const string CrossOriginIsolation = "coi.get";
     public const string IntentLaunch = "int.launch";
     public const string IntentOpenFile = "int.open";
     public const string IntentEditFile = "int.edit";

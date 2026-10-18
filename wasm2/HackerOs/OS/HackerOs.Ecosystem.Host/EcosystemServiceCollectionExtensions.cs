@@ -701,7 +701,11 @@ public static class EcosystemServiceCollectionExtensions
                     provider.GetRequiredService<VirtualHardwareProfile>(),
                     provider.GetRequiredService<IStorageUsageProvider>()),
                 // ADR 0068: write-stream buffers and sockets in flight, charged to each app's process.
-                provider.GetRequiredService<IKernelMemoryLedger>()),
+                provider.GetRequiredService<IKernelMemoryLedger>())
+            {
+                // ADR 0146: HackCrossOriginIsolation reads the status the boot probe recorded.
+                CrossOriginIsolation = new AppCrossOriginIsolationGateway(() => provider.GetService<CrossOriginIsolationState>()?.Status)
+            },
             // HackClipboard (ADR 0056 section 12): one OS clipboard shared by every app of the session.
             clipboard: provider.GetRequiredService<HackerOs.Platform.Core.Clipboard.SystemClipboard>(),
             // HackSettings.OpenSystemAsync, HackPermissionAdministration, HackServerConnection,

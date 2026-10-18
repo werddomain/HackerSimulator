@@ -157,6 +157,9 @@ internal sealed class AppExecutionContext : IAppExecutionContext
     public IAppDriveGateway Drives { get => Guarded(field); }
 
     /// <inheritdoc />
+    public HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway CrossOriginIsolation { get => Guarded(field); internal set; } = UnsupportedCrossOriginIsolationGateway.Instance;
+
+    /// <inheritdoc />
     public IAppClipboardGateway Clipboard { get => Guarded(field); }
 
     /// <inheritdoc />
@@ -370,6 +373,15 @@ internal sealed class AppExecutionContext : IAppExecutionContext
 
         public ValueTask<IReadOnlyList<HackDriveSnapshot>> GetDrivesAsync(CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("This execution context has no drive information.");
+    }
+
+    /// <summary>Isolation gateway of a context built without the page's status (tests).</summary>
+    private sealed class UnsupportedCrossOriginIsolationGateway : HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway
+    {
+        public static readonly UnsupportedCrossOriginIsolationGateway Instance = new();
+
+        public ValueTask<HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus> GetStatusAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("This execution context has no cross-origin isolation information.");
     }
 
     /// <summary>Network gateway of a context built without a simulated network (tests).</summary>

@@ -1,1 +1,35 @@
 #nullable enable
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolation
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.Browser = 4 -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.InsecureContext = 3 -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.MissingHeaders = 2 -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.None = 0 -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.NotBrowser = 5 -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.Setting = 1 -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting.Auto = 0 -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting.Off = 2 -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting.On = 1 -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting
+HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway
+HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway.GetStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus!>
+HackerOs.AppSdk.IAppExecutionContext.CrossOriginIsolation.get -> HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway!
+static HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolation.GetStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus!>
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.IsIsolated.get -> bool
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.IsIsolated.init -> void
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.Reason.get -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.Reason.init -> void
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.Setting.get -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.Setting.init -> void
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.EmbedderPolicy.get -> string?
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.EmbedderPolicy.init -> void
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.SharedPipes.get -> bool
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.SharedPipes.init -> void
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.SynchronousWorkerCalls.get -> bool
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.SynchronousWorkerCalls.init -> void
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.BrowserMemoryMeasurement.get -> bool
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.BrowserMemoryMeasurement.init -> void
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.TimerResolution.get -> System.TimeSpan
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.TimerResolution.init -> void
+HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.HackCrossOriginIsolationStatus(bool IsIsolated, HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason Reason, HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting Setting, string? EmbedderPolicy, bool SharedPipes, bool SynchronousWorkerCalls, bool BrowserMemoryMeasurement, System.TimeSpan TimerResolution) -> void

@@ -27,7 +27,7 @@ classement.
 | Capacité | Classement |
 |---|---|
 | `filesystem.private.*`, `filesystem.user-selected.*`, `filesystem.user-home.*` | normale |
-| `filesystem.system.read`, `filesystem.system.write` | **dangereuse** (Diagnostic déclare `filesystem.system.read` pour lire `/proc/hackeros/workers`, approuvée avec `system.storage.inspect`, ADR 0143 §8) |
+| `filesystem.system.read`, `filesystem.system.write` | **dangereuse** (Diagnostic lit l'isolation par `HackCrossOriginIsolation`, sans capacité, et ne la déclare plus, ADR 0146) |
 | `apps.launch` | normale |
 | `apps.manage` | **dangereuse** (exigée par `HackAppManagement`, ADR 0056 §3 ; déclarée par Paramètres) |
 | `dialogs.file-open`, `dialogs.file-save`, `dialogs.folder-select` | normale |

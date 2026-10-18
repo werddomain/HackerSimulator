@@ -367,6 +367,12 @@ public sealed class AppExecutionContextFactory
             context.SystemBackup = administration.SystemBackup;
         }
 
+        if (_metrics?.CrossOriginIsolation is { } isolation)
+        {
+            // ADR 0146: the page's isolation, no capability, set after construction like the backup gateway.
+            context.CrossOriginIsolation = isolation;
+        }
+
         if (administration.UserAccounts is not null)
         {
             // ADR 0120: accounts and passwords, set after construction like the backup gateway.
@@ -508,4 +514,11 @@ public sealed record SystemMetricsServices(
     INetworkInterfaceStatistics? Network = null,
     IProcessIoAccounting? ProcessIo = null,
     HackerOs.AppSdk.IO.IAppDriveGateway? Drives = null,
-    IKernelMemoryLedger? KernelMemory = null);
+    IKernelMemoryLedger? KernelMemory = null)
+{
+    /// <summary>
+    /// Gets the page's cross-origin isolation behind <see cref="IAppExecutionContext.CrossOriginIsolation"/>
+    /// (ADR 0146); shared by every context. <see langword="null"/> leaves it unsupported.
+    /// </summary>
+    public HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway? CrossOriginIsolation { get; init; }
+}

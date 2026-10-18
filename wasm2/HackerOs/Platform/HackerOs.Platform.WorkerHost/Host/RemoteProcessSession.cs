@@ -789,6 +789,11 @@ internal sealed class RemoteProcessSession
                 var drives = await c.Drives.GetDrivesAsync(cancellationToken).ConfigureAwait(false);
                 return writer => WireCodec.WriteDrives(writer, drives);
             }
+            case RemoteOps.CrossOriginIsolation:
+            {
+                HackCrossOriginIsolationStatus isolation = await c.CrossOriginIsolation.GetStatusAsync(cancellationToken).ConfigureAwait(false);
+                return writer => WireCodec.WriteCrossOriginIsolation(writer, isolation);
+            }
             case RemoteOps.IntentLaunch:
             {
                 AppIntentLaunchResult result = await c.Intents.LaunchAsync(a.GetString("id"), WireCodec.ReadStrings(a, "ar"), cancellationToken).ConfigureAwait(false);

@@ -316,6 +316,13 @@ public interface IAppExecutionContext
     IO.IAppDriveGateway Drives => new UnsupportedAppDriveGateway();
 
     /// <summary>
+    /// Gets the OS's cross-origin isolation, behind <see cref="Diagnostics.HackCrossOriginIsolation"/>
+    /// (ADR 0146; no capability). Defaults to an unsupported gateway so existing implementations keep
+    /// compiling; the trusted platform factory overrides it.
+    /// </summary>
+    Diagnostics.IAppCrossOriginIsolationGateway CrossOriginIsolation => new UnsupportedAppCrossOriginIsolationGateway();
+
+    /// <summary>
     /// Gets this instance's view of the session clipboard, behind <see cref="HackClipboard"/> (ADR 0056,
     /// section 12; capabilities <c>clipboard.read</c> and <c>clipboard.write</c>). Defaults to an
     /// unsupported gateway so existing implementations keep compiling; the trusted platform factory
@@ -548,6 +555,13 @@ file sealed class UnsupportedAppDriveGateway : IO.IAppDriveGateway
 {
     public ValueTask<IReadOnlyList<IO.HackDriveSnapshot>> GetDrivesAsync(CancellationToken cancellationToken = default) =>
         throw new NotSupportedException("This IAppExecutionContext implementation does not provide a Drives gateway.");
+}
+
+/// <summary>Default <see cref="IAppExecutionContext.CrossOriginIsolation"/> for contexts that don't wire one up.</summary>
+file sealed class UnsupportedAppCrossOriginIsolationGateway : Diagnostics.IAppCrossOriginIsolationGateway
+{
+    public ValueTask<Diagnostics.HackCrossOriginIsolationStatus> GetStatusAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("This IAppExecutionContext implementation does not provide a CrossOriginIsolation gateway.");
 }
 
 /// <summary>Default <see cref="IAppExecutionContext.Catalog"/> for contexts that don't wire one up.</summary>

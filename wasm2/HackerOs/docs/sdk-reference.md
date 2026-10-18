@@ -134,6 +134,7 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `Environment` | Derrière `HackEnvironment`. |
 | `Culture`, `FormatCulture` | Langue des textes (`en` ou `fr`, depuis `LC_ALL`/`LC_MESSAGES`/`LANG` du processus) et culture des formats (`fr-CA`, depuis `LC_TIME`) ; membres par défaut relus à chaque appel (ADR 0104). `context.GetLocalizer<Strings>()` donne un `IStringLocalizer<Strings>` lié à cette langue ([`localization.md`](localization.md)). |
 | `Network`, `Drives`, `Clipboard`, `ShellHost`, `Services` | Derrière les façades du même domaine. |
+| `CrossOriginIsolation` | État de l'isolation cross-origin (`IAppCrossOriginIsolationGateway.GetStatusAsync`, ADR 0146, après la 1.2.0) ; derrière `HackCrossOriginIsolation`, aucune capacité. Membre par défaut : `NotSupportedException`. |
 | `Console` | Derrière `HackConsole` (ADR 0064). |
 | `SystemSettings`, `PermissionAdministration`, `ServerConnection`, `SystemPower`, `StorageDiagnostics`, `SystemBackup` | Derrière les façades d'administration. |
 | `WebDatabase` | Base IndexedDB `hackweb.<appId>` d'une app `Web` (`IAppWebDatabaseGateway`, ADR 0088) ; derrière `HackWebDb` du SDK web. Une autre app reçoit `UnauthorizedAccessException`. |
@@ -168,6 +169,7 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `HackTextContent` | `TryDecode`, `TryReadAsync` (texte ou binaire, comme `file`) | [`text-editor.md`](text-editor.md) |
 | `HackRecoveryDraft` | `Open(name)`, `SaveAsync`, `TryReadAsync`, `TakeAsync`, `DeleteAsync` : brouillon de travail non enregistré dans `~/.local/state/<appId>/recovery/` (ADR 0069) | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
 | `HackDriveInfo` | `GetDrivesAsync` : taille et espace libre (comme `df`) | [`system-metrics.md`](system-metrics.md) |
+| `HackCrossOriginIsolation` (`.Diagnostics`) | `GetStatusAsync` → `HackCrossOriginIsolationStatus` (`IsIsolated`, `Reason`, `Setting`, `EmbedderPolicy`, `SharedPipes`, `SynchronousWorkerCalls`, `BrowserMemoryMeasurement`, `TimerResolution`) ; aucune capacité ; après la 1.2.0 (ADR 0146) | [`worker-processes.md`](worker-processes.md#isolation-cross-origin-adr-0131-adr-0143) |
 | Exceptions | `HackIOException`, `HackFileNotFoundException`, `HackDirectoryNotFoundException`, `HackFileConflictException`, `HackUnauthorizedAccessException` | [`hack-file-api.md`](hack-file-api.md) |
 
 Capacités : selon le chemin (`filesystem.private.*`, `.user-home.*`,
