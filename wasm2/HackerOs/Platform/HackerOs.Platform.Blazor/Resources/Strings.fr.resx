@@ -405,6 +405,72 @@
   <data name="Security.Verifying" xml:space="preserve">
     <value>Vérification...</value>
   </data>
+  <data name="Server.Account" xml:space="preserve">
+    <value>Compte</value>
+  </data>
+  <data name="Server.AccountName" xml:space="preserve">
+    <value>Nom du compte</value>
+  </data>
+  <data name="Server.Address" xml:space="preserve">
+    <value>Adresse</value>
+  </data>
+  <data name="Server.Cancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="Server.CreateAccount" xml:space="preserve">
+    <value>Créer un compte</value>
+  </data>
+  <data name="Server.Detail" xml:space="preserve">
+    <value>Détail</value>
+  </data>
+  <data name="Server.Identify" xml:space="preserve">
+    <value>S'identifier</value>
+  </data>
+  <data name="Server.IdentifyFailed" xml:space="preserve">
+    <value>Échec de l'identification : {0}</value>
+  </data>
+  <data name="Server.LastSync" xml:space="preserve">
+    <value>Dernière synchronisation</value>
+  </data>
+  <data name="Server.LogIn" xml:space="preserve">
+    <value>Se connecter</value>
+  </data>
+  <data name="Server.NoAccount" xml:space="preserve">
+    <value>Non identifié</value>
+  </data>
+  <data name="Server.Panel" xml:space="preserve">
+    <value>Serveur HackerOS</value>
+  </data>
+  <data name="Server.Password" xml:space="preserve">
+    <value>Mot de passe</value>
+  </data>
+  <data name="Server.Reconnect" xml:space="preserve">
+    <value>Reconnecter</value>
+  </data>
+  <data name="Server.Settings" xml:space="preserve">
+    <value>Paramètres du serveur</value>
+  </data>
+  <data name="Server.State" xml:space="preserve">
+    <value>État</value>
+  </data>
+  <data name="Server.Status.Anonymous" xml:space="preserve">
+    <value>Connecté, non identifié</value>
+  </data>
+  <data name="Server.Status.Connected" xml:space="preserve">
+    <value>Connecté</value>
+  </data>
+  <data name="Server.Status.Connecting" xml:space="preserve">
+    <value>Connexion…</value>
+  </data>
+  <data name="Server.Status.Error" xml:space="preserve">
+    <value>Erreur</value>
+  </data>
+  <data name="Server.Status.Offline" xml:space="preserve">
+    <value>Hors ligne (serveur injoignable)</value>
+  </data>
+  <data name="Server.Tooltip" xml:space="preserve">
+    <value>Serveur HackerOS {0} : {1}</value>
+  </data>
   <data name="Shell.LaunchFailed" xml:space="preserve">
     <value>L'application facultative n'a pas pu être chargée.</value>
   </data>

@@ -36,10 +36,16 @@ public sealed record HostSmokeSettings(
 
     /// <summary>Reads the settings, or returns <see langword="null"/> when no URL is set.</summary>
     /// <summary>
-    /// Gets whether the host runs commands in Web Workers (ADR 0070): every WebAssembly host, not the
-    /// server, which renders in Interactive Server mode (section 6).
+    /// Gets whether the host runs commands in Web Workers (ADR 0070): every host since ADR 0130, the
+    /// server included, runs the OS in WebAssembly.
     /// </summary>
-    public bool ExpectsWorkers => !string.Equals(HostName, "server", StringComparison.Ordinal);
+    public bool ExpectsWorkers => true;
+
+    /// <summary>
+    /// Gets whether the OS must connect by itself to the host that served it (ADR 0134): only the
+    /// <c>server</c> run is a HackerOS server.
+    /// </summary>
+    public bool ExpectsServerConnection => string.Equals(HostName, "server", StringComparison.Ordinal);
 
     public static HostSmokeSettings? FromEnvironment()
     {

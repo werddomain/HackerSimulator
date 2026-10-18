@@ -583,6 +583,7 @@ build (`HOSAPP0031`). Les tâches courantes :
 | Héberger un shell (terminal, éditeur de code) | `HackShell.StartAsync` | `shell.host` (dangereuse) |
 | Sauvegarder ou restaurer toute la machine (apps système) | `HackSystemBackup.CreateAsync`, `RestoreAsync` | `system.backup` (dangereuse) + administrateur |
 | Temps simulé, minuteries | `AppContext.Clock` | aucune |
+| Sortir un calcul lourd de la fenêtre (filtre, recherche, compression) | `HackBackground.RunAsync` (SDK 1.2) | aucune ; la tâche a les capacités de l'app |
 
 Les chemins acceptent `~` et les chemins relatifs (au répertoire courant du
 processus). Les erreurs suivent `System.IO` : `HackFileNotFoundException`,
@@ -599,6 +600,43 @@ Exemples détaillés par domaine : [`hack-file-api.md`](hack-file-api.md),
 [`trash.md`](trash.md), [`process-environment.md`](process-environment.md),
 [`sdk-network.md`](sdk-network.md), [`task-manager.md`](task-manager.md),
 [`shell-host.md`](shell-host.md), [`system-administration.md`](system-administration.md).
+
+### Calculs lourds : `HackBackground`
+
+Une app fenêtrée tourne sur le fil principal, qui dessine aussi le bureau : une
+boucle longue y gèle tout. `HackBackground.RunAsync` confie le travail à un
+processus enfant de l'app, dans un Web Worker quand l'hôte en a, et attend son
+résultat ; la progression revient dans le contexte de la fenêtre.
+
+```csharp
+[assembly: HackWireContext(typeof(MyJobsJsonContext))]
+
+[JsonSerializable(typeof(PrimeCountInput))]
+[JsonSerializable(typeof(PrimeCountResult))]
+internal sealed partial class MyJobsJsonContext : JsonSerializerContext;
+
+public static class MyJobs
+{
+    public static async Task<PrimeCountResult> CountPrimes(PrimeCountInput input, HackBackgroundContext context)
+    {
+        // ... calcul, avec context.Report(fraction, message) et await context.CheckpointAsync() ...
+    }
+}
+
+PrimeCountResult result = await HackBackground.RunAsync<PrimeCountInput, PrimeCountResult>(
+    MyJobs.CountPrimes, new PrimeCountInput(3_000_000), new Progress<HackBackgroundProgress>(Show), cancellationToken: ct);
+```
+
+La tâche est une **méthode statique** de l'app (pas de lambda : elle ne peut pas
+capturer les objets de la fenêtre) et ses types passent en JSON par un
+contexte `HackWireContext`. L'analyseur du SDK le vérifie au build
+(`HOSBG0001` à `HOSBG0004`). Annulation : `OperationCanceledException` ; tâche
+tuée depuis `kill` ou le gestionnaire de tâches : `HackProcessKilledException`
+(à attraper **avant** l'annulation) ; exception de la tâche :
+`HackBackgroundJobException`. Dans les tests de l'app, la tâche s'exécute en
+ligne avec la même sérialisation. Guide complet et exemple :
+[`background-jobs.md`](background-jobs.md) et la section « Background Task » de
+`Apps/Samples/HackerOs.Samples.WindowApp`.
 
 ### Capacités dangereuses
 
@@ -731,3 +769,4 @@ façon : `ProjectReference` ou `PackageReference` (paquet d'app produit par
 - [x] Guide complet du dépôt tiers, SDK 1.0 (`v3/15`, ADR 0114) : [`building-on-hackeros.md`](building-on-hackeros.md).
 - [x] Sauvegarde de la machine et erreurs `NoSpace`/`FileTooLarge` (`v3/7-storage-backup`).
 - [x] Traduire son app : ressources, `GetLocalizer<T>`, `AppManifest.fr.resx` (`v3/12`, ADR 0104).
+- [x] Calculs lourds hors de la fenêtre avec `HackBackground` (`exec/5`, ADR 0128 et 0140).

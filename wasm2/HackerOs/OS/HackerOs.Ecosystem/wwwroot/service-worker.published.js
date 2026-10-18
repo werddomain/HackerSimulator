@@ -15,7 +15,9 @@ const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
 // Fonts (.ttf/.woff2) are listed so lazy-loaded apps keep their icons offline: the Code
 // Editor ships Monaco's codicon.ttf next to its bundle (v3/11, ADR 0103 §3).
 const offlineAssetsInclude = [ /\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.json$/, /\.css$/, /\.woff2?$/, /\.ttf$/, /\.svg$/, /\.webp$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/ ];
-const offlineAssetsExclude = [ /^service-worker\.js$/ ];
+// hackeros-host.json is never cached (ADR 0137): HackerOs.Server answers that path itself
+// ("a server delivered this OS"), so its bytes differ from the static file's integrity hash.
+const offlineAssetsExclude = [ /^service-worker\.js$/, /^hackeros-host\.json$/ ];
 
 // Base URL for relative asset resolution
 const base = "/";
@@ -70,6 +72,11 @@ async function onFetch(event) {
         const networkResponse = await fetch(event.request);
         return networkResponse;
     } catch (error) {
+        // Offline, the host discovery answers "no server reachable" instead of failing (ADR 0137).
+        if (new URL(event.request.url).pathname.endsWith('/hackeros-host.json')) {
+            return new Response('{"product":"HackerOS","isServer":false}',
+                { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+        }
         // When network is unavailable and request is navigation, serve cached shell
         if (event.request.mode === 'navigate') {
             const fallbackShell = await cache.match('index.html');

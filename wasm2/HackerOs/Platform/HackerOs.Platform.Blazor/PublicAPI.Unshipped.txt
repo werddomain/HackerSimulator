@@ -43,3 +43,8 @@ HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.WindowResponsivenes
 static readonly HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.LongInputDelay -> System.TimeSpan
 static readonly HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.TerminateGracePeriod -> System.TimeSpan
 ~override HackerOs.Platform.Blazor.Windows.UnresponsiveWindowOverlay.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.OnOpenSettings.get -> Microsoft.AspNetCore.Components.EventCallback
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.OnOpenSettings.set -> void
+HackerOs.Platform.Blazor.Shell.ServerStatusIndicator.ServerStatusIndicator() -> void

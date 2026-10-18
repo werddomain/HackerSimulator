@@ -45,7 +45,37 @@ public interface IRemoteProcessHost
     /// <param name="launch">The process to run.</param>
     /// <returns>The running service.</returns>
     IRemoteService StartService(RemoteProcessLaunch launch);
+
+    /// <summary>
+    /// Gets whether this host runs background tasks (ADR 0128, section 3); when it does not, the OS
+    /// runs them on the main thread (section 5). <see langword="false"/> by default, so existing hosts
+    /// keep compiling.
+    /// </summary>
+    bool CanRunBackgroundJobs => false;
+
+    /// <summary>
+    /// Runs one background task (ADR 0128) in a worker of the pool until it ends. The task's progress
+    /// reaches <see cref="RemoteBackgroundJobLaunch.Progress"/>; its result or its fault comes back in
+    /// <see cref="RemoteProcessExit.JobResult"/> or <see cref="RemoteProcessExit.JobFault"/>.
+    /// </summary>
+    /// <param name="launch">The task's process and request.</param>
+    /// <param name="cancellationToken">Cancels the task: its process token in the worker is cancelled.</param>
+    /// <returns>How it ended.</returns>
+    /// <exception cref="NotSupportedException">The host does not run background tasks (<see cref="CanRunBackgroundJobs"/>).</exception>
+    Task<RemoteProcessExit> RunBackgroundJobAsync(RemoteBackgroundJobLaunch launch, CancellationToken cancellationToken) =>
+        throw new NotSupportedException("This host does not run background tasks in workers.");
 }
+
+/// <summary>One background task the OS hands to a worker (ADR 0128).</summary>
+/// <param name="Context">The task's process's trusted context on the OS side: every remote SDK call is served through it.</param>
+/// <param name="Control">The task's process's control block (stop request, kill, ADR 0069).</param>
+/// <param name="Request">The task (already checked by the OS) and its input.</param>
+/// <param name="Progress">Receives the task's reports, or <see langword="null"/>.</param>
+public sealed record RemoteBackgroundJobLaunch(
+    IAppExecutionContext Context,
+    ProcessControlBlock? Control,
+    HackerOs.AppSdk.Threading.HackBackgroundJobRequest Request,
+    Action<HackerOs.AppSdk.Threading.HackBackgroundProgress>? Progress);
 
 /// <summary>One process the OS hands to a worker.</summary>
 /// <param name="Descriptor">The app's resolved entry point (its assembly and type are loaded again in the worker).</param>
@@ -67,6 +97,18 @@ public sealed record RemoteProcessLaunch(
 /// <param name="FaultMessage">The escaping exception's message when <see cref="Status"/> is <see cref="RemoteProcessExitStatus.Faulted"/>.</param>
 public sealed record RemoteProcessExit(RemoteProcessExitStatus Status, int ExitCode = 0, string? FaultMessage = null)
 {
+    /// <summary>Gets the result of a background task that returned (ADR 0128), as JSON; <see langword="null"/> otherwise.</summary>
+    public string? JobResult { get; init; }
+
+    /// <summary>Gets what escaped a background task (ADR 0128, section 4), or <see langword="null"/>.</summary>
+    public HackerOs.AppSdk.Threading.HackBackgroundJobException? JobFault { get; init; }
+
+    /// <summary>
+    /// Gets whether the worker refused the background task before running it (a target or an input it
+    /// could not read): the caller sees an <see cref="ArgumentException"/>, not a fault of the task.
+    /// </summary>
+    public bool JobRejected { get; init; }
+
     /// <summary>A normal exit with <paramref name="code"/>.</summary>
     public static RemoteProcessExit Exited(int code) => new(RemoteProcessExitStatus.Exited, code);
 }

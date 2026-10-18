@@ -183,6 +183,14 @@ public sealed class AppExecutionContextFactory
     }
 
     /// <summary>
+    /// Gets the service behind <see cref="IAppExecutionContext.Background"/> (ADR 0128): each task
+    /// becomes a child process of the app. Lazy because the service reaches the orchestrator (the app's
+    /// descriptor) and the remote host, which depend on this factory. <see langword="null"/> keeps the
+    /// SDK's default, which runs the task at once on the calling thread.
+    /// </summary>
+    public Func<BackgroundJobService>? BackgroundJobs { get; init; }
+
+    /// <summary>
     /// Creates a new trusted context for one running app instance, wiring every scoped gateway to
     /// the acting app/user/process.
     /// </summary>
@@ -369,6 +377,18 @@ public sealed class AppExecutionContextFactory
                     Shell.ShellHostService.ShellManifest, principal, shellProcess, grantedCapabilities,
                     shellProcess.AppInstanceId.Value, isRootElevated));
         }
+
+        if (BackgroundJobs is { } backgroundJobs)
+        {
+            // ADR 0128 section 3: a task is a child process of this one, with this instance's identity,
+            // capabilities and root elevation, like a helper the app would fork.
+            context.Background = new AppBackgroundGateway(
+                backgroundJobs,
+                () => context,
+                jobProcess => Create(
+                    manifest, principal, jobProcess, grantedCapabilities, jobProcess.AppInstanceId.Value, isRootElevated));
+        }
+
         clipboardGateway.BindAmbientContext(context);
         return context;
     }

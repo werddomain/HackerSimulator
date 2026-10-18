@@ -175,7 +175,10 @@ await p.KillAsync();                                           // SIGKILL
 - Lecture : `/proc` (liste et date de création de `/proc/<pid>` comme
   `StartTime`), `status`, `stat`, `cmdline`, `cwd` (cible du lien), `io`, `environ`.
   Visibilité de `/proc` : son propre processus, les autres avec
-  `process.list`. Lire `/proc` demande `filesystem.system.read`.
+  `process.list`. Lire `/proc` demande `filesystem.system.read`. Par la
+  passerelle (`IAppProcessGateway`), une app voit, arrête et tue aussi ses
+  propres descendants (ses tâches `HackBackground`) sans `process.list` ni
+  `process.manage` (ADR 0140 §7).
 - Action : `KillAsync` (`SIGKILL` : immédiat, descendants compris, pas de
   `StopRequested`), `TerminateAsync` (`SIGTERM` d'un autre processus, raison
   `Terminated`, `DefaultTerminateTimeout` = 5 s) et `CloseMainWindowAsync`

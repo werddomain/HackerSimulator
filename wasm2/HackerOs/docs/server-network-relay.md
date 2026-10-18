@@ -64,7 +64,6 @@ Nouveaux codes d'erreur : `GRANT_MISSING` (403), `RELAY_DISABLED` (503),
 |---|---|
 | `HttpProxyClient` | HTTP et flux (WebSocket `ws`/`wss`, jeton dans `access_token`). |
 | `WebSocketProxyStreamChannel` | attend la trame texte d'ouverture ou la fermeture `4001` ; découpe un envoi TCP en blocs de 64 Kio. |
-| `DirectProxyClient` | même chose sans réseau quand l'OS est servi par le serveur lui-même (ADR 0036). |
 | `AppNetworkGateway` | `ConnectTcpAsync`, `ConnectUdpAsync`, relais HTTP avec corps. |
 | `RelayedSocket` | `IHackSocket` sur un flux : compte le trafic (`/proc/net/dev`) et la mémoire du noyau. |
 | `AppServerConnectionGateway.GetRelayPolicyAsync` | politique du serveur pour Paramètres, sans jamais exposer le jeton. |

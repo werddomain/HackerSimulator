@@ -4,6 +4,7 @@ using HackerOs.Infrastructure.Browser.Workers;
 using HackerOs.Platform.Blazor.Hosting;
 using HackerOs.Platform.Blazor.LazyLoading;
 using HackerOs.Platform.Core.Apps;
+using HackerOs.Platform.Core.ServerConnection;
 using HackerOs.Platform.WorkerHost;
 using HackerOs.Simulation.Abstractions.Workers;
 using Microsoft.AspNetCore.Components.Web;
@@ -79,6 +80,9 @@ public static partial class HackerOsBrowserHostExtensions
             provider.GetRequiredService<BuildKnownAssemblyLoaderRegistry>()));
         // ADR 0098 §5: app assets are the static web assets of their package, checked at first read.
         builder.Services.AddSingleton<IAppAssetSource>(new StaticWebAssetAppAssetSource(new Uri(builder.HostEnvironment.BaseAddress)));
+        // ADR 0134, ADR 0137: the OS asks its own origin whether a HackerOS server served it.
+        Uri ownOrigin = new(builder.HostEnvironment.BaseAddress);
+        builder.Services.AddScoped<IHostInfoClient>(provider => new HttpHostInfoClient(provider.GetRequiredService<HttpClient>(), ownOrigin));
         // ADR 0066: decided once from appsettings.json and what the build compiled in. Must precede
         // AddHackerOsEcosystem, and runs before any app code so the context-switch hook can be installed.
         builder.Services.AddHackerOsResourceAccounting(builder.Configuration, apps.Images);
@@ -89,7 +93,7 @@ public static partial class HackerOsBrowserHostExtensions
 
         // ADR 0070/0071: commands and services run in Web Workers; the pool warms up once the desktop
         // is shown. The JavaScript ships in HackerOs.Infrastructure.Browser's wwwroot, imported by
-        // BrowserWebWorkerRuntime itself. A server host never registers this (ADR 0070, section 6).
+        // BrowserWebWorkerRuntime itself. Every host runs the OS in the browser since ADR 0130.
         if (OperatingSystem.IsBrowser())
         {
             IReadOnlyList<string> preload = options.WorkerPreloadAssemblies

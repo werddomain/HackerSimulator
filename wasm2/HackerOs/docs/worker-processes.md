@@ -45,11 +45,12 @@ relues par `exec/1-remote-gateways` et tiennent toujours (ADR 0138 §9). Le
 service d'exemple et `hackwebd` tournent en worker dédié depuis que `HackEvents`
 et `Watch` traversent la frontière (ADR 0124).
 
-`HackerOs.Server` n'a pas de Web Worker .NET : `AppExecutionHost` y est ignoré
-et le démarrage écrit dans `/var/log/syslog` « workers: no Web Worker on this
-host: AppExecutionHost (pool, dedicated) is ignored, every process runs in the
-host process (ADR 0070, section 6) ». `test/test` exécute côté navigateur le
-`Program.cs` de l'Ecosystem : il a les workers.
+Les trois hôtes ont les workers : `test/test` exécute côté navigateur le
+`Program.cs` de l'Ecosystem, et `HackerOs.Server` sert l'OS de l'Ecosystem en
+WebAssembly depuis l'ADR 0130 (son ancien rendu Interactive Server, sans
+worker, a été retiré). Un hôte composé sans `IWebWorkerRuntime` écrit dans
+`/var/log/syslog` « workers: no Web Worker on this host: AppExecutionHost
+(pool, dedicated) is ignored, every process runs in the host process ».
 
 ## Architecture
 
@@ -103,6 +104,7 @@ Messages JSON avec un champ `t` :
 | `ack` | Crédit de sortie : l'OS a écrit `n` caractères. |
 | `epipe` | Le lecteur du flux `f` est parti (tube cassé). |
 | `hreq` | Requête HTTP pour un socket ouvert par `net.listen` dans le worker (`web/3`). |
+| `bgp` | Progression (`f`, `m`) de la tâche `j` qu'un processus du worker a lancée par `bg.run` (ADR 0128 §6, ADR 0140). |
 
 | Worker → OS | Rôle |
 |---|---|
@@ -112,7 +114,7 @@ Messages JSON avec un champ `t` :
 | `note` | Appel sans réponse (journal, environnement), gardé dans l'ordre. |
 | `cancel` | Annuler un `call` en cours. |
 | `out` | Sortie standard ou d'erreur d'un processus. |
-| `exit` | Fin d'un processus : statut, code, message d'erreur. |
+| `exit` | Fin d'un processus : statut, code, message d'erreur ; pour une tâche `HackBackground`, `jr` (résultat JSON), `jf` (exception d'origine) et `jx` (tâche refusée). |
 | `killed` | Accusé d'un `kill`. |
 | `stopdone`, `sstopped` | Fin du traitement d'un `stop` / `sstop`. |
 | `log` | Ligne de diagnostic du worker. |
@@ -149,6 +151,25 @@ le contexte d'exécution du processus** (`HackExecutionContext.Enter` puis
 `EnterKernel`) : les mêmes vérifications de capacités et la même comptabilité
 qu'en local. La sortie a un crédit de 64 Kio en vol ; un fichier régulier de
 16 Mio au plus est lu d'un coup, au-delà par blocs.
+
+### Tâches `HackBackground` (ADR 0128, ADR 0140)
+
+Une tâche lancée par `HackBackground.RunAsync` est un processus enfant de l'app
+que l'OS crée sur le fil principal (`BackgroundJobService`), puis place dans un
+worker du pool par `WorkerRemoteProcessHost.RunBackgroundJobAsync` : un message
+`start` avec `k = 2`, la cible `jt` (`asm`, `ty`, `me`, `it`) et l'entrée `ji`.
+Le worker charge l'assembly (`KnownAssemblies`), lie la méthode statique ou la
+classe de tâche, exécute la tâche dans le contexte du processus et rend le
+résultat dans `exit`. Sans worker, la tâche tourne sur le fil principal avec la
+même sérialisation ([`background-jobs.md`](background-jobs.md)).
+
+| Opération | Forme | Rôle |
+|---|---|---|
+| `bg.progress` | `note` | Une remontée de progression de la tâche (`f`, `m`), déjà limitée à 10 par seconde. |
+| `bg.run` | `call` | Un processus déjà dans un worker lance une tâche (`jt`, `ji`, `n`, `ni`, numéro `j`) ; l'OS la place comme une autre et renvoie sa progression par des messages `bgp`, puis le résultat `{r}`. |
+
+Erreurs distantes : `bgfault` (`ty`, `st`) porte une `HackBackgroundJobException`
+avec le type et la pile d'origine ; `killed` porte la raison `rs`.
 
 ### Pool, worker prêt, débordement (ADR 0070 §2-3, ADR 0071)
 
@@ -309,3 +330,10 @@ d'arrêt).
 - [x] `KnownAssemblies`, refus avec le code 127 ; `sample-cmd` dans l'Ecosystem et le test des hôtes.
 - [x] Tests de parité (`RemoteEventsTests`, `WireTopicMessageBusTests`).
 - [x] Documentation, ADR 0138, index.
+
+## Liste des tâches du chantier `exec/5-background-jobs` (ADR 0128, ADR 0140)
+
+- [x] Démarrage `k = 2`, champs `jt`/`ji`, fin `jr`/`jf`/`jx`.
+- [x] Note `bg.progress`, appel `bg.run` et messages `bgp` pour une tâche lancée depuis un worker.
+- [x] Erreurs `bgfault` et raison `rs` de `killed`.
+- [x] Tests de parité fil principal / worker (`BackgroundJobTests`).

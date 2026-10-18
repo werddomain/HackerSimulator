@@ -1,3 +1,5 @@
 #nullable enable
 HackerOs.Platform.WorkerHost.Host.WorkerPoolOptions.KnownAssemblies.get -> System.Collections.Generic.IReadOnlyList<string!>!
 HackerOs.Platform.WorkerHost.Host.WorkerPoolOptions.KnownAssemblies.init -> void
+HackerOs.Platform.WorkerHost.Host.WorkerRemoteProcessHost.CanRunBackgroundJobs.get -> bool
+HackerOs.Platform.WorkerHost.Host.WorkerRemoteProcessHost.RunBackgroundJobAsync(HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch! launch, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<HackerOs.Platform.Core.Execution.RemoteProcessExit!>!

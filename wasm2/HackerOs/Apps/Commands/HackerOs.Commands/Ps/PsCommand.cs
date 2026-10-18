@@ -110,6 +110,10 @@ public sealed class PsCommand : TerminalAppBase
         return 0;
     }
 
+    /// <summary>A background task (ADR 0128) shows as <c>&lt;app command&gt;:&lt;task&gt;</c>, like a named thread of its app.</summary>
+    private static string CommandOf(ProcEntry proc) =>
+        proc.Status.TryGetValue("Job", out string? job) ? job : proc.Field("AppId");
+
     /// <summary>
     /// The <c>-o</c> fields procps knows that HackerOS can fill, with their headers (ADR 0127 adds
     /// <c>ni</c> and <c>pri</c>). <c>pri</c> is procps's <c>PRI</c> of <c>ps -l</c>: <c>80 + nice</c>.
@@ -134,9 +138,9 @@ public sealed class PsCommand : TerminalAppBase
         ["time"] = new("TIME", 8, Right: true, static (p, now) =>
             (now > p.StartedAtUtc ? now - p.StartedAtUtc : TimeSpan.Zero).ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)),
         ["comm"] = new("COMMAND", 0, Right: false, static (p, _) => p.Field("Name")),
-        ["cmd"] = new("CMD", 0, Right: false, static (p, _) => p.Field("AppId")),
-        ["args"] = new("COMMAND", 0, Right: false, static (p, _) => p.Field("AppId")),
-        ["command"] = new("COMMAND", 0, Right: false, static (p, _) => p.Field("AppId")),
+        ["cmd"] = new("CMD", 0, Right: false, static (p, _) => CommandOf(p)),
+        ["args"] = new("COMMAND", 0, Right: false, static (p, _) => CommandOf(p)),
+        ["command"] = new("COMMAND", 0, Right: false, static (p, _) => CommandOf(p)),
     };
 
     private static IEnumerable<string> SplitFields(string list) =>

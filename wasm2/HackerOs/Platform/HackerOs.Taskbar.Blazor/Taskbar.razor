@@ -46,6 +46,13 @@
     </nav>
 
     <div class="taskbar-end">
+        @if (NotificationAreaContent is not null)
+        {
+            <div class="taskbar-notification-area" role="group" aria-label="@L["Taskbar.NotificationArea"]">
+                @NotificationAreaContent
+            </div>
+        }
+
         @if (StatusSource is not null)
         {
             <div class="taskbar-clock-region">
@@ -110,6 +117,14 @@
     /// </summary>
     [Parameter]
     public RenderFragment? ClockPanelContent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the notification area ("system tray") left of the clock: small status icons the
+    /// host supplies, such as the server connection (ADR 0134 §2). Hidden when null. The taskbar only
+    /// lays the fragment out; each icon owns its own behavior and panel.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? NotificationAreaContent { get; set; }
 
     /// <summary>Gets or sets the optional session commands. Hides the session control when null.</summary>
     [Parameter]

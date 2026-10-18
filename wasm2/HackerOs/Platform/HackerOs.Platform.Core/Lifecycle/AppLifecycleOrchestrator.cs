@@ -100,7 +100,7 @@ public sealed class AppLifecycleOrchestrator
     /// </param>
     /// <param name="remoteHost">
     /// Optional out-of-thread host (ADR 0070): commands and services whose manifest asks for a worker
-    /// run there. Registered only by the WebAssembly hosts; when omitted (the server host, tests),
+    /// run there. Registered by the WebAssembly hosts; when omitted (tests, a host without workers),
     /// every process runs in-process and <c>execution</c> is ignored.
     /// </param>
     /// <param name="clock">

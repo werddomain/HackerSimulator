@@ -142,6 +142,13 @@
     white-space: nowrap;
 }
 
+/* ADR 0134 §2: notification area ("system tray"), a row of host-supplied status icons. */
+.taskbar-notification-area {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
 .taskbar-clock-region {
     position: relative;
 }
