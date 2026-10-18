@@ -195,6 +195,15 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
     }
 
     /// <summary>
+    /// The <c>exit=N</c> line the CPU-limit step prints; the typed command line itself shows
+    /// <c>exit=$?</c>, which must not count.
+    /// </summary>
+    private static bool ExitStatusShown(string text) => ExitStatusPattern().IsMatch(text);
+
+    [GeneratedRegex(@"exit=\d")]
+    private static partial Regex ExitStatusPattern();
+
+    /// <summary>
     /// ADR 0125: <c>/proc/self/limits</c> says how limits are enforced on this host, and the CPU
     /// limit ends a command with <c>SIGXCPU</c> (exit 152) where CPU time is measured, strictly in a
     /// Web Worker. Where it is not measured the limit is inactive and the command ends normally; with
@@ -224,14 +233,14 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
         await RunCommandAsync(page, screen, $"clear; sh -c 'ulimit -S -t 1; stress --yield -t {(cpuMeasured ? 30 : 2)}'; echo \"exit=$?\"");
         if (cpuMeasured)
         {
-            string ended = await WaitForTerminalTextAsync(rows, text => text.Contains("exit=", StringComparison.Ordinal), "the end of the CPU-limited stress");
+            string ended = await WaitForTerminalTextAsync(rows, ExitStatusShown, "the end of the CPU-limited stress");
             Assert.Contains("CPU time limit exceeded", ended, StringComparison.Ordinal);
             Assert.Contains("exit=152", ended, StringComparison.Ordinal);
             Log("ulimit -S -t 1; stress --yield: SIGXCPU, exit 152.");
         }
         else
         {
-            string ended = await WaitForTerminalTextAsync(rows, text => text.Contains("exit=", StringComparison.Ordinal), "the end of stress");
+            string ended = await WaitForTerminalTextAsync(rows, ExitStatusShown, "the end of stress");
             Assert.Contains("exit=0", ended, StringComparison.Ordinal);
             Log("CPU not measured: the CPU limit is inactive, stress ran to its end.");
         }
