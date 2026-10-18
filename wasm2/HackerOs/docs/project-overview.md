@@ -3,7 +3,7 @@
 ## Objet
 
 HackerOS simule un système d'exploitation de type Linux dans le navigateur,
-pour servir d'environnement où développer des jeux et des applications. C'est
+pour servir d'environnement où développer des applications. **Aucun jeu sur ce repository** ([ADR 0135](adr/0135-no-game-in-this-repository.md)). C'est
 le portage en C# et Blazor WebAssembly du simulateur JavaScript d'origine
 (`src/`, gardé en lecture seule comme référence de comportement).
 
@@ -228,9 +228,8 @@ Documents : [`hack-file-api.md`](hack-file-api.md),
 - État : la migration wasm v3 est terminée, le SDK a été gelé en 1.0.0
   (ADR 0114) puis publié en 1.1.0 par la série v3.1 (ADR 0117 §5,
   [`sdk-packages.md`](sdk-packages.md#sdk-11)) ; le bilan et ce qui reste ouvert sont dans
-  [`wasm-v3-final-status.md`](wasm-v3-final-status.md). Le jeu n'est pas dans
-  ce dépôt (ADR 0092) : il se construit ailleurs sur le SDK 1.x
-  ([`building-on-hackeros.md`](building-on-hackeros.md)).
+  [`wasm-v3-final-status.md`](wasm-v3-final-status.md). Un autre dépôt peut se construire sur
+  le SDK 1.x ([`building-on-hackeros.md`](building-on-hackeros.md)).
 
 ## Tâches de ce document
 

@@ -200,7 +200,7 @@ public sealed class MeasuredCpuTimeAccountant : ICpuTimeAccountant, IExecutionCo
     /// <inheritdoc />
     /// <remarks>
     /// Processes that never ran are not measured (<see cref="TryGetProcessTimes"/> is false): they
-    /// have no time yet, and the game-content processes that run no code stay simulated (ADR 0066, section 4).
+    /// have no time yet, and the processes that run no code stay simulated (ADR 0066, section 4).
     /// </remarks>
     public bool TryGetThreadTimes(out MeasuredThreadCpuTimes times)
     {

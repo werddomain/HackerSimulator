@@ -135,7 +135,7 @@ bool responding = editor.Responding;               // false : « Not responding 
 | `/proc/<pid>/status` | `Cpu` = usage de la dernière seconde, `CpuSource: measured`, puis `Responding`, `LongTasks`, `voluntary_ctxt_switches`, `nonvoluntary_ctxt_switches` | exactement le fichier d'avant : `Cpu` simulé, `CpuSource: simulated`, sans les quatre champs |
 | `/proc/stat` | `cpu0` = le thread principal (`user`, `system` = `stime` + compositeur, `idle`) ; le cœur `k` ajoute le temps occupé du worker du pool qui le porte (ADR 0070, [`worker-processes.md`](worker-processes.md)) ; sans worker, les autres cœurs restent `idle` | temps simulé (ADR 0057) |
 
-Un processus qui n'a encore rien exécuté (ou un processus du contenu de jeu,
+Un processus qui n'a encore rien exécuté (ou un processus simulé,
 qui n'exécute pas de code) n'est pas mesuré : il garde ses valeurs simulées.
 
 ### Configurer

@@ -17,37 +17,28 @@ phase web.
   cités ici « R1 » à « R23 ») ;
 - `/mnt/project-files/audits/wasm-v3-migration-analysis-gaps.md`.
 
-## 1. Décision préalable : le jeu vit dans un autre dépôt
+## 1. Décision préalable : **Aucun jeu sur ce repository**
 
-Benoit, 2026-10-17 : « Rien en ce qui concerne le jeu, cela sera dans une autre
-repository qui va utiliser l'écosystème que nous créons présentement. »
-
-Ce dépôt construit **la plateforme** : l'OS simulé, son SDK et ses apps de base.
-Le jeu (missions, contrats, économie, améliorations matérielles, simulation de
-sécurité, scripts du joueur, sauvegarde de partie) sera un autre dépôt, client
-de cet écosystème comme n'importe quel développeur tiers. Décision consignée
-dans l'[ADR 0092](adr/0092-game-in-a-separate-repository.md), qui remplace
-l'[ADR 0023](adr/0023-optional-game-domain-and-proxy-fallback.md).
+Ce dépôt construit **la plateforme** : l'OS simulé, son SDK et ses apps de base
+([ADR 0135](adr/0135-no-game-in-this-repository.md), qui remplace l'ADR 0092 et l'ADR 0023).
 
 Conséquences pour ce plan :
 
-- la vague 6 (gameplay) de l'analyse est **retirée** ; elle n'est ni à faire
-  ici ni comptée comme un manque ;
-- le code de jeu actuel (`HackerOs.Game.Core`, `HackerOs.Game.Abstractions`,
-  `HackerOs.Game.Tests`, capacité `gameplay.domain.access`) est retiré par le
-  chantier `v3/2` ;
-- ce que le jeu demandera à l'OS (missions qui écrivent des fichiers, cibles
-  réseau, etc.) passera par des **points d'extension génériques du SDK**, jamais
-  par une API « jeu » dans ce dépôt ;
-- la capacité du dépôt du jeu à consommer l'écosystème (paquets, versions,
+- la vague 6 de l'analyse est **retirée** ; elle n'est ni à faire ici ni
+  comptée comme un manque ;
+- l'ancien code de domaine hors périmètre (trois projets et une capacité) est
+  retiré par le chantier `v3/2` ;
+- un autre dépôt qui utilise l'écosystème passe par les **points d'extension
+  génériques du SDK** ;
+- la capacité d'un autre dépôt à consommer l'écosystème (paquets, versions,
   gabarits) devient un objectif de ce plan : chantiers `v3/6` et `v3/15`.
 
 ## 2. Ce qui n'est pas repris
 
 | Point | Pourquoi |
 |---|---|
-| Vague 6 : missions, économie, améliorations, sécurité simulée, scripts du joueur (`P4-W6-*`) | Jeu, autre dépôt (section 1). `doc/wasm/gameplay-v3-analyse.md` reste une référence pour ce dépôt-là. |
-| Site ShopZone (`ecommerce-controller.ts`) | Contenu de jeu ; il n'était même pas enregistré dans `src/`. |
+| Vague 6 (`P4-W6-*`) | Hors périmètre (section 1). |
+| Site ShopZone (`ecommerce-controller.ts`) | Hors périmètre (section 1) ; il n'était même pas enregistré dans `src/`. |
 | Portées de réglages app/appareil, itinérance, synchro des réglages | Remplacé par l'ADR 0044. |
 | Rejet atomique d'un document de réglages invalide | Remplacé par l'ADR 0044 §5. |
 | Activer/désactiver une app | Remplacé par désinstaller/réinstaller (ADR 0048). |
@@ -65,8 +56,8 @@ Conséquences pour ce plan :
    peut copier.
 2. **SDK public seulement** pour les apps de base (ADR 0055) ; toute nouvelle
    possibilité passe par une façade `Hack*` documentée dans `sdk-reference.md`.
-3. **Pensé pour un dépôt tiers.** Chaque ajout au SDK doit pouvoir servir au
-   dépôt du jeu sans connaître le jeu.
+3. **Pensé pour un dépôt tiers.** Chaque ajout au SDK doit pouvoir servir à
+   un autre dépôt sans rien savoir de lui.
 4. **Les trois hôtes restent opérationnels** après chaque chantier
    (`build/verify-hosts.sh`) et l'Ecosystem marche sans serveur.
 5. **ADR avant le code**, documentation et index `docs/README.md` à jour dans
@@ -85,7 +76,7 @@ fusionné dans `main` sans Benoit.
 | Branche | Contenu | Manques couverts | Dépend de |
 |---|---|---|---|
 | `v3/1-adr` | ADR des chantiers 3 à 15 (numéros pris à partir du premier libre). Constate aussi les décisions différées sans objet (n°12) et la taille maximale des fichiers déjà fixée par `FileContentStoragePolicy` (16 Mio, blocs de 256 Kio, analyse §20.5). | R22 (en partie) | validation |
-| `v3/2-game-removal` | Retrait de `Game/HackerOs.Game.Core`, `Shared/HackerOs.Game.Abstractions`, `Tests/HackerOs.Game.Tests` de la solution et des règles de la frontière du SDK ; retrait de `AppCapabilities.GameplayDomainAccess` (32 → 31 capacités) ; docs (`project-overview`, `capabilities`, `sdk-reference`, `app-sdk`). | — | `1` |
+| `v3/2-game-removal` | Retrait de l'ancien code de domaine hors périmètre (trois projets) de la solution et des règles de la frontière du SDK, et de sa capacité (32 → 31 capacités) ; docs (`project-overview`, `capabilities`, `sdk-reference`, `app-sdk`). | — | `1` |
 | `v3/3-window-model` | Événements de fenêtre dans `WindowAppBase` (focus, perte du focus, réduction, agrandissement, restauration, redimensionnement) ; tailles initiale, minimale et maximale déclarées dans `AppDefinition` au lieu de `360×240` en dur (`WindowLaunchCoordinator.cs:77`) ; opérations au clavier de l'ADR 0009 : Alt+Tab, Alt+F4, Super+flèches, déplacer et redimensionner au clavier (menu de fenêtre Alt+Espace). | R7, R8 | `1` |
 | `v3/4-intents` | `RevealFileIntent` réel (l'explorateur ouvre le dossier et sélectionne le fichier) ; `Edit` atteignable par `IAppIntentGateway` ; intents `OpenUri` (navigateur par défaut, `xdg-open`) et `ShowAppSettings` ; intents déclarés par les apps et routés par le dispatcher au lieu de `intent.unknown` ; commande `xdg-open`. | R6 | `1` |
 | `v3/5-services` | Santé des services (`ServiceHealth` : `active`, `activating`, `failed`, raison) remontée par `HackServiceController`, `systemctl status` et le gestionnaire de tâches ; démarrage au boot de l'OS (avant la connexion) ou à la connexion, déclaré dans le manifeste ; message clair quand la désinstallation d'une app arrête un processus actif. | R9, R23 | `1` |
@@ -113,7 +104,7 @@ fusionné dans `main` sans Benoit.
 4. `13`, puis `14`, puis `15`, puis `16`, l'un après l'autre (chacun touche
    l'ensemble de la solution).
 
-Le dépôt du jeu peut commencer dès la fusion de `v3/6` (paquets en version
+Un autre dépôt peut commencer dès la fusion de `v3/6` (paquets en version
 préliminaire) ; il passe au SDK 1.0 après `v3/15`.
 
 ### ADR prévus (écrits par `v3/1`)
@@ -132,7 +123,7 @@ numéro libre ; plusieurs fils écrivent des ADR en parallèle).
 | Chantier | ADR |
 |---|---|
 | `v3/1-adr` | [0094](adr/0094-deferred-decisions-status-and-maximum-file-size.md) décisions différées et taille maximale des fichiers |
-| `v3/2-game-removal` | [0092](adr/0092-game-in-a-separate-repository.md) (déjà écrit) |
+| `v3/2-game-removal` | [0092](adr/0092-game-in-a-separate-repository.md) (déjà écrit), remplacé par l'ADR 0135 |
 | `v3/3-window-model` | [0095](adr/0095-window-events-sizes-and-keyboard.md) |
 | `v3/4-intents` | [0096](adr/0096-added-intents-and-app-defined-intents.md) |
 | `v3/5-services` | [0097](adr/0097-service-health-and-startup.md) |
@@ -156,7 +147,6 @@ l'hôte au lieu d'être écrite dans `~` (une archive de l'OS dépasse la limite
 
 ## 5. Hors périmètre
 
-- Tout le contenu de jeu (section 1).
 - Installation d'apps au runtime, format et signature des paquets, magasin
   d'apps : reportés à un plan à part (question 1).
 - Suites de la phase 5 : plan séparé.
@@ -182,7 +172,7 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 | # | Question | Réponse |
 |---|---|---|
 | 1 | Installation d'apps au runtime (paquets, signature, transaction, migrations de données) | **Plus tard**, dans un plan à part. |
-| 2 | Comment le dépôt du jeu consomme l'écosystème | « Pas important » : on garde la recommandation, **paquets NuGet** (flux local, puis GitHub Packages quand la CI remarchera). |
+| 2 | Comment un autre dépôt consomme l'écosystème | « Pas important » : on garde la recommandation, **paquets NuGet** (flux local, puis GitHub Packages quand la CI remarchera). |
 | 3 | Langues de la localisation | **Anglais et français**, anglais par défaut. |
 | 4 | Porter l'éditeur de thèmes de `src/` | **Oui**, comme app système sur le SDK public. |
 | 5 | Branche d'intégration | **`v3/base`**, créée depuis `web/base` une fois `web/12` à `web/15` fusionnés ; Benoit décide quand ramener `web/base` vers `main`. |
@@ -191,7 +181,7 @@ Réponses de Benoit du 2026-10-17 05:52Z.
 
 ### Préparation
 - [x] Relevé de ce qui reste (2026-10-16), revérifié sur `web/base` 34952e2.
-- [x] Décision « le jeu dans un autre dépôt » consignée (ADR 0092).
+- [x] Décision préalable consignée (ADR 0092, remplacé par l'ADR 0135 : **Aucun jeu sur ce repository**).
 - [x] Ce plan.
 - [x] Validation du plan et réponses aux questions par Benoit (2026-10-17).
 - [x] Création de `v3/base` depuis `web/base` (après `web/12` à `web/15`).

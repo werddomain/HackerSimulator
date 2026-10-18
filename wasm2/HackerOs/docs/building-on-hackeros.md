@@ -2,9 +2,8 @@
 
 ## Objet
 
-Le guide d'un dépôt qui **utilise** HackerOS sans en copier le code : le dépôt
-du jeu (ADR 0092), ou tout projet qui veut ses propres apps et son propre hôte
-d'OS. Il part du SDK 1.0, gelé par le chantier `v3/15`
+Le guide d'un dépôt qui **utilise** HackerOS sans en copier le code : tout
+projet qui veut ses propres apps et son propre hôte d'OS. **Aucun jeu sur ce repository** ([ADR 0135](adr/0135-no-game-in-this-repository.md)). Il part du SDK 1.0, gelé par le chantier `v3/15`
 ([ADR 0114](adr/0114-sdk-1-0-freeze.md)) ; la version courante est la **1.1.0**
 (série v3.1, [ADR 0117](adr/0117-sdk-window-title-and-sdk-1-1.md) §5, voir « Ce que la 1.1 ajoute »).
 
