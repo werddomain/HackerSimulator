@@ -117,7 +117,8 @@ Sur le fil principal, la livraison reste synchrone comme avant.
   vide (hôte qui ne la renseigne pas) n'impose aucune restriction.
 - L'Ecosystem référence désormais `HackerOs.Samples.TerminalApp` : sa commande
   `sample-cmd` sert de commande tierce chargée à la demande dans le test des
-  hôtes (`HostSmoke`). `test/test` n'est pas changé.
+  hôtes (`HostSmoke`). Comme toute commande, elle est masquée du menu Démarrer
+  (`LaunchVisibility = Hidden`) et reste désinstallable. `test/test` n'est pas changé.
 
 ### 9. Revue des apps en `MainThread`
 
