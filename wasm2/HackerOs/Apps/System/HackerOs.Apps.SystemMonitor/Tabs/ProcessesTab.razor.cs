@@ -30,8 +30,15 @@ public partial class ProcessesTab
         (ProcessColumn.Cpu, "Column.Cpu", true),
         (ProcessColumn.Memory, "Column.Memory", true),
         (ProcessColumn.DiskRead, "Column.DiskRead", true),
-        (ProcessColumn.DiskWrite, "Column.DiskWrite", true)
+        (ProcessColumn.DiskWrite, "Column.DiskWrite", true),
+        (ProcessColumn.Priority, "Column.Priority", true)
     ];
+
+    /// <summary>The columns shown: "Priority" only once the user asked for it (ADR 0127).</summary>
+    private IEnumerable<(ProcessColumn Column, string LabelKey, bool Numeric)> ShownColumns =>
+        Columns.Where(column => column.Column != ProcessColumn.Priority || Table.ShowPriority);
+
+    private void TogglePriorityColumn() => Table.ShowPriority = !Table.ShowPriority;
 
     private IStringLocalizer<Strings>? _localizer;
 

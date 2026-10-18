@@ -171,6 +171,33 @@ public sealed class ProcessTableTests
         Assert.Equal([1, 2], Pids(table));
     }
 
+    [Fact]
+    public void The_priority_column_is_hidden_by_default_and_sorts_lowest_niceness_first()
+    {
+        ProcessTable table = new();
+        table.SetRows([Rows[0] with { Nice = 5 }, Rows[1] with { Nice = -3 }, Rows[2], Rows[3] with { Nice = 19 }]);
+        Assert.False(table.ShowPriority);
+
+        table.ShowPriority = true;
+        table.ToggleSort(ProcessColumn.Priority);
+
+        Assert.False(table.SortDescending);
+        Assert.Equal([10L, 11, 1, 12], Pids(table));
+    }
+
+    [Fact]
+    public void Hiding_the_priority_column_while_sorted_on_it_goes_back_to_the_cpu_order()
+    {
+        ProcessTable table = Table();
+        table.ShowPriority = true;
+        table.ToggleSort(ProcessColumn.Priority);
+
+        table.ShowPriority = false;
+
+        Assert.Equal(ProcessColumn.Cpu, table.SortColumn);
+        Assert.True(table.SortDescending);
+    }
+
     private static long[] Pids(ProcessTable table) => [.. table.Visible.Select(static row => row.Pid)];
 
     private static ProcessRow Row(long pid, string name, string appId, double cpu, long memory) =>

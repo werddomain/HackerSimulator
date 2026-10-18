@@ -487,6 +487,7 @@ public sealed class AppLifecycleOrchestrator
             environment,
             SystemScope: request.SystemScope)
             {
+                Nice = request.Nice,
                 ResourceLimits = sessionLimits,
                 // ADR 0125 section 5: an elevated root is not held by nproc (CAP_SYS_RESOURCE).
                 ResourceLimitExempt = isRootElevated

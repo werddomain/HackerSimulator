@@ -109,6 +109,15 @@ internal sealed class ShellSessionAccess(
         // The elevated command reads what sudo would have read: `echo x | sudo tee` keeps its input.
         interpreter.RunElevatedAsync(session, arguments, standardInput, standardOutput, standardError, options, cancellationToken);
 
+    /// <inheritdoc />
+    public ValueTask<int> RunNicedAsync(
+        IReadOnlyList<string> arguments,
+        int adjustment,
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken) =>
+        interpreter.RunNicedAsync(session, arguments, adjustment, standardInput, standardOutput, standardError, options, cancellationToken);
+
     /// <summary>
     /// Requires a shell identifier, <c>[A-Za-z_][A-Za-z0-9_]*</c> (ADR 0050, section 3): the only
     /// names <c>$NAME</c> can read back, as bash's <c>export</c> enforces.

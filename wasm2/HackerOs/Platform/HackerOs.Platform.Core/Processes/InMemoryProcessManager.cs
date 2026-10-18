@@ -144,7 +144,10 @@ public sealed class InMemoryProcessManager : IProcessManager
                 exitCode: null,
                 exitReason: null);
 
-            _active[pid] = new Entry(record, tokenSource, new ProcessControlBlock(pid)) { IsAuxiliary = request.Auxiliary };
+            // ADR 0127: like fork, the child starts with its parent's niceness unless asked otherwise.
+            int nice = ProcessNice.Clamp(request.Nice
+                ?? (request.ParentPid is { } parent && _active.TryGetValue(parent, out Entry? parentEntry) ? parentEntry.Nice : ProcessNice.Default));
+            _active[pid] = new Entry(record, tokenSource, new ProcessControlBlock(pid)) { IsAuxiliary = request.Auxiliary, Nice = nice };
             _eventBus.Publish(new ProcessStateChangedEvent(pid, ProcessState.Created, ProcessState.Starting, now));
             return record;
         }
@@ -285,6 +288,27 @@ public sealed class InMemoryProcessManager : IProcessManager
                 old.State, old.ResourceProfile, health, old.CreatedAtUtc, old.StartedAtUtc,
                 old.StoppedAtUtc, old.ExitCode, old.ExitReason);
             return entry.Record;
+        }
+    }
+
+    /// <inheritdoc />
+    public int GetNice(ProcessId pid)
+    {
+        lock (_gate)
+        {
+            return GetActiveEntry(pid).Nice;
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>No event: like <c>setpriority(2)</c>, a niceness change is not a lifecycle transition.</remarks>
+    public int SetNice(ProcessId pid, int nice)
+    {
+        lock (_gate)
+        {
+            Entry entry = GetActiveEntry(pid);
+            entry.Nice = ProcessNice.Clamp(nice);
+            return entry.Nice;
         }
     }
 
@@ -502,5 +526,8 @@ public sealed class InMemoryProcessManager : IProcessManager
 
         /// <summary>Whether the process is an auxiliary of its app (<see cref="ProcessStartRequest.Auxiliary"/>).</summary>
         public bool IsAuxiliary { get; init; }
+
+        /// <summary>The process's niceness (ADR 0127), <c>-20</c> to <c>19</c>.</summary>
+        public int Nice { get; set; }
     }
 }

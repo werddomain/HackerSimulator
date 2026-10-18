@@ -122,6 +122,12 @@ public sealed class BackgroundJobTests
         ShellRun ps = await os.RunAsync(os.OpenShell(), "ps").WaitAsync(TimeSpan.FromSeconds(10));
         Assert.Contains("bg-hold:Hold", ps.Stdout, StringComparison.Ordinal);
 
+        // ADR 0127: the task's nice option is its process's niceness, in ps and in the pool queue.
+        Assert.Equal(5, job.Nice);
+        Assert.Equal(5, os.Manager.GetNice(job.Pid));
+        ShellRun niced = await os.RunAsync(os.OpenShell(), "ps -o ni,cmd").WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Contains("  5 bg-hold:Hold", niced.Stdout, StringComparison.Ordinal);
+
         ShellRun kill = await os.RunAsync(os.OpenShell(), $"kill -9 {job.Pid.Value}").WaitAsync(TimeSpan.FromSeconds(10));
         ShellRun run = await running.WaitAsync(TimeSpan.FromSeconds(20));
 
@@ -402,7 +408,7 @@ internal static class BackgroundJobCommands
         public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
         {
             int count = int.Parse(context.Arguments[0]);
-            Task<int>[] tasks = [.. Enumerable.Range(0, count).Select(_ => HackBackground.RunAsync<int, int>(Hold, 1, cancellationToken: cancellationToken))];
+            Task<int>[] tasks = [.. Enumerable.Range(0, count).Select(_ => HackBackground.RunAsync<int, int>(Hold, 1, options: new HackBackgroundOptions { Nice = 5 }, cancellationToken: cancellationToken))];
             if (context.Arguments.Count > 1)
             {
                 await Task.WhenAll(tasks);

@@ -132,7 +132,11 @@ public sealed class BackgroundJobService
                 parent.ResourceProfile,
                 // argv[0] is the task's name, as ps and /proc/<pid>/cmdline show it; the environment
                 // and working directory are the app's, copied by the process manager (ADR 0050).
-                [name]));
+                [name])
+            {
+                // ADR 0127: the task's own niceness, shown by ps and /proc, and its place in the pool queue.
+                Nice = nice,
+            });
             IAppExecutionContext child = createChildContext(process);
             IRemoteProcessHost? remote = _remoteHost?.Invoke() is { CanRunBackgroundJobs: true } host ? host : null;
             BackgroundJobInfo info = new(

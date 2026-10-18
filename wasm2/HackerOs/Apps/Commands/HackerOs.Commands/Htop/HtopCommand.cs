@@ -273,7 +273,7 @@ public sealed class HtopCommand(AppManifest manifest) : TerminalAppBase(manifest
             string user = process.UserName.Length > 0 ? process.UserName : process.UserId;
             string row = string.Create(
                 CultureInfo.InvariantCulture,
-                $"{process.Id,7} {(user.Length > 8 ? user[..8] : user),-8}  20   0 {CommandIO.HumanSize(resKb * 3 * 1024),5} {CommandIO.HumanSize(resKb * 1024),5} {CommandIO.HumanSize(resKb * 256),5} {process.StateCode} {process.CpuUsage,4:0.0} {memPercent,4:0.0} {SystemSnapshot.FormatCpuTime(process, now),8}  {command}");
+                $"{process.Id,7} {(user.Length > 8 ? user[..8] : user),-8} {process.BasePriority,4} {process.Nice,3} {CommandIO.HumanSize(resKb * 3 * 1024),5} {CommandIO.HumanSize(resKb * 1024),5} {CommandIO.HumanSize(resKb * 256),5} {process.StateCode} {process.CpuUsage,4:0.0} {memPercent,4:0.0} {SystemSnapshot.FormatCpuTime(process, now),8}  {command}");
             lines.Add(index == state.Selection
                 ? C(state, Selected) + row.PadRight(columns) + C(state, Reset)
                 : (process.StateCode == 'R' ? C(state, Green) : string.Empty) + row + C(state, Reset));

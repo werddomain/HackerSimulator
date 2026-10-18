@@ -884,6 +884,16 @@ public static class EcosystemServiceCollectionExtensions
         // Depends on AppLifecycleOrchestrator, which is Scoped (see above) — see this file's
         // IJSRuntime scoping note.
         services.AddScoped<WindowCloseCoordinator>();
+        // ADR 0127 §2-3: which app windows stop answering, and their "Attendre | Terminer" dialog.
+        // Scoped like WindowRuntime; reads the same accountant and threshold as /proc (ADR 0066/0067).
+        services.AddScoped(provider => new WindowResponsivenessMonitor(
+            provider.GetRequiredService<WindowRuntime>(),
+            provider.GetRequiredService<IProcessManager>(),
+            CpuAccountant(provider),
+            provider.GetRequiredService<ResourceAccountingPlan>().Settings.UnresponsiveThreshold,
+            TimeProvider.System,
+            provider.GetService<IOsSettingsService>(),
+            provider.GetService<ILogger<WindowResponsivenessMonitor>>()));
         services.AddScoped<FileDialogWindowAdapter>(provider => new FileDialogWindowAdapter(
             provider.GetRequiredService<FileDialogCoordinator>(),
             provider.GetRequiredService<WindowRuntime>(),

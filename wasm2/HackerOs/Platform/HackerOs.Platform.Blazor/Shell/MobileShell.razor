@@ -19,7 +19,8 @@
     <div class="mobile-shell-workspace">
         <SingleSurfaceArea Windows="WindowRuntime.Windows"
                            OnFocus="HandleFocus"
-                           OnGesture="HandleGesture">
+                           OnGesture="HandleGesture"
+                           WindowOverlay="UnresponsiveWindowOverlay.ForWindow">
             <WindowContent Context="window">
                 @if (window.Content is not null)
                 {
@@ -41,6 +42,8 @@
                 }
             </WindowContent>
         </SingleSurfaceArea>
+        @* ADR 0127 §2: samples which windows stop answering their inputs. *@
+        <WindowResponsivenessHost />
         <button type="button"
                 class="mobile-shade-handle"
                 @ref="_swipeHandleElement"

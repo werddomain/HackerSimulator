@@ -38,7 +38,7 @@ public sealed class WorkerRemoteProcessHost : IRemoteProcessHost
         Guid? group = dedicated ? null : launch.PlacementGroup;
         WorkerConnection worker = dedicated
             ? await _pool.AcquireDedicatedAsync(cancellationToken).ConfigureAwait(false)
-            : await _pool.AcquireForCommandAsync(group, cancellationToken).ConfigureAwait(false);
+            : await _pool.AcquireForCommandAsync(group, _pool.NiceOf(launch.Context.ProcessId), cancellationToken).ConfigureAwait(false);
         try
         {
             RemoteProcessSession session = new(
@@ -93,12 +93,13 @@ public sealed class WorkerRemoteProcessHost : IRemoteProcessHost
     /// <remarks>
     /// ADR 0128 section 3: the task takes a core of the pool like a command (the ready worker when none
     /// is free), and gives it back when it ends. Its <c>start</c> message names the task instead of an
-    /// entry point; the caller's cancellation is a Ctrl+C of the task's process.
+    /// entry point; the caller's cancellation is a Ctrl+C of the task's process. It waits in the pool
+    /// queue with its process's niceness, like a command (ADR 0127 section 1).
     /// </remarks>
     public async Task<RemoteProcessExit> RunBackgroundJobAsync(RemoteBackgroundJobLaunch launch, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(launch);
-        WorkerConnection worker = await _pool.AcquireForCommandAsync(null, cancellationToken).ConfigureAwait(false);
+        WorkerConnection worker = await _pool.AcquireForCommandAsync(null, _pool.NiceOf(launch.Context.ProcessId), cancellationToken).ConfigureAwait(false);
         try
         {
             RemoteProcessSession session = new(worker, launch);

@@ -345,6 +345,9 @@
   <data name="LoginStep.StartingSession" xml:space="preserve">
     <value>Démarrage de la session</value>
   </data>
+  <data name="Nice.PermissionDenied" xml:space="preserve">
+    <value>impossible de modifier la priorité : Permission refusée</value>
+  </data>
   <data name="Prompt.Dangerous.Approved" xml:space="preserve">
     <value>Capacités autorisées par un administrateur.</value>
   </data>

@@ -240,6 +240,12 @@
   <data name="org.hackeros.commands.netstat.Terminal.Usage" xml:space="preserve">
     <value>netstat [-tulnap] [-i] [-r] [-s]</value>
   </data>
+  <data name="org.hackeros.commands.nice.Description" xml:space="preserve">
+    <value>Exécute une commande avec une priorité modifiée</value>
+  </data>
+  <data name="org.hackeros.commands.nice.Terminal.Usage" xml:space="preserve">
+    <value>nice [-n N] [commande [arguments...]]</value>
+  </data>
   <data name="org.hackeros.commands.nmap.Description" xml:space="preserve">
     <value>Cartographe réseau simulé : analyse les ports des hôtes simulés</value>
   </data>
@@ -280,13 +286,19 @@
     <value>Affiche un instantané des processus en cours</value>
   </data>
   <data name="org.hackeros.commands.ps.Terminal.Usage" xml:space="preserve">
-    <value>ps [-a] [-u]</value>
+    <value>ps [-a] [-u] [-l] [-o champ,...]</value>
   </data>
   <data name="org.hackeros.commands.read.Description" xml:space="preserve">
     <value>Lit une ligne de l'entrée standard dans des variables du shell</value>
   </data>
   <data name="org.hackeros.commands.read.Terminal.Usage" xml:space="preserve">
     <value>read [-r] [-p invite] [-s] [-n nombre] [-t secondes] [-d délim] [nom...]</value>
+  </data>
+  <data name="org.hackeros.commands.renice.Description" xml:space="preserve">
+    <value>Modifie la priorité de processus en cours</value>
+  </data>
+  <data name="org.hackeros.commands.renice.Terminal.Usage" xml:space="preserve">
+    <value>renice [-n] N [-p] pid...</value>
   </data>
   <data name="org.hackeros.commands.rm.Description" xml:space="preserve">
     <value>Déplace des fichiers ou des dossiers vers la Corbeille, ou les supprime définitivement</value>

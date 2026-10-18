@@ -16,6 +16,10 @@
                 <span class="proc-count-selected"> · @L["Processes.Selected", Table.Selected.Count]</span>
             }
         </span>
+        <button class="sysmon-btn sysmon-btn-ghost proc-column-toggle"
+                aria-pressed="@(Table.ShowPriority ? "true" : "false")"
+                title="@L["Processes.PriorityColumn.Title"]"
+                @onclick="TogglePriorityColumn">@L["Column.Priority"]</button>
         <button class="sysmon-btn" disabled="@(Table.Selected.Count != 1)" @onclick="ShowSelectedDetails" title="@L["Processes.Details.Title"]">@L["Processes.Details"]</button>
         <button class="sysmon-btn btn-danger" disabled="@(Table.Selected.Count == 0)" @onclick="EndSelectedAsync" title="@L["Processes.EndTask.Title"]">@L["EndTask.Title"]</button>
     </div>
@@ -64,7 +68,7 @@
             <table class="sysmon-table proc-table" role="grid" aria-multiselectable="true">
                 <thead>
                     <tr>
-                        @foreach ((ProcessColumn column, string labelKey, bool numeric) in Columns)
+                        @foreach ((ProcessColumn column, string labelKey, bool numeric) in ShownColumns)
                         {
                             <th class="sortable @(numeric ? "num" : null) @(Table.SortColumn == column ? "sorted" : null)"
                                 aria-sort="@AriaSort(column)"
@@ -107,11 +111,15 @@
                             <td class="num">@Units.Bytes(row.MemoryBytes, Formats)</td>
                             <td class="num">@Units.Rate(row.ReadPerSecond, Formats)</td>
                             <td class="num">@Units.Rate(row.WritePerSecond, Formats)</td>
+                            @if (Table.ShowPriority)
+                            {
+                                <td class="num mono">@row.Nice.ToString(Formats)</td>
+                            }
                         </tr>
                     }
                     @if (Table.Visible.Count == 0)
                     {
-                        <tr class="proc-empty"><td colspan="8">@(Table.Rows.Count == 0 ? L["Processes.Empty.None"] : L["Processes.Empty.Filter"])</td></tr>
+                        <tr class="proc-empty"><td colspan="@(Table.ShowPriority ? 9 : 8)">@(Table.Rows.Count == 0 ? L["Processes.Empty.None"] : L["Processes.Empty.Filter"])</td></tr>
                     }
                 </tbody>
             </table>

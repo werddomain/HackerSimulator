@@ -312,6 +312,31 @@ public interface IAppProcessGateway
     }
 
     /// <summary>
+    /// Gets the niceness of one visible process (ADR 0127), like <c>getpriority(2)</c>. Defaults to
+    /// <see cref="ProcessNice.Default"/> so existing implementations keep compiling.
+    /// </summary>
+    /// <param name="pid">A process the app may see (its own, or any with <see cref="AppCapabilities.ProcessList"/>).</param>
+    /// <exception cref="KeyNotFoundException">No such active process.</exception>
+    /// <exception cref="AppGatewayAccessDeniedException">The process is another app's and policy denies <see cref="AppCapabilities.ProcessList"/>.</exception>
+    int GetNice(ProcessId pid) => ProcessNice.Default;
+
+    /// <summary>
+    /// Sets the niceness of one process (ADR 0127), like <c>setpriority(2)</c>: <c>renice</c> and
+    /// <c>nice</c> come here. The rules are Linux's: a process of the same user may be made nicer
+    /// (higher value) freely, with <see cref="AppCapabilities.ProcessManage"/> when it is not the
+    /// caller's own; lowering a niceness, or touching another user's process, needs root
+    /// (<c>sudo</c>).
+    /// </summary>
+    /// <param name="pid">The target process.</param>
+    /// <param name="nice">The new niceness, clamped to <see cref="ProcessNice.Min"/>..<see cref="ProcessNice.Max"/>.</param>
+    /// <returns>The niceness now in effect.</returns>
+    /// <exception cref="KeyNotFoundException">No such active process.</exception>
+    /// <exception cref="AppGatewayAccessDeniedException">Policy denies <see cref="AppCapabilities.ProcessManage"/> for another process.</exception>
+    /// <exception cref="UnauthorizedAccessException">Lowering the niceness, or another user's process, without root (<c>EPERM</c>).</exception>
+    /// <exception cref="NotSupportedException">This host does not offer priorities (a worker without the gateway).</exception>
+    int SetNice(ProcessId pid, int nice) => throw new NotSupportedException("Process priorities are not offered by this host.");
+
+    /// <summary>
     /// Changes one resource limit of a process (ADR 0125, section 4, <c>setrlimit</c>/<c>prlimit</c>):
     /// the calling app's own process, or with <see cref="AppCapabilities.ProcessManage"/> another
     /// process of the same user, or any process when the caller is elevated (<c>sudo</c>). Only an

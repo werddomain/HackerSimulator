@@ -1,0 +1,5 @@
+{
+  "name": "renice",
+  "description": "Modifie la priorité de processus en cours",
+  "terminalUsage": "renice [-n] N [-p] pid..."
+}

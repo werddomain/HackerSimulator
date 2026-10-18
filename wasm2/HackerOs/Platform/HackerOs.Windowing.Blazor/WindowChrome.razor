@@ -40,7 +40,11 @@
         {
             <img class="window-icon" src="@Window.IconAssetPath" alt="" />
         }
-        <h2 id="@TitleId">@Window.Title</h2>
+        <h2 id="@TitleId">@Window.Title@if (!Window.IsResponding)
+            {
+                @* Display only (ADR 0127 §3): Window.Title keeps the app's own title. *@
+                <span class="window-title-state">@(" " + L["Chrome.NotResponding"])</span>
+            }</h2>
     </div>
     <div class="window-actions" aria-label="@L["Chrome.Controls"]">
         <button type="button" class="chrome-button chrome-button-minimize" aria-label="@L["Chrome.Minimize"]" title="@L["Chrome.Minimize"]" @onclick="MinimizeAsync">

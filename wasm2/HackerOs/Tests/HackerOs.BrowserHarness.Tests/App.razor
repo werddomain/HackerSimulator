@@ -49,6 +49,10 @@
     {
         <TaskbarBrowserScenario />
     }
+    else if (IsUnresponsiveScenario)
+    {
+        <UnresponsiveWindowBrowserScenario />
+    }
     else
     {
         <h1>HackerOS IndexedDB contract harness</h1>
@@ -69,6 +73,7 @@
     private bool IsCodeEditorScenario => new Uri(Navigation.Uri).Query.Contains("scenario=code-editor", StringComparison.Ordinal);
     private bool IsHackPaintScenario => new Uri(Navigation.Uri).Query.Contains("scenario=hack-paint", StringComparison.Ordinal);
     private bool IsTaskbarScenario => new Uri(Navigation.Uri).Query.Contains("scenario=taskbar", StringComparison.Ordinal);
+    private bool IsUnresponsiveScenario => new Uri(Navigation.Uri).Query.Contains("scenario=unresponsive", StringComparison.Ordinal);
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -88,7 +93,8 @@
                 || query.Contains("scenario=virtual-keyboard-terminal", StringComparison.Ordinal)
                 || query.Contains("scenario=code-editor", StringComparison.Ordinal)
                 || query.Contains("scenario=hack-paint", StringComparison.Ordinal)
-                || query.Contains("scenario=taskbar", StringComparison.Ordinal))
+                || query.Contains("scenario=taskbar", StringComparison.Ordinal)
+                || query.Contains("scenario=unresponsive", StringComparison.Ordinal))
             {
                 return;
             }

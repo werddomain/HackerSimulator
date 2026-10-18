@@ -104,7 +104,9 @@ public sealed class SettingsStoreToFilesMigration : IUserProfileInitializer
                      AccessibilitySettingsDocuments.Document,
                      UiPlatformPreferenceSettingsDocuments.Document,
                      PolicySettingsDocuments.Document,
-                     Clipboard.ClipboardSettingsDocuments.Document
+                     Clipboard.ClipboardSettingsDocuments.Document,
+                     // ADR 0127 §5: the "not responding" dialog switch.
+                     Shell.WindowManagerSettingsDocuments.Document
                  })
         {
             await WriteIfAbsentAsync(system, document.SystemPath, DefaultConfig(document), cancellationToken).ConfigureAwait(false);

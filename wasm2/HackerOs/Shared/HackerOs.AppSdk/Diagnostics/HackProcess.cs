@@ -135,6 +135,16 @@ public sealed partial class HackProcess
     /// </summary>
     public bool Responding { get; private set; } = true;
 
+    /// <summary>
+    /// Gets the niceness (field 19 of <c>/proc/&lt;pid&gt;/stat</c>, ADR 0127): <c>-20</c> (most
+    /// favored) to <c>19</c>, <c>0</c> by default, the <c>NI</c> column of <c>ps</c> and <c>top</c>.
+    /// It only orders the worker pool's queue: on the main thread it changes nothing.
+    /// </summary>
+    public int Nice { get; private set; }
+
+    /// <summary>Gets the kernel priority shown next to <see cref="Nice"/> (<c>PR</c> of <c>top</c>): <c>20 + Nice</c>.</summary>
+    public int BasePriority => 20 + Nice;
+
     /// <summary>Gets the arguments of the process, the first being the program, like <c>argv</c>.</summary>
     public IReadOnlyList<string> Arguments { get; private set; } = [];
 
@@ -369,6 +379,23 @@ public sealed partial class HackProcess
                 : TimeSpan.Zero;
     }
 
+    /// <summary>
+    /// Parses the <c>nice</c> field (19) of a <c>/proc/&lt;pid&gt;/stat</c> line (<c>proc(5)</c>,
+    /// ADR 0127), counted after the last <c>)</c> like <see cref="ParseStatTimes"/>.
+    /// </summary>
+    /// <param name="text">File content.</param>
+    /// <returns>The niceness, clamped to <c>-20</c>..<c>19</c>; <c>0</c> for a line too short to hold it.</returns>
+    public static int ParseStatNice(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        int close = text.LastIndexOf(')');
+        string[] rest = text[(close + 1)..].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        // rest[0] is field 3, so field 19 is rest[16].
+        return rest.Length > 16 && int.TryParse(rest[16], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out int nice)
+            ? Math.Clamp(nice, -20, 19)
+            : 0;
+    }
+
     /// <summary>Reads status, stat, cmdline, cwd and io; <see langword="false"/> when the process vanished.</summary>
     private async Task<bool> TryLoadAsync(DateTimeOffset startTime, CancellationToken cancellationToken)
     {
@@ -402,6 +429,7 @@ public sealed partial class HackProcess
         CpuUsage = double.TryParse(Field(status, "Cpu"), NumberStyles.Float, CultureInfo.InvariantCulture, out double cpu) ? cpu : 0;
         (UserProcessorTime, PrivilegedProcessorTime) = stat is null ? (TimeSpan.Zero, TimeSpan.Zero) : ParseStatTimes(stat);
         Responding = Field(status, "Responding") != "0";
+        Nice = stat is null ? 0 : ParseStatNice(stat);
         Arguments = cmdline is null ? [] : cmdline.Split('\0', StringSplitOptions.RemoveEmptyEntries);
         CommandLine = string.Join(' ', Arguments.Select(static argument => argument.Contains(' ', StringComparison.Ordinal) ? $"\"{argument}\"" : argument));
         WorkingDirectory = cwd;

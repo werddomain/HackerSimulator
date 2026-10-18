@@ -387,6 +387,18 @@ _module = await JS.InvokeAsync<IJSObjectReference>(
 
 Ne jamais ajouter de `<script>` dans un hôte.
 
+### Ne pas bloquer le fil principal (ADR 0127 §4)
+
+Une app fenêtrée tourne sur le fil principal du navigateur, comme tout le
+bureau. Une boucle longue sans `await` gèle alors tout l'OS : la souris, les
+autres fenêtres et même la boîte « L'application ne répond pas », qui ne peut
+s'afficher qu'après le gel. Mettez un calcul lourd dans
+`HackBackground.RunAsync` (ADR 0128, il tourne dans un worker), ou appelez
+`HackProcess.CheckpointAsync` souvent dans la boucle. Quand la fenêtre reste
+occupée plus de 5 s, l'OS lui ajoute « (Not responding) » et propose
+« Attendre » ou « Terminer l'application » (arrêt demandé puis forcé après
+2 s). Voir [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md).
+
 ## 4. Une commande du shell
 
 Une commande reçoit ses arguments, ses flux et le répertoire courant du shell.

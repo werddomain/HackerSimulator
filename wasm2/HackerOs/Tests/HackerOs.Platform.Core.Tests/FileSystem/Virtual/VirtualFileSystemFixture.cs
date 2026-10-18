@@ -174,6 +174,11 @@ internal sealed class VirtualFileSystemFixture
 
         internal List<ProcessRecord> History { get; } = [];
 
+        /// <summary>Niceness per process (ADR 0127); absent means 0.</summary>
+        internal Dictionary<ProcessId, int> Nice { get; } = [];
+
+        public int GetNice(ProcessId pid) => Nice.GetValueOrDefault(pid);
+
         public IReadOnlyList<ProcessRecord> GetActiveProcesses() => [.. Active];
 
         public IReadOnlyList<ProcessRecord> GetHistory() => [.. History];

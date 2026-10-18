@@ -33,6 +33,9 @@
   <data name="Column.Pid" xml:space="preserve">
     <value>PID</value>
   </data>
+  <data name="Column.Priority" xml:space="preserve">
+    <value>Priority</value>
+  </data>
   <data name="Column.State" xml:space="preserve">
     <value>State</value>
   </data>
@@ -425,6 +428,9 @@
   </data>
   <data name="Processes.NotResponding.Title" xml:space="preserve">
     <value>One slice of this process held the thread longer than the OS threshold (Responding: 0 in /proc/&lt;pid&gt;/status). Nothing was stopped.</value>
+  </data>
+  <data name="Processes.PriorityColumn.Title" xml:space="preserve">
+    <value>Show or hide the Priority column (niceness, NI)</value>
   </data>
   <data name="Processes.Selected" xml:space="preserve">
     <value>{0} selected</value>
