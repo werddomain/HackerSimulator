@@ -59,14 +59,7 @@ public sealed class CatCommand : TerminalAppBase
 
             if (!readResult.Succeeded || readResult.Value is null)
             {
-                if (readResult.Error?.Code == FileSystemErrorCode.PermissionDenied || readResult.Error?.Code == FileSystemErrorCode.CapabilityDenied)
-                {
-                    context.StandardError.WriteLine(CommandText.FileError(context, "cat", fileArg, CommandText.Reason(context, Errno.PermissionDenied)));
-                }
-                else
-                {
-                    context.StandardError.WriteLine(CommandText.FileError(context, "cat", fileArg, CommandText.Reason(context, Errno.NotFound)));
-                }
+                context.StandardError.WriteLine(CommandText.FileError(context, "cat", fileArg, CommandText.Reason(context, CommandIO.ReadErrno(readResult.Error))));
                 exitCode = 1;
             }
             else

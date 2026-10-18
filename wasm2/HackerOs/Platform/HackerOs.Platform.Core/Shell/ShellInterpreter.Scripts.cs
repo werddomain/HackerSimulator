@@ -322,13 +322,24 @@ public sealed partial class ShellInterpreter
             }
         }
 
-        (ProcessRecord process, IAppExecutionContext context) = _orchestrator.StartShellProcess(
-            parent.Host,
-            parent.Principal,
-            [scriptName, .. arguments],
-            VirtualPath.Parse(parent.CurrentDirectory),
-            ChildEnvironment(parent, assignments),
-            exec.ProcessStarted);
+        ProcessRecord process;
+        IAppExecutionContext context;
+        try
+        {
+            (process, context) = _orchestrator.StartShellProcess(
+                parent.Host,
+                parent.Principal,
+                [scriptName, .. arguments],
+                VirtualPath.Parse(parent.CurrentDirectory),
+                ChildEnvironment(parent, assignments),
+                exec.ProcessStarted);
+        }
+        catch (ProcessLimitExceededException)
+        {
+            // fork(2) failed on the nproc limit (ADR 0125): bash's "fork: Resource temporarily unavailable".
+            await exec.Err.WriteLineAsync(ErrorPrefix(exec) + exec.Text["Shell.ForkFailed"]).ConfigureAwait(false);
+            return 1;
+        }
 
         ShellSession script = new(context, parent.Principal, isInteractive: false)
         {

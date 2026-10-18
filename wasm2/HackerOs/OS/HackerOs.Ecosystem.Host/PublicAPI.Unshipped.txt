@@ -1,1 +1,10 @@
 #nullable enable
+const HackerOs.Ecosystem.ResourceLimitsServiceCollectionExtensions.SectionName = "HackerOs:ResourceLimits" -> string!
+HackerOs.Ecosystem.ResourceLimitsServiceCollectionExtensions
+HackerOs.Ecosystem.ResourceLimitsSettings
+HackerOs.Ecosystem.ResourceLimitsSettings.Enabled.get -> bool
+HackerOs.Ecosystem.ResourceLimitsSettings.Enabled.init -> void
+HackerOs.Ecosystem.ResourceLimitsSettings.ResourceLimitsSettings(bool Enabled) -> void
+static HackerOs.Ecosystem.ResourceLimitsServiceCollectionExtensions.AddHackerOsResourceLimits(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration? configuration) -> HackerOs.Ecosystem.ResourceLimitsSettings!
+static HackerOs.Ecosystem.ResourceLimitsServiceCollectionExtensions.ReadSettings(Microsoft.Extensions.Configuration.IConfiguration? configuration) -> HackerOs.Ecosystem.ResourceLimitsSettings!
+static HackerOs.Ecosystem.ResourceLimitsSettings.Default.get -> HackerOs.Ecosystem.ResourceLimitsSettings!

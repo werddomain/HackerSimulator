@@ -24,6 +24,12 @@ public sealed class AppProcessGateway : IAppProcessGateway
 
     private ProcessId OwnPid { get; }
 
+    /// <summary>Gets the limit table behind <see cref="SetResourceLimitAsync"/> (ADR 0125); without it the call is not supported.</summary>
+    public IProcessResourceLimitTable? ResourceLimits { get; init; }
+
+    /// <summary>Gets whether the app runs as an elevated root (<c>sudo</c>): it may raise hard limits and act on any user's process.</summary>
+    public bool IsRootElevated { get; init; }
+
     /// <inheritdoc />
     public ProcessRecord OwnProcess =>
         _processManager.TryGetActive(OwnPid, out ProcessRecord process)
@@ -64,6 +70,34 @@ public sealed class AppProcessGateway : IAppProcessGateway
     {
         RequireManageUnlessOwn(pid);
         return _processManager.Kill(pid, reason);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// ADR 0125 section 4, the rules of <c>prlimit(2)</c>: the app's own process, or another process of
+    /// the same user with <see cref="AppCapabilities.ProcessManage"/>, or any process when elevated.
+    /// </remarks>
+    public Task<ResourceLimitChangeResult> SetResourceLimitAsync(
+        ProcessId pid, ResourceLimitKind kind, ResourceLimit limit, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (ResourceLimits is not { } table)
+        {
+            throw new NotSupportedException("This host does not manage resource limits.");
+        }
+
+        RequireManageUnlessOwn(pid);
+        if (!_processManager.TryGetActive(pid, out ProcessRecord target))
+        {
+            return Task.FromResult(ResourceLimitChangeResult.NoSuchProcess);
+        }
+
+        if (!IsRootElevated && pid != OwnPid && target.UserId != OwnProcess.UserId)
+        {
+            return Task.FromResult(ResourceLimitChangeResult.PermissionDenied);
+        }
+
+        return Task.FromResult(table.TrySet(pid, kind, limit, privileged: IsRootElevated));
     }
 
     private void RequireManageUnlessOwn(ProcessId pid)

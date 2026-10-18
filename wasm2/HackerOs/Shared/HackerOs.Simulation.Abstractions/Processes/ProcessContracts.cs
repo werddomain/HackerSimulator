@@ -108,7 +108,20 @@ public enum ProcessExitReason
     /// Another process asked this one to stop (<c>SIGTERM</c> from <c>kill</c> or the task
     /// manager's "End task", ADR 0069) and it ended within its grace period.
     /// </summary>
-    Terminated
+    Terminated,
+
+    /// <summary>
+    /// The process went over its CPU time limit (<c>RLIMIT_CPU</c>, ADR 0125): it ended on the
+    /// <c>SIGXCPU</c> the OS sent at the soft limit (exit code 152), or the OS killed it
+    /// (<c>SIGKILL</c>, exit code 137) at the hard limit.
+    /// </summary>
+    CpuLimitExceeded,
+
+    /// <summary>
+    /// The process went over its resident memory limit (<c>RLIMIT_RSS</c>, ADR 0125) and the OS
+    /// killed it (<c>SIGKILL</c>, exit code 137).
+    /// </summary>
+    MemoryLimitExceeded
 }
 
 /// <summary>Reports the self-assessed health of a long-running <see cref="AppKind.Service"/> process.</summary>

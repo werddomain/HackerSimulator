@@ -30,6 +30,8 @@ builder.Services.AddSingleton(provider => new BuildKnownLazyAppDescriptorRegistr
 // appsettings.json and what the build compiled in. Must precede AddHackerOsEcosystem, and runs before
 // any app code so the context-switch hook can be installed.
 builder.Services.AddHackerOsResourceAccounting(builder.Configuration, BuildKnownLazyApps.Images);
+// ADR 0125: process limits (ulimit, limits.conf), on unless HackerOs:ResourceLimits:Enabled is false.
+builder.Services.AddHackerOsResourceLimits(builder.Configuration);
 builder.Services.AddHackerOsEcosystem(
     BuildKnownLazyApps.Catalog,
     provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>().Descriptors,

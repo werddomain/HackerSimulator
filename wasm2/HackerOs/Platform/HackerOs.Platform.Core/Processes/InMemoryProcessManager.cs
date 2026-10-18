@@ -14,11 +14,16 @@ namespace HackerOs.Platform.Core.Processes;
 /// </summary>
 public sealed class InMemoryProcessManager : IProcessManager
 {
+    /// <summary>Exit code of a process ended by <c>SIGXCPU</c>: 128 + 24 (ADR 0125, section 2).</summary>
+    public const int CpuLimitExitCode = 152;
+
     private readonly ISimulationClock _clock;
     private readonly ISessionService _session;
     private readonly IEventBus _eventBus;
     private readonly int _maxHistory;
     private readonly InMemoryProcessEnvironmentTable _environments;
+    private readonly InMemoryProcessResourceLimitTable _limits;
+    private readonly InMemoryProcessFileDescriptorTable _descriptors;
 
     private readonly Lock _gate = new();
     private long _nextPid = 1;
@@ -41,6 +46,32 @@ public sealed class InMemoryProcessManager : IProcessManager
         IEventBus eventBus,
         int maxHistory = 200,
         InMemoryProcessEnvironmentTable? environments = null)
+        : this(clock, session, eventBus, maxHistory, environments, limits: null)
+    {
+    }
+
+    /// <summary>Initializes an in-memory process manager with its resource limits (ADR 0125).</summary>
+    /// <param name="clock">Simulation clock used for every timestamp and bounded-stop deadline.</param>
+    /// <param name="session">Active session whose root token every process token links to.</param>
+    /// <param name="eventBus">Bus used to publish <see cref="ProcessStateChangedEvent"/> transitions.</param>
+    /// <param name="maxHistory">Maximum retained terminal process records; oldest is evicted first.</param>
+    /// <param name="environments">Table of arguments, working directory and environment; a private one when <see langword="null"/>.</param>
+    /// <param name="limits">
+    /// Table receiving each process's resource limits (ADR 0125); a private one with the kernel's
+    /// defaults is created when <see langword="null"/>. Reachable through <see cref="ResourceLimits"/>.
+    /// </param>
+    /// <param name="descriptors">
+    /// Table receiving each process's open descriptors (ADR 0125, <c>RLIMIT_NOFILE</c>); a private one
+    /// bound to <paramref name="limits"/> is created when omitted. Reachable through <see cref="FileDescriptors"/>.
+    /// </param>
+    public InMemoryProcessManager(
+        ISimulationClock clock,
+        ISessionService session,
+        IEventBus eventBus,
+        int maxHistory,
+        InMemoryProcessEnvironmentTable? environments,
+        InMemoryProcessResourceLimitTable? limits,
+        InMemoryProcessFileDescriptorTable? descriptors = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(maxHistory, 1);
 
@@ -49,6 +80,8 @@ public sealed class InMemoryProcessManager : IProcessManager
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
         _maxHistory = maxHistory;
         _environments = environments ?? new InMemoryProcessEnvironmentTable();
+        _limits = limits ?? new InMemoryProcessResourceLimitTable();
+        _descriptors = descriptors ?? new InMemoryProcessFileDescriptorTable(pid => _limits.GetOrNone(pid).NoFile.Soft);
     }
 
     /// <summary>
@@ -56,6 +89,18 @@ public sealed class InMemoryProcessManager : IProcessManager
     /// (ADR 0050, section 5): filled at <see cref="Start"/>, dropped when a process ends.
     /// </summary>
     public IProcessEnvironmentTable Environments => _environments;
+
+    /// <summary>
+    /// Gets the resource limits of the active processes (ADR 0125): inherited at <see cref="Start"/>,
+    /// dropped when a process ends.
+    /// </summary>
+    public IProcessResourceLimitTable ResourceLimits => _limits;
+
+    /// <summary>
+    /// Gets the open descriptors of the active processes (ADR 0125, <c>RLIMIT_NOFILE</c>): the three
+    /// standard streams at <see cref="Start"/>, all closed when a process ends.
+    /// </summary>
+    public IProcessFileDescriptorTable FileDescriptors => _descriptors;
 
     /// <inheritdoc />
     public ProcessRecord Start(ProcessStartRequest request)
@@ -69,9 +114,13 @@ public sealed class InMemoryProcessManager : IProcessManager
                 throw new InvalidOperationException($"Parent process '{parentPid}' is not active.");
             }
 
+            EnsureProcessLimit(request);
             ProcessId pid = ProcessId.FromInt64(_nextPid++);
             // Copy the parent's directory and environment now, while it is known to be active.
             _environments.Create(request, pid);
+            // ADR 0125 section 3: the limits are inherited like the environment, at fork.
+            _limits.Create(request, pid);
+            _descriptors.Create(pid, request.Kind == AppKind.Terminal ? "/dev/tty" : "/dev/null");
             // ADR 0097 section 4: a boot service lives until shutdown, not until logout.
             CancellationTokenSource tokenSource = request.SystemScope
                 ? CancellationTokenSource.CreateLinkedTokenSource(_systemRoot.Token)
@@ -131,7 +180,13 @@ public sealed class InMemoryProcessManager : IProcessManager
         lock (_gate)
         {
             Entry entry = GetActiveEntry(pid);
-            return Finish(entry, ProcessState.Stopped, exitCode, ProcessExitReason.Completed);
+            // ADR 0125 section 2: a process that ends on the SIGXCPU of its CPU limit (128 + 24) was
+            // ended by that limit, as the shell reports it.
+            ProcessExitReason reason = exitCode == CpuLimitExitCode
+                && entry.Control.StopRequest?.Reason == ProcessExitReason.CpuLimitExceeded
+                    ? ProcessExitReason.CpuLimitExceeded
+                    : ProcessExitReason.Completed;
+            return Finish(entry, ProcessState.Stopped, exitCode, reason);
         }
     }
 
@@ -365,6 +420,8 @@ public sealed class InMemoryProcessManager : IProcessManager
 
         _active.Remove(old.Pid);
         _environments.Remove(old.Pid);
+        _limits.Remove(old.Pid);
+        _descriptors.Remove(old.Pid);
         entry.TokenSource.Cancel();
         entry.TokenSource.Dispose();
         AddHistory(updated);
@@ -390,8 +447,38 @@ public sealed class InMemoryProcessManager : IProcessManager
     /// kill", or the end of a grace period. Other forced ends (window closed, logout, app disabled)
     /// keep the OS reachable for the process's own cleanup, as before.
     /// </summary>
+    /// <remarks>
+    /// ADR 0125: the OS's own <c>SIGKILL</c> at a hard CPU limit or a memory limit is one too.
+    /// </remarks>
     private static bool IsSignalKill(ProcessExitReason reason) =>
-        reason is ProcessExitReason.Killed or ProcessExitReason.Timeout;
+        reason is ProcessExitReason.Killed or ProcessExitReason.Timeout
+            or ProcessExitReason.CpuLimitExceeded or ProcessExitReason.MemoryLimitExceeded;
+
+    /// <summary>
+    /// The <c>RLIMIT_NPROC</c> check of <c>fork(2)</c> (ADR 0125, section 1): the caller's soft
+    /// <c>nproc</c> limit against the live processes of the user. Called under the lock.
+    /// </summary>
+    /// <exception cref="ProcessLimitExceededException">The limit is reached (<c>EAGAIN</c>).</exception>
+    private void EnsureProcessLimit(ProcessStartRequest request)
+    {
+        if (request.ResourceLimitExempt || request.SystemScope)
+        {
+            // ADR 0125 section 5: an elevated root (CAP_SYS_RESOURCE) and system processes.
+            return;
+        }
+
+        long limit = _limits.Preview(request).NProc.Soft;
+        if (limit == ResourceLimit.Unlimited)
+        {
+            return;
+        }
+
+        int running = _active.Values.Count(entry => entry.Record.UserId == request.UserId);
+        if (running >= limit)
+        {
+            throw new ProcessLimitExceededException(limit);
+        }
+    }
 
     private void AddHistory(ProcessRecord record)
     {

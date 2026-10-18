@@ -67,6 +67,12 @@ public sealed class FileSystemSeeder(
         await EnsureFileAsync(
             Network.Local.HackDnsResolver.HostsFilePath.Value, Network.Local.HackDnsResolver.DefaultHostsFileContent, 0x01A4, system, cancellationToken);
 
+        // ADR 0125, section 3: pam_limits-style session limits, every line commented, root-owned 0644.
+        await EnsureDirectoryAsync("/etc/security", 0x01ED, system, cancellationToken);
+        await EnsureDirectoryAsync(ResourceLimitsConfiguration.LimitsDirectoryPath.Value, 0x01ED, system, cancellationToken);
+        await EnsureFileAsync(
+            ResourceLimitsConfiguration.LimitsFilePath.Value, ResourceLimitsConfiguration.DefaultLimitsFileContent, 0x01A4, system, cancellationToken);
+
         // ADR 0077/0080: declarations of the hosted static sites (hackwebd), edited by an administrator.
         await EnsureDirectoryAsync("/etc/hackweb", 0x01ED, system, cancellationToken);
         await EnsureDirectoryAsync("/etc/hackweb/sites", 0x01ED, system, cancellationToken);
