@@ -50,6 +50,10 @@ public sealed class WindowAppRenderer : ComponentBase, IDisposable
     [Parameter]
     public AppWindowGatewayFactory? WindowGateways { get; set; }
 
+    /// <summary>Gets or sets the services, to find the optional <see cref="IRemoteWindowRendering"/> (ADR 0133).</summary>
+    [Inject]
+    private IServiceProvider Services { get; set; } = null!;
+
     private IAppWindowGateway? _windowGateway;
     private WindowId _windowGatewayId;
 
@@ -105,6 +109,19 @@ public sealed class WindowAppRenderer : ComponentBase, IDisposable
 
     private void RenderEntryPoint(RenderTreeBuilder builder)
     {
+        // ADR 0129 trial: when the host turned it on for this app, a page-side host shows the content
+        // the app renders in its worker; the app component is not created on the page.
+        if (Services.GetService(typeof(IRemoteWindowRendering)) is IRemoteWindowRendering remote
+            && remote.GetHostComponent(Descriptor) is { } host)
+        {
+            builder.OpenComponent(3, host);
+            builder.AddComponentParameter(4, nameof(Window), Window);
+            builder.AddComponentParameter(5, nameof(Descriptor), Descriptor);
+            builder.AddComponentParameter(6, nameof(AppContext), AppContext);
+            builder.CloseComponent();
+            return;
+        }
+
         builder.OpenComponent(0, Descriptor.EntryPointType);
         builder.AddComponentParameter(1, nameof(WindowAppBase.AppContext), AppContext);
         builder.AddComponentReferenceCapture(2, CaptureComponent);

@@ -337,6 +337,9 @@ internal sealed class WorkerConnection
                 case WorkerMessageType.Log:
                     _pool.Log(root.GetString("m"));
                     break;
+                case WorkerMessageType.UiOutput:
+                    Find(root)?.UiReceiver?.Invoke(root.GetProperty("d"));
+                    break;
                 case WorkerMessageType.HttpResponse:
                     Find(root)?.OnHttpResponse(root.GetInt32("sk"), root.GetInt64("x"), WireCodec.ReadListenerReply(root.GetProperty("r")));
                     break;

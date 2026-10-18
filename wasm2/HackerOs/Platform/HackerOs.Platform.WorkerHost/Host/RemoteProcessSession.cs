@@ -104,6 +104,12 @@ internal sealed class RemoteProcessSession
     /// <summary>Receives the reports of a background task (ADR 0128), or <see langword="null"/>.</summary>
     public Action<HackerOs.AppSdk.Threading.HackBackgroundProgress>? JobProgress { get; }
 
+    /// <summary>
+    /// Receives the <c>ui</c> outputs of a window rendered in the worker (ADR 0129 trial), on the
+    /// page's thread; the element is valid during the call only. <see langword="null"/> otherwise.
+    /// </summary>
+    public Action<JsonElement>? UiReceiver { get; set; }
+
     /// <summary>Gets whether the process reads a real standard input (a pipe or the terminal).</summary>
     public bool InputAttached { get; }
 
