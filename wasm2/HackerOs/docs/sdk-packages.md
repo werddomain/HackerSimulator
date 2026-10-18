@@ -2,7 +2,7 @@
 
 ## Objet
 
-Permettre à un autre dépôt (le jeu, ADR 0092) de construire des apps HackerOS
+Permettre à un autre dépôt de construire des apps HackerOS
 **et** un hôte d'OS complet avec ses propres apps, sans copier ce dépôt
 ([ADR 0098](adr/0098-sdk-versions-packages-and-manifest-checks.md) §1, §2, §6).
 Tout ce qui est publié porte une seule version, sort en paquets NuGet dans un

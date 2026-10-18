@@ -216,7 +216,7 @@ composants et les cinq rappels ci-dessus.
   installateur factice pour couvrir toutes les combinaisons sans toucher au
   crochet du processus de test.
 - **Source par processus.** `TryGetCpuUsage` / `TryGetProcessMemory` répondent
-  processus par processus : les processus du contenu de jeu, qui n'exécutent
+  processus par processus : les processus simulés, qui n'exécutent
   pas de code, resteront simulés même mesure active (ADR 0066 §4).
 - **Lecture manuelle de la configuration** (pas de liaison par réflexion) :
   compatible avec l'analyse de trimming de la solution.

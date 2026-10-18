@@ -6,8 +6,8 @@ namespace HackerOs.Platform.Core.Network;
 /// <summary>
 /// Minimal, explicitly-labeled seed data for the simulated network (ADR 0034) — just enough for
 /// <c>curl</c>/<c>ping</c>/<c>nmap</c> to be smoke-tested end-to-end now that they're wired into the
-/// app catalog. This is deliberately not an attempt at a full simulated internet: that is game
-/// content, which lives in a separate repository built on this ecosystem (ADR 0092) — every
+/// app catalog. This is deliberately not an attempt at a full simulated internet, which is
+/// out of scope here (no game in this repository, ADR 0135) — every
 /// hostname here uses the <c>.hackeros</c> suffix the server-side proxy already treats as a
 /// simulated-only domain (<c>ProxyService</c>'s blocked-suffix list), so it's unambiguous that
 /// these hosts are smoke-test fixtures, never real network destinations.
@@ -121,6 +121,6 @@ public static class SmokeTestNetworkSeed
                     new HeroSection("Welcome to example.hackeros", "A minimal smoke-test host."),
                     new ParagraphSection(
                         "This page exists only to prove curl/ping/nmap work end-to-end (ADR 0034). " +
-                        "It is not real game content."))));
+                        "It is not real site content."))));
     }
 }

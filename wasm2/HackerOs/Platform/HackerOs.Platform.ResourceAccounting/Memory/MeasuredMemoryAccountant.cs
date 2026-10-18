@@ -26,7 +26,7 @@ namespace HackerOs.Platform.ResourceAccounting.Memory;
 /// <para>
 /// <b>Measured or simulated.</b> A process is measured when the host's catalog knows its image (every
 /// built-in app) or when it has run code under its frame (the shell, an app installed at run time).
-/// Anything else (game content that runs no code) stays simulated, as ADR 0066 section 4 requires.
+/// Anything else (a simulated process that runs no code) stays simulated, as ADR 0066 section 4 requires.
 /// </para>
 /// </remarks>
 public sealed class MeasuredMemoryAccountant : IMemoryAccountant
