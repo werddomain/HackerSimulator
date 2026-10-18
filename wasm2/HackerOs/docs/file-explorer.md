@@ -96,6 +96,24 @@ Règles :
 
 Après un collage d'éléments coupés sans échec, le presse-papiers est vidé.
 
+### Archives en arrière-plan (ADR 0140)
+
+Compresser, Extraire et « UnZip Here… » passent par des tâches
+`HackBackground` ([`background-jobs.md`](background-jobs.md)) :
+`FileExplorerZipService.CompressInBackgroundAsync` et `ExtractInBackgroundAsync`
+lancent les processus enfants `file-explorer:compress` et
+`file-explorer:extract`, qui lisent, compressent ou décompressent et écrivent
+par leurs propres passerelles (mêmes droits que l'explorateur), dans un Web
+Worker quand l'hôte en a. Une erreur revient comme clé de texte
+(`ZipFailure`) et la fenêtre la traduit. Ces tâches sont suivies comme les
+transferts : une demande d'arrêt attend leur fin.
+
+Restent dans la fenêtre, avec leur raison écrite dans le code : les copies et
+déplacements (`FileTransfer`, appels à l'OS attendus avec un point d'arrêt
+entre deux éléments, et question de conflit dans la fenêtre) et le
+téléchargement d'une sélection en `.zip` (les octets vont au navigateur depuis
+la fenêtre et dépasseraient vite les 16 Mio d'un résultat).
+
 ### `FileView`
 
 | Paramètre | Rôle |
@@ -223,3 +241,9 @@ l'app est traduit par `Resources/AppManifest.fr.resx`.
   `AppContext.Catalog.SetUserDefaultHandlerAsync`
   ([`user-file-associations.md`](user-file-associations.md)).
 - [x] L'explorateur déclare `file-associations.read`.
+
+## Tâches du chantier `exec/5-background-jobs` (ADR 0140)
+
+- [x] Compresser, Extraire et « UnZip Here… » en tâches `file-explorer:compress` et `file-explorer:extract`.
+- [x] Copies et téléchargement gardés dans la fenêtre, raison écrite.
+- [x] Test de l'aller-retour compression puis extraction (`FileExplorerZipJobsTests`).

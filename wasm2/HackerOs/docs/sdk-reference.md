@@ -127,7 +127,8 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `Notifications` | `Post(severity, title, message, actions, expiresAfter)` ; `notifications.post`. |
 | `Events` | Bus d'événements : sujets de l'app (`Publish(topic, payload)`, `Subscribe`, `SubscribeChannel`, `RegisterSharedChannel`) et événements de la plateforme (`Subscribe<TEvent>`). Dans un worker, les charges d'un type de l'app sont déclarées par `[assembly: HackWireContext(typeof(...))]` (`HackWireContextAttribute`, SDK 1.2, ADR 0124) ; voir [`app-sdk.md`](app-sdk.md#processus-dans-des-web-workers-adr-0070-et-0071). |
 | `Clock` | Temps simulé : `UtcNow`, `CurrentTick`, `DelayAsync`, `Schedule`. |
-| `Processes` | Processus de l'app et des autres (`OwnProcess`, `ListProcesses`, `StopAsync`, `Kill`). Préférer `HackProcess`. |
+| `Processes` | Processus de l'app et des autres (`OwnProcess`, `ListProcesses`, `StopAsync`, `Kill`). Préférer `HackProcess`. Les descendants du processus de l'app (ses tâches `HackBackground`) comptent comme les siens, sans `process.list` ni `process.manage` (ADR 0140 §7). |
+| `Background` | Passerelle des tâches en arrière-plan (`IAppBackgroundGateway.RunAsync`, SDK 1.2, ADR 0128) ; derrière `HackBackground`. Par défaut (contexte que l'OS n'a pas construit), la tâche s'exécute en ligne avec la même sérialisation. |
 | `Intents`, `Catalog`, `AppManagement` | Derrière `HackApps` et `HackAppManagement`. `IAppIntentGateway` : `LaunchAsync`, `OpenFileAsync`, `EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `ShowAppSettingsAsync`, `SendIntentAsync` → `AppIntentResult` (`AppIntentOutcome`, ADR 0096). |
 | `Intent`, `IntentReceived` | Intent qui a lancé l'instance (`AppIntentDelivery` : `IntentId`, `PayloadJson`, `SenderAppId`, `Arguments`) ; événement levé quand l'OS remet un intent ou une seconde activation à l'instance déjà ouverte (ADR 0096 §5). Voir [`app-intents.md`](app-intents.md). |
 | `Environment` | Derrière `HackEnvironment`. |
@@ -220,9 +221,21 @@ porte le code du moteur, et `ShellErrorText.Describe` donne le message Linux.
 |---|---|---|---|
 | `HackProcess` (`.Diagnostics`) | `GetProcessesAsync`, `GetProcessByIdAsync`, `GetCurrentProcessAsync`, `RefreshAsync`, `GetEnvironmentVariablesAsync`, `GetChildren`, `KillAsync` (`SIGKILL`), `TerminateAsync` (`SIGTERM`, 5 s), `CloseMainWindowAsync` ; état, CPU, mémoire (`WorkingSet64` = `VmRSS`, `PrivateMemorySize64` = `RssAnon`, ADR 0068), E/S, arguments ; `UserProcessorTime`, `PrivilegedProcessorTime`, `TotalProcessorTime`, `Responding` (ADR 0067, [`cpu-accounting.md`](cpu-accounting.md)) | `filesystem.system.read` pour `/proc`, `process.list`, `process.manage` | [`task-manager.md`](task-manager.md) |
 | `HackProcess.Current` → `HackCurrentProcess` ; `HackProcess.CheckpointAsync` (`.Diagnostics`) | `Id`, `StopToken`, `IsStopRequested`, `StopRequest`, `StopRequested` ; point d'arrêt : lève si l'arrêt est demandé, rend la main au-delà de 8 ms, sinon sans allocation | — | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
-| `HackStopRequestedEventArgs`, `HackProcessKilledException` (`.Diagnostics`) | `Reason`, `RequestedAt`, `Deadline`, `GracePeriod`, `Defer(Task)` ; exception des passerelles d'un processus tué | — | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
+| `HackStopRequestedEventArgs`, `HackProcessKilledException` (`.Diagnostics`) | `Reason`, `RequestedAt`, `Deadline`, `GracePeriod`, `Defer(Task)` ; exception des passerelles d'un processus tué, avec sa `Reason` (`Killed` par défaut, SDK 1.2, ADR 0140) ; elle dérive de `OperationCanceledException` | — | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
 | `IAppProcessGateway.KillAsync(pid, reason)` (`Simulation.Abstractions`) | Tuer un processus en attendant l'accusé de l'OS ; utilisé par `HackProcess.KillAsync`, y compris depuis un Web Worker (méthode par défaut qui retombe sur `Kill`) | `process.manage` | [`worker-processes.md`](worker-processes.md) |
 | `HackServiceController` (`.ServiceProcess`) | `GetServicesAsync`, `RefreshAsync`, `RefreshStatusAsync`, `StartAsync`, `StopAsync`, `ResetFailedAsync`, `SetStartTypeAsync`, `Status`, `StartType`, `ActiveState`, `Result`, `Health`, `StatusText`, `ActiveStateChangedAt`, `ExitCode` ; `HackServiceStates.ToSystemdName` (ADR 0097) | `services.manage` sur les autres apps | [`task-manager.md`](task-manager.md) |
+
+### Tâches en arrière-plan (`HackerOs.AppSdk.Threading`, SDK 1.2)
+
+| API | Membres | Capacité | Document |
+|---|---|---|---|
+| `HackBackground` | `RunAsync<TInput, TResult>(job, input, progress, options, cancellationToken)` pour une méthode statique (`Func<TInput, HackBackgroundContext, Task<TResult>>` ou `TResult`), `RunAsync<TInput>` sans résultat (`Func<…, Task>` ou `Action<…>`), `RunAsync<TJob, TInput, TResult>(input, …)` pour une classe de tâche | — | [`background-jobs.md`](background-jobs.md) |
+| `HackBackgroundJob<TInput, TResult>` | Classe de tâche : `RunAsync(input, context)` ; créée par son constructeur sans paramètre dans le processus de la tâche | — | [`background-jobs.md`](background-jobs.md) |
+| `HackBackgroundContext` | `ProcessId`, `CancellationToken`, `Report(fraction, message)` (au plus 10 par seconde, la dernière l'emporte), `CheckpointAsync()` | — | [`background-jobs.md`](background-jobs.md) |
+| `HackBackgroundProgress`, `HackBackgroundOptions` | `Fraction`, `Message`, `ToString()` (`42% message`) ; `Name` (affiché dans `ps`), `Nice` | — | [`background-jobs.md`](background-jobs.md) |
+| `HackBackgroundJobException` | Exception de la tâche : `OriginalTypeName`, `Message`, `OriginalStackTrace` | — | [`background-jobs.md`](background-jobs.md) |
+| `IAppBackgroundGateway`, `HackBackgroundJobRequest`, `HackBackgroundJobTarget` | Contrat entre le SDK et l'OS : cible nommée (assembly, type, méthode, type d'entrée), entrée JSON, nom, `nice` | — | [`background-jobs.md`](background-jobs.md) |
+| Analyseur `HOSBG0001` à `HOSBG0004` | Livré dans le paquet `HackerOs.AppSdk` : groupe de méthode statique, types déclarés par `HackWireContext`, assembly de l'app, pas de générique | — | [`background-jobs.md`](background-jobs.md#règles-vérifiées-au-build) |
 
 ### Réseau (`HackerOs.AppSdk.Net`)
 
@@ -482,4 +495,5 @@ paramètre `Tokens` appliqué par-dessus le thème de base.
 - [x] `HackSystemBackup`, `BrowserFilePicker`, codes `NoSpace` et `FileTooLarge` (16 Mio) (`v3/7`).
 - [x] Localisation : `Culture`/`FormatCulture`, `HackLocale`, `GetLocalizer<T>`, `IShellSession.GetCommands(culture)` (`v3/12`, ADR 0104).
 - [x] Titre de fenêtre : `WindowTitle`, `SetWindowTitleAsync`, `FormatWindowTitle`, `IAppWindowGateway` (`v3.1/3`, SDK 1.1, versé dans `PublicAPI.Shipped.txt` par `v3.1/4-sdk-1-1`).
+- [x] Tâches en arrière-plan : `HackBackground`, `HackBackgroundContext`, `IAppExecutionContext.Background`, `HackProcessKilledException.Reason`, analyseur `HOSBG` (`exec/5`, ADR 0128 et 0140).
 - [x] Relecture finale de la migration v3 (`v3/16-final`) : renvoi vers les fichiers `PublicAPI.Shipped.txt`, liste exhaustive de la surface 1.0.

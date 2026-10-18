@@ -83,7 +83,11 @@ CpuSource:	simulated
 MemSource:	simulated
 ```
 
-`Name` est le dernier segment de l'`appId`, tronqué à 15 caractères. `Cpu` est
+`Name` est le dernier segment de l'`appId`, tronqué à 15 caractères. Pour une
+tâche `HackBackground` (ADR 0128, ADR 0140, [`background-jobs.md`](background-jobs.md)),
+`Name` est le nom de la tâche (`code-editor:sea`, tronqué de même) et deux
+lignes suivent `Session` : `Job:` (le nom entier, `code-editor:search`) et
+`Host:` (`MainThread` ou `Worker`). `Cpu` est
 un pourcentage d'un cœur (`CpuUsage × 100`), sans le signe `%`, pour rester
 facile à analyser. `CpuSource` et `MemSource` (ADR 0066) disent d'où viennent
 `Cpu` et `VmRSS` : `measured` quand la mesure de la phase 5 répond pour ce

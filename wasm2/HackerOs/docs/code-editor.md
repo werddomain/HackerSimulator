@@ -73,6 +73,16 @@ dossier appellent `HackProcess.CheckpointAsync` entre deux fichiers ou
 dossiers : la page reste fluide et la recherche s'arrête sur une demande
 d'arrêt.
 
+Depuis `exec/5` (ADR 0140), la vue Recherche lance la recherche comme **tâche
+en arrière-plan** (`CodeEditorWorkspaceSearch.SearchInBackgroundAsync`,
+[`background-jobs.md`](background-jobs.md)) : la fenêtre liste le dossier,
+puis le processus enfant `code-editor:search` lit chaque fichier et applique le
+motif, dans un Web Worker quand l'hôte en a. Les onglets non enregistrés
+passent dans l'entrée de la tâche ; un motif invalide est signalé tout de suite,
+sans processus. Une nouvelle frappe annule la tâche précédente (code 130).
+`SearchAsync` reste la recherche en ligne, partagée avec la tâche
+(`SearchFilesAsync`) et utilisée par les tests.
+
 Entrée dans la boîte Ctrl+P et dans la zone de création de l'explorateur
 agit au relâchement de la touche : l'éditeur reprend le focus quand la boîte
 se ferme, et un traitement à l'appui laisserait la fin de la frappe insérer
@@ -114,6 +124,7 @@ versionner `wwwroot/monaco/`. Le build .NET n'exécute pas npm.
 - [x] `CodeEditorWorkspace` : liste des fichiers, création, chemins relatifs.
 - [x] Recherche dans le dossier (casse, mot entier, regex, globs, contenu non
   enregistré) et ouverture rapide floue.
+- [x] Recherche dans le dossier en tâche `HackBackground` (`exec/5`, ADR 0140).
 - [x] Vues Explorateur (création en place, menu contextuel, corbeille) et
   Recherche ; boîte Ctrl+P.
 - [x] Atelier : menus, barre d'activité, barre latérale et terminal
