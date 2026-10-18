@@ -16,7 +16,8 @@
 #   ecosystem-settings-off  default publish, wwwroot/appsettings.json switching both measurements off
 #   ecosystem-limits-off    default publish, wwwroot/appsettings.json switching the process limits off (ADR 0125)
 #   test-host               test/test (Blazor Web App, InteractiveWebAssembly)
-#   server                  Server/HackerOs.Server (InteractiveServer, ADR 0027)
+#   server                  Server/HackerOs.Server (serves the Ecosystem's OS in WebAssembly and its API, ADR 0130;
+#                           the OS must connect to it by itself, ADR 0134)
 #
 # The two "-off" runs need the ADR 0066 switches (build/HackerOs.ResourceAccounting.targets and the
 # HackerOs:ResourceAccounting section of appsettings.json). On a tree without them they are reported
@@ -151,8 +152,8 @@ verify_run() {
     log "$name: listening on $url, running the smoke test"
     if run_smoke "$name" "$url" "$cpu" "$mem"; then
         stop_host
-        # Server-side failures never reach the browser console (InteractiveServer circuits,
-        # disposal after a reload): an ASP.NET Core "fail:" entry fails the run as well.
+        # Server-side failures never reach the browser console (an API call the OS made, the
+        # automatic connection of ADR 0134): an ASP.NET Core "fail:" entry fails the run as well.
         local host_failures
         host_failures="$(grep -cE '^fail: |Unhandled exception' "$hostlog")"
         if [[ "$host_failures" -gt 0 ]]; then
@@ -192,13 +193,11 @@ HAS_SWITCHES=0
 [[ -f "$ACCOUNTING_TARGETS" ]] && HAS_SWITCHES=1
 
 # Expected CpuSource:/MemSource: values in /proc/self/status (ADR 0066 to 0068): measured by
-# default on the WebAssembly hosts, simulated on HackerOs.Server (switched off in its
-# appsettings.json) and in both "-off" runs. Empty means "not checked" (tree without ADR 0066).
+# default on every host (HackerOs.Server serves the Ecosystem's own appsettings.json since ADR
+# 0130), simulated in both "-off" runs. Empty means "not checked" (tree without ADR 0066).
 DEFAULT_SOURCE=""
-SERVER_SOURCE=""
 if [[ $HAS_SWITCHES -eq 1 ]]; then
     DEFAULT_SOURCE=measured
-    SERVER_SOURCE=simulated
 fi
 
 build_step() { # build_step LABEL LOGFILE COMMAND...
@@ -314,7 +313,7 @@ PY
     if wanted server; then
         port="$(free_port)"
         data="$OUT/server-data"; rm -rf "$data"; mkdir -p "$data"
-        verify_run server "http://127.0.0.1:$port" "$LOGS/server.host.log" "$SERVER_SOURCE" "$SERVER_SOURCE" \
+        verify_run server "http://127.0.0.1:$port" "$LOGS/server.host.log" "$DEFAULT_SOURCE" "$DEFAULT_SOURCE" \
             env ASPNETCORE_ENVIRONMENT=Development \
                 ConnectionStrings__HackerOsDb="Data Source=$data/hackeros.db" \
                 BlobStorage__Root="$data/blobs" ServerBackup__Root="$data/backups" \

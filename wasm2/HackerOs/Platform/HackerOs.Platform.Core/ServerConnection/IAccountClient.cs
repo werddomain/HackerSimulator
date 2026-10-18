@@ -6,8 +6,8 @@ namespace HackerOs.Platform.Core.ServerConnection;
 /// <summary>
 /// Thin HTTP wrapper over the optional server's account/auth endpoints (ADR 0028). Every member
 /// takes only <see cref="HackerOs.Server.Contracts"/> DTOs and primitives — no ASP.NET-specific
-/// types — so a future direct-injection implementation for the server-hosted host is possible
-/// without redesigning this interface. Browser-independent (plain <see cref="HttpClient"/>), unlike
+/// types. Every host calls the server through it over HTTP (ADR 0130 retired the in-process
+/// implementation of ADR 0036). Browser-independent (plain <see cref="HttpClient"/>), unlike
 /// the IndexedDB-backed <c>IServerConnectionRepository</c> implementation.
 /// </summary>
 public interface IAccountClient

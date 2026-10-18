@@ -1,13 +1,7 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using HackerOs.Ecosystem;
-using HackerOs.Platform.Blazor.Hosting;
-using HackerOs.Platform.Blazor.LazyLoading;
-using HackerOs.Platform.Core.ServerConnection;
 using HackerOs.Server;
-using HackerOs.Server.Components;
 using HackerOs.Server.Data;
 using HackerOs.Server.Endpoints;
-using HackerOs.Server.ServerConnection;
 using HackerOs.Server.Services;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
@@ -17,6 +11,9 @@ using Scalar.AspNetCore;
 //
 // This process is entirely optional. The browser PWA continues to function
 // fully when this server is not reachable. The server provides:
+//   0. The OS itself (ADR 0130): the published files of OS/HackerOs.Ecosystem, served as they
+//      are. The OS runs in the browser in WebAssembly, exactly as the standalone PWA does; it
+//      reaches the endpoints below over HTTP and WebSocket like any other client.
 //   1. Sync — record-level versioned push/pull with explicit conflict resolution.
 //   2. Identity — account registration, device management, token refresh.
 //   3. Network relay — server-side validated HTTP requests (with their bodies), a single-port
@@ -29,22 +26,6 @@ using Scalar.AspNetCore;
 // =============================================================================
 
 var builder = WebApplication.CreateBuilder(args);
-
-// The server-hosted Blazor UI (ADR 0027) reuses AddHackerOsEcosystem, whose composition
-// root registers every IJSRuntime-touching service as Scoped (per-circuit) rather than
-// Singleton — Singleton was the original shape and caused a real bug: the first circuit
-// to resolve one permanently captured whichever IJSRuntime existed at that moment
-// (including an unattached one from the host page's own static-SSR pass), so JS interop
-// failed for every later circuit too. ValidateScopes is explicitly kept on so a future
-// singleton-consuming-a-scoped-service regression fails loudly instead of quietly
-// reintroducing that bug. ValidateOnBuild stays off as it was before ADR 0045 removed the
-// IndexedDbDiagnosticRepository registration that originally required it; turning it on is a
-// separate server-composition change (ADR 0045 leaves this host's composition untouched).
-builder.Host.UseDefaultServiceProvider(options =>
-{
-    options.ValidateScopes = true;
-    options.ValidateOnBuild = false;
-});
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 // WebApplication.CreateBuilder already loads appsettings.json, the environment
@@ -141,69 +122,15 @@ builder.Services.AddCors(options =>
 // ── OpenAPI (Scalar UI) ───────────────────────────────────────────────────────
 builder.Services.AddOpenApi();
 
-// ── Server-hosted Blazor UI (ADR 0027) ────────────────────────────────────────
-// Serves the same HackerOs.Ecosystem.App component tree as OS/HackerOs.Ecosystem
-// (static WASM) and test/test (WASM debug harness) via Interactive Server render
-// mode. Single-tenant/single-active-circuit only for this phase — see ADR 0027.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents(options => options.DetailedErrors = builder.Environment.IsDevelopment());
-// SignalR's default 32KB message cap is sized for typical form-post/DOM-diff traffic. This
-// app's initial interactive render (desktop shell + taskbar + app launcher, backed by the full
-// app catalog/manifest set) produces a render batch larger than that on first connect, so the
-// circuit was closing immediately with "The maximum message size of 32768B was exceeded" before
-// the desktop ever appeared. WASM hosts never hit this (no SignalR transport involved).
-builder.Services.Configure<Microsoft.AspNetCore.SignalR.HubOptions>(options =>
-{
-    options.MaximumReceiveMessageSize = 1024 * 1024;
-});
-builder.Services.AddSingleton<IEcosystemHostEnvironment, AspNetCoreEcosystemHostEnvironment>();
-builder.Services.AddSingleton<IBuildKnownAssemblyTransport, InProcessAssemblyTransport>();
-builder.Services.AddSingleton(provider => new BuildKnownAssemblyLoaderRegistry(
-    BuildKnownLazyAssemblies.Names,
-    provider.GetRequiredService<IBuildKnownAssemblyTransport>()));
-builder.Services.AddSingleton(provider => new BuildKnownLazyAppDescriptorRegistry(
-    BuildKnownLazyApps.Catalog,
-    provider.GetRequiredService<BuildKnownAssemblyLoaderRegistry>()));
-
-// Direct-injection IAccountClient/IProxyClient/ISyncClient (ADR 0036) — registered before
-// AddHackerOsEcosystem below so its TryAddSingleton calls find these already present and skip
-// the Http*Client defaults. Calls IAccountService/ISyncService/IProxyService in-process instead
-// of looping back through this same process's own HTTP API.
-builder.Services.AddSingleton<IAccountClient, DirectAccountClient>();
-builder.Services.AddSingleton<IProxyClient, DirectProxyClient>();
-builder.Services.AddSingleton<ISyncClient, DirectSyncClient>();
-
-// ADR 0066: optional measured CPU/memory, decided once from HackerOs:ResourceAccounting in
-// appsettings.json and what the build compiled in. Both are off by default on this host: several
-// threads run app code at once under Interactive Server (ADR 0067, section 6).
-builder.Services.AddHackerOsResourceAccounting(builder.Configuration, BuildKnownLazyApps.Images);
-// ADR 0125: process limits (ulimit, limits.conf), on unless HackerOs:ResourceLimits:Enabled is false.
-builder.Services.AddHackerOsResourceLimits(builder.Configuration);
-
-int serviceCountBeforeEcosystem = builder.Services.Count;
-builder.Services.AddHackerOsEcosystem(
-    BuildKnownLazyApps.Catalog,
-    provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>().Descriptors,
-    provider => provider.GetRequiredService<BuildKnownLazyAppDescriptorRegistry>());
-
-// AddHackerOsEcosystem registers HackerOsDiagnosticLoggerProvider as ILoggerProvider. It was
-// originally stripped here because it construct-injected the IJSRuntime-backed IndexedDB
-// diagnostic repository, which ASP.NET Core cannot build before any circuit exists. Since ADR
-// 0045 it only writes to /var/log through LogFileWriter (all singletons), but this API host never
-// attaches a filesystem to that writer, so the bridge stays removed: ADR 0045 leaves the server
-// composition as it was. Removing only the descriptor AddHackerOsEcosystem just added (not any
-// framework-registered ILoggerProvider) keeps the diagnostic sink itself intact.
-for (int i = builder.Services.Count - 1; i >= serviceCountBeforeEcosystem; i--)
-{
-    if (builder.Services[i].ServiceType == typeof(ILoggerProvider))
-    {
-        builder.Services.RemoveAt(i);
-    }
-}
-
 var app = builder.Build();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
+// ADR 0130: a page address of the OS (/, a deep link, a reload) is answered with the Ecosystem's
+// index.html, served by MapStaticAssets like every other file of the OS, in every environment.
+// The rewrite runs before routing; API and documentation paths and real files are left alone.
+app.UseOsPageRewrite();
+app.UseRouting();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -216,7 +143,16 @@ app.UseCors();
 app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30) });
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseAntiforgery();
+// ADR 0130: the OS in WebAssembly. MapStaticAssets serves every file the Ecosystem publishes
+// (index.html with its fingerprinted references, _framework/, the service worker, the apps);
+// only its hackeros-host.json is answered by this server instead (ADR 0137).
+if (app.Environment.IsDevelopment())
+{
+    app.UseWebAssemblyDebugging();
+}
+
+app.UseHostDiscoveryFile();
+
 app.MapStaticAssets();
 
 // ── Database migration on startup ─────────────────────────────────────────────
@@ -246,12 +182,7 @@ app.MapSyncEndpoints();       // POST /api/sync/pull, POST /api/sync/push, ...
 app.MapProxyEndpoints();      // POST /api/proxy/http, /tcp-probe; WS /api/proxy/tcp, /udp; GET /api/proxy/policy
 app.MapAdminEndpoints();      // GET /health, GET /api/account/data-summary, ...
 
-// ── Server-hosted Blazor UI (ADR 0027) ────────────────────────────────────────
-app.MapRazorComponents<HackerOs.Server.Components.App>()
-    .AddInteractiveServerRenderMode()
-    .AddAdditionalAssemblies(
-        typeof(HackerOs.Ecosystem.App).Assembly,
-        typeof(HackerOs.Platform.Blazor.Shell.DesktopShell).Assembly);
+app.MapHostInfoEndpoints();   // GET /api/hackeros/host-info (ADR 0134)
 
 await app.RunAsync();
 

@@ -185,7 +185,6 @@ public sealed class ResourceAccountingCompositionTests
     [Theory]
     [InlineData("OS/HackerOs.Ecosystem/wwwroot/appsettings.json", true)]
     [InlineData("test/test/appsettings.json", true)]
-    [InlineData("Server/HackerOs.Server/appsettings.json", false)]
     public void Each_host_ships_its_section(string relativePath, bool enabled)
     {
         IConfiguration configuration = new ConfigurationBuilder()
@@ -199,6 +198,20 @@ public sealed class ResourceAccountingCompositionTests
         Assert.Equal(enabled, settings.MemoryEnabled);
         Assert.Equal(ResourceAccountingSettings.DefaultUnresponsiveThreshold, settings.UnresponsiveThreshold);
         Assert.Empty(settings.Warnings);
+    }
+
+    /// <summary>
+    /// ADR 0130: HackerOs.Server no longer runs the OS, so it has no section of its own; the browser
+    /// reads the Ecosystem's wwwroot/appsettings.json, which the server serves as it is.
+    /// </summary>
+    [Fact]
+    public void Server_has_no_section_of_its_own()
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(SolutionDirectory(), "Server/HackerOs.Server/appsettings.json"), optional: false)
+            .Build();
+
+        Assert.Empty(configuration.GetSection(ResourceAccountingServiceCollectionExtensions.SectionName).GetChildren());
     }
 
     private static IConfiguration Configuration(Dictionary<string, string?> values) =>
