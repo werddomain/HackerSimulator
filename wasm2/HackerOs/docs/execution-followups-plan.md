@@ -12,7 +12,8 @@ terminées. La branche d'intégration `exec/base` est créée depuis `v3.1/base`
 et le chantier des ADR (`exec/0-adr`, mené sur la branche `exec/1-adr`) a
 écrit les ADR [0124](adr/0124-remote-event-and-watch-gateways.md) à
 [0132](adr/0132-exec-series-sdk-1-2-and-merge-rules.md) (section 7) ; l'ADR
-0133 est réservé à la décision de l'essai de rendu en worker. Benoit a répondu le
+[0133](adr/0133-window-rendering-in-worker-verdict.md) conclut l'essai de rendu
+en worker (`exec/6`) : **on s'arrête**, `exec/7` n'a pas lieu. Benoit a répondu le
 2026-10-18 aux quatre questions nées de l'écriture des ADR (section 6.1) :
 l'ADR [0134](adr/0134-automatic-server-connection-and-status-icon.md) les
 consigne, et l'ADR [0135](adr/0135-no-game-in-this-repository.md) retire le
@@ -133,7 +134,7 @@ phases précédentes.
 | `exec/4-not-responding-ui` | Décisions 5 et 6 : fenêtre « (Not responding) » et boîte « L'application ne répond pas : Attendre \| Terminer l'application », `nice`/`renice` et colonne « NI » de `ps`/`top`, ordre de la file du pool. | `0` |
 | `exec/5-background-jobs` | Décision 7, étape 1 : `HackBackground.RunAsync` (méthode statique ou classe de tâche, entrée et résultat sérialisables, progression, annulation), analyseur qui refuse une lambda qui capture, processus enfant de l'app avec son identité et ses droits, repli sur le fil principal quand il n'y a pas de worker (tests, hôte sans workers), exemple dans `Apps/Samples`, migration des traitements longs des apps de base, guide et référence du SDK. | `1` |
 | `exec/6-remote-renderer-poc` | Décision 7, étape 2 : preuve de faisabilité d'un `Renderer` Blazor dans un worker, lots de rendu sérialisés vers le fil principal, événements du DOM renvoyés au worker ; mesure du coût. Résultat : un ADR « on y va » ou « on s'arrête ». Rien n'est livré aux apps si la preuve échoue. | `5` |
-| `exec/7-window-workers` | Seulement si `6` réussit : `AppExecutionHost.Dedicated` permis pour une fenêtre sans interop JavaScript propre, gestion du clavier, du focus et des dialogues, tests sur la Calculatrice. | `6` |
+| `exec/7-window-workers` | Seulement si `6` réussit : `AppExecutionHost.Dedicated` permis pour une fenêtre sans interop JavaScript propre, gestion du clavier, du focus et des dialogues, tests sur la Calculatrice. **Retiré** : l'[ADR 0133](adr/0133-window-rendering-in-worker-verdict.md) conclut « on s'arrête ». | `6` |
 | `exec/8-server-wasm` | **Fait** (2026-10-18, [`server-hosting.md`](server-hosting.md), [ADR 0137](adr/0137-server-hosting-implementation-adjustments.md)) : fichiers publiés de l'Ecosystem servis tels quels. Décision 8 : `HackerOs.Server` sert l'OS en WebAssembly (rendu `InteractiveWebAssembly` ou fichiers publiés de l'Ecosystem, selon l'ADR), retrait du mode Interactive Server et de l'injection directe, l'OS appelle l'API du serveur par HTTP comme l'Ecosystem, connexion automatique au serveur qui a servi l'OS et icône d'état dans la zone de notification (ADR 0134), `build/verify-hosts.sh` et `HackerOs.HostSmoke.Tests` adaptés (workers et `/proc/hackeros` présents sur cet hôte), docs d'hébergement à jour. | `0` |
 | `exec/9-cross-origin-isolation` | Décisions 9 et 10 : audit de compatibilité (iframes des sites ASP.Hack et du navigateur, fenêtres détachées, repli sur le réseau réel, workers de Monaco, téléchargements, PWA), en-têtes dans les trois hôtes et le service worker, repli, puis tubes partagés, appels synchrones, mémoire réelle par worker et minuteries. | `3`, `5` |
 | `exec/10-final` | Publication du SDK 1.2 (ADR 0132), app de compatibilité 1.1 ; vérification de bout en bout, documents à jour (`system-metrics.md`, `task-manager.md`, `worker-processes.md`, `app-sdk.md`, `sdk-reference.md`, `linux-commands.md`, `virtual-proc-and-dev.md`, `building-and-testing.md`), index, cette liste. | tous |
@@ -216,6 +217,7 @@ et les conséquences de chaque choix ; réponses du 2026-10-18 (ADR 0134).
 | [0130](adr/0130-server-serves-webassembly-os-and-api.md) `HackerOs.Server` servi en WebAssembly | décision 8 | remplace l'ADR 0027 et l'ADR 0036 ; rend sans objet l'ADR 0066 §3 (défaut Server), 0067 §6, 0070 §6, 0072 §7 |
 | [0131](adr/0131-cross-origin-isolation.md) Isolation cross-origin | décisions 9 et 10 | complète l'ADR 0072 §2 (tubes) et l'ADR 0068 (mémoire réelle par worker) |
 | [0132](adr/0132-exec-series-sdk-1-2-and-merge-rules.md) Ajouts du SDK 1.2, branches et barre de fusion | sections 5 et 8 | applique les ADR 0114 et 0117 |
+| [0133](adr/0133-window-rendering-in-worker-verdict.md) Verdict de l'essai de rendu en worker : on s'arrête | décision 7, étape 2 (`exec/6`) | ne remplace pas l'ADR 0070 §1 ; `exec/7` retiré |
 | [0134](adr/0134-automatic-server-connection-and-status-icon.md) Connexion automatique au serveur et icône d'état | réponses E1 à E4 | remplace l'ADR 0130 §4 |
 | [0135](adr/0135-no-game-in-this-repository.md) Aucun jeu sur ce repository | réponse E4 | remplace l'ADR 0092 |
 
@@ -243,8 +245,8 @@ et les conséquences de chaque choix ; réponses du 2026-10-18 (ADR 0134).
 ### Fenêtres
 - [ ] « (Not responding) » et « Attendre / Forcer à quitter », `nice`/`renice`.
 - [ ] `HackBackground.RunAsync`, analyseur, exemple, migration des apps de base.
-- [ ] Preuve de faisabilité du rendu en worker et ADR de décision.
-- [ ] Fenêtres en worker (si décidé).
+- [x] Preuve de faisabilité du rendu en worker et ADR de décision (`exec/6-remote-renderer-poc`, ADR 0133 : on s'arrête).
+- [x] ~~Fenêtres en worker (si décidé).~~ Sans objet : l'ADR 0133 conclut « on s'arrête » (mémoire d'un worker de fenêtre 66,5 Mio pour 40 Mio permis).
 
 ### Hôte Server
 - [ ] OS servi en WebAssembly, API seulement côté serveur, retrait d'Interactive Server, vérification des hôtes adaptée.
