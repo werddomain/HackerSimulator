@@ -51,14 +51,16 @@ public sealed class CommandParityTests
         new("mv", ["mv notes.txt moved.txt", "mv missing.txt x"]),
         new("nano", ["nano notes.txt"]),
         new("netstat", ["netstat", "netstat -i"]),
+        new("nice", ["nice", "nice -n 5 echo hi", "nice -n 5 nice", "nice -n 5 ps -o ni,comm", "nice -n bogus echo hi", "nice -n -5 echo hi"]),
         new("nslookup", ["nslookup example.hackeros", "nslookup nowhere.invalid", "nslookup"]),
         new("nmap", ["nmap example.hackeros", "nmap -p 80-443 -sV 10.0.0.10"]),
         new("passwd", ["passwd -S", "passwd bob", "passwd -x"]),
         new("ping", ["ping example.hackeros", "ping nowhere.invalid"]),
         new("printf", ["printf '%s-%d\\n' a 1 b 2"]),
-        new("ps", ["ps", "ps -a -u"]),
+        new("ps", ["ps", "ps -a -u", "ps -o pid,ni,comm", "ps -o bogus"]),
         new("pwd", ["pwd"]),
         new("read", ["read -r first rest && echo \"$first|$rest\""], Input: "one two three\n"),
+        new("renice", ["renice", "renice 5 99999", "renice -n 5 -g 1"]),
         new("rm", ["rm copy-of-nothing", "rm -r docs/sub", "rm --permanent numbers.txt"]),
         new("seq", ["seq 5", "seq -s , 2 2 10", "seq -w 8 11"]),
         new("sleep", ["sleep 2 && echo awake"], UsesClock: true),
@@ -110,7 +112,7 @@ public sealed class CommandParityTests
             .Where(name => !covered.Contains(name))];
 
         Assert.Empty(missing);
-        Assert.Equal(70, OsFixture.BuiltInCommands.Count);
+        Assert.Equal(72, OsFixture.BuiltInCommands.Count);
     }
 
     [Fact]

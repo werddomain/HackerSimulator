@@ -401,13 +401,8 @@ public sealed partial class ShellInterpreter
 
         string name = arguments[0];
         Microsoft.Extensions.Localization.IStringLocalizer texts = ShellText.For(session);
+        // Like `nice cd`: GNU nice can only exec a program, never a shell built-in.
         ShellCommandResolution? resolution = IsSpecialBuiltin(name) ? null : Resolver.Resolve(name, [.. arguments.Skip(1)]);
-        if (resolution is not null && DeclaresShellControl(resolution.Manifest))
-        {
-            // Like `nice cd`: GNU nice can only exec a program, never a shell built-in.
-            resolution = null;
-        }
-
         if (resolution is null || !_enablement.IsEnabled(resolution.AppId))
         {
             await error.WriteLineAsync("nice: " + texts["Shell.CommandNotFound", name]).ConfigureAwait(false);
@@ -423,9 +418,13 @@ public sealed partial class ShellInterpreter
             nice = current;
         }
 
+        // A command that drives its shell (`nice watch …`, `nice nice …`) still gets it (ADR 0051 §3).
+        IShellSession? shell = session.ProvidesShellControl && DeclaresShellControl(resolution.Manifest)
+            ? new ShellSessionAccess(this, session, options, input)
+            : null;
         ProcessId? parent = caller?.ProcessId ?? session.ProcessId;
         StageOutcome outcome = await StartAsync(
-            "nice", session, resolution, parent, input, output, error, options, elevation: null, shell: null,
+            "nice", session, resolution, parent, input, output, error, options, elevation: null, shell,
             ChildEnvironment(session, []), processStarted: null, cancellationToken, nice).ConfigureAwait(false);
         return outcome.ExitCode;
     }

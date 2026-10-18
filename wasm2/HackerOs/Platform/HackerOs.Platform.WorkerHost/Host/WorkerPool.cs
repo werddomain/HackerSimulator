@@ -32,8 +32,7 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
     private readonly Lock _gate = new();
     private readonly List<WorkerConnection> _workers = [];
     private readonly Dictionary<Guid, PlacementGroup> _groups = [];
-    private readonly List<RunQueueEntry> _runQueue = [];
-    private long _nextQueueSequence;
+    private readonly WorkerRunQueue _runQueue = new();
     private readonly CancellationTokenSource _lifetime = new();
     private TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _nextId;
@@ -180,11 +179,10 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
     internal async Task<WorkerConnection> AcquireForCommandAsync(Guid? group, int nice, CancellationToken cancellationToken)
     {
         _watchdog ??= WatchAsync(_lifetime.Token);
-        RunQueueEntry entry;
+        WorkerRunQueue.Entry entry;
         lock (_gate)
         {
-            entry = new RunQueueEntry(ProcessNice.Clamp(nice), ++_nextQueueSequence);
-            _runQueue.Add(entry);
+            entry = _runQueue.Enqueue(nice);
         }
 
         try
@@ -202,7 +200,7 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
                         return placement.Worker;
                     }
 
-                    bool headOfQueue = ReferenceEquals(HeadOfRunQueue(), entry);
+                    bool headOfQueue = _runQueue.IsHead(entry);
                     WorkerConnection? chosen = headOfQueue
                         ? _workers
                             .Where(static worker => worker.Role is WorkerRole.Pool or WorkerRole.Overflow && worker.IsFree)
@@ -213,7 +211,7 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
                         : null;
                     WorkerConnection? warming = _workers.FirstOrDefault(static worker =>
                         worker.Role is WorkerRole.Pool or WorkerRole.Overflow && !worker.IsTerminated && !worker.IsReady);
-                    bool mayTakeReady = entry.Nice <= 0 || warming is null;
+                    bool mayTakeReady = WorkerRunQueue.MayTakeReadyWorker(entry.Nice, warming is not null);
                     if (headOfQueue && chosen is null && mayTakeReady && TakeReadyWorker() is { } ready)
                     {
                         // ADR 0071, section 3: no core is free, the ready worker joins the pool for this process.
@@ -296,21 +294,6 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
                 return _runQueue.Count;
             }
         }
-    }
-
-    /// <summary>The request of the run queue served next: lowest niceness, then first come. Called under the gate.</summary>
-    private RunQueueEntry? HeadOfRunQueue()
-    {
-        RunQueueEntry? head = null;
-        foreach (RunQueueEntry candidate in _runQueue)
-        {
-            if (head is null || candidate.Nice < head.Nice || (candidate.Nice == head.Nice && candidate.Sequence < head.Sequence))
-            {
-                head = candidate;
-            }
-        }
-
-        return head;
     }
 
     /// <summary>
@@ -753,7 +736,6 @@ public sealed class WorkerPool : IWorkerPoolStatus, IAsyncDisposable
     }
 
     /// <summary>One command waiting for a core (ADR 0127): its niceness and its place in the arrival order.</summary>
-    private sealed record RunQueueEntry(int Nice, long Sequence);
 
     private sealed class PlacementGroup(WorkerConnection worker)
     {
