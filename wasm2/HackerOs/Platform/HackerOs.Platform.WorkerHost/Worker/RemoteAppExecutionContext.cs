@@ -5,6 +5,7 @@ using HackerOs.AppSdk.Clipboard;
 using HackerOs.AppSdk.Diagnostics;
 using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Net;
+using HackerOs.AppSdk.Threading;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using HackerOs.Simulation.Abstractions.Processes;
@@ -77,7 +78,15 @@ internal sealed class RemoteAppExecutionContext : IAppExecutionContext
             message => Logging.Log(HackerOs.Simulation.Abstractions.Diagnostics.DiagnosticSeverity.Error, message));
         Events = new RemoteEventGateway(channel, EventTable);
         Watch = new RemoteWatchGateway(channel, EventTable);
+        // ADR 0128 section 6: a task started from here is placed by the OS, through bg.run.
+        BackgroundJobs = new RemoteBackgroundGateway(channel);
     }
+
+    /// <summary>Gets the process's background tasks, fed by the OS's <c>bgp</c> messages (ADR 0128).</summary>
+    public RemoteBackgroundGateway BackgroundJobs { get; }
+
+    /// <inheritdoc />
+    public IAppBackgroundGateway Background => BackgroundJobs;
 
     /// <summary>Gets the process's subscriptions, fed by the OS's <c>ev</c> messages (ADR 0124).</summary>
     public RemoteEventTable EventTable { get; }

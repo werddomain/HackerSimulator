@@ -3,6 +3,7 @@ using System.Text.Json;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Diagnostics;
+using HackerOs.AppSdk.Threading;
 using HackerOs.Platform.Core.Execution;
 using HackerOs.Platform.Core.Processes;
 using HackerOs.Platform.WorkerHost.Protocol;
@@ -119,6 +120,10 @@ public sealed class WorkerProcessHost
                     break;
                 case WorkerMessageType.Event:
                     Find(root)?.Context.EventTable.Deliver(root.GetInt32("s"), root);
+                    break;
+                case WorkerMessageType.BackgroundJobProgress:
+                    Find(root)?.Context.BackgroundJobs.Deliver(
+                        root.GetInt32("j"), new HackBackgroundProgress(root.GetDouble("f"), root.GetOptionalString("m")));
                     break;
                 case WorkerMessageType.HttpRequest:
                     Find(root)?.Channel.Listeners.Deliver(root.GetInt32("sk"), WireCodec.ReadListenerExchange(root.GetProperty("ex")));
@@ -271,6 +276,16 @@ public sealed class WorkerProcessHost
             _processes[pid] = process;
         }
 
+        if (root.GetInt32("k") == JobKind)
+        {
+            // ADR 0128: a background task, named by its target, with its input as JSON.
+            JsonElement target = root.GetProperty("jt");
+            _ = RunJobAsync(process, new HackBackgroundJobTarget(
+                target.GetString("asm"), target.GetString("ty"), target.GetOptionalString("me"), target.GetString("it")),
+                root.GetString("ji"));
+            return;
+        }
+
         StartInfo start = new(
             root.GetInt32("k") == 1 ? AppKind.Service : AppKind.Terminal,
             root.GetString("asm"),
@@ -304,6 +319,37 @@ public sealed class WorkerProcessHost
         {
             // The message alone, as the in-process launch reports it (lifecycle.entry-point.fault).
             exit = new RemoteProcessExit(RemoteProcessExitStatus.Faulted, FaultMessage: exception.Message);
+        }
+
+        End(process, exit);
+    }
+
+    /// <summary><c>k</c> of a <c>start</c> message for a background task (ADR 0128): 0 command, 1 service, 2 task.</summary>
+    internal const int JobKind = 2;
+
+    /// <summary>
+    /// Runs a background task (ADR 0128, section 3): loads the app's assembly, finds the task, reads its
+    /// input, runs it on the process's scheduler, and reports its result, its fault or its refusal in
+    /// the <c>exit</c> message. Progress reports travel as <c>bg.progress</c> notes.
+    /// </summary>
+    private async Task RunJobAsync(WorkerProcess process, HackBackgroundJobTarget target, string inputJson)
+    {
+        RemoteProcessExit exit;
+        try
+        {
+            EnsureKnownAssembly(target.AssemblyName + ".dll");
+            Type type = await _loader.LoadEntryTypeAsync(target.AssemblyName + ".dll", target.TypeName).ConfigureAwait(true);
+            HackBackgroundJobRunner.PreparedJob job = HackBackgroundJobRunner.Prepare(type.Assembly, target, inputJson);
+            exit = await process.RunJobAsync(job).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is ArgumentException or TypeLoadException)
+        {
+            // Nothing valid to run, like exec(2) failing: the caller sees an ArgumentException.
+            exit = new RemoteProcessExit(RemoteProcessExitStatus.Faulted, LaunchFailedExitCode, exception.Message)
+            {
+                JobRejected = true,
+                JobFault = new HackBackgroundJobException(exception.GetType().FullName!, exception.Message, exception.StackTrace)
+            };
         }
 
         End(process, exit);
@@ -367,6 +413,30 @@ public sealed class WorkerProcessHost
             if (exit.FaultMessage is { } message)
             {
                 writer.WriteString("m", message);
+            }
+
+            // ADR 0128: what a background task returned, threw, or why it was refused.
+            if (exit.JobResult is { } result)
+            {
+                writer.WriteString("jr", result);
+            }
+
+            if (exit.JobFault is { } fault)
+            {
+                writer.WriteStartObject("jf");
+                writer.WriteString("ty", fault.OriginalTypeName);
+                writer.WriteString("m", fault.Message);
+                if (fault.OriginalStackTrace is { } stack)
+                {
+                    writer.WriteString("st", stack);
+                }
+
+                writer.WriteEndObject();
+            }
+
+            if (exit.JobRejected)
+            {
+                writer.WriteBoolean("jx", true);
             }
         }));
     }
@@ -484,6 +554,41 @@ internal sealed class WorkerProcess
         catch (RemoteBrokenPipeException)
         {
             return new RemoteProcessExit(RemoteProcessExitStatus.BrokenPipe);
+        }
+    }
+
+    /// <summary>
+    /// Runs a background task (ADR 0128) on the process's scheduler, in its ambient context: its
+    /// token is the process token (cancelled by the caller's <c>int</c> or a stop request), its reports
+    /// go to the OS as <c>bg.progress</c> notes.
+    /// </summary>
+    public async Task<RemoteProcessExit> RunJobAsync(HackBackgroundJobRunner.PreparedJob job)
+    {
+        HackBackgroundContext context = new(Pid, _token.Token, progress => Channel.Notify(RemoteOps.BackgroundProgress, writer =>
+        {
+            writer.WriteNumber("f", progress.Fraction);
+            if (progress.Message is { } message)
+            {
+                writer.WriteString("m", message);
+            }
+        }));
+        try
+        {
+            using IDisposable ambient = HackExecutionContext.Enter(Context);
+            string? result = await Control.RunAsync(() => HackBackgroundFaults.RunAsync(job, context)).ConfigureAwait(true);
+            return new RemoteProcessExit(RemoteProcessExitStatus.Exited) { JobResult = result };
+        }
+        catch (HackProcessKilledException)
+        {
+            return new RemoteProcessExit(RemoteProcessExitStatus.Killed);
+        }
+        catch (OperationCanceledException)
+        {
+            return new RemoteProcessExit(RemoteProcessExitStatus.Cancelled);
+        }
+        catch (HackBackgroundJobException fault)
+        {
+            return new RemoteProcessExit(RemoteProcessExitStatus.Faulted, 1, fault.Message) { JobFault = fault };
         }
     }
 

@@ -45,7 +45,15 @@ public sealed record ProcMetricsSources(
     ICpuTimeAccountant? CpuAccountant = null,
     IMemoryAccountant? MemoryAccountant = null,
     Func<HackerOs.Simulation.Abstractions.Workers.IWorkerPoolStatus?>? Workers = null,
-    Func<HackerOs.Platform.Core.Network.Local.ListeningPortTable?>? Listeners = null);
+    Func<HackerOs.Platform.Core.Network.Local.ListeningPortTable?>? Listeners = null)
+{
+    /// <summary>
+    /// Gets the background tasks of ADR 0128 behind the <c>Job</c> and <c>Host</c> lines of
+    /// <c>/proc/&lt;pid&gt;/status</c> (and the task's name in <c>Name</c>); missing, a task reads like
+    /// any process of its app.
+    /// </summary>
+    public Func<HackerOs.Platform.Core.Execution.BackgroundJobService?>? BackgroundJobs { get; init; }
+}
 
 /// <summary>One line of <c>/proc/mounts</c>: what is mounted where, with which type and options.</summary>
 /// <param name="Source">Device or pseudo-source, e.g. <c>/dev/hda</c> or <c>proc</c>.</param>

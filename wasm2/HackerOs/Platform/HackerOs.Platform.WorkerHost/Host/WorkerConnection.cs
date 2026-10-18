@@ -391,7 +391,16 @@ internal sealed class WorkerConnection
         }
 
         RemoteProcessExit exit = new(
-            (RemoteProcessExitStatus)root.GetInt32("s"), root.GetInt32("c"), root.GetOptionalString("m"));
+            (RemoteProcessExitStatus)root.GetInt32("s"), root.GetInt32("c"), root.GetOptionalString("m"))
+        {
+            // ADR 0128: the result, fault or refusal of a background task.
+            JobResult = root.GetOptionalString("jr"),
+            JobFault = root.GetOptional("jf") is { } fault
+                ? new HackerOs.AppSdk.Threading.HackBackgroundJobException(
+                    fault.GetOptionalString("ty") ?? "System.Exception", fault.GetOptionalString("m") ?? string.Empty, fault.GetOptionalString("st"))
+                : null,
+            JobRejected = root.GetFlag("jx")
+        };
         _ = CompleteAsync();
 
         async Task CompleteAsync()

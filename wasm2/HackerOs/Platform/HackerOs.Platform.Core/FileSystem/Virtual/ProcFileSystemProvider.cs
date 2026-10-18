@@ -349,8 +349,14 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         long rssKb = (long)Math.Round(memoryBytes / 1024d, MidpointRounding.AwayFromZero);
         double cpuPercent = cpuUsage * 100d;
 
+        // ADR 0128 section 3: a background task is named after its app's command and the task.
+        HackerOs.Platform.Core.Execution.BackgroundJobInfo? job =
+            _metrics.BackgroundJobs?.Invoke() is { } jobs && jobs.TryGetJob(process.Pid, out HackerOs.Platform.Core.Execution.BackgroundJobInfo found)
+                ? found
+                : null;
+
         StringBuilder builder = new();
-        AppendField(builder, "Name", ShortName(process.AppId));
+        AppendField(builder, "Name", job is null ? ShortName(process.AppId) : Truncate(job.Name));
         AppendField(builder, "State", StateText(process.State));
         AppendField(builder, "Pid", process.Pid.ToString());
         AppendField(builder, "PPid", process.ParentPid?.ToString() ?? "0");
@@ -358,6 +364,12 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         AppendField(builder, "AppId", process.AppId);
         AppendField(builder, "Kind", process.Kind.ToString().ToLowerInvariant());
         AppendField(builder, "Session", process.SessionId.ToString());
+        if (job is not null)
+        {
+            AppendField(builder, "Job", job.Name);
+            AppendField(builder, "Host", job.Host == HackerOs.Platform.Core.Execution.BackgroundJobHost.MainThread ? "MainThread" : "Worker");
+        }
+
         AppendField(builder, "VmRSS", $"{rssKb.ToString(CultureInfo.InvariantCulture)} kB");
         AppendMeasuredMemory(builder, measuredMemory);
         AppendField(builder, "Cpu", cpuPercent.ToString("0.0", CultureInfo.InvariantCulture));
@@ -821,6 +833,10 @@ public sealed class ProcFileSystemProvider : VirtualFileSystemProvider
         && pid > 0
             ? pid
             : null;
+
+    /// <summary>Cuts a process name to 15 characters, like Linux's <c>comm</c>.</summary>
+    private static string Truncate(string name) =>
+        name.Length > MaximumProcessNameLength ? name[..MaximumProcessNameLength] : name;
 
     /// <summary>Gets the last dotted segment of an app ID, cut to 15 characters like Linux's <c>comm</c>.</summary>
     private static string ShortName(string appId)
