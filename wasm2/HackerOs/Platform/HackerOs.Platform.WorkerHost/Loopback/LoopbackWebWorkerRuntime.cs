@@ -28,7 +28,21 @@ public sealed class LoopbackWebWorkerRuntime : IWebWorkerRuntime
     /// <param name="startupDelay">Simulated cold start of each worker.</param>
     /// <param name="loaderFactory">Creates each worker's assembly loader (default: already-loaded assemblies).</param>
     public LoopbackWebWorkerRuntime(int hardwareConcurrency = 4, TimeSpan? startupDelay = null, Func<IWorkerAssemblyLoader>? loaderFactory = null)
+        : this(hardwareConcurrency, startupDelay, loaderFactory, synchronousCalls: false)
     {
+    }
+
+    /// <summary>Initializes the runtime, optionally as on a cross-origin isolated page.</summary>
+    /// <param name="hardwareConcurrency">The <c>navigator.hardwareConcurrency</c> to report.</param>
+    /// <param name="startupDelay">Simulated cold start of each worker.</param>
+    /// <param name="loaderFactory">Creates each worker's assembly loader (default: already-loaded assemblies).</param>
+    /// <param name="synchronousCalls">
+    /// Whether workers may wait for the OS's answer (ADR 0131, section 4): the worker's thread blocks
+    /// on an event, as a real worker blocks in <c>Atomics.wait</c>.
+    /// </param>
+    public LoopbackWebWorkerRuntime(int hardwareConcurrency, TimeSpan? startupDelay, Func<IWorkerAssemblyLoader>? loaderFactory, bool synchronousCalls)
+    {
+        SynchronousCalls = synchronousCalls;
         HardwareConcurrency = hardwareConcurrency;
         StartupDelay = startupDelay ?? TimeSpan.Zero;
         _loaderFactory = loaderFactory ?? (static () => new ResolvedAssemblyLoader());
@@ -36,6 +50,9 @@ public sealed class LoopbackWebWorkerRuntime : IWebWorkerRuntime
 
     /// <inheritdoc />
     public int HardwareConcurrency { get; }
+
+    /// <summary>Gets whether workers may call the OS synchronously (ADR 0131, section 4).</summary>
+    public bool SynchronousCalls { get; }
 
     /// <summary>Gets the simulated cold start of each worker.</summary>
     public TimeSpan StartupDelay { get; }
@@ -61,7 +78,7 @@ public sealed class LoopbackWebWorkerRuntime : IWebWorkerRuntime
             await Task.Delay(StartupDelay, cancellationToken).ConfigureAwait(false);
         }
 
-        LoopbackWorker worker = new(Interlocked.Increment(ref _nextId), options, _loaderFactory());
+        LoopbackWorker worker = new(Interlocked.Increment(ref _nextId), options, _loaderFactory(), SynchronousCalls);
         _workers.Add(worker);
         return worker;
     }
@@ -74,18 +91,22 @@ public sealed class LoopbackWebWorkerRuntime : IWebWorkerRuntime
     }
 
     /// <summary>One loopback worker: a thread, its message loop and its worker host.</summary>
-    private sealed class LoopbackWorker : IWebWorker
+    private sealed class LoopbackWorker : IWebWorker, ISynchronousWebWorker
     {
         private readonly WorkerThreadContext _thread;
         private readonly Channel<string> _toOs = Channel.CreateUnbounded<string>(new UnboundedChannelOptions { SingleReader = true });
         private readonly WorkerProcessHost _host;
+        private readonly bool _synchronousCalls;
+        private readonly Lock _syncGate = new();
+        private (int Id, string? Reply, ManualResetEventSlim Answered)? _waiting;
         private volatile bool _terminated;
 
-        public LoopbackWorker(int id, WebWorkerStartOptions options, IWorkerAssemblyLoader loader)
+        public LoopbackWorker(int id, WebWorkerStartOptions options, IWorkerAssemblyLoader loader, bool synchronousCalls)
         {
             Id = id;
             Options = options;
-            _host = new WorkerProcessHost(PostToOs, loader, canMeterCpu: false);
+            _synchronousCalls = synchronousCalls;
+            _host = new WorkerProcessHost(PostToOs, loader, canMeterCpu: false, synchronousCalls ? CallSync : null);
             _thread = new WorkerThreadContext(options.Name);
             _ = PumpToOsAsync();
         }
@@ -103,6 +124,42 @@ public sealed class LoopbackWebWorkerRuntime : IWebWorkerRuntime
         }
 
         public bool IsTerminated => _terminated;
+
+        public bool SupportsSynchronousCalls => _synchronousCalls && !_terminated;
+
+        public SynchronousAnswerOutcome AnswerSynchronousCall(int callId, string reply)
+        {
+            lock (_syncGate)
+            {
+                if (_terminated || _waiting is not { } waiting || waiting.Id != callId)
+                {
+                    return SynchronousAnswerOutcome.Late;
+                }
+
+                _waiting = waiting with { Reply = reply };
+                waiting.Answered.Set();
+                return SynchronousAnswerOutcome.Delivered;
+            }
+        }
+
+        /// <summary>The worker's thread blocks until the OS answers, as in <c>Atomics.wait</c>.</summary>
+        private string? CallSync(int callId, string message, TimeSpan timeout)
+        {
+            using ManualResetEventSlim answered = new();
+            lock (_syncGate)
+            {
+                _waiting = (callId, null, answered);
+            }
+
+            PostToOs(message);
+            answered.Wait(timeout);
+            lock (_syncGate)
+            {
+                string? reply = _waiting is { } waiting && waiting.Id == callId ? waiting.Reply : null;
+                _waiting = null;
+                return reply;
+            }
+        }
 
         public void Post(string message)
         {

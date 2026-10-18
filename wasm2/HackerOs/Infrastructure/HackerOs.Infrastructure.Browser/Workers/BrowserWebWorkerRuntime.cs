@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Runtime.InteropServices.JavaScript;
 using System.Runtime.Versioning;
+using System.Text.Json;
 using HackerOs.Simulation.Abstractions.Workers;
 
 namespace HackerOs.Infrastructure.Browser.Workers;
@@ -14,9 +16,14 @@ namespace HackerOs.Infrastructure.Browser.Workers;
 /// Browser only: registered by the WebAssembly hosts (<c>OS/HackerOs.Ecosystem/Program.cs</c>, also
 /// run by <c>test/test</c>), never by the server (ADR 0070, section 6). Callbacks arrive on the
 /// page's single .NET thread.
+/// <para>
+/// When the page is cross-origin isolated (ADR 0131, section 4), <c>workerHost.js</c> carries the
+/// messages in shared rings by itself; this class adds the synchronous answers
+/// (<see cref="ISynchronousWebWorker"/>) and the browser's memory meter (<see cref="IWebWorkerMemoryMeter"/>).
+/// </para>
 /// </remarks>
 [SupportedOSPlatform("browser")]
-public sealed partial class BrowserWebWorkerRuntime : IWebWorkerRuntime
+public sealed partial class BrowserWebWorkerRuntime : IWebWorkerRuntime, IWebWorkerMemoryMeter
 {
     private const string ModuleName = "hackeros-worker-host";
     private const string ModulePath = "_content/HackerOs.Infrastructure.Browser/workerHost.js";
@@ -66,6 +73,29 @@ public sealed partial class BrowserWebWorkerRuntime : IWebWorkerRuntime
         await WhenIdle((int)Math.Clamp(timeout.TotalMilliseconds, 0, int.MaxValue)).WaitAsync(cancellationToken).ConfigureAwait(true);
     }
 
+    /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<int, long>?> MeasureWorkersAsync(CancellationToken cancellationToken = default)
+    {
+        await _import.Value.ConfigureAwait(true);
+        string json = await MeasureMemory().WaitAsync(cancellationToken).ConfigureAwait(true);
+        if (string.IsNullOrEmpty(json))
+        {
+            return null;
+        }
+
+        Dictionary<int, long> bytes = [];
+        using JsonDocument document = JsonDocument.Parse(json);
+        foreach (JsonProperty worker in document.RootElement.EnumerateObject())
+        {
+            if (int.TryParse(worker.Name, NumberStyles.Integer, CultureInfo.InvariantCulture, out int id))
+            {
+                bytes[id] = (long)worker.Value.GetDouble();
+            }
+        }
+
+        return bytes;
+    }
+
     private static async Task ImportModuleAsync()
     {
         string baseUri = JSHost.GlobalThis.GetPropertyAsJSObject("document")?.GetPropertyAsString("baseURI") ?? "/";
@@ -91,8 +121,17 @@ public sealed partial class BrowserWebWorkerRuntime : IWebWorkerRuntime
     [JSImport("terminate", ModuleName)]
     private static partial void TerminateWorker(int id);
 
+    [JSImport("sharedChannels", ModuleName)]
+    private static partial bool SharedChannels();
+
+    [JSImport("answerSync", ModuleName)]
+    private static partial string AnswerSync(int id, int callId, string message);
+
+    [JSImport("measureMemory", ModuleName)]
+    private static partial Task<string> MeasureMemory();
+
     /// <summary>One worker started by <c>workerHost.js</c>.</summary>
-    private sealed class BrowserWebWorker : IWebWorker
+    private sealed class BrowserWebWorker : IWebWorker, ISynchronousWebWorker
     {
         private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private bool _terminated;
@@ -106,6 +145,16 @@ public sealed partial class BrowserWebWorkerRuntime : IWebWorkerRuntime
         public event Action<string>? Faulted;
 
         public bool IsTerminated => _terminated;
+
+        public bool SupportsSynchronousCalls => !_terminated && SharedChannels();
+
+        public SynchronousAnswerOutcome AnswerSynchronousCall(int callId, string reply) =>
+            _terminated ? SynchronousAnswerOutcome.Late : AnswerSync(Id, callId, reply) switch
+            {
+                "ok" => SynchronousAnswerOutcome.Delivered,
+                "too-large" => SynchronousAnswerOutcome.TooLarge,
+                _ => SynchronousAnswerOutcome.Late
+            };
 
         public void Post(string message)
         {

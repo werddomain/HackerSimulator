@@ -946,7 +946,28 @@ internal static class WireCodec
 
     public static void WriteProcess(Utf8JsonWriter writer, string name, ProcessRecord process)
     {
-        writer.WriteStartObject(name);
+        writer.WritePropertyName(name);
+        WriteProcessValue(writer, process);
+    }
+
+    /// <summary>The process table, for the synchronous <c>ListProcesses</c> of a worker (ADR 0131, section 4).</summary>
+    public static void WriteProcesses(Utf8JsonWriter writer, string name, IReadOnlyList<ProcessRecord> processes)
+    {
+        writer.WriteStartArray(name);
+        foreach (ProcessRecord process in processes)
+        {
+            WriteProcessValue(writer, process);
+        }
+
+        writer.WriteEndArray();
+    }
+
+    public static IReadOnlyList<ProcessRecord> ReadProcesses(JsonElement element, string name) =>
+        [.. element.GetProperty(name).EnumerateArray().Select(ReadProcess)];
+
+    private static void WriteProcessValue(Utf8JsonWriter writer, ProcessRecord process)
+    {
+        writer.WriteStartObject();
         writer.WriteNumber("pid", process.Pid.Value);
         if (process.ParentPid is { } parent)
         {

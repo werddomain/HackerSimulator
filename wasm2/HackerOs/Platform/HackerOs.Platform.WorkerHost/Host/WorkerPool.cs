@@ -39,6 +39,7 @@ public sealed class WorkerPool : IWorkerPoolStatus, HackerOs.Platform.Core.Proce
     private bool _started;
     private bool _saturationLogged;
     private Task? _watchdog;
+    private Task? _memoryMeter;
 
     /// <summary>Initializes the pool; nothing starts before <see cref="StartAsync"/> or the first request.</summary>
     /// <param name="runtime">Starts the Web Workers.</param>
@@ -135,6 +136,11 @@ public sealed class WorkerPool : IWorkerPoolStatus, HackerOs.Platform.Core.Proce
         }
 
         _watchdog ??= WatchAsync(_lifetime.Token);
+        if (_runtime is IWebWorkerMemoryMeter meter)
+        {
+            _memoryMeter ??= MeasureMemoryAsync(meter, _lifetime.Token);
+        }
+
         EnsureReadyWorker();
         while (!_lifetime.IsCancellationRequested)
         {
@@ -656,6 +662,51 @@ public sealed class WorkerPool : IWorkerPoolStatus, HackerOs.Platform.Core.Proce
             {
                 Signal();
             }
+        }
+    }
+
+    /// <summary>
+    /// ADR 0131, section 4: on a cross-origin isolated page the browser measures each worker
+    /// (<c>performance.measureUserAgentSpecificMemory()</c>); its figure replaces the heartbeat's in
+    /// <c>/proc</c> and for the OOM killer (ADR 0126, section 6). Stops for good when the browser
+    /// does not offer the meter.
+    /// </summary>
+    private async Task MeasureMemoryAsync(IWebWorkerMemoryMeter meter, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                IReadOnlyDictionary<int, long>? measured = await meter.MeasureWorkersAsync(cancellationToken).ConfigureAwait(false);
+                if (measured is null)
+                {
+                    return;
+                }
+
+                List<WorkerConnection> workers;
+                lock (_gate)
+                {
+                    workers = [.. _workers];
+                }
+
+                foreach (WorkerConnection worker in workers)
+                {
+                    if (worker.WorkerId is { } id && measured.TryGetValue(id, out long bytes))
+                    {
+                        worker.ApplyBrowserMemory(bytes);
+                    }
+                }
+
+                await Task.Delay(Options.MemoryMeasurePeriod, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The pool is disposed.
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            Log($"memory measurement stopped: {exception.Message}");
         }
     }
 

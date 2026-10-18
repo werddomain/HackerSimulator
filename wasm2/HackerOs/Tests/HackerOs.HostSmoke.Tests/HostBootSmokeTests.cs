@@ -85,6 +85,9 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
             await CheckWorkersAsync(page, screen, rows, settings);
             AssertNoErrors(errors, "workers");
 
+            await CheckIsolationAsync(page, screen, rows, settings);
+            AssertNoErrors(errors, "cross-origin isolation");
+
             await CheckLimitsAsync(page, screen, rows, settings);
             AssertNoErrors(errors, "limits");
 
@@ -201,6 +204,45 @@ public sealed partial class HostBootSmokeTests(ITestOutputHelper output)
             rows, text => text.Contains("Terminated", StringComparison.Ordinal) || text.Contains("Killed", StringComparison.Ordinal),
             "the job ended after kill");
         Log("kill (SIGTERM) ended the stuck command after the grace period.");
+    }
+
+    /// <summary>
+    /// ADR 0131 (adjusted by ADR 0143): the page is cross-origin isolated exactly when the run expects
+    /// it, <c>/proc/hackeros/workers</c> says so on its first line, and what isolation adds follows:
+    /// isolated, a command in a worker lists processes synchronously and a long pipe through the
+    /// shared rings keeps every line; not isolated, the synchronous call is refused and the pipe
+    /// still works over messages.
+    /// </summary>
+    private async Task CheckIsolationAsync(IPage page, ILocator screen, ILocator rows, HostSmokeSettings settings)
+    {
+        if (settings.ExpectedIsolation is not { } expected)
+        {
+            return;
+        }
+
+        bool isolated = await page.EvaluateAsync<bool>("() => globalThis.crossOriginIsolated === true");
+        Assert.True(isolated == expected, $"crossOriginIsolated is {isolated}, the run expects {expected}.");
+        string answer = expected ? "yes" : "no";
+        await RunCommandAsync(page, screen, "clear; head -3 /proc/hackeros/workers");
+        string header = await WaitForTerminalTextAsync(rows, text => OutputFinished(text, "isolation-setting:"), "the isolation lines of /proc/hackeros/workers");
+        Assert.Contains($"cross-origin-isolated: {answer}", header, StringComparison.Ordinal);
+        Log($"isolation:\n{header.Trim()}");
+
+        await RunCommandAsync(page, screen, "clear; sample-cmd --processes");
+        if (expected)
+        {
+            await WaitForTerminalTextAsync(rows, text => Regex.IsMatch(text, @"^processes: \d", RegexOptions.Multiline), "the synchronous process list");
+            Log("sample-cmd --processes: synchronous call answered.");
+        }
+        else
+        {
+            await WaitForTerminalTextAsync(rows, text => text.Contains("ListProcesses", StringComparison.Ordinal), "the refused synchronous call");
+            Log("sample-cmd --processes: synchronous call refused without isolation.");
+        }
+
+        await RunCommandAsync(page, screen, "clear; seq 30000 | wc -l");
+        await WaitForTerminalTextAsync(rows, text => Regex.IsMatch(text, @"^\s*30000\s*$", RegexOptions.Multiline), "every line of the long pipe");
+        Log("seq 30000 | wc -l: 30000.");
     }
 
     /// <summary>

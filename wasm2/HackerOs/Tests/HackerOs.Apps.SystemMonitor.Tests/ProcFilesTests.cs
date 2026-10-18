@@ -106,6 +106,9 @@ public sealed class ProcFilesTests
     public void ParseWorkers_reads_the_ceiling_the_pool_and_each_worker()
     {
         ProcWorkers workers = ProcFiles.ParseWorkers(
+            "cross-origin-isolated: yes\n" +
+            "isolation-reason: -\n" +
+            "timer-resolution-us: 5\n" +
             "capacity 4\n" +
             "pool_size 1\n" +
             "worker role       state          core memory_kb heartbeat_ms busy_ms pids\n" +

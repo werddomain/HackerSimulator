@@ -1,9 +1,11 @@
 using System.Runtime.InteropServices.JavaScript;
 using System.Runtime.Versioning;
+using HackerOs.Infrastructure.Browser.Isolation;
 using HackerOs.Infrastructure.Browser.Workers;
 using HackerOs.Platform.Blazor.Hosting;
 using HackerOs.Platform.Blazor.LazyLoading;
 using HackerOs.Platform.Core.Apps;
+using HackerOs.Platform.Core.Isolation;
 using HackerOs.Platform.Core.ServerConnection;
 using HackerOs.Platform.RemoteRendering;
 using HackerOs.Platform.RemoteRendering.Host;
@@ -104,6 +106,16 @@ public static partial class HackerOsBrowserHostExtensions
         {
             IReadOnlyList<string> preload = options.WorkerPreloadAssemblies
                 ?? (apps.LazyAssemblyNames.Contains("HackerOs.Commands.dll", StringComparer.Ordinal) ? ["HackerOs.Commands.dll"] : []);
+            // ADR 0131: the page says at boot whether it is cross-origin isolated
+            // (HackerOs:CrossOriginIsolation: auto, on or off); the workers' JavaScript uses shared
+            // rings and synchronous calls by itself when it is.
+            CrossOriginIsolationMode isolationMode = CrossOriginIsolationPolicy.Parse(builder.Configuration[CrossOriginIsolationPolicy.SettingKey]);
+            builder.Services.AddSingleton<CrossOriginIsolationState>();
+            builder.Services.AddSingleton(provider => new CrossOriginIsolationProbe(
+                provider.GetRequiredService<CrossOriginIsolationState>(),
+                () => OperatingSystem.IsBrowser()
+                    ? ProbeCrossOriginIsolationAsync(isolationMode)
+                    : Task.FromResult(CrossOriginIsolationStatus.NotBrowser)));
             builder.Services.AddSingleton<IWebWorkerRuntime, BrowserWebWorkerRuntime>();
             // ADR 0124, section 4: a worker loads any app assembly known to this build on demand.
             builder.Services.AddHackerOsWorkerProcesses(workerOptions => workerOptions with
@@ -130,6 +142,13 @@ public static partial class HackerOsBrowserHostExtensions
         string[] listed = [.. section.GetSection("Apps").GetChildren().Select(static app => app.Value).OfType<string>()];
         return listed.Length > 0 ? options with { Apps = listed } : options;
     }
+
+    /// <summary>Asks the page whether it is cross-origin isolated (ADR 0131) and reads its answer.</summary>
+    [SupportedOSPlatform("browser")]
+    private static async Task<CrossOriginIsolationStatus> ProbeCrossOriginIsolationAsync(CrossOriginIsolationMode mode) =>
+        CrossOriginIsolationProbe.Read(
+            mode,
+            await BrowserCrossOriginIsolation.ProbeAsync(CrossOriginIsolationPolicy.SendsHeaders(mode)).ConfigureAwait(true));
 
     [SupportedOSPlatform("browser")]
     private static bool RootElementExists(string selector) => QuerySelector(selector) is not null;

@@ -47,11 +47,24 @@ public sealed class WorkerProcessHost
     /// (<see langword="false"/> for the in-process loopback, which shares the OS's statics).
     /// </param>
     public WorkerProcessHost(Action<string> post, IWorkerAssemblyLoader loader, bool canMeterCpu)
+        : this(post, loader, canMeterCpu, null)
+    {
+    }
+
+    /// <summary>Initializes the worker's host, with synchronous calls to the OS when the page allows them.</summary>
+    /// <param name="post">Posts one message to the OS (<c>self.postMessage</c> in a real worker).</param>
+    /// <param name="loader">Loads the apps' assemblies.</param>
+    /// <param name="canMeterCpu">Whether the context-switch hook may be installed (see the other constructor).</param>
+    /// <param name="callSync">
+    /// Waits for the OS's answer to one call (ADR 0131, section 4: <c>Atomics.wait</c> on a cross-origin
+    /// isolated page), or <see langword="null"/>: the synchronous members of the gateways are then refused.
+    /// </param>
+    public WorkerProcessHost(Action<string> post, IWorkerAssemblyLoader loader, bool canMeterCpu, WorkerSynchronousCall? callSync)
     {
         _post = post ?? throw new ArgumentNullException(nameof(post));
         _loader = loader ?? throw new ArgumentNullException(nameof(loader));
         _canMeterCpu = canMeterCpu;
-        _rpc = new WorkerRpcClient(post);
+        _rpc = new WorkerRpcClient(post, callSync);
     }
 
     /// <summary>Gets the number of processes running here.</summary>

@@ -125,6 +125,28 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
+// ADR 0131, section 2: COOP/COEP on every response, so the OS's page and its Web Workers are
+// cross-origin isolated (HackerOs:CrossOriginIsolation: auto, on or off). The PWA's service worker
+// adds the same headers once it is installed; this covers the first load and a host without it.
+IReadOnlyList<KeyValuePair<string, string>> isolationHeaders = HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.ServerHeaders(
+    HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.Parse(app.Configuration[HackerOs.Platform.Core.Isolation.CrossOriginIsolationPolicy.SettingKey]));
+if (isolationHeaders.Count > 0)
+{
+    app.Use((context, next) =>
+    {
+        context.Response.OnStarting(() =>
+        {
+            foreach ((string name, string value) in isolationHeaders)
+            {
+                context.Response.Headers[name] = value;
+            }
+
+            return Task.CompletedTask;
+        });
+        return next(context);
+    });
+}
+
 // ADR 0130: a page address of the OS (/, a deep link, a reload) is answered with the Ecosystem's
 // index.html, served by MapStaticAssets like every other file of the OS, in every environment.
 // The rewrite runs before routing; API and documentation paths and real files are left alone.

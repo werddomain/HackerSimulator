@@ -19,6 +19,9 @@ internal sealed class WorkerConnection
     private readonly Dictionary<long, ProcessSample> _samples = [];
     private readonly TaskCompletionSource _hello = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private IWebWorker? _worker;
+    private long _heartbeatMemory;
+    private long _browserMemory;
+    private long _browserMemoryAt;
     private long _lastHeartbeat;
     private long _lastPlaced;
     private long _emptySince;
@@ -36,6 +39,9 @@ internal sealed class WorkerConnection
 
     /// <summary>Gets the worker number.</summary>
     public int Id { get; }
+
+    /// <summary>Gets the runtime's id of the Web Worker behind this connection (<see cref="IWebWorker.Id"/>), once attached.</summary>
+    public int? WorkerId => _worker?.Id;
 
     /// <summary>Gets or sets what the worker is for (changes when the ready worker is taken).</summary>
     public WorkerRole Role { get; set; }
@@ -64,8 +70,30 @@ internal sealed class WorkerConnection
         }
     }
 
-    /// <summary>Gets the whole memory of the worker's runtime at its last heartbeat (its WebAssembly memory, else its managed heap).</summary>
-    public long RuntimeMemoryBytes { get; private set; }
+    /// <summary>
+    /// Gets the whole memory of the worker: the browser's own measurement when a recent one exists
+    /// (ADR 0131, section 4; ADR 0126, section 6), else its runtime's at the last heartbeat (its
+    /// WebAssembly memory, else its managed heap).
+    /// </summary>
+    public long RuntimeMemoryBytes => IsMemoryMeasuredByBrowser ? Interlocked.Read(ref _browserMemory) : _heartbeatMemory;
+
+    /// <summary>Gets whether <see cref="RuntimeMemoryBytes"/> is the browser's measurement (fresh within three periods).</summary>
+    public bool IsMemoryMeasuredByBrowser
+    {
+        get
+        {
+            long at = Interlocked.Read(ref _browserMemoryAt);
+            return at != 0 && Stopwatch.GetElapsedTime(at) <= _pool.Options.MemoryMeasurePeriod * 3;
+        }
+    }
+
+    /// <summary>Records the browser's measurement of this worker (<c>measureUserAgentSpecificMemory</c>).</summary>
+    /// <param name="bytes">Bytes the browser attributes to the worker.</param>
+    public void ApplyBrowserMemory(long bytes)
+    {
+        Interlocked.Exchange(ref _browserMemory, Math.Max(0, bytes));
+        Interlocked.Exchange(ref _browserMemoryAt, Stopwatch.GetTimestamp());
+    }
 
     /// <summary>Gets the managed heap of the worker's runtime at the last heartbeat (ADR 0126, section 5).</summary>
     public long RuntimeHeapBytes { get; private set; }
@@ -203,6 +231,30 @@ internal sealed class WorkerConnection
         }
     }
 
+    /// <summary>
+    /// Answers a synchronous call (ADR 0131, section 4) in the worker's shared slot, where its thread
+    /// waits in <c>Atomics.wait</c>. An answer too large for the slot is replaced by an I/O error; a
+    /// late one (the worker gave up) is dropped, as a late <c>result</c> of an abandoned call is.
+    /// </summary>
+    /// <param name="callId">The call's number.</param>
+    /// <param name="reply">Its <c>result</c> message.</param>
+    public void AnswerSynchronously(int callId, string reply)
+    {
+        if (IsTerminated || _worker is not ISynchronousWebWorker synchronous)
+        {
+            return;
+        }
+
+        if (synchronous.AnswerSynchronousCall(callId, reply) == SynchronousAnswerOutcome.TooLarge)
+        {
+            synchronous.AnswerSynchronousCall(callId, WorkerMessage.Create(WorkerMessageType.Result, writer =>
+            {
+                writer.WriteNumber("i", callId);
+                RemoteErrors.Write(writer, new IOException("The answer is too large for a synchronous call; use the asynchronous member."));
+            }));
+        }
+    }
+
     /// <summary>Gets how many processes this worker has hosted since it started.</summary>
     public int HostedTotal { get; private set; }
 
@@ -300,20 +352,31 @@ internal sealed class WorkerConnection
                     OnHeartbeat(root);
                     break;
                 case WorkerMessageType.Call:
+                {
+                    bool synchronous = root.GetFlag("s");
                     if (Find(root) is { } caller)
                     {
-                        _ = caller.OnCallAsync(root.GetInt32("i"), root.GetString("o"), root.GetProperty("a").Clone());
+                        _ = caller.OnCallAsync(root.GetInt32("i"), root.GetString("o"), root.GetProperty("a").Clone(), synchronous);
                     }
                     else
                     {
-                        Post(WorkerMessage.Create(WorkerMessageType.Result, writer =>
+                        string killed = WorkerMessage.Create(WorkerMessageType.Result, writer =>
                         {
                             writer.WriteNumber("i", root.GetInt32("i"));
                             RemoteErrors.Write(writer, new HackerOs.AppSdk.Diagnostics.HackProcessKilledException(root.GetInt64("p")));
-                        }));
+                        });
+                        if (synchronous)
+                        {
+                            AnswerSynchronously(root.GetInt32("i"), killed);
+                        }
+                        else
+                        {
+                            Post(killed);
+                        }
                     }
 
                     break;
+                }
                 case WorkerMessageType.Notify:
                     if (Find(root) is { } notifier)
                     {
@@ -366,7 +429,7 @@ internal sealed class WorkerConnection
         // The runtime's whole memory when the platform reports it, else its managed heap.
         long heap = root.GetInt64("heap");
         RuntimeHeapBytes = heap;
-        RuntimeMemoryBytes = root.GetOptional("rss") is { } rss && rss.GetInt64() > heap ? rss.GetInt64() : heap;
+        _heartbeatMemory = root.GetOptional("rss") is { } rss && rss.GetInt64() > heap ? rss.GetInt64() : heap;
         if (root.GetOptional("busy") is { } busy)
         {
             BusyTime = TimeSpan.FromTicks(busy.GetInt64());

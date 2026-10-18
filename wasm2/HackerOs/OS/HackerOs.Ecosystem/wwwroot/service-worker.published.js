@@ -1,7 +1,8 @@
 // HackerOS Progressive Web App Service Worker (Published / Production Mode)
 // Implements Cache-First offline shell strategy, atomic cache versioning,
 // asset integrity checking, and safe update activation (P2-PWA-002 through P2-PWA-005),
-// plus the corrupted-cache recovery of ADR 0099 §3 (RESET_CACHE message, see onMessage).
+// plus the corrupted-cache recovery of ADR 0099 §3 (RESET_CACHE message, see onMessage)
+// and the cross-origin isolation headers of ADR 0131 §2 (see withIsolationHeaders).
 
 self.importScripts('./service-worker-assets.js');
 
@@ -23,6 +24,67 @@ const offlineAssetsExclude = [ /^service-worker\.js$/, /^hackeros-host\.json$/ ]
 const base = "/";
 const baseUrl = new URL(base, self.origin);
 const manifestUrlList = self.assetsManifest.assets.map(asset => new URL(asset.url, baseUrl).href);
+
+// ADR 0131 §2: the worker adds COOP/COEP to the same-origin responses it serves, navigation
+// included, so the PWA is cross-origin isolated offline and on a static host that cannot set
+// headers. HackerOs:CrossOriginIsolation in appsettings.json decides: "off" adds nothing, "on"
+// always adds them, "auto" adds them when the audit passed for this release. The audit result is
+// the constant CrossOriginIsolationPolicy.AuditPassed (Platform.Core); a unit test keeps both equal.
+const crossOriginIsolationAuditPassed = true;
+// The page asks once for require-corp when the browser ignored credentialless (COI_STRICT); the
+// choice is kept in this cache, under a synthetic key, across worker restarts.
+const isolationConfigCache = 'hackeros-isolation';
+const isolationConfigKey = new URL('__hackeros/isolation-config', baseUrl).href;
+let isolationState = null;
+
+// Reads the setting from the cached appsettings.json (the network when it is not cached yet) and
+// the stored COEP choice. Called on every navigation, so a changed setting applies at the next load.
+async function loadIsolationState() {
+    let mode = 'auto';
+    try {
+        const cache = await caches.open(cacheName);
+        const response = await cache.match('appsettings.json') || await fetch('appsettings.json', { cache: 'no-store' });
+        if (response && response.ok) {
+            const settings = JSON.parse((await response.text()).replace(/^\uFEFF/, ''));
+            const value = settings && settings.HackerOs && settings.HackerOs.CrossOriginIsolation;
+            if (typeof value === 'string' && /^(on|off|auto)$/i.test(value.trim())) {
+                mode = value.trim().toLowerCase();
+            }
+        }
+    } catch (error) {
+        console.warn('HackerOS Service Worker: appsettings.json unreadable, cross-origin isolation stays "auto"', error);
+    }
+
+    let embedderPolicy = 'credentialless';
+    try {
+        const stored = await (await caches.open(isolationConfigCache)).match(isolationConfigKey);
+        if (stored && (await stored.json()).embedderPolicy === 'require-corp') {
+            embedderPolicy = 'require-corp';
+        }
+    } catch {
+        // No stored choice: credentialless.
+    }
+
+    const sends = mode === 'on' || (mode === 'auto' && crossOriginIsolationAuditPassed);
+    isolationState = { mode, sends, embedderPolicy };
+    return isolationState;
+}
+
+// Copies a same-origin response with the two headers. Opaque (cross-origin no-cors) and error
+// responses cannot be rebuilt and pass through untouched; COEP credentialless accepts them.
+async function withIsolationHeaders(response, refresh) {
+    const state = refresh || !isolationState ? await loadIsolationState() : isolationState;
+    if (!state.sends || !response || response.type === 'opaque' || response.type === 'opaqueredirect' || response.status === 0) {
+        return response;
+    }
+
+    const headers = new Headers(response.headers);
+    headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+    headers.set('Cross-Origin-Embedder-Policy', state.embedderPolicy);
+    // Same-origin resources declare themselves embeddable, so a frame or worker under require-corp loads them.
+    headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
 
 async function onInstall(event) {
     console.info('HackerOS Service Worker: Installing release asset cache', cacheName);
@@ -56,13 +118,24 @@ async function onFetch(event) {
         return fetch(event.request);
     }
 
+    const response = await fetchShellOrAsset(event);
+    // Only this origin's responses: a cross-origin one keeps its own headers.
+    return new URL(event.request.url).origin === self.origin
+        ? withIsolationHeaders(response, event.request.mode === 'navigate')
+        : response;
+}
+
+async function fetchShellOrAsset(event) {
     // Cache-First strategy for static assets and HTML shell (P2-PWA-004)
     const shouldServeIndexHtml = event.request.mode === 'navigate'
         && !manifestUrlList.some(url => url === event.request.url);
 
     const request = shouldServeIndexHtml ? 'index.html' : event.request;
     const cache = await caches.open(cacheName);
-    const cachedResponse = await cache.match(request);
+    // A Web Worker's script carries its id in the query (?hackeros-worker=N, ADR 0131 §4, memory
+    // attribution): it is the same cached file.
+    const ignoreSearch = !shouldServeIndexHtml && new URL(event.request.url).searchParams.has('hackeros-worker');
+    const cachedResponse = await cache.match(request, { ignoreSearch });
 
     if (cachedResponse) {
         return cachedResponse;
@@ -89,7 +162,19 @@ async function onFetch(event) {
 }
 
 function onMessage(event) {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
+    if (event.data && event.data.type === 'COI_STATE') {
+        // ADR 0131 §5: the page asks what this worker sends, to tell "missing headers" from "browser".
+        const port = event.ports && event.ports[0];
+        event.waitUntil(loadIsolationState().then(state => port && port.postMessage(state)));
+    } else if (event.data && event.data.type === 'COI_STRICT') {
+        // The browser ignored credentialless: require-corp from now on, for this origin.
+        const port = event.ports && event.ports[0];
+        event.waitUntil(caches.open(isolationConfigCache)
+            .then(cache => cache.put(isolationConfigKey, new Response(JSON.stringify({ embedderPolicy: 'require-corp' }),
+                { headers: { 'Content-Type': 'application/json' } })))
+            .then(loadIsolationState)
+            .then(state => port && port.postMessage(state)));
+    } else if (event.data && event.data.type === 'SKIP_WAITING') {
         console.info('HackerOS Service Worker: Received SKIP_WAITING signal');
         self.skipWaiting();
     } else if (event.data && event.data.type === 'RESET_CACHE') {

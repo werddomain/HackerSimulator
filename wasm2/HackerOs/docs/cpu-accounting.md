@@ -107,6 +107,11 @@ comptable : `user + system + idle` vaut toujours le temps écoulé.
 
 ### Coût
 
+Résolution : dans le navigateur, `Stopwatch.GetTimestamp` lit
+`performance.now()`, arrondi à 100 µs, ou à 5 µs quand la page est isolée
+(ADR 0131 §4, ADR 0143 §7) ; `/proc/hackeros/workers` affiche la valeur
+mesurée (`timer-resolution-us`).
+
 Le chemin chaud lit l'horloge (`Stopwatch.GetTimestamp`), quelques champs
 `[ThreadStatic]`, et additionne avec `Interlocked` dans un emplacement trouvé
 par PID dans un tableau : pas de verrou, pas d'allocation, sauf la première

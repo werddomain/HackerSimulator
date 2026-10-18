@@ -89,3 +89,12 @@ static HackerOs.Simulation.Abstractions.Processes.ResourceLimit.Format(long valu
 static HackerOs.Simulation.Abstractions.Processes.ResourceLimit.Infinite.get -> HackerOs.Simulation.Abstractions.Processes.ResourceLimit
 HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot.RuntimeHeapBytes.get -> long
 HackerOs.Simulation.Abstractions.Workers.WorkerSnapshot.RuntimeHeapBytes.init -> void
+HackerOs.Simulation.Abstractions.Workers.ISynchronousWebWorker
+HackerOs.Simulation.Abstractions.Workers.ISynchronousWebWorker.AnswerSynchronousCall(int callId, string! reply) -> HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome
+HackerOs.Simulation.Abstractions.Workers.ISynchronousWebWorker.SupportsSynchronousCalls.get -> bool
+HackerOs.Simulation.Abstractions.Workers.IWebWorkerMemoryMeter
+HackerOs.Simulation.Abstractions.Workers.IWebWorkerMemoryMeter.MeasureWorkersAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<int, long>?>!
+HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome
+HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome.Delivered = 0 -> HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome
+HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome.Late = 1 -> HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome
+HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome.TooLarge = 2 -> HackerOs.Simulation.Abstractions.Workers.SynchronousAnswerOutcome

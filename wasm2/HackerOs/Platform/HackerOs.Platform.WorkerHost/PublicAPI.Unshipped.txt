@@ -22,3 +22,9 @@ HackerOs.Platform.WorkerHost.Worker.WorkerWindowRun.Pid.get -> long
 HackerOs.Platform.WorkerHost.Worker.WorkerWindowRun.Send(System.Action<System.Text.Json.Utf8JsonWriter!>! write) -> void
 HackerOs.Platform.WorkerHost.Worker.WorkerWindowRun.SetReceiver(System.Action<System.Text.Json.JsonElement>! receiver) -> void
 static readonly HackerOs.Platform.WorkerHost.Host.RemoteWindowProcess.CloseTimeout -> System.TimeSpan
+HackerOs.Platform.WorkerHost.Host.WorkerPoolOptions.MemoryMeasurePeriod.get -> System.TimeSpan
+HackerOs.Platform.WorkerHost.Host.WorkerPoolOptions.MemoryMeasurePeriod.init -> void
+HackerOs.Platform.WorkerHost.Loopback.LoopbackWebWorkerRuntime.LoopbackWebWorkerRuntime(int hardwareConcurrency, System.TimeSpan? startupDelay, System.Func<HackerOs.Platform.WorkerHost.Worker.IWorkerAssemblyLoader!>? loaderFactory, bool synchronousCalls) -> void
+HackerOs.Platform.WorkerHost.Loopback.LoopbackWebWorkerRuntime.SynchronousCalls.get -> bool
+HackerOs.Platform.WorkerHost.Worker.WorkerProcessHost.WorkerProcessHost(System.Action<string!>! post, HackerOs.Platform.WorkerHost.Worker.IWorkerAssemblyLoader! loader, bool canMeterCpu, HackerOs.Platform.WorkerHost.Worker.WorkerSynchronousCall? callSync) -> void
+HackerOs.Platform.WorkerHost.Worker.WorkerSynchronousCall

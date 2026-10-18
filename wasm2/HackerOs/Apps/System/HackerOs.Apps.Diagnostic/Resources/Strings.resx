@@ -159,4 +159,25 @@
   <data name="View.Table" xml:space="preserve">
     <value>Table View</value>
   </data>
+  <data name="Isolation.Yes" xml:space="preserve">
+    <value>Cross-origin isolated</value>
+  </data>
+  <data name="Isolation.No" xml:space="preserve">
+    <value>Not isolated: {0}</value>
+  </data>
+  <data name="Isolation.Reason.Setting" xml:space="preserve">
+    <value>turned off by the setting</value>
+  </data>
+  <data name="Isolation.Reason.MissingHeaders" xml:space="preserve">
+    <value>headers missing</value>
+  </data>
+  <data name="Isolation.Reason.InsecureContext" xml:space="preserve">
+    <value>not a secure context</value>
+  </data>
+  <data name="Isolation.Reason.Browser" xml:space="preserve">
+    <value>browser refused</value>
+  </data>
+  <data name="Isolation.Reason.NotBrowser" xml:space="preserve">
+    <value>outside a browser</value>
+  </data>
 </root>

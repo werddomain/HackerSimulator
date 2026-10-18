@@ -45,6 +45,18 @@
     background-color: var(--hos-info, #1f6feb);
 }
 
+/* Cross-origin isolation (ADR 0131): accent when isolated, muted with its reason when not. */
+.diag-badge-isolated {
+    background-color: var(--hos-accent, #2ea043);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--hos-accent, #2ea043) 60%, transparent);
+}
+
+.diag-badge-muted {
+    background-color: var(--hos-surface-raised, #30363d);
+    color: var(--hos-text-secondary, #c9d1d9);
+    border: 1px solid var(--hos-border, #484f58);
+}
+
 .diag-actions {
     display: flex;
     gap: 8px;

@@ -40,6 +40,9 @@ internal static class RemoteOps
     public const string ProcessStop = "proc.stop";
     public const string ProcessKill = "proc.kill";
 
+    /// <summary>The process table (ADR 0131, section 4): only ever called synchronously, by <c>ListProcesses</c>.</summary>
+    public const string ProcessList = "proc.list";
+
     // Network (IAppNetworkGateway).
     public const string NetResolve = "net.resolve";
     public const string NetReverse = "net.reverse";

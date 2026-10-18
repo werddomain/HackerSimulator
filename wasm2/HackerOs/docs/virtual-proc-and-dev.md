@@ -183,7 +183,10 @@ proc /proc proc ro 0 0
   zéro dans un hôte réel.
 
 - `/proc/hackeros/workers` (ADR 0071 §5) n'existe que si l'hôte a des Web
-  Workers : capacité, taille du pool, puis une ligne par worker (rôle, état,
+  Workers : d'abord l'isolation cross-origin de la page
+  (`cross-origin-isolated: yes|no`, raison, réglage, COEP, tubes partagés,
+  appels synchrones, mesure de la mémoire, résolution des minuteries ; ADR 0131
+  §5, ADR 0143 §8), puis capacité, taille du pool, puis une ligne par worker (rôle, état,
   cœur, mémoire, âge du battement, temps occupé, PID visibles). Format :
   [`worker-processes.md`](worker-processes.md#prochackerosworkers).
 

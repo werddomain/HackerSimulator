@@ -92,7 +92,7 @@ Une commande compile, lance et parcourt les trois hôtes
 ([`execution-isolation-plan.md`](execution-isolation-plan.md), section 5.2) :
 
 ```bash
-build/verify-hosts.sh                 # tout : build, publications, sept parcours
+build/verify-hosts.sh                 # tout : build, publications, neuf parcours
 build/verify-hosts.sh --skip-build    # réutilise les sorties déjà compilées
 build/verify-hosts.sh --only server,test-host
 ```
@@ -112,7 +112,8 @@ Déroulé :
    `Server/HackerOs.Server` et `Tests/HackerOs.HostSmoke.Tests` ;
    `dotnet publish` (Release) d'Ecosystem, deux fois (réglages par défaut,
    puis mesures coupées au build).
-2. Pour chaque parcours, l'hôte démarre sur un port libre de `127.0.0.1` dans
+2. Pour chaque parcours, l'hôte démarre sur un port libre de `127.0.0.1`
+   (`127.0.0.2` pour les deux parcours de l'isolation) dans
    son propre groupe de processus : Ecosystem publié derrière un serveur
    statique Python, les deux autres par `dotnet run --no-build`. La base, les
    blobs et les sauvegardes du serveur vont dans un dossier jetable : le
@@ -158,6 +159,8 @@ RESULT: PASS
 | `ecosystem-settings-off` | même publication que `ecosystem`, `wwwroot/appsettings.json` réécrit avec `Enabled: false` pour `Cpu` et `Memory` | coupées au démarrage | `simulated` |
 | `ecosystem-limits-off` | même publication que `ecosystem`, `wwwroot/appsettings.json` réécrit avec `HackerOs:ResourceLimits:Enabled: false` (ADR 0125) | build et réglage par défaut | `measured` |
 | `ecosystem-oom` | même publication que `ecosystem`, `wwwroot/appsettings.json` réécrit avec `HackerOs:Hardware:MemoryMiB` = `${OOM_MEMORY_MIB:-512}` (ADR 0142 §11) | build et réglage par défaut | `measured` |
+| `ecosystem-isolated` | même publication que `ecosystem`, servie sur `127.0.0.2` : le service worker s'enregistre et pose COOP/COEP (ADR 0131, 0143) | build et réglage par défaut | `measured` |
+| `ecosystem-isolation-off` | idem, `wwwroot/appsettings.json` réécrit avec `HackerOs:CrossOriginIsolation` = `off` | build et réglage par défaut | `measured` |
 | `test-host` | `test/test` | réglage de l'hôte (activées) | `measured` |
 | `server` | `HackerOs.Server` (sert l'OS de l'Ecosystem en WebAssembly, ADR 0130) | `appsettings.json` de l'Ecosystem (activées) | `measured` |
 
@@ -172,6 +175,17 @@ Chaque parcours vérifie aussi les limites de processus (`exec/2`,
 sortir avec 152 et « CPU time limit exceeded » là où le CPU est mesuré, et
 normalement ailleurs. Dans `ecosystem-limits-off`, `ulimit -n 100` doit
 répondre « cannot modify limit ».
+
+Chaque parcours vérifie l'isolation cross-origin (`exec/9`,
+[`worker-processes.md`](worker-processes.md#isolation-cross-origin-adr-0131-adr-0143)) :
+`crossOriginIsolated` dans la page, la ligne `cross-origin-isolated:` de
+`/proc/hackeros/workers`, `sample-cmd --processes` (réponse synchrone si la
+page est isolée, refus sinon) et `seq 30000 | wc -l`. Isolés : `ecosystem-isolated`,
+`test-host` et `server` (intergiciel). Non isolés : les parcours de l'Ecosystem
+sur `127.0.0.1` (pas de service worker sur cette adresse) et
+`ecosystem-isolation-off`. Un parcours qui réécrit `appsettings.json` recalcule
+son empreinte dans `service-worker-assets.js`, sinon l'installation du service
+worker échoue sur `127.0.0.2`.
 
 Le parcours `ecosystem-oom` (`exec/3`, [`oom-killer.md`](oom-killer.md))
 active l'OOM killer par `sudo tee /etc/hackeros/memory.config`, lance
@@ -193,9 +207,30 @@ HACKEROS_SMOKE_URL=http://127.0.0.1:5000 dotnet test Tests/HackerOs.HostSmoke.Te
 Variables facultatives : `HACKEROS_SMOKE_HOST` (nom affiché),
 `HACKEROS_SMOKE_EXPECT_CPU_SOURCE` / `HACKEROS_SMOKE_EXPECT_MEM_SOURCE`
 (valeur attendue dans `/proc/self/status`), `HACKEROS_SMOKE_ARTIFACTS`
-(dossier des captures).
+(dossier des captures), `HACKEROS_SMOKE_EXPECT_ISOLATION` (`yes` ou `no`).
 
 Chaque PR `rebuild/5-*` colle la sortie de `build/verify-hosts.sh`.
+
+## Hébergement et en-têtes d'isolation
+
+L'OS se sert de l'isolation cross-origin quand la page l'a (ADR 0131, 0143) et
+marche sans. `HackerOs:CrossOriginIsolation` (`auto`, `on`, `off`) dans
+`appsettings.json` de chaque hôte ; `auto` vaut `on` depuis l'audit d'`exec/9`.
+
+- **Ecosystem sur un hébergement statique** : rien à configurer. Le service
+  worker de la PWA ajoute `Cross-Origin-Opener-Policy: same-origin` et
+  `Cross-Origin-Embedder-Policy: credentialless` (`require-corp` pour un
+  navigateur qui ignore `credentialless`, avec un rechargement unique). Il
+  faut un contexte sécurisé (HTTPS, ou une adresse de bouclage autre que
+  `localhost`/`127.0.0.1`, sur lesquelles `index.html` n'enregistre pas le
+  service worker) : en local, servir la publication sur `127.0.0.2`.
+- Un hébergeur qui pose déjà ces en-têtes convient aussi ; un proxy qui les
+  retire donne le repli exact (`/proc/hackeros/workers` dit pourquoi).
+- **`test/test` et `HackerOs.Server`** posent les en-têtes eux-mêmes (intergiciel
+  dans `Program.cs`).
+- Après une modification de `wwwroot/appsettings.json` d'une publication,
+  recalculer son empreinte dans `service-worker-assets.js` (voir
+  `rehash_settings` dans `build/verify-hosts.sh`).
 
 ## Publier en Release trimmée
 
