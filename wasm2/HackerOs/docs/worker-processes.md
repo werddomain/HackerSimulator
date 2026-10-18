@@ -35,6 +35,11 @@ fil principal.
 | Commande | `pool` | `pool`, `dedicated`, `mainThread` |
 | Service | `dedicated` | `dedicated`, `pool`, `mainThread` |
 
+Une fenêtre reste sur le fil principal : l'essai de rendu dans un worker
+(ADR 0129) a conclu « on s'arrête » ([ADR 0133](adr/0133-window-rendering-in-worker-verdict.md),
+[`remote-window-rendering.md`](remote-window-rendering.md)). Son prototype,
+coupé par défaut, est le seul à démarrer un processus `start` `k = 3`.
+
 Les 70 commandes de `HackerOs.Commands` : 54 en `pool`, 16 en `mainThread`
 avec la raison en commentaire dans leur définition (`cd`, `exit`, `export`,
 `unset`, `jobs`, `read`, `help`, `which`, `kill` pilotent le shell ; `sudo`
@@ -105,6 +110,7 @@ Messages JSON avec un champ `t` :
 | `epipe` | Le lecteur du flux `f` est parti (tube cassé). |
 | `hreq` | Requête HTTP pour un socket ouvert par `net.listen` dans le worker (`web/3`). |
 | `bgp` | Progression (`f`, `m`) de la tâche `j` qu'un processus du worker a lancée par `bg.run` (ADR 0128 §6, ADR 0140). |
+| `uin` | Essai de l'ADR 0133 : entrée de l'hôte de fenêtre de la page (`d` : événement `e`, réponse de dialogue `dlgr`, `close`) pour la fenêtre `p`. |
 
 | Worker → OS | Rôle |
 |---|---|
@@ -119,6 +125,11 @@ Messages JSON avec un champ `t` :
 | `stopdone`, `sstopped` | Fin du traitement d'un `stop` / `sstop`. |
 | `log` | Ligne de diagnostic du worker. |
 | `hres` | Réponse à un `hreq` (`web/3`). |
+| `ui` | Essai de l'ADR 0133 : sortie de la fenêtre `p` vers son hôte sur la page (`d` : lot d'opérations DOM `b`, demande de dialogue `dlg`). |
+
+`start` porte `k` : 0 ou absent pour une commande, 1 pour un service, 2 pour
+une tâche `HackBackground` (ADR 0140), 3 pour une fenêtre de l'essai de
+l'ADR 0133 (champs `ra`/`rt` : le runner de la plateforme qui la rend).
 
 ### Événements et surveillance de fichiers (ADR 0124, ADR 0138)
 
@@ -358,3 +369,13 @@ seule réponse : son descripteur est rendu dès cette réponse (ADR 0139 §3).
 - [x] Note `bg.progress`, appel `bg.run` et messages `bgp` pour une tâche lancée depuis un worker.
 - [x] Erreurs `bgfault` et raison `rs` de `killed`.
 - [x] Tests de parité fil principal / worker (`BackgroundJobTests`).
+
+## Mesures de l'essai de fenêtre en worker (`exec/6`, ADR 0129 et 0133)
+
+Publication Release trimmée, Chromium sans écran. Un worker prêt et vide
+occupe **55,4 Mio** de mémoire linéaire WebAssembly (le runtime et les 87
+assemblies du boot, ≈ 20,3 Mo dont 8,67 Mo pour `HackerOs.AppSdk.Icons`) et
+5,7 Mio de tas managé. Avec la Calculatrice : 66,5 Mio. Ouverture +≈ 340 ms
+(worker prêt), latence d'un clic p95 +3,3 ms. Détail et verdict dans
+l'[ADR 0133](adr/0133-window-rendering-in-worker-verdict.md).
+

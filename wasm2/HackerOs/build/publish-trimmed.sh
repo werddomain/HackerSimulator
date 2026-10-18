@@ -11,7 +11,7 @@
 # with a static file server and runs Tests/HackerOs.TrimmedPublish.E2E.Tests against it: sign-in,
 # every window app of the Start menu, a pipeline in the worker pool, the Intranet and the sample
 # Blazor site in the Browser, then a reload with no network once the service worker has cached the
-# release. Exit code 0 only when the publish and both tests passed.
+# release. Exit code 0 only when the publish and every test (EXPECTED_TESTS) passed.
 #
 #   --skip-build      reuse the existing publish and test build
 #   --compare         also publish untrimmed (-p:PublishTrimmed=false) and print both sizes
@@ -188,8 +188,11 @@ code=$?
 stop_servers
 grep -E '^\s*\[(trimmed|chromium)\]' "$LOGS/tests.log" | sed "s/^ */    /"
 
-# A skipped test exits 0 too: require both tests actually run and passed.
-if [[ $code -eq 0 ]] && grep -qE '^\s*Passed: +2\s*$' "$LOGS/tests.log" && ! grep -qE '^\s*Skipped: +[1-9]' "$LOGS/tests.log"; then
+# A skipped test exits 0 too: require every test to have actually run and passed. Four tests: the
+# boot with every app, the offline boot, and the window rendered in a worker with its measurements
+# (ADR 0133, TrimmedPublishTests.RemoteWindows.cs).
+EXPECTED_TESTS=4
+if [[ $code -eq 0 ]] && grep -qE "^\s*Passed: +$EXPECTED_TESTS\s*$" "$LOGS/tests.log" && ! grep -qE '^\s*Skipped: +[1-9]' "$LOGS/tests.log"; then
     [[ -z "$PWA_URL" ]] && log "note: the offline test did not run (no 127.0.0.2)"
     log "RESULT: PASS"
     exit 0

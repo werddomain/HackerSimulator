@@ -36,6 +36,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="HackerOs.Platform.WorkerHost.Tests" />
+    <!-- ADR 0133: the window renderer tests build a WorkerWindowRun around a fake post. -->
+    <InternalsVisibleTo Include="HackerOs.Platform.RemoteRendering.Tests" />
   </ItemGroup>
 
 </Project>

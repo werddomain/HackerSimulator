@@ -41,6 +41,8 @@
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.Core\HackerOs.Platform.Core.csproj" />
     <!-- ADR 0070/0071: commands and services in Web Workers; part of the boot set, since every worker loads it. -->
     <ProjectReference Include="..\..\Platform\HackerOs.Platform.WorkerHost\HackerOs.Platform.WorkerHost.csproj" />
+    <!-- ADR 0129 trial, ADR 0133: window apps rendered in a worker (off by default). -->
+    <ProjectReference Include="..\..\Platform\HackerOs.Platform.RemoteRendering\HackerOs.Platform.RemoteRendering.csproj" />
     <ProjectReference Include="..\..\Platform\HackerOs.Theming.Blazor\HackerOs.Theming.Blazor.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Icons\HackerOs.AppSdk.Icons.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.FileView\HackerOs.AppSdk.FileView.csproj" />

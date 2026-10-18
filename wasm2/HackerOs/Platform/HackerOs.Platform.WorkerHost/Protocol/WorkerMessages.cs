@@ -70,6 +70,13 @@ internal static class WorkerMessageType
     /// </summary>
     public const string BackgroundJobProgress = "bgp";
 
+    /// <summary>
+    /// An input <c>d</c> (a JSON object) for the window process <c>p</c> rendered in this worker (ADR
+    /// 0129 trial, ADR 0133): a DOM event, the answer to a dialog, the window's close. Opaque to the
+    /// worker host; read by the process's <see cref="Worker.IWorkerWindowRunner"/>.
+    /// </summary>
+    public const string UiInput = "uin";
+
     // ---- worker → OS ------------------------------------------------------------------------
 
     /// <summary>The worker's .NET side is up and its assemblies are loaded.</summary>
@@ -107,6 +114,12 @@ internal static class WorkerMessageType
 
     /// <summary>The reply <c>r</c> of the process to the exchange <c>x</c> of its socket <c>sk</c>.</summary>
     public const string HttpResponse = "hres";
+
+    /// <summary>
+    /// An output <c>d</c> (a JSON object) of the window process <c>p</c> (ADR 0129 trial): a batch of
+    /// DOM changes, a dialog request. Opaque to the worker host; read by the window's host on the page.
+    /// </summary>
+    public const string UiOutput = "ui";
 }
 
 /// <summary>Writes and reads protocol messages: compact JSON, UTF-16 strings on the pipe.</summary>

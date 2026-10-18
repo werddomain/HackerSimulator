@@ -5,10 +5,13 @@ using HackerOs.Platform.Blazor.Hosting;
 using HackerOs.Platform.Blazor.LazyLoading;
 using HackerOs.Platform.Core.Apps;
 using HackerOs.Platform.Core.ServerConnection;
+using HackerOs.Platform.RemoteRendering;
+using HackerOs.Platform.RemoteRendering.Host;
 using HackerOs.Platform.WorkerHost;
 using HackerOs.Simulation.Abstractions.Workers;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HackerOs.Ecosystem;
@@ -108,9 +111,24 @@ public static partial class HackerOsBrowserHostExtensions
                 PreloadAssemblies = [.. preload],
                 KnownAssemblies = [.. apps.LazyAssemblyNames]
             });
+            // ADR 0129 trial, ADR 0133: window apps rendered in a worker, off unless
+            // HackerOs:RemoteWindowRendering:Enabled is true in appsettings.json.
+            builder.Services.AddHackerOsRemoteWindowRendering(ReadRemoteWindowRendering(builder.Configuration));
         }
 
         return builder;
+    }
+
+    /// <summary>Reads <c>HackerOs:RemoteWindowRendering</c> (ADR 0133): <c>Enabled</c>, and optionally <c>Apps</c>.</summary>
+    private static RemoteWindowRenderingOptions ReadRemoteWindowRendering(IConfiguration configuration)
+    {
+        IConfigurationSection section = configuration.GetSection(RemoteWindowRenderingOptions.SectionName);
+        RemoteWindowRenderingOptions options = new()
+        {
+            Enabled = bool.TryParse(section["Enabled"], out bool enabled) && enabled
+        };
+        string[] listed = [.. section.GetSection("Apps").GetChildren().Select(static app => app.Value).OfType<string>()];
+        return listed.Length > 0 ? options with { Apps = listed } : options;
     }
 
     [SupportedOSPlatform("browser")]

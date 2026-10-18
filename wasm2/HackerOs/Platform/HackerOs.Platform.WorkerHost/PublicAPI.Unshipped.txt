@@ -4,3 +4,21 @@ HackerOs.Platform.WorkerHost.Host.WorkerPoolOptions.KnownAssemblies.init -> void
 HackerOs.Platform.WorkerHost.Host.WorkerRemoteProcessHost.CanRunBackgroundJobs.get -> bool
 HackerOs.Platform.WorkerHost.Host.WorkerRemoteProcessHost.RunBackgroundJobAsync(HackerOs.Platform.Core.Execution.RemoteBackgroundJobLaunch! launch, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<HackerOs.Platform.Core.Execution.RemoteProcessExit!>!
 HackerOs.Platform.WorkerHost.Host.WorkerPool.RecycleAfterOomKill(long pid) -> bool
+HackerOs.Platform.WorkerHost.Host.RemoteWindowProcess
+HackerOs.Platform.WorkerHost.Host.RemoteWindowProcess.CloseAsync(System.Action<System.Text.Json.Utf8JsonWriter!>! close) -> System.Threading.Tasks.Task!
+HackerOs.Platform.WorkerHost.Host.RemoteWindowProcess.Exit.get -> System.Threading.Tasks.Task<HackerOs.Platform.Core.Execution.RemoteProcessExit!>!
+HackerOs.Platform.WorkerHost.Host.RemoteWindowProcess.Pid.get -> long
+HackerOs.Platform.WorkerHost.Host.RemoteWindowProcess.Send(System.Action<System.Text.Json.Utf8JsonWriter!>! write) -> void
+HackerOs.Platform.WorkerHost.Host.RemoteWindowProcess.WorkerId.get -> int
+HackerOs.Platform.WorkerHost.Host.RemoteWindowProcess.WorkerMemoryBytes.get -> long
+HackerOs.Platform.WorkerHost.Host.WorkerRemoteProcessHost.StartWindowAsync(HackerOs.Platform.Core.Execution.RemoteProcessLaunch! launch, System.Type! runnerType, System.Action<System.Text.Json.JsonElement>! receiver, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<HackerOs.Platform.WorkerHost.Host.RemoteWindowProcess!>!
+HackerOs.Platform.WorkerHost.Worker.IWorkerWindowRunner
+HackerOs.Platform.WorkerHost.Worker.IWorkerWindowRunner.RunAsync(HackerOs.Platform.WorkerHost.Worker.WorkerWindowRun! run, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<int>!
+HackerOs.Platform.WorkerHost.Worker.WorkerWindowRun
+HackerOs.Platform.WorkerHost.Worker.WorkerWindowRun.Context.get -> HackerOs.AppSdk.IAppExecutionContext!
+HackerOs.Platform.WorkerHost.Worker.WorkerWindowRun.EntryPointType.get -> System.Type!
+HackerOs.Platform.WorkerHost.Worker.WorkerWindowRun.Log(string! line) -> void
+HackerOs.Platform.WorkerHost.Worker.WorkerWindowRun.Pid.get -> long
+HackerOs.Platform.WorkerHost.Worker.WorkerWindowRun.Send(System.Action<System.Text.Json.Utf8JsonWriter!>! write) -> void
+HackerOs.Platform.WorkerHost.Worker.WorkerWindowRun.SetReceiver(System.Action<System.Text.Json.JsonElement>! receiver) -> void
+static readonly HackerOs.Platform.WorkerHost.Host.RemoteWindowProcess.CloseTimeout -> System.TimeSpan
