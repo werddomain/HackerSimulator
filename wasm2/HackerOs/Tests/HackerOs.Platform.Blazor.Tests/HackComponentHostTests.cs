@@ -79,12 +79,78 @@ public sealed class HackComponentHostTests
         Assert.Equal("org.hackeros.beta", resolution.ProviderAppId);
     }
 
+    [Fact]
+    public async Task A_platform_component_is_resolved_without_loading_any_app()
+    {
+        var loads = new List<string>();
+        HackComponentHost host = CreateHost(
+            [],
+            loads: loads,
+            platform: [new HackPlatformComponent(AppComponentContracts.ContextMenu, typeof(TestEmbed))]);
+
+        HackComponentResolution resolution = await host.ResolveAsync(AppComponentContracts.ContextMenu);
+
+        Assert.True(resolution.IsResolved);
+        Assert.Equal(typeof(TestEmbed), resolution.ComponentType);
+        Assert.Equal(HackComponentResolution.PlatformProviderId, resolution.ProviderAppId);
+        Assert.Empty(loads);
+    }
+
+    [Fact]
+    public void A_platform_component_must_be_embeddable()
+    {
+        Assert.Throws<ArgumentException>(() => new HackPlatformComponent(AppComponentContracts.ContextMenu, typeof(NotEmbeddable)));
+    }
+
+    [Fact]
+    public async Task A_reserved_contract_is_never_given_to_an_app_that_is_not_a_system_app()
+    {
+        AppManifest impostor = CreateManifest("org.example.impostor", typeof(TestEmbed), AppComponentContracts.FileView);
+        var errors = new List<string>();
+        HackComponentHost host = CreateHost([impostor], errors: errors);
+
+        HackComponentResolution resolution = await host.ResolveAsync(AppComponentContracts.FileView);
+
+        Assert.False(resolution.IsResolved);
+        Assert.Empty(host.GetProviders(AppComponentContracts.FileView));
+        // ADR 0148 §5: the OS's own control missing is a fault, written to the system log.
+        string error = Assert.Single(errors);
+        Assert.Contains(AppComponentContracts.FileView, error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_reserved_contract_is_given_to_a_system_app()
+    {
+        AppManifest explorer = CreateManifest("org.hackeros.explorer", typeof(TestEmbed), AppComponentContracts.FileView);
+        var errors = new List<string>();
+        HackComponentHost host = CreateHost([explorer], systemAppIds: ["org.hackeros.explorer"], errors: errors);
+
+        HackComponentResolution resolution = await host.ResolveAsync(AppComponentContracts.FileView);
+
+        Assert.Equal("org.hackeros.explorer", resolution.ProviderAppId);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public async Task An_open_contract_without_provider_is_not_written_to_the_system_log()
+    {
+        var errors = new List<string>();
+        HackComponentHost host = CreateHost([], errors: errors);
+
+        HackComponentResolution resolution = await host.ResolveAsync(Contract);
+
+        Assert.False(resolution.IsResolved);
+        Assert.Empty(errors);
+    }
+
     private static HackComponentHost CreateHost(
         IReadOnlyList<AppManifest> manifests,
         IReadOnlyList<string>? disabled = null,
         IReadOnlyList<string>? systemAppIds = null,
         IReadOnlyList<string>? unavailable = null,
-        List<string>? loads = null)
+        List<string>? loads = null,
+        IReadOnlyList<HackPlatformComponent>? platform = null,
+        List<string>? errors = null)
     {
         AppCatalog catalog = Assert.IsType<AppCatalog>(AppCatalog.Build(manifests, systemAppIds ?? []).Catalog);
         var enablement = new AppEnablementRegistry(catalog);
@@ -100,10 +166,10 @@ public sealed class HackComponentHostTests
             AppManifest manifest = catalog.Manifests[appId];
             Assembly assembly = typeof(TestEmbed).Assembly;
             return Task.FromResult<(AppDescriptor?, string?)>((new AppDescriptor(manifest, typeof(TestWindow), assembly), null));
-        });
+        }, platform, errors is null ? null : errors.Add);
     }
 
-    private static AppManifest CreateManifest(string id, Type componentType) => new()
+    private static AppManifest CreateManifest(string id, Type componentType, string contract = Contract) => new()
     {
         Id = id,
         Name = id,
@@ -115,7 +181,7 @@ public sealed class HackComponentHostTests
         SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
         Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, []),
         Resources = AppResourceProfileManifest.None,
-        Components = [new AppComponentManifest(Contract, AssemblyName, componentType.FullName!)]
+        Components = [new AppComponentManifest(contract, AssemblyName, componentType.FullName!)]
     };
 
     public sealed class TestWindow : WindowAppBase;

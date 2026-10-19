@@ -284,7 +284,7 @@ les lit ici. Voir [`accessibility.md`](accessibility.md).
 
 | Type | Rôle | Document |
 |---|---|---|
-| `HackComponentContracts` | Noms des contrats : `Terminal` (`hackeros.terminal`). | [`embedded-components.md`](embedded-components.md) |
+| `HackComponentContracts` | Noms des contrats : `Terminal` (`hackeros.terminal`) ; réservés à l'OS (ADR 0148) : `FileView` (`hackeros.file-view`), `FileDialogs` (`hackeros.file-dialogs`), `ContextMenu` (`hackeros.context-menu`). | [`embedded-components.md`](embedded-components.md) |
 | `IHackTerminal`, `HackTerminalOptions`, `HackTerminalCommandResult`, `HackTerminalOutputEventArgs` | Piloter un terminal embarqué : `RunCommandAsync`, `SetWorkingDirectoryAsync`, `SendInputAsync`, `ReadOutput`, `ClearAsync`, `FocusAsync`, `WorkingDirectory`, `Title`, `IsRunning`, `IsBusy`, `OutputReceived`, `CommandCompleted`, `StateChanged`, `Exited`. | [`embedded-components.md`](embedded-components.md) |
 
 ### Shell (`HackerOs.AppSdk.Shell` et `HackerOs.AppSdk`)
@@ -420,7 +420,7 @@ annulation.
 | `BrowserFilePicker` (`.Interop`) | `PickAsync(accept)` → `BrowserPickedFile(Name, Content)` ou `null` : ouvrir un fichier du vrai disque ; seulement juste après un clic ou une touche (sinon `InvalidOperationException`) | [`system-backup.md`](system-backup.md) |
 | `IDisplaySurfaceService`, `IDisplaySurface`, `DisplaySurfaceContent` (`.Display`) | Fenêtres détachées du navigateur hôte (ADR 0078) : `OpenAsync(DisplaySurfaceOptions)` → `DisplaySurfaceOpenResult` (`Opened`, `Blocked`, `Unavailable`), `Surfaces`, `SurfacesChanged`, `CloseAllAsync` ; surface `Id`, `Title`, `Width`, `Height`, `HasFocus`, `State`, `Changed`, `SetTitleAsync`, `FocusAsync`, `CloseAsync` ; `<DisplaySurfaceContent Surface="…">` y dessine son contenu (`Surface` facultatif : sans surface ouverte, le contenu reste en place) | [`detached-display-windows.md`](detached-display-windows.md) |
 | `IAppWindowGateway` | Fenêtre d'une app vue par le SDK (SDK 1.1, ADR 0123) : `Title`, `DefaultTitle`, `SetTitleAsync`. Implémentée par la plateforme et donnée à `WindowAppBase` par valeur en cascade ; une app passe par `SetWindowTitleAsync` | [`window-model.md`](window-model.md) |
-| `HackEmbeddedComponent<TController>` (`.Components`) | Affiche le composant d'une autre app pour un contrat : `Contract`, `Options`, `ControllerChanged`, `Unavailable` ; `HackEmbeddableComponent` est la base du composant fourni (`Options`, `ControllerReady`, `HostContext`) | [`embedded-components.md`](embedded-components.md) |
+| `HackEmbeddedComponent<TController>` (`.Components`) | Affiche le composant d'une autre app pour un contrat : `Contract`, `Options`, `Parameters`, `ControllerChanged`, `Unavailable` ; `HackEmbeddableComponent` est la base du composant fourni (`Options`, `ControllerReady`, `HostContext`, `UnmatchedParameters`) ; `HackContractComponent<TController>` est la base des composants typés (`AddProviderParameters`, `Controller`, ADR 0153) | [`embedded-components.md`](embedded-components.md) |
 
 ### Sites Blazor (`HackerOs.AppSdk.Web.Blazor.Sites`)
 

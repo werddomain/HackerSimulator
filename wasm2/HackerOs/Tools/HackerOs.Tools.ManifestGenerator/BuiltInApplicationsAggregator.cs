@@ -79,6 +79,7 @@ public static class BuiltInApplicationsAggregator
         {
             diagnostics.AddRange(FindDuplicateCommands(applications.Select(item => item.Manifest)));
             diagnostics.AddRange(FindNegativeOomScoreAdjust(applications));
+            diagnostics.AddRange(FindReservedComponentContracts(applications));
         }
 
         return diagnostics.Count > 0
@@ -137,6 +138,23 @@ public static class BuiltInApplicationsAggregator
                 GeneratorCodes.NegativeOomScoreAdjust,
                 item.Manifest.Id,
                 $"oomScoreAdj {item.Manifest.OomScoreAdj} is negative: only a system app (IsSystemApp=\"true\" on the host's ProjectReference) may lower its OOM score."))];
+    }
+
+    /// <summary>
+    /// ADR 0148, section 3.3, at build: only a system app may provide the OS's file view and file
+    /// dialogs. One <c>HOSAPP0025</c> per non-system app and reserved contract it registers, in app
+    /// id order (the platform-only <c>hackeros.context-menu</c> is already refused by
+    /// <see cref="AppManifestValidator.Validate"/> when the app's own manifest is generated).
+    /// </summary>
+    /// <param name="applications">The host's apps with their system flag.</param>
+    /// <returns>The diagnostics, empty when no non-system app registers a reserved contract.</returns>
+    public static IReadOnlyList<GeneratorDiagnostic> FindReservedComponentContracts(IEnumerable<BuiltInApplication> applications)
+    {
+        ArgumentNullException.ThrowIfNull(applications);
+        return [.. applications
+            .OrderBy(static item => item.Manifest.Id, StringComparer.Ordinal)
+            .SelectMany(static item => AppManifestValidator.ValidateComponentProviders(item.Manifest, item.IsSystemApp)
+                .Select(error => new GeneratorDiagnostic(GeneratorCodes.ReservedComponentContract, item.Manifest.Id, error.Message)))];
     }
 
     /// <summary>

@@ -33,3 +33,6 @@ HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.BrowserMemoryMeasurem
 HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.TimerResolution.get -> System.TimeSpan
 HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.TimerResolution.init -> void
 HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.HackCrossOriginIsolationStatus(bool IsIsolated, HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason Reason, HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting Setting, string? EmbedderPolicy, bool SharedPipes, bool SynchronousWorkerCalls, bool BrowserMemoryMeasurement, System.TimeSpan TimerResolution) -> void
+const HackerOs.AppSdk.Components.HackComponentContracts.ContextMenu = "hackeros.context-menu" -> string!
+const HackerOs.AppSdk.Components.HackComponentContracts.FileDialogs = "hackeros.file-dialogs" -> string!
+const HackerOs.AppSdk.Components.HackComponentContracts.FileView = "hackeros.file-view" -> string!

@@ -83,6 +83,36 @@ public sealed class BuiltInApplicationsAggregatorTests : IDisposable
     }
 
     [Fact]
+    public void A_reserved_component_contract_is_refused_for_a_non_system_app_with_HOSAPP0025()
+    {
+        AppManifest manifest = new()
+        {
+            Id = "org.example.files",
+            Name = "Files",
+            Version = "1.0.0",
+            PublisherId = "org.example",
+            Description = "Registers the file view.",
+            Kind = AppKind.Window,
+            EntryPoint = new AppEntryPointManifest("Example.Files", "Example.Files.Window"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
+            Presentation = new PresentationManifest("files", AppLaunchVisibility.Visible, []),
+            Resources = AppResourceProfileManifest.None,
+            Components =
+            [
+                new AppComponentManifest(AppComponentContracts.FileView, "Example.Files", "Example.Files.View"),
+                new AppComponentManifest("hackeros.terminal", "Example.Files", "Example.Files.Terminal")
+            ]
+        };
+
+        GeneratorDiagnostic diagnostic = Assert.Single(
+            BuiltInApplicationsAggregator.FindReservedComponentContracts([new BuiltInApplication(false, manifest)]));
+        Assert.Equal("HOSAPP0025", diagnostic.Code);
+        Assert.Equal("org.example.files", diagnostic.Subject);
+        Assert.Contains(AppComponentContracts.FileView, diagnostic.Message, StringComparison.Ordinal);
+        Assert.Empty(BuiltInApplicationsAggregator.FindReservedComponentContracts([new BuiltInApplication(true, manifest)]));
+    }
+
+    [Fact]
     public void Command_named_like_a_shell_builtin_fails_with_HOSAPP0022()
     {
         AggregationResult result = BuiltInApplicationsAggregator.Aggregate(

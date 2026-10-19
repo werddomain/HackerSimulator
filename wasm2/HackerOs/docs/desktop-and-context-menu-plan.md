@@ -365,4 +365,5 @@ documentation et l'index [`README.md`](README.md).
 - [x] Valider le récapitulatif.
 - [x] Écrire ce plan.
 - [x] Chantier 0 : ADR 0148 à 0152 ([0148](adr/0148-sdk-contracts-and-os-provided-controls.md), [0149](adr/0149-sdk-2-0-file-view-removal.md), [0150](adr/0150-os-context-menu.md), [0151](adr/0151-app-registered-file-menu-entries.md), [0152](adr/0152-desktop-icons.md)).
-- [ ] Chantiers 1 à 6.
+- [x] Chantier 1 : hôte de contrats générique (`HackContractComponent<T>`, registre dans `AppCatalog`, contrats réservés et `HOSAPP0025`, fournisseurs de la plateforme, erreur au journal ; [ADR 0153](adr/0153-contract-host-implementation-adjustments.md), [`embedded-components.md`](embedded-components.md)).
+- [ ] Chantiers 2 à 6.

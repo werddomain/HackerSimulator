@@ -881,10 +881,15 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<IHackComponentHost>(provider =>
         {
             AppLifecycleOrchestrator orchestrator = provider.GetRequiredService<AppLifecycleOrchestrator>();
+            LogFileWriter? log = provider.GetService<LogFileWriter>();
             return new HackComponentHost(
                 provider.GetRequiredService<AppCatalog>(),
                 provider.GetRequiredService<IAppEnablementRegistry>(),
-                orchestrator.EnsureDescriptorAsync);
+                orchestrator.EnsureDescriptorAsync,
+                platformComponents: provider.GetServices<HackPlatformComponent>(),
+                reportError: log is null
+                    ? null
+                    : message => log.Write(LogFileTarget.Syslog, DiagnosticSeverity.Error, "components", message));
         });
         // Blazor sites (ADR 0084): the browser asks the OS to start a site's renderer process.
         services.AddScoped<IHackWebSiteHost>(provider =>

@@ -1,1 +1,11 @@
 #nullable enable
+HackerOs.App.Abstractions.AppComponentContracts
+HackerOs.App.Abstractions.AppComponentProviderScope
+HackerOs.App.Abstractions.AppComponentProviderScope.AnyApp = 0 -> HackerOs.App.Abstractions.AppComponentProviderScope
+HackerOs.App.Abstractions.AppComponentProviderScope.Platform = 2 -> HackerOs.App.Abstractions.AppComponentProviderScope
+HackerOs.App.Abstractions.AppComponentProviderScope.SystemApps = 1 -> HackerOs.App.Abstractions.AppComponentProviderScope
+const HackerOs.App.Abstractions.AppComponentContracts.ContextMenu = "hackeros.context-menu" -> string!
+const HackerOs.App.Abstractions.AppComponentContracts.FileDialogs = "hackeros.file-dialogs" -> string!
+const HackerOs.App.Abstractions.AppComponentContracts.FileView = "hackeros.file-view" -> string!
+static HackerOs.App.Abstractions.AppComponentContracts.GetProviderScope(string! contract) -> HackerOs.App.Abstractions.AppComponentProviderScope
+static HackerOs.App.Abstractions.AppManifestValidator.ValidateComponentProviders(HackerOs.App.Abstractions.AppManifest! manifest, bool isSystemApp) -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.ManifestValidationError!>!
