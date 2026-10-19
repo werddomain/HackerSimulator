@@ -298,6 +298,35 @@ public sealed class AppManifestValidatorTests
     }
 
     [Fact]
+    public void Validate_rejects_an_app_registering_the_platform_context_menu()
+    {
+        AppManifest manifest = CreateValidManifest() with
+        {
+            Components = [new AppComponentManifest(AppComponentContracts.ContextMenu, "HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.Menu")]
+        };
+
+        Assert.Contains(AppManifestValidator.Validate(manifest).Errors, error => error.Code == "manifest.component.contract.platform");
+    }
+
+    [Theory]
+    [InlineData(AppComponentContracts.FileView, false, true)]
+    [InlineData(AppComponentContracts.FileDialogs, false, true)]
+    [InlineData(AppComponentContracts.FileView, true, false)]
+    [InlineData("hackeros.terminal", false, false)]
+    public void ValidateComponentProviders_keeps_reserved_contracts_to_system_apps(string contract, bool isSystemApp, bool refused)
+    {
+        AppManifest manifest = CreateValidManifest() with
+        {
+            Components = [new AppComponentManifest(contract, "HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.Embed")]
+        };
+
+        // The file contracts are well-formed for Validate: only the host knows whether the app is a system app.
+        Assert.True(AppManifestValidator.Validate(manifest).IsValid);
+        IReadOnlyList<ManifestValidationError> errors = AppManifestValidator.ValidateComponentProviders(manifest, isSystemApp);
+        Assert.Equal(refused, errors.Any(error => error.Code == "manifest.component.contract.system"));
+    }
+
+    [Fact]
     public void Validate_rejects_a_contract_registered_twice()
     {
         var component = new AppComponentManifest("hackeros.terminal", "HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.Embed");

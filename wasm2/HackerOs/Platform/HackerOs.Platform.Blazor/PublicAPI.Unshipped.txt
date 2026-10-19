@@ -1,1 +1,6 @@
 #nullable enable
+HackerOs.Platform.Blazor.Components.HackComponentHost.HackComponentHost(HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry! enablement, System.Func<string!, System.Threading.CancellationToken, System.Threading.Tasks.Task<(HackerOs.Platform.Core.Discovery.AppDescriptor? Descriptor, string? Error)>!>! descriptors, System.Collections.Generic.IEnumerable<HackerOs.Platform.Blazor.Components.HackPlatformComponent!>? platformComponents, System.Action<string!>? reportError) -> void
+HackerOs.Platform.Blazor.Components.HackPlatformComponent
+HackerOs.Platform.Blazor.Components.HackPlatformComponent.ComponentType.get -> System.Type!
+HackerOs.Platform.Blazor.Components.HackPlatformComponent.Contract.get -> string!
+HackerOs.Platform.Blazor.Components.HackPlatformComponent.HackPlatformComponent(string! contract, System.Type! componentType) -> void

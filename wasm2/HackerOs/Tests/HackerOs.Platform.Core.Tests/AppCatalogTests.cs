@@ -191,6 +191,39 @@ public sealed class AppCatalogTests
             catalog.Warnings.Select(warning => (warning.AppId, warning.Code)));
     }
 
+    [Fact]
+    public void Build_registers_component_providers_system_apps_first()
+    {
+        AppManifest alpha = CreateProvider("org.example.alpha", "hackeros.terminal");
+        AppManifest zeta = CreateProvider("org.hackeros.zeta", "hackeros.terminal");
+
+        AppCatalog catalog = AppCatalog.Build([alpha, zeta], ["org.hackeros.zeta"]).Catalog!;
+
+        Assert.Equal(["org.hackeros.zeta", "org.example.alpha"], catalog.GetComponentProviders("hackeros.terminal").Select(provider => provider.AppId));
+        Assert.Empty(catalog.GetComponentProviders("hackeros.unknown"));
+        Assert.Empty(catalog.Warnings);
+    }
+
+    [Fact]
+    public void Build_ignores_a_reserved_contract_registered_by_an_app_that_is_not_a_system_app()
+    {
+        AppManifest explorer = CreateProvider("org.hackeros.explorer", AppComponentContracts.FileView);
+        AppManifest impostor = CreateProvider("org.example.impostor", AppComponentContracts.FileView);
+
+        AppCatalog catalog = AppCatalog.Build([explorer, impostor], ["org.hackeros.explorer"]).Catalog!;
+
+        // The impostor stays installable: only its registration is refused.
+        Assert.Equal(2, catalog.Manifests.Count);
+        Assert.Equal(["org.hackeros.explorer"], catalog.GetComponentProviders(AppComponentContracts.FileView).Select(provider => provider.AppId));
+        AppCatalogError warning = Assert.Single(catalog.Warnings);
+        Assert.Equal(("org.example.impostor", "catalog.component.reserved"), (warning.AppId, warning.Code));
+    }
+
+    private static AppManifest CreateProvider(string appId, string contract) => CreateManifest(appId) with
+    {
+        Components = [new AppComponentManifest(contract, "HackerOs.TestApps", "TestApps.Embed")]
+    };
+
     private static AppManifest CreateCommand(string appId, string name, IReadOnlyList<string> aliases) => CreateManifest(appId) with
     {
         Kind = AppKind.Terminal,

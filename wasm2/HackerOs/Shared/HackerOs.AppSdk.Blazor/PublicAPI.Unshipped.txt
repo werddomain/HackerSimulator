@@ -1,1 +1,19 @@
 #nullable enable
+abstract HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.AddProviderParameters(System.Collections.Generic.IDictionary<string!, object?>! parameters) -> void
+abstract HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.Contract.get -> string!
+const HackerOs.AppSdk.Blazor.Components.HackComponentResolution.PlatformProviderId = "platform" -> string!
+HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>
+HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.Controller.get -> TController?
+HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.ControllerChanged.get -> Microsoft.AspNetCore.Components.EventCallback<TController?>
+HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.ControllerChanged.set -> void
+HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.HackContractComponent() -> void
+HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.Unavailable.get -> Microsoft.AspNetCore.Components.RenderFragment<string!>?
+HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.Unavailable.set -> void
+HackerOs.AppSdk.Blazor.Components.HackEmbeddableComponent.UnmatchedParameters.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object!>?
+HackerOs.AppSdk.Blazor.Components.HackEmbeddableComponent.UnmatchedParameters.set -> void
+HackerOs.AppSdk.Blazor.Components.HackEmbeddedComponent<TController>.Parameters.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>?
+HackerOs.AppSdk.Blazor.Components.HackEmbeddedComponent<TController>.Parameters.set -> void
+override HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder! builder) -> void
+override HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.OnParametersSet() -> void
+virtual HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.OnControllerChangedAsync(TController? controller) -> System.Threading.Tasks.Task!
+virtual HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.Options.get -> object?

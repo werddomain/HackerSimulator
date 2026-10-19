@@ -17,4 +17,21 @@ public static class HackComponentContracts
     /// and configured with <see cref="HackTerminalOptions"/>. Provided by the Terminal app.
     /// </summary>
     public const string Terminal = "hackeros.terminal";
+
+    /// <summary>
+    /// The shared file view of the OS (ADR 0148). Reserved: only a system app (the File Explorer)
+    /// may provide it; another app's registration is ignored by the OS and fails the host build.
+    /// </summary>
+    public const string FileView = HackerOs.App.Abstractions.AppComponentContracts.FileView;
+
+    /// <summary>
+    /// The shared file dialogs of the OS: Open with, Properties, name conflicts and the file pickers
+    /// (ADR 0148). Reserved to system apps, like <see cref="FileView"/>.
+    /// </summary>
+    public const string FileDialogs = HackerOs.App.Abstractions.AppComponentContracts.FileDialogs;
+
+    /// <summary>
+    /// The OS context menu (ADR 0150). Provided by the platform itself: no app may register it.
+    /// </summary>
+    public const string ContextMenu = HackerOs.App.Abstractions.AppComponentContracts.ContextMenu;
 }

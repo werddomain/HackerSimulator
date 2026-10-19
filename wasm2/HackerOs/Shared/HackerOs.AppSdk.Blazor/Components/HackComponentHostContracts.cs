@@ -28,6 +28,13 @@ public sealed record HackComponentResolution(
     string? ProviderAppId,
     string? Error)
 {
+    /// <summary>
+    /// The <see cref="ProviderAppId"/> of a component the platform provides itself, without a
+    /// manifest (ADR 0148 §3.2, e.g. the context menu). Never a valid app id: an app id has at least
+    /// three dotted segments.
+    /// </summary>
+    public const string PlatformProviderId = "platform";
+
     /// <summary>Gets whether a component can be embedded.</summary>
     public bool IsResolved => ComponentType is not null;
 
@@ -62,6 +69,20 @@ public abstract class HackEmbeddableComponent : HackComponentBase
     /// <summary>Gets or sets the callback receiving the controller once the component is ready.</summary>
     [Parameter]
     public EventCallback<object?> ControllerReady { get; set; }
+
+    /// <summary>
+    /// Gets or sets the parameters the host passed that this component does not declare: a host
+    /// built on a newer SDK can pass a parameter an older provider does not know yet, and the
+    /// provider still renders, as an older library ignores a newer caller's optional argument.
+    /// </summary>
+    /// <remarks>
+    /// The typed host components (<see cref="HackContractComponent{TController}"/>) forward their
+    /// parameters by name to the provider; the provider declares the ones it uses as ordinary
+    /// <c>[Parameter]</c> properties. A provider must not declare its own
+    /// <c>CaptureUnmatchedValues</c> parameter: Blazor allows only one per component.
+    /// </remarks>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? UnmatchedParameters { get; set; }
 
     /// <summary>Gets the execution context of the host window, or throws when the component is not inside one.</summary>
     protected IAppExecutionContext HostContext =>

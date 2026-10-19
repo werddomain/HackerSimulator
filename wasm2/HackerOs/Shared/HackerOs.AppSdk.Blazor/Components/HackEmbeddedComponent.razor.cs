@@ -15,6 +15,8 @@ public partial class HackEmbeddedComponent<TController> : IAsyncDisposable
     private HackComponentResolution? _resolution;
     private Dictionary<string, object?> _parameters = new(StringComparer.Ordinal);
     private string? _resolvedContract;
+    private IReadOnlyDictionary<string, object?>? _forwarded;
+    private static readonly IReadOnlyDictionary<string, object?> EmptyParameters = new Dictionary<string, object?>();
     private readonly CancellationTokenSource _disposeCts = new();
 
     [Inject]
@@ -27,6 +29,15 @@ public partial class HackEmbeddedComponent<TController> : IAsyncDisposable
     /// <summary>Gets or sets the contract's options, passed to the component when it is created.</summary>
     [Parameter]
     public object? Options { get; set; }
+
+    /// <summary>
+    /// Gets or sets other parameters passed by name to the provider's component, beside
+    /// <see cref="Options"/> (ADR 0148 §1): the typed host components
+    /// (<see cref="HackContractComponent{TController}"/>) forward theirs, callbacks included, this
+    /// way. The provider receives a new set each time a new dictionary is given.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyDictionary<string, object?>? Parameters { get; set; }
 
     /// <summary>
     /// Gets or sets the callback receiving the controller once the component is ready (or
@@ -46,15 +57,22 @@ public partial class HackEmbeddedComponent<TController> : IAsyncDisposable
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
-        // A new dictionary only when the options change: the embedded component is not
-        // re-rendered each time its host re-renders.
-        if (_parameters.Count == 0 || !ReferenceEquals(_parameters[nameof(HackEmbeddableComponent.Options)], Options))
+        // A new dictionary only when the options or the forwarded parameters change: the embedded
+        // component is not re-rendered each time its host re-renders.
+        if (_parameters.Count == 0
+            || !ReferenceEquals(_parameters[nameof(HackEmbeddableComponent.Options)], Options)
+            || !ReferenceEquals(_forwarded, Parameters))
         {
-            _parameters = new Dictionary<string, object?>(StringComparer.Ordinal)
+            _forwarded = Parameters;
+            _parameters = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach ((string name, object? value) in Parameters ?? EmptyParameters)
             {
-                [nameof(HackEmbeddableComponent.Options)] = Options,
-                [nameof(HackEmbeddableComponent.ControllerReady)] = EventCallback.Factory.Create<object?>(this, OnControllerReadyAsync)
-            };
+                _parameters[name] = value;
+            }
+
+            // The contract's own two parameters always win over a forwarded one of the same name.
+            _parameters[nameof(HackEmbeddableComponent.Options)] = Options;
+            _parameters[nameof(HackEmbeddableComponent.ControllerReady)] = EventCallback.Factory.Create<object?>(this, OnControllerReadyAsync);
         }
 
         if (string.Equals(_resolvedContract, Contract, StringComparison.Ordinal))
