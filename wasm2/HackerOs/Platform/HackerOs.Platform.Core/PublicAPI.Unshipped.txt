@@ -5,3 +5,4 @@ HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway
 HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway.AppCrossOriginIsolationGateway(System.Func<HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus?>! status) -> void
 HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway.GetStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus!>
 static HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway.ToSdk(HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus! status) -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus!
+static readonly HackerOs.Platform.Core.Execution.BackgroundJobService.ParentExitGracePeriod -> System.TimeSpan

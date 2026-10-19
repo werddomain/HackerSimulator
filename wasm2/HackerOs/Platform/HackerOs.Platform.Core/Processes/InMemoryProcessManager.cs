@@ -162,7 +162,12 @@ public sealed class InMemoryProcessManager : IProcessManager
             // ADR 0127: like fork, the child starts with its parent's niceness unless asked otherwise.
             int nice = ProcessNice.Clamp(request.Nice
                 ?? (request.ParentPid is { } parent && _active.TryGetValue(parent, out Entry? parentEntry) ? parentEntry.Nice : ProcessNice.Default));
-            _active[pid] = new Entry(record, tokenSource, new ProcessControlBlock(pid)) { IsAuxiliary = request.Auxiliary, Nice = nice };
+            _active[pid] = new Entry(record, tokenSource, new ProcessControlBlock(pid))
+            {
+                IsAuxiliary = request.Auxiliary,
+                Nice = nice,
+                ParentExitGracePeriod = request.ParentExitGracePeriod is { } grace && grace > TimeSpan.Zero ? grace : null,
+            };
             _eventBus.Publish(new ProcessStateChangedEvent(pid, ProcessState.Created, ProcessState.Starting, now));
             return record;
         }
@@ -277,13 +282,51 @@ public sealed class InMemoryProcessManager : IProcessManager
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// A descendant started with <see cref="ProcessStartRequest.ParentExitGracePeriod"/> is not ended
+    /// here unless the kill is a <c>SIGKILL</c>: it receives a stop request (its <c>SIGTERM</c>) and
+    /// is killed only if it still runs at the end of its grace period (ADR 0147).
+    /// </remarks>
     public ProcessRecord Kill(ProcessId pid, ProcessExitReason reason = ProcessExitReason.Killed)
     {
+        List<(ProcessId Pid, TimeSpan GracePeriod)> graceful = [];
+        ProcessRecord ended;
         lock (_gate)
         {
             Entry entry = GetActiveEntry(pid);
-            KillDescendants(pid, IsSignalKill(reason));
-            return ForceTerminal(entry, reason);
+            KillDescendants(pid, IsSignalKill(reason), graceful);
+            ended = ForceTerminal(entry, reason);
+        }
+
+        // Outside the lock: StopAsync raises the stop request, whose handlers may call back into the OS.
+        foreach ((ProcessId childPid, TimeSpan gracePeriod) in graceful)
+        {
+            _ = StopAfterParentExitAsync(childPid, gracePeriod);
+        }
+
+        return ended;
+    }
+
+    /// <summary>
+    /// The parent-death signal of a descendant that asked for one (ADR 0147, like
+    /// <c>prctl(PR_SET_PDEATHSIG, SIGTERM)</c>): a stop request with <see cref="ProcessExitReason.DependencyStop"/>,
+    /// then a kill at the end of <paramref name="gracePeriod"/>. Whatever the process itself started and
+    /// left running is killed once it has ended.
+    /// </summary>
+    private async Task StopAfterParentExitAsync(ProcessId pid, TimeSpan gracePeriod)
+    {
+        try
+        {
+            await StopAsync(pid, gracePeriod, ProcessExitReason.DependencyStop).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is KeyNotFoundException or InvalidOperationException)
+        {
+            // Ended or stopping meanwhile.
+        }
+
+        lock (_gate)
+        {
+            KillDescendants(pid, signalKill: true, graceful: []);
         }
     }
 
@@ -402,8 +445,12 @@ public sealed class InMemoryProcessManager : IProcessManager
         }
     }
 
-    /// <summary>Ends every active descendant of a process; with <paramref name="signalKill"/>, as killed (ADR 0069).</summary>
-    private void KillDescendants(ProcessId parentPid, bool signalKill)
+    /// <summary>
+    /// Ends every active descendant of a process; with <paramref name="signalKill"/>, as killed (ADR 0069).
+    /// Without it, a descendant that has a parent-exit grace period is added to <paramref name="graceful"/>
+    /// instead, with its own descendants (ADR 0147).
+    /// </summary>
+    private void KillDescendants(ProcessId parentPid, bool signalKill, List<(ProcessId Pid, TimeSpan GracePeriod)> graceful)
     {
         List<ProcessId> children = [.. _active.Values
             .Where(e => e.Record.ParentPid == parentPid)
@@ -413,7 +460,13 @@ public sealed class InMemoryProcessManager : IProcessManager
         {
             if (_active.TryGetValue(childPid, out Entry? childEntry))
             {
-                KillDescendants(childPid, signalKill);
+                if (!signalKill && childEntry.ParentExitGracePeriod is { } gracePeriod)
+                {
+                    graceful.Add((childPid, gracePeriod));
+                    continue;
+                }
+
+                KillDescendants(childPid, signalKill, graceful);
                 if (signalKill)
                 {
                     childEntry.Control.MarkKilled();
@@ -547,5 +600,8 @@ public sealed class InMemoryProcessManager : IProcessManager
 
         /// <summary>The process's niceness (ADR 0127), <c>-20</c> to <c>19</c>.</summary>
         public int Nice { get; set; }
+
+        /// <summary>Its <see cref="ProcessStartRequest.ParentExitGracePeriod"/>, when positive (ADR 0147).</summary>
+        public TimeSpan? ParentExitGracePeriod { get; init; }
     }
 }

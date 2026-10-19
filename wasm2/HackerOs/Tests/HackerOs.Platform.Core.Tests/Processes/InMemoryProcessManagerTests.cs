@@ -116,6 +116,60 @@ public sealed partial class InMemoryProcessManagerTests
     }
 
     [Fact]
+    public async Task A_child_with_a_parent_exit_grace_period_gets_a_stop_request_then_a_kill()
+    {
+        Fixture fixture = new();
+        ProcessRecord parent = fixture.Manager.Start(fixture.RequestFor("com.hackeros.app"));
+        ProcessRecord child = fixture.Manager.Start(fixture.RequestFor("com.hackeros.app", parent.Pid) with
+        {
+            ParentExitGracePeriod = TimeSpan.FromSeconds(5),
+        });
+        ProcessRecord grandchild = fixture.Manager.Start(fixture.RequestFor("com.hackeros.helper", child.Pid));
+        fixture.Manager.MarkRunning(child.Pid);
+        CancellationToken token = fixture.Manager.GetCancellationToken(child.Pid);
+
+        fixture.Manager.Kill(parent.Pid, ProcessExitReason.CloseRequested);
+
+        // ADR 0147: SIGTERM at once (stopping, token cancelled), its own child left to it.
+        Assert.True(fixture.Manager.TryGetActive(child.Pid, out ProcessRecord? stopping));
+        Assert.Equal(ProcessState.Stopping, stopping!.State);
+        Assert.True(token.IsCancellationRequested);
+        Assert.True(fixture.Manager.TryGetActive(grandchild.Pid, out _));
+
+        // SIGKILL at the end of the grace period, with what it left running.
+        fixture.Clock.Advance(5);
+        await WaitUntilAsync(() => !fixture.Manager.TryGetActive(child.Pid, out _));
+        Assert.Equal(ProcessExitReason.Timeout, fixture.Manager.GetHistory().Single(r => r.Pid == child.Pid).ExitReason);
+        Assert.False(fixture.Manager.TryGetActive(grandchild.Pid, out _));
+    }
+
+    [Fact]
+    public void A_sigkill_of_the_parent_ends_a_child_with_a_grace_period_at_once()
+    {
+        Fixture fixture = new();
+        ProcessRecord parent = fixture.Manager.Start(fixture.RequestFor("com.hackeros.app"));
+        ProcessRecord child = fixture.Manager.Start(fixture.RequestFor("com.hackeros.app", parent.Pid) with
+        {
+            ParentExitGracePeriod = TimeSpan.FromSeconds(5),
+        });
+
+        fixture.Manager.Kill(parent.Pid);
+
+        Assert.False(fixture.Manager.TryGetActive(child.Pid, out _));
+        Assert.Equal(ProcessExitReason.DependencyStop, fixture.Manager.GetHistory().Single(r => r.Pid == child.Pid).ExitReason);
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        for (int i = 0; i < 200 && !condition(); i++)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.True(condition());
+    }
+
+    [Fact]
     public void Killing_a_parent_cascades_to_active_descendants_as_dependency_stop()
     {
         Fixture fixture = new();

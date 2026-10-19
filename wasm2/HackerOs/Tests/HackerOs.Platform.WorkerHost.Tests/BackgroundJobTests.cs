@@ -155,7 +155,7 @@ public sealed class BackgroundJobTests
 
     [Theory]
     [MemberData(nameof(BothModes))]
-    public async Task Ending_the_app_kills_its_tasks(bool workers)
+    public async Task Kill_minus_9_of_the_app_kills_its_tasks_at_once(bool workers)
     {
         await using OsFixture os = await StartAsync(workers);
         BackgroundJobCommands.Reset();
@@ -171,6 +171,57 @@ public sealed class BackgroundJobTests
         await OsFixture.WaitUntilAsync(() => !os.Manager.TryGetActive(job.Pid, out _), TimeSpan.FromSeconds(10), "the task dies with its app");
         await OsFixture.WaitUntilAsync(() => os.BackgroundJobs.GetJobs().Count == 0, TimeSpan.FromSeconds(10), "the task is forgotten");
         BackgroundJobCommands.Release();
+    }
+
+    [Theory]
+    [MemberData(nameof(BothModes))]
+    public async Task Closing_the_app_asks_its_tasks_to_stop_and_a_task_that_honors_it_ends_with_code_130(bool workers)
+    {
+        await using OsFixture os = await StartAsync(workers);
+        BackgroundJobCommands.Reset();
+
+        Task<ShellRun> running = os.RunAsync("bg-forever");
+        await OsFixture.WaitUntilAsync(() => os.BackgroundJobs.GetJobs().Count == 1, TimeSpan.FromSeconds(20), "the task starts");
+        BackgroundJobInfo job = os.BackgroundJobs.GetJobs().Single();
+
+        // ADR 0147: the app ends without a SIGKILL (its window closed); the task gets a SIGTERM, not a kill.
+        os.Manager.Kill(job.ParentPid, ProcessExitReason.CloseRequested);
+
+        await OsFixture.WaitUntilAsync(() => !os.Manager.TryGetActive(job.Pid, out _), TimeSpan.FromSeconds(20), "the task ends on its stop request");
+        ProcessRecord ended = os.Manager.GetHistory().Last(record => record.Pid == job.Pid);
+        Assert.Equal(130, ended.ExitCode);
+        Assert.NotEqual(ProcessExitReason.Timeout, ended.ExitReason);
+        await OsFixture.WaitUntilAsync(() => os.BackgroundJobs.GetJobs().Count == 0, TimeSpan.FromSeconds(10), "the task is forgotten");
+        await running.WaitAsync(TimeSpan.FromSeconds(20));
+    }
+
+    [Theory]
+    [MemberData(nameof(BothModes))]
+    public async Task A_task_that_ignores_the_stop_request_is_killed_five_seconds_after_its_app_closed(bool workers)
+    {
+        await using OsFixture os = await StartAsync(workers);
+        BackgroundJobCommands.Reset();
+
+        Task<ShellRun> running = os.RunAsync("bg-hold 1 nocatch");
+        await OsFixture.WaitUntilAsync(() => os.BackgroundJobs.GetJobs().Count == 1 && BackgroundJobCommands.Started >= 1, TimeSpan.FromSeconds(20), "the task starts");
+        BackgroundJobInfo job = os.BackgroundJobs.GetJobs().Single();
+
+        os.Manager.Kill(job.ParentPid, ProcessExitReason.CloseRequested);
+
+        // Still there, stopping, with its app gone: the grace period runs on the simulation clock.
+        Assert.False(os.Manager.TryGetActive(job.ParentPid, out _));
+        Assert.True(os.Manager.TryGetActive(job.Pid, out ProcessRecord? stopping));
+        Assert.Equal(ProcessState.Stopping, stopping!.State);
+        os.Clock.Advance(4);
+        await Task.Delay(100);
+        Assert.True(os.Manager.TryGetActive(job.Pid, out _));
+
+        os.Clock.Advance(1);
+        await OsFixture.WaitUntilAsync(() => !os.Manager.TryGetActive(job.Pid, out _), TimeSpan.FromSeconds(10), "the task is killed at the end of the grace period");
+        Assert.Equal(ProcessExitReason.Timeout, os.Manager.GetHistory().Last(record => record.Pid == job.Pid).ExitReason);
+        await OsFixture.WaitUntilAsync(() => os.BackgroundJobs.GetJobs().Count == 0, TimeSpan.FromSeconds(10), "the task is forgotten");
+        BackgroundJobCommands.Release();
+        await running.WaitAsync(TimeSpan.FromSeconds(20));
     }
 
     [Theory]
@@ -263,6 +314,7 @@ internal static class BackgroundJobCommands
         TestCommands.Command<FaultCommand>("bg-fault"),
         TestCommands.Command<CancelCommand>("bg-cancel"),
         TestCommands.Command<HoldCommand>("bg-hold"),
+        TestCommands.Command<ForeverCommand>("bg-forever"),
         TestCommands.Command<UndeclaredCommand>("bg-undeclared"),
         TestCommands.Command<ForeignCommand>("bg-foreign"),
         TestCommands.Command<SelfKillCommand>("bg-selfkill")
@@ -376,6 +428,24 @@ internal static class BackgroundJobCommands
             {
                 string trace = string.IsNullOrEmpty(exception.OriginalStackTrace) ? "no" : "yes";
                 await context.StandardOutput.WriteLineAsync($"{exception.OriginalTypeName}: {exception.Message} trace={trace}");
+            }
+
+            return 0;
+        }
+    }
+
+    /// <summary><c>bg-forever</c>: runs <c>Forever</c> with no token of its own; only the task's stop request ends it.</summary>
+    public sealed class ForeverCommand(AppManifest manifest) : TerminalAppBase(manifest)
+    {
+        public override async ValueTask<int> ExecuteAsync(TerminalExecutionContext context, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await HackBackground.RunAsync<int>(Forever, 0, cancellationToken: CancellationToken.None);
+            }
+            catch (OperationCanceledException)
+            {
+                // The app is gone by then: nothing to print.
             }
 
             return 0;

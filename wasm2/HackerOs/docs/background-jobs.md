@@ -1,7 +1,8 @@
 # Tâches en arrière-plan (`HackBackground`)
 
 Chantier `exec/5-background-jobs`, [ADR 0128](adr/0128-background-jobs-hack-background.md)
-et [ADR 0140](adr/0140-background-jobs-implementation-adjustments.md). Ajout du
+[ADR 0140](adr/0140-background-jobs-implementation-adjustments.md) et
+[ADR 0147](adr/0147-background-task-grace-period-on-app-close.md). Ajout du
 SDK 1.2, publié à la fin de la série `exec` (ADR 0132).
 
 ## Objet
@@ -18,7 +19,9 @@ Comme sous Linux, la tâche est un vrai processus :
 - elle apparaît dans `ps`, `top` et le gestionnaire de tâches sous l'app, avec
   le nom `<commande>:<tâche>` (`code-editor:search`, `file-explorer:compress`) ;
 - `kill -9 <pid>` ou « Terminer » la tue **sans fermer la fenêtre** ;
-- elle se termine avec l'app ;
+- quand l'app se ferme, elle reçoit une demande d'arrêt (son jeton est annulé)
+  et a **5 s** pour finir, puis elle est tuée, comme `SIGTERM` puis `SIGKILL`
+  (ADR 0147) ; un `kill -9` de l'app la tue tout de suite ;
 - elle est soumise aux limites des processus (ADR 0125) comme les autres.
 
 ## Usage
@@ -179,8 +182,13 @@ HackBackground.RunAsync ──► IAppExecutionContext.Background
   JSON : un worker est un autre runtime .NET, sans les objets de la fenêtre.
 - Sans worker, même contrat sur le fil principal, avec la même sérialisation :
   une app qui marche dans ses tests marche en worker.
-- Un processus par tâche, enfant de l'app : visible, tuable seul, terminé avec
-  l'app (raison `DependencyStop`, jeton annulé tout de suite).
+- Un processus par tâche, enfant de l'app : visible, tuable seul. À la
+  fermeture de l'app, demande d'arrêt `DependencyStop` puis mise à mort après
+  5 s sur l'horloge de la simulation (`ProcessStartRequest.ParentExitGracePeriod`,
+  ADR 0147, qui remplace l'ADR 0140 §6) ; `kill -9` de l'app, une limite ou
+  l'OOM killer la tuent tout de suite.
+- Le PID de la tâche ne fait pas partie de la progression (réponse de Benoit,
+  ADR 0147 §3) : la tâche le met dans son message si la fenêtre en a besoin.
 - `nice` est borné et devient la valeur `nice` du processus de la tâche
   (`ps -o ni`, `/proc/<pid>/stat`) ; il fixe sa place dans la file des workers
   (ADR 0127, [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md)).
@@ -211,7 +219,8 @@ tâche ; la fenêtre reste ouverte et affiche `killed`).
 - `Tests/HackerOs.Platform.WorkerHost.Tests/BackgroundJobTests.cs` : chaque cas
   sur le fil principal **et** en worker (résultat, processus enfant,
   progression, classe de tâche, faute, annulation, `kill -9` sans fermer l'app,
-  l'app qui tue sa propre tâche, fin de l'app, limite de concurrence,
+  l'app qui tue sa propre tâche, `kill -9` de l'app, fermeture de l'app avec
+  sortie en `130` ou mise à mort à 5 s, limite de concurrence,
   `/proc/<pid>/status`, `ps`, entrée refusée, autre assembly).
 - Tests des apps : recherche en tâche (CodeEditor), compression et extraction
   (explorateur), tâche de l'exemple.
@@ -228,3 +237,4 @@ tâche ; la fenêtre reste ouverte et affiche `killed`).
 - [x] Exemple dans la fenêtre d'exemple.
 - [x] Tests SDK, analyseur, OS et worker, apps.
 - [x] Documentation, ADR 0140, index.
+- [x] Délai de 5 s à la fermeture de l'app, réponses de Benoit aux deux cartes (ADR 0147).

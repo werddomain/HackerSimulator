@@ -287,6 +287,8 @@ ajouts). `HackerOsVersion` reste `1.2.0` d'ici là.
 |---|---|---|
 | `HackerOs.Simulation.Abstractions` | `IAppEventGateway.PublishAsync` (implémentation par défaut qui appelle `Publish`) : le vrai résultat d'une publication, même dans un worker | ADR 0145 |
 | `HackerOs.AppSdk` | `HackCrossOriginIsolation.GetStatusAsync`, `HackCrossOriginIsolationStatus`, `HackCrossOriginIsolationReason`, `HackCrossOriginIsolationSetting`, `IAppCrossOriginIsolationGateway` et `IAppExecutionContext.CrossOriginIsolation` (implémentation par défaut qui lève `NotSupportedException`) : l'état de l'isolation cross-origin, sans capacité | ADR 0146 |
+| `HackerOs.Simulation.Abstractions` | `ProcessStartRequest.ParentExitGracePeriod` : délai d'un enfant après la fin de son parent (demande d'arrêt, puis mise à mort) | ADR 0147 |
+| `HackerOs.Platform.Core` | `BackgroundJobService.ParentExitGracePeriod` (5 s) | ADR 0147 |
 
 ### App de compatibilité
 
