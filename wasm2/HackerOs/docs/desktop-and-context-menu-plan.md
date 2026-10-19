@@ -334,6 +334,8 @@ public sealed class SuperApp : AppDefinition
 
 ## 10. ADR à écrire
 
+Écrits par le chantier 0 (branche `desk/0-adrs`, vers `desk/base`).
+
 | ADR | Sujet |
 |---|---|
 | 0148 | Le SDK ne porte que des contrats ; les contrôles et dialogues partagés sont fournis par l'OS à l'exécution (complète l'ADR 0063, remplace l'ADR 0037 §1 et §8) |
@@ -362,5 +364,5 @@ documentation et l'index [`README.md`](README.md).
 - [x] Débattre de l'idée avec Benoit (Q1 à Q22).
 - [x] Valider le récapitulatif.
 - [x] Écrire ce plan.
-- [ ] Chantier 0 : ADR 0148 à 0152.
+- [x] Chantier 0 : ADR 0148 à 0152 ([0148](adr/0148-sdk-contracts-and-os-provided-controls.md), [0149](adr/0149-sdk-2-0-file-view-removal.md), [0150](adr/0150-os-context-menu.md), [0151](adr/0151-app-registered-file-menu-entries.md), [0152](adr/0152-desktop-icons.md)).
 - [ ] Chantiers 1 à 6.
