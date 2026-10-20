@@ -74,6 +74,18 @@ public sealed record ProcessStartRequest(
     /// at <c>exec</c>. <see langword="null"/> inherits the parent's value, or <c>0</c> for a root process.
     /// </summary>
     public int? OomScoreAdjust { get; init; }
+
+    /// <summary>
+    /// How long the process may keep running once its parent has ended (ADR 0147), like a
+    /// <c>SIGTERM</c> parent-death signal (<c>prctl(PR_SET_PDEATHSIG)</c>) followed by a
+    /// <c>SIGKILL</c>. When the parent ends without being killed (its window closed, a logout), the
+    /// process receives a stop request with <see cref="ProcessExitReason.DependencyStop"/> instead of
+    /// ending at once, and is killed if it still runs at the end of this period. A <c>SIGKILL</c> of
+    /// the parent (<c>kill -9</c>, a limit, the OOM killer) still ends it at once.
+    /// <see langword="null"/> or zero ends it with its parent, as before; the background tasks of
+    /// <c>HackBackground</c> use 5 seconds.
+    /// </summary>
+    public TimeSpan? ParentExitGracePeriod { get; init; }
 }
 
 /// <summary>

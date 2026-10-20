@@ -20,7 +20,8 @@ namespace HackerOs.Platform.Core.Execution;
 /// <para>
 /// Like <c>fork</c> + <c>exec</c> of a helper binary, the OS creates the process, its trusted
 /// context and its control block here, on its own thread; only the task's code runs elsewhere. The
-/// process ends with the task, is killed with the app (its parent), and can be killed alone from
+/// process ends with the task, ends with the app (its parent; a stop request, then a kill after
+/// <see cref="ParentExitGracePeriod"/>, ADR 0147), and can be killed alone from
 /// <c>kill</c> or the task manager without closing the window.
 /// </para>
 /// <para>
@@ -66,6 +67,12 @@ public sealed class BackgroundJobService
 
     /// <summary>Gets how many tasks of one app may run at once for one user (ADR 0128, section 3).</summary>
     public int MaxConcurrentJobsPerApp { get; }
+
+    /// <summary>
+    /// How long a task may still run once its app has ended without being killed (ADR 0147): a stop
+    /// request, then a kill, as <c>SIGTERM</c> then <c>SIGKILL</c>.
+    /// </summary>
+    public static readonly TimeSpan ParentExitGracePeriod = TimeSpan.FromSeconds(5);
 
     /// <summary>Gets the tasks running now (<c>/proc/&lt;pid&gt;/status</c>, the task manager).</summary>
     public IReadOnlyList<BackgroundJobInfo> GetJobs() => [.. _jobs.Values.OrderBy(static job => job.Pid.Value)];
@@ -136,6 +143,8 @@ public sealed class BackgroundJobService
             {
                 // ADR 0127: the task's own niceness, shown by ps and /proc, and its place in the pool queue.
                 Nice = nice,
+                // ADR 0147: when the app ends, the task gets a stop request and 5 s to end, then is killed.
+                ParentExitGracePeriod = ParentExitGracePeriod,
             });
             IAppExecutionContext child = createChildContext(process);
             IRemoteProcessHost? remote = _remoteHost?.Invoke() is { CanRunBackgroundJobs: true } host ? host : null;

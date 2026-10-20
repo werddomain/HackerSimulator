@@ -643,7 +643,8 @@ contexte `HackWireContext`. L'analyseur du SDK le vérifie au build
 (`HOSBG0001` à `HOSBG0004`). Annulation : `OperationCanceledException` ; tâche
 tuée depuis `kill` ou le gestionnaire de tâches : `HackProcessKilledException`
 (à attraper **avant** l'annulation) ; exception de la tâche :
-`HackBackgroundJobException`. Dans les tests de l'app, la tâche s'exécute en
+`HackBackgroundJobException`. Quand l'app se ferme, la tâche voit son jeton
+annulé et a 5 s pour finir avant d'être tuée (ADR 0147). Dans les tests de l'app, la tâche s'exécute en
 ligne avec la même sérialisation. Guide complet et exemple :
 [`background-jobs.md`](background-jobs.md) et la section « Background Task » de
 `Apps/Samples/HackerOs.Samples.WindowApp`.
