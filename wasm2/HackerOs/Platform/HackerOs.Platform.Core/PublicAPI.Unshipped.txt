@@ -2,7 +2,7 @@
 const HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher.ShellAppId = "org.hackeros.shell" -> string!
 const HackerOs.Platform.Core.ContextMenus.FileContextMenuMatcher.DirectoryMediaType = "inode/directory" -> string!
 const HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.FileName = "context-menus.config" -> string!
-const HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.Header = "# ~/.config/hackeros/context-menus.config\n# File menu entries added by apps that you hid (ADR 0151). One '<app id>.<entry>=true' line\n# per hidden entry; change it in Settings > Application.\n" -> string!
+const HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.Header = "# ~/.config/hackeros/context-menus.config\n# File menu entries added by apps that you hid (ADR 0151). One '<app id>.<entry>=true' line\n# per hidden entry; change it in Settings > File menus.\n" -> string!
 const HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.HiddenGroup = "hidden" -> string!
 const HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry.DirectoryPath = "/etc/hackeros/context-menus.d" -> string!
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.FileMenuEntries.get -> System.Func<HackerOs.Platform.Core.ContextMenus.FileContextMenuAdministration!>?

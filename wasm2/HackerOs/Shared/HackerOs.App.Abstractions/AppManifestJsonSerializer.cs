@@ -166,8 +166,9 @@ public static class AppManifestJsonSerializer
                 ? null
                 : [.. manifest.Components.OrderBy(item => item.Contract, StringComparer.Ordinal)
                     .ThenBy(item => item.Type, StringComparer.Ordinal)],
-            // ADR 0159: the declared order of the entries is their order at a shared place, so it is kept.
-            ContextMenus = manifest.ContextMenus is null
+            // ADR 0159: the declared order of the entries is their order at a shared place, so it is
+            // kept; an empty list is written as no property, like a manifest without entries.
+            ContextMenus = manifest.ContextMenus is not { Count: > 0 }
                 ? null
                 : [.. manifest.ContextMenus.Select(entry => entry with
                 {

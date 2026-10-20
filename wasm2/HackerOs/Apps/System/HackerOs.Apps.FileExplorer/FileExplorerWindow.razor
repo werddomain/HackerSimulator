@@ -804,7 +804,10 @@
     {
         if (_files is null) return;
 
-        string folderName = archiveName[..^".zip".Length];
+        // A registered entry also accepts application/zip files without the extension: they get a ".d" folder.
+        string folderName = archiveName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && archiveName.Length > ".zip".Length
+            ? archiveName[..^".zip".Length]
+            : archiveName + ".d";
         VirtualPath destDir = CombineChild(ParentOf(VirtualPath.Parse(archivePath)), folderName);
 
         // ADR 0128/0140: inflating and writing every entry happen in a child process of the explorer.

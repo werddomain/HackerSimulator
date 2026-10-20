@@ -31,7 +31,7 @@ public sealed class FileContextMenuPreferences
     public const string Header =
         "# ~/.config/hackeros/context-menus.config\n"
         + "# File menu entries added by apps that you hid (ADR 0151). One '<app id>.<entry>=true' line\n"
-        + "# per hidden entry; change it in Settings > Application.\n";
+        + "# per hidden entry; change it in Settings > File menus.\n";
 
     private readonly IOsSettingsService _settings;
 

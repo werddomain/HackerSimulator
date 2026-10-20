@@ -151,15 +151,16 @@ public sealed class ContextMenuService
                 {
                     return false;
                 }
-
-                // ADR 0159 §5: a file menu gets the entries apps registered, whichever app provides the control.
-                if (menu.FileMenu is not null && _fileMenuEntries is not null)
-                {
-                    await AddFileMenuEntriesAsync(menu, name);
-                }
-
-                menu.Validate();
             }
+
+            // ADR 0159 §5: a file menu gets the entries apps registered, whichever app provides the
+            // control, after the provider's and the host's own adjustments.
+            if (menu.FileMenu is not null && _fileMenuEntries is not null)
+            {
+                await AddFileMenuEntriesAsync(menu, name);
+            }
+
+            menu.Validate();
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
