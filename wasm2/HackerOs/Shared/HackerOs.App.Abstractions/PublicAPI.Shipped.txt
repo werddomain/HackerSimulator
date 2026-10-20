@@ -12,6 +12,7 @@ HackerOs.App.Abstractions.AppComponent.Contract.get -> string!
 HackerOs.App.Abstractions.AppComponent.Contract.init -> void
 HackerOs.App.Abstractions.AppComponent.Type.get -> System.Type!
 HackerOs.App.Abstractions.AppComponent.Type.init -> void
+HackerOs.App.Abstractions.AppComponentContracts
 HackerOs.App.Abstractions.AppComponentManifest
 HackerOs.App.Abstractions.AppComponentManifest.AppComponentManifest(string! Contract, string! Assembly, string! Type) -> void
 HackerOs.App.Abstractions.AppComponentManifest.Assembly.get -> string!
@@ -20,6 +21,52 @@ HackerOs.App.Abstractions.AppComponentManifest.Contract.get -> string!
 HackerOs.App.Abstractions.AppComponentManifest.Contract.init -> void
 HackerOs.App.Abstractions.AppComponentManifest.Type.get -> string!
 HackerOs.App.Abstractions.AppComponentManifest.Type.init -> void
+HackerOs.App.Abstractions.AppComponentProviderScope
+HackerOs.App.Abstractions.AppComponentProviderScope.AdministratorSelected = 1 -> HackerOs.App.Abstractions.AppComponentProviderScope
+HackerOs.App.Abstractions.AppComponentProviderScope.AnyApp = 0 -> HackerOs.App.Abstractions.AppComponentProviderScope
+HackerOs.App.Abstractions.AppComponentProviderScope.Platform = 2 -> HackerOs.App.Abstractions.AppComponentProviderScope
+HackerOs.App.Abstractions.AppContextMenuEntryManifest
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.After.get -> string?
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.After.init -> void
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.AfterGroup.get -> string?
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.AfterGroup.init -> void
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.First.get -> bool
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.First.init -> void
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Icon.get -> HackerOs.App.Abstractions.AppContextMenuIconManifest?
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Icon.init -> void
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Intent.get -> string?
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Intent.init -> void
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Name.get -> string!
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Name.init -> void
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Parent.get -> string?
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Parent.init -> void
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Scopes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Scopes.init -> void
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Selection.get -> string!
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Selection.init -> void
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Target.get -> string!
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Target.init -> void
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Title.get -> string!
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Title.init -> void
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Titles.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppContextMenuTitleManifest!>!
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Titles.init -> void
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Types.get -> System.Collections.Generic.IReadOnlyList<string!>?
+HackerOs.App.Abstractions.AppContextMenuEntryManifest.Types.init -> void
+HackerOs.App.Abstractions.AppContextMenuIconManifest
+HackerOs.App.Abstractions.AppContextMenuIconManifest.AppContextMenuIconManifest(string! Kind, string! Source, string? Library = null) -> void
+HackerOs.App.Abstractions.AppContextMenuIconManifest.Kind.get -> string!
+HackerOs.App.Abstractions.AppContextMenuIconManifest.Kind.init -> void
+HackerOs.App.Abstractions.AppContextMenuIconManifest.Library.get -> string?
+HackerOs.App.Abstractions.AppContextMenuIconManifest.Library.init -> void
+HackerOs.App.Abstractions.AppContextMenuIconManifest.Source.get -> string!
+HackerOs.App.Abstractions.AppContextMenuIconManifest.Source.init -> void
+HackerOs.App.Abstractions.AppContextMenuTitleManifest
+HackerOs.App.Abstractions.AppContextMenuTitleManifest.AppContextMenuTitleManifest(string! Culture, string! Text) -> void
+HackerOs.App.Abstractions.AppContextMenuTitleManifest.Culture.get -> string!
+HackerOs.App.Abstractions.AppContextMenuTitleManifest.Culture.init -> void
+HackerOs.App.Abstractions.AppContextMenuTitleManifest.Text.get -> string!
+HackerOs.App.Abstractions.AppContextMenuTitleManifest.Text.init -> void
+HackerOs.App.Abstractions.AppContextMenus
 HackerOs.App.Abstractions.AppDefinition
 HackerOs.App.Abstractions.AppDefinition.AppDefinition() -> void
 HackerOs.App.Abstractions.AppDefinitionMapper
@@ -105,6 +152,8 @@ HackerOs.App.Abstractions.AppManifest.Capabilities.get -> System.Collections.Gen
 HackerOs.App.Abstractions.AppManifest.Capabilities.init -> void
 HackerOs.App.Abstractions.AppManifest.Components.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppComponentManifest!>?
 HackerOs.App.Abstractions.AppManifest.Components.init -> void
+HackerOs.App.Abstractions.AppManifest.ContextMenus.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppContextMenuEntryManifest!>?
+HackerOs.App.Abstractions.AppManifest.ContextMenus.init -> void
 HackerOs.App.Abstractions.AppManifest.DeclaredTopicPermissions.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.TopicPermissionDeclarationManifest!>!
 HackerOs.App.Abstractions.AppManifest.DeclaredTopicPermissions.init -> void
 HackerOs.App.Abstractions.AppManifest.Dependencies.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppDependencyManifest!>!
@@ -783,6 +832,7 @@ const HackerOs.App.Abstractions.AppCapabilities.ProcessList = "process.list" -> 
 const HackerOs.App.Abstractions.AppCapabilities.ProcessManage = "process.manage" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.ServerConnectionManage = "server.connection.manage" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.ServicesManage = "services.manage" -> string!
+const HackerOs.App.Abstractions.AppCapabilities.ShellContextMenu = "shell.context-menu" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.ShellControl = "shell.control" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.ShellHost = "shell.host" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.SystemBackup = "system.backup" -> string!
@@ -790,6 +840,21 @@ const HackerOs.App.Abstractions.AppCapabilities.SystemPower = "system.power" -> 
 const HackerOs.App.Abstractions.AppCapabilities.SystemStorageInspect = "system.storage.inspect" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.UsersManage = "users.manage" -> string!
 const HackerOs.App.Abstractions.AppCapabilities.WindowsManage = "windows.manage" -> string!
+const HackerOs.App.Abstractions.AppComponentContracts.ContextMenu = "hackeros.context-menu" -> string!
+const HackerOs.App.Abstractions.AppComponentContracts.FileDialogs = "hackeros.file-dialogs" -> string!
+const HackerOs.App.Abstractions.AppComponentContracts.FileView = "hackeros.file-view" -> string!
+const HackerOs.App.Abstractions.AppContextMenus.BackgroundScope = "background" -> string!
+const HackerOs.App.Abstractions.AppContextMenus.DesktopScope = "desktop" -> string!
+const HackerOs.App.Abstractions.AppContextMenus.DirectoryScope = "directory" -> string!
+const HackerOs.App.Abstractions.AppContextMenus.EnglishCulture = "en" -> string!
+const HackerOs.App.Abstractions.AppContextMenus.FileScope = "file" -> string!
+const HackerOs.App.Abstractions.AppContextMenus.ImageIcon = "image" -> string!
+const HackerOs.App.Abstractions.AppContextMenus.MaxDepth = 3 -> int
+const HackerOs.App.Abstractions.AppContextMenus.SelectionAll = "all" -> string!
+const HackerOs.App.Abstractions.AppContextMenus.SelectionEach = "each" -> string!
+const HackerOs.App.Abstractions.AppContextMenus.SelectionSingle = "single" -> string!
+const HackerOs.App.Abstractions.AppContextMenus.SelfTarget = "self" -> string!
+const HackerOs.App.Abstractions.AppContextMenus.VectorIcon = "vector" -> string!
 const HackerOs.App.Abstractions.AppIntentIds.EditFile = "org.hackeros.intent.edit-file.v1" -> string!
 const HackerOs.App.Abstractions.AppIntentIds.ExecuteCommand = "org.hackeros.intent.execute-command.v1" -> string!
 const HackerOs.App.Abstractions.AppIntentIds.LaunchApp = "org.hackeros.intent.launch-app.v1" -> string!
@@ -831,6 +896,11 @@ static HackerOs.App.Abstractions.AppCapabilities.IsDangerous(string! capability)
 static HackerOs.App.Abstractions.AppCapabilities.IsKnown(string! capability) -> bool
 static HackerOs.App.Abstractions.AppCapabilities.RequiresWindowKind(string! capability) -> bool
 static HackerOs.App.Abstractions.AppCapabilityPolicy.IsGranted(System.Collections.Generic.IEnumerable<string!>! grantedCapabilities, string! requestedCapability) -> bool
+static HackerOs.App.Abstractions.AppComponentContracts.GetProviderScope(string! contract) -> HackerOs.App.Abstractions.AppComponentProviderScope
+static HackerOs.App.Abstractions.AppContextMenus.DefaultItemIds.get -> System.Collections.Generic.IReadOnlySet<string!>!
+static HackerOs.App.Abstractions.AppContextMenus.Scopes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+static HackerOs.App.Abstractions.AppContextMenus.Selections.get -> System.Collections.Generic.IReadOnlyList<string!>!
+static HackerOs.App.Abstractions.AppContextMenus.VectorLibraries.get -> System.Collections.Generic.IReadOnlyList<string!>!
 static HackerOs.App.Abstractions.AppDefinitionMapper.ToManifest(HackerOs.App.Abstractions.AppDefinition! definition) -> HackerOs.App.Abstractions.AppManifest!
 static HackerOs.App.Abstractions.AppDefinitionMapper.ToManifest(HackerOs.App.Abstractions.AppDefinition! definition, string! sdkMinimumVersion) -> HackerOs.App.Abstractions.AppManifest!
 static HackerOs.App.Abstractions.AppExecutionHosts.DefaultFor(HackerOs.App.Abstractions.AppKind kind) -> HackerOs.App.Abstractions.AppExecutionHost
@@ -913,6 +983,9 @@ virtual HackerOs.App.Abstractions.AppDefinition.Urls.get -> System.Collections.G
 virtual HackerOs.App.Abstractions.AppDefinition.Version.get -> string!
 virtual HackerOs.App.Abstractions.AppDefinition.Window.get -> HackerOs.App.Abstractions.WindowOptions?
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.AppComponentManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppComponentManifest>
+~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.AppContextMenuEntryManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppContextMenuEntryManifest>
+~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.AppContextMenuIconManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppContextMenuIconManifest>
+~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.AppContextMenuTitleManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppContextMenuTitleManifest>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.AppDependencyManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppDependencyManifest>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.AppEntryPointManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppEntryPointManifest>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.AppExecutionHost.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.AppExecutionHost>
@@ -936,6 +1009,8 @@ virtual HackerOs.App.Abstractions.AppDefinition.Window.get -> HackerOs.App.Abstr
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.Double.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<double>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.FileHandlerManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<HackerOs.App.Abstractions.FileHandlerManifest>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.IReadOnlyListAppComponentManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppComponentManifest>>
+~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.IReadOnlyListAppContextMenuEntryManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppContextMenuEntryManifest>>
+~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.IReadOnlyListAppContextMenuTitleManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppContextMenuTitleManifest>>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.IReadOnlyListAppDependencyManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppDependencyManifest>>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.IReadOnlyListAppIntentDeclarationManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppIntentDeclarationManifest>>
 ~HackerOs.App.Abstractions.AppManifestJsonSerializerContext.IReadOnlyListAppPlatformEntryPointManifest.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppPlatformEntryPointManifest>>

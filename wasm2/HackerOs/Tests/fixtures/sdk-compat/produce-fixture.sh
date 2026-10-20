@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# ADR 0098 §8, ADR 0114, ADR 0132 §1: builds one SDK compatibility fixture (a project of src/)
-# against the HackerOS packages of a local feed, the way another repository would, and writes its
-# package to packages/. Run once per published SDK version that gets a fixture (1.0.0:
-# Contoso.Sdk1Compat; 1.1.0: Contoso.Sdk11Compat, packed from the v3.1/base tip); the committed
-# package is never rebuilt, so the tests keep loading an app compiled against the old SDK into the
-# current OS.
+# ADR 0098 §8, ADR 0114, ADR 0132 §1, ADR 0161 §3: builds one SDK compatibility fixture (a project
+# of src/) against the HackerOS packages of a local feed, the way another repository would, and
+# writes its package to packages/. Run once per published SDK version that gets a fixture (1.0.0:
+# Contoso.Sdk1Compat; 1.1.0: Contoso.Sdk11Compat, packed from the v3.1/base tip; 2.0.0:
+# Contoso.Sdk2Compat, packed from the desk/6-sdk-2 tip); the committed package is never rebuilt, so
+# the tests keep loading an app compiled against the old SDK into the current OS (or, for an
+# earlier major, check that the OS refuses it).
 #
 #   Tests/fixtures/sdk-compat/produce-fixture.sh [--project <name>] [--version <x.y.z>] [--feed <dir>]
 #     --project  a folder of src/ (default: Contoso.Sdk1Compat)

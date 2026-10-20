@@ -71,7 +71,6 @@ using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Blazor.Components;
 using HackerOs.AppSdk.Blazor.Display;
 using Microsoft.JSInterop;
-using HackerOs.AppSdk.FileView.Icons;
 using HackerOs.AppSdk.Icons;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -1044,7 +1043,8 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<TestDemoFixtureSeeder>();
 
         services.AddSingleton<IIconCatalog, IconCatalog>();
-        services.AddSingleton<IShellIconProvider, DefaultShellIconProvider>();
+        // The file control draws its icons with its own DefaultShellIconProvider (ADR 0161 §1): the
+        // host no longer references its code, which loads with the File Explorer.
 
         // Depends on IJSRuntime through the browser probe — see this file's IJSRuntime scoping note.
         services.AddScoped<IPlatformEnvironmentProbe, BrowserPlatformEnvironmentProbe>();

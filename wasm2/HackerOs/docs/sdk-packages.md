@@ -18,13 +18,13 @@ empreintes des ressources, ADR 0098 §3 à §5) sont décrites dans
 
 ## Version unique
 
-- `build/Versions.props` définit `HackerOsVersion` (aujourd'hui `1.2.0`, publiée par le chantier `exec/10-final`),
+- `build/Versions.props` définit `HackerOsVersion` (aujourd'hui `2.0.0`, publiée par le chantier `desk/6-sdk-2`),
   importé par `Directory.Build.props` : chaque projet de la solution porte ce
   `Version`.
 - Avant le gel : `0.9.0-preview.<n>`. Depuis le gel du SDK 1.0 (chantier
   `v3/15`, [ADR 0114](adr/0114-sdk-1-0-freeze.md)) : SemVer (ADR 0019),
   correctif sans changement d'API, mineure pour un ajout, majeure pour une
-  rupture du SDK (voir « Gel du SDK 1.0 »).
+  rupture du SDK (voir « Gel du SDK 1.0 » et « SDK 2.0 »).
 - `HackerOsSdk.Version` (`HackerOs.App.Abstractions`) est cette version à
   l'exécution (version informative de l'assembly, sans métadonnées `+sha`).
   Le générateur l'écrit comme `sdkCompatibility.minimumVersion` de chaque app ;
@@ -43,7 +43,7 @@ bibliothèque liste sa surface dans `PublicAPI.Shipped.txt` (la 1.0, gelée) et
 
 | Paquets | Contenu |
 |---|---|
-| `HackerOs.App.Abstractions`, `HackerOs.Simulation.Abstractions`, `HackerOs.Theming.Abstractions`, `HackerOs.AppSdk`, `.Blazor`, `.Terminal`, `.Web`, `.Web.Blazor`, `.FileView`, `.Icons`, `.VirtualKeyboard` | le SDK public, ce qu'une app référence ; `HackerOs.AppSdk` porte aussi l'analyseur `HOSBG` de `HackBackground` dans `analyzers/dotnet/cs/` (ADR 0140, [`background-jobs.md`](background-jobs.md)) |
+| `HackerOs.App.Abstractions`, `HackerOs.Simulation.Abstractions`, `HackerOs.Theming.Abstractions`, `HackerOs.AppSdk`, `.Blazor`, `.Terminal`, `.Web`, `.Web.Blazor`, `.Icons`, `.VirtualKeyboard` | le SDK public, ce qu'une app référence (`.FileView` n'en fait plus partie depuis la 2.0 : son code est dans l'explorateur de fichiers) ; `HackerOs.AppSdk` porte aussi l'analyseur `HOSBG` de `HackBackground` dans `analyzers/dotnet/cs/` (ADR 0140, [`background-jobs.md`](background-jobs.md)) |
 | `HackerOs.App.Build` | l'intégration de build (voir plus bas) |
 | `HackerOs.Platform.Core`, `.Blazor`, `.ResourceAccounting`, `.WorkerHost`, `HackerOs.Infrastructure.Browser`, `HackerOs.Windowing.Abstractions`, `.Core`, `.Blazor`, `HackerOs.Taskbar.Blazor`, `HackerOs.Theming.Blazor`, `HackerOs.MobileShell.Blazor`, `HackerOs.Server.Contracts` | la plateforme, ce qu'un hôte compose (`Server.Contracts` est une dépendance de `Platform.Core`) |
 | `HackerOs.Ecosystem.Host` | l'OS lui-même : bureau, démarrage, services, adaptateurs du navigateur, jetons de design |
@@ -189,7 +189,7 @@ sans paramètre pour les tests unitaires.
 [ADR 0098](adr/0098-sdk-versions-packages-and-manifest-checks.md) §8 et
 [ADR 0114](adr/0114-sdk-1-0-freeze.md) :
 
-- Toute la surface des 39 bibliothèques est dans `PublicAPI.Shipped.txt` ;
+- Toute la surface des 39 bibliothèques (38 depuis la 2.0) est dans `PublicAPI.Shipped.txt` ;
   chaque `PublicAPI.Unshipped.txt` ne contient que `#nullable enable`.
 - Après le gel, un ajout va dans `Unshipped` (`RS0016`, la correction
   `dotnet format analyzers <csproj> --diagnostics RS0016 --severity info`
@@ -221,6 +221,9 @@ app n'est touchée : ces types ne font pas partie du SDK.
 | 1.1.0 | `HackerOs.Platform.Blazor` | `WindowGeometrySettings.Parse` rend `SavedWindowGeometry?` ; `Serialize(WindowBounds)` devient `Serialize(appId, SavedWindowGeometry)` | adapter l'appel |
 | 1.1.0 | `HackerOs.Platform.Blazor` | `WindowLaunchCoordinator.Present(...)` (deux surcharges) remplacé par `PresentAsync(...)` ; le constructeur prend maintenant l'enregistreur de géométrie | appeler `PresentAsync` ; laisser l'injection de dépendances construire le coordinateur (`AddHackerOsBrowserHost`) |
 | 1.2.0 | `HackerOs.Ecosystem.Host` | le constructeur d'`EcosystemBootCoordinator` prend trois paramètres optionnels de plus (`OomKiller? oomKiller`, `IOsSettingsService? settings`, `CrossOriginIsolationProbe? isolation`, ADR 0126, 0131) : rupture binaire, le code source compile toujours | recompiler l'hôte ; laisser l'injection de dépendances construire le coordinateur (`AddHackerOsEcosystem`) |
+| 2.0.0 | `HackerOs.Ecosystem.Host` | n'enregistre plus `IShellIconProvider` (ADR 0161 §1) | rien : le contrôle de fichiers garde ses icônes par défaut |
+| 2.0.0 | `HackerOs.Apps.FileExplorer` | les types de l'ancienne `FileView` sont dans `HackerOs.Apps.FileExplorer.FileControl` et dérivent de `HackComponentBase` ; `FileConflictDialog`, `FilePropertiesDialog`, `OpenWithDialog`, `FileExplorerDialogBase`, `PublishSiteContextMenuProvider`, `ZipFileContextMenuProvider` et `FileExplorerState.ViewMode` sont retirés (desk/3 à desk/5) | passer par les contrats `hackeros.file-view` et `hackeros.file-dialogs` |
+| 2.0.0 | `HackerOs.Apps.CodeEditor` | `CodeEditorExplorer` perd `OnDeleteRequested`, `OwnerAppId`, `Watch` et `Dispose` ; le constructeur public de `CodeEditorWorkspace` est retiré (desk/3) | utiliser `HackFileView` |
 
 ## SDK 1.1
 
@@ -277,16 +280,68 @@ build/tools/ship-public-api.sh --check   # ce qu'une publication verserait, sans
 build/tools/ship-public-api.sh           # à la publication, puis HackerOsVersion dans build/Versions.props
 ```
 
-### Ajouts depuis la 1.2.0 (prochaine mineure)
+Aucune 1.3 n'a été publiée : les ajouts qui l'attendaient (`PublishAsync`,
+ADR 0145 ; `HackCrossOriginIsolation`, ADR 0146) sont partis dans la 2.0.
 
-Ces ajouts sont dans `PublicAPI.Unshipped.txt` ; ils partiront avec la
-prochaine publication (1.3.0, mineure d'après SemVer puisque ce sont des
-ajouts). `HackerOsVersion` reste `1.2.0` d'ici là.
+## SDK 2.0
+
+Publiée par le chantier `desk/6-sdk-2`, à la fin de la série du bureau et du
+menu contextuel ([ADR 0149](adr/0149-sdk-2-0-file-view-removal.md),
+[ADR 0161](adr/0161-sdk-2-0-implementation-adjustments.md) ; question Q5 du
+[plan](desktop-and-context-menu-plan.md), choix de Benoit « SDK 2.0
+maintenant ») : `build/tools/ship-public-api.sh` verse 1561 lignes de
+`PublicAPI.Unshipped.txt` dans `PublicAPI.Shipped.txt` et `HackerOsVersion`
+passe à `2.0.0`.
+
+### Rupture : `HackerOs.AppSdk.FileView` quitte le SDK
+
+Le paquet `HackerOs.AppSdk.FileView` n'existe plus. Son code (vue, arbre,
+détails, icônes, fil d'Ariane, zone de dépôt, menus `IFileViewContextMenuProvider`,
+`ShellIcon`, `IShellIconProvider`) est l'implémentation interne de l'explorateur
+de fichiers (`Apps/System/HackerOs.Apps.FileExplorer/FileControl/`), qui fournit
+le contrôle aux autres apps par le contrat `hackeros.file-view` (ADR 0148). Les
+autres bibliothèques du SDK ne perdent aucun membre : la majeure vient de ce
+seul retrait.
+
+Une app compilée contre 1.x porte `sdkCompatibility.minimumVersion: 1.x`. Un
+hôte qui la référence ne se construit plus (`HOSAPP0021`, la même règle que le
+catalogue appliquée au build) ; un OS 2.0 qui la trouve à son catalogue la refuse
+au démarrage (`catalog.sdk.incompatible`), ne la charge pas, et Paramètres ▸
+Applications installées l'affiche « Incompatible ». Elle doit être recompilée
+contre les paquets 2.0.0.
+
+### Migration d'une app 1.x
+
+| En 1.x | En 2.0 |
+|---|---|
+| `<FileView …/>` (`HackerOs.AppSdk.FileView`) | `<HackFileView InitialDirectory="…" …/>` (`HackerOs.AppSdk.Blazor.Files`) et son contrôleur `IHackFileView` ([`file-explorer.md`](file-explorer.md)) |
+| `IFileViewContextMenuProvider`, `FileViewMenuItemCollection` | `ContextMenuOpening` de `HackFileView`, ou une entrée inscrite par `[RegisterFileContextMenu]` ([`context-menu.md`](context-menu.md)) |
+| `FileTransfer.CopyAsync` / `MoveAsync` / `TransferAsync` / `ImportAsync` / `MoveToTrashAsync` / `GetCopyName` | les mêmes méthodes de `HackFileOperations` (`HackerOs.AppSdk.IO`) |
+| `FileTransferResult`, `FileTransferMode`, `FileConflictChoice`, `FileConflictResolution`, `FileTransferConflict`, `FileConflictResolver`, `FileTransferFailure`, `FileTransferItemResult`, `FileTransferHostFile` | `HackFileTransferResult`, `HackFileTransferMode`, `HackFileConflictChoice`, `HackFileConflictResolution`, `HackFileTransferConflict`, `HackFileConflictResolver`, `HackFileTransferFailure`, `HackFileTransferItemResult`, `HackHostFile` |
+| un résolveur de conflit écrit par l'app | `Dialogs.AsFileConflictResolver(AppContext)` : le dialogue « Remplacer / Garder les deux / Ignorer » du fournisseur de `hackeros.file-dialogs` |
+| `ShellIcon`, `ShellIconDescriptor` | `HackIcons.Vector(…)` / `HackIcons.FromImage(…)` (`HackerOs.AppSdk.Icons`) pour décrire une icône ; le rendu appartient à l'OS |
+
+Puis passer `HackerOsVersion` à `2.0.0` et recompiler.
+
+### Ajouts
+
+Tous les autres changements du SDK sont des ajouts :
 
 | Bibliothèque | Ajout | Décision |
 |---|---|---|
-| `HackerOs.Simulation.Abstractions` | `IAppEventGateway.PublishAsync` (implémentation par défaut qui appelle `Publish`) : le vrai résultat d'une publication, même dans un worker | ADR 0145 |
-| `HackerOs.AppSdk` | `HackCrossOriginIsolation.GetStatusAsync`, `HackCrossOriginIsolationStatus`, `HackCrossOriginIsolationReason`, `HackCrossOriginIsolationSetting`, `IAppCrossOriginIsolationGateway` et `IAppExecutionContext.CrossOriginIsolation` (implémentation par défaut qui lève `NotSupportedException`) : l'état de l'isolation cross-origin, sans capacité | ADR 0146 |
+| `HackerOs.AppSdk.Blazor` | `HackContractComponent<TController>`, `HackComponentResolution` : hôte d'un contrat fourni par une app | ADR 0148, 0153 |
+| `HackerOs.AppSdk.Blazor` | `HackContextMenu`, `IHackContextMenu`, `HackMenus` (`Menus.Attach`, `Menus.Define`, `OpenAsync`), `HackMenuBuilder`, `HackMenuDefinition`, `HackMenuItem`, `HackMenuGroup`, `HackMenuOpeningEventArgs`, `IHackMenuHost` | ADR 0150, 0154 |
+| `HackerOs.AppSdk.Blazor` | `HackFileView`, `IHackFileView`, `HackFileViewItem`, `HackFileViewMode`, `HackFileViewFeatures`, leurs événements, `HackFileMenuOpeningEventArgs`, `HackFileMenuContext` | ADR 0148, 0155, 0160 |
+| `HackerOs.AppSdk.Blazor` | `IDialogService.OpenWithAsync`, `ShowFilePropertiesAsync`, `ResolveFileConflictAsync` et leurs types, `HackFileDialogs`, `HackFileOperationDialogs.AsFileConflictResolver` | ADR 0155, 0157, 0161 |
+| `HackerOs.AppSdk.Blazor` | `[RegisterFileContextMenu]`, `RegisterFileContextMenuContext` | ADR 0151, 0159 |
+| `HackerOs.AppSdk` | `HackFileOperations` et ses types (`HackFileTransferResult`…, `HackHostFile`) | ADR 0161 §2 |
+| `HackerOs.AppSdk` | `HackFileMenuItems`, `FileMenuScope`, `MenuSelection`, `HackFileMenuIntent`, `HackFileMenuEntries`, `HackFileMenuEntryInfo` | ADR 0151, 0159 |
+| `HackerOs.AppSdk` | `HackComponentProviders`, `HackComponentContractInfo`, `HackComponentProviderInfo` (choix du fournisseur par l'administrateur) | ADR 0156, 0158 |
+| `HackerOs.AppSdk` | `HackDesktopSettings`, `HackDesktopSettingsDocument`, `HackDesktopOptions`, `HackDesktopLayout`, `HackDesktopCell`, `HackDesktopEntry`, `HackDesktopItems`, `HackDesktopSort`, `HackDesktopIconSize`, `HackDesktopArrangement`, `HackAppIcons` | ADR 0152, 0160 |
+| `HackerOs.AppSdk` | `HackCrossOriginIsolation` et ses types, `IAppCrossOriginIsolationGateway` | ADR 0146 |
+| `HackerOs.AppSdk.Icons` | `HackIcons` (`Vector`, `FromImage`), `HackIcon`, `HackIconKind` | ADR 0150, 0151 |
+| `HackerOs.App.Abstractions` | `AppManifest.ContextMenus`, `AppContextMenuEntryManifest` et ses titres et icônes, `AppContextMenus`, `AppComponentContracts`, `AppComponentProviderScope`, capacité `shell.context-menu` | ADR 0151, 0153, 0156 |
+| `HackerOs.Simulation.Abstractions` | `IAppEventGateway.PublishAsync` | ADR 0145 |
 
 ### App de compatibilité
 
@@ -299,12 +354,15 @@ dépôt, contre les paquets de sa version, et **jamais reconstruite** :
 | `Contoso.Sdk1Compat.1.0.0.nupkg` | 1.0.0 (`v3/15`) | fenêtre `com.contoso.sdk1-window` (enregistre et relit un fichier), commande `sdk1-compat` |
 | `Contoso.Sdk11Compat.1.1.0.nupkg` | 1.1.0, paquets du sommet de `v3.1/base` (`exec/10-final`, ADR 0132 §1) | fenêtre `com.contoso.sdk11-window` qui se nomme avec `SetWindowTitleAsync` et `FormatWindowTitle` (`note.txt — SDK 1.1 Window`), `rememberGeometry: false` ; commande `sdk11-compat` qui appelle aussi `HackUserAccounts.ValidateNewPassword` |
 
-Les tests les chargent dans l'OS courant ; à une 2.0, une app `2.0.0` s'y
-ajoute et celles de la 1.x deviennent des tests de refus.
+| `Contoso.Sdk2Compat.2.0.0.nupkg` | 2.0.0, paquets du sommet de `desk/6-sdk-2` (ADR 0161 §3) | fenêtre `com.contoso.sdk2-window` qui affiche le contrôle de fichiers de l'OS (`HackFileView`) et inscrit l'entrée « Inspect with SDK 2.0 » dans le menu des fichiers (`[RegisterFileContextMenu]`, intent `com.contoso.sdk2.inspect.v1`) ; commande `sdk2-compat` qui copie un fichier par `HackFileOperations.CopyAsync` (`sdk2-compat (copy).txt`) |
+
+Les tests chargent l'app de la majeure courante (2.0.0) dans l'OS ; celles de la
+1.x restent comme preuve du **refus** d'une app d'une autre majeure
+(ADR 0149 §5).
 
 ```bash
 build/pack-local.sh
-Tests/fixtures/sdk-compat/produce-fixture.sh --project Contoso.Sdk11Compat --version 1.1.0 --feed <flux 1.1.0>
+Tests/fixtures/sdk-compat/produce-fixture.sh --project Contoso.Sdk2Compat   # contre le flux 2.0.0
 ```
 
 ## Tests
@@ -312,8 +370,8 @@ Tests/fixtures/sdk-compat/produce-fixture.sh --project Contoso.Sdk11Compat --ver
 | Où | Quoi |
 |---|---|
 | `Tests/HackerOs.Templates.E2E.Tests` | empaquette tout (`pack-local`, ou le flux de `HACKEROS_LOCAL_FEED`), installe les modèles dans un `DOTNET_CLI_HOME` isolé, génère et compile chaque modèle d'app hors du dépôt avec un cache NuGet isolé (manifeste, genre, version minimale du SDK vérifiés) ; puis génère un hôte, y ajoute une app fenêtrée et une commande générées, le compile (catalogue agrégé vérifié), le lance, crée le profil dans Chromium, ouvre l'app (`Clicked 0 times` puis `1`) et exécute `hello Morpheus` dans le terminal (`Hello, Morpheus!`). |
-| `Tests/HackerOs.Templates.E2E.Tests` (`A_host_runs_app_packages_compiled_against_SDK_1_0_0_and_1_1_0`) | un hôte généré, avec `PackageReference` vers les apps de compatibilité 1.0.0 et 1.1.0 (source `hackeros-sdk-fixtures`), démarre dans Chromium ; chaque fenêtre enregistre et relit un fichier, celle de la 1.1 affiche son titre (`note.txt — SDK 1.1 Window`, puis `sdk11-window.txt — SDK 1.1 Window`), `sdk1-compat still binds` et `sdk11-compat still binds` s'exécutent dans le terminal (ADR 0114 §4, ADR 0132 §1) |
-| `Tests/HackerOs.SdkCompatibility.Tests` | les apps de compatibilité 1.0.0 et 1.1.0 : admises par le catalogue courant, chaque type et membre HackerOS qu'elles référencent existe, chaque méthode compile contre le SDK courant (JIT), les deux commandes tournent (ADR 0114 §4, ADR 0132 §1) |
+| `Tests/HackerOs.Templates.E2E.Tests` (`A_host_runs_SDK_2_app_packages_and_refuses_SDK_1_x_packages`) | un hôte généré avec `PackageReference` vers les apps de compatibilité 1.0.0 et 1.1.0 (source `hackeros-sdk-fixtures`) ne se construit pas (`HOSAPP0021` pour chacune des quatre apps) ; avec l'app 2.0.0 à la place, il démarre dans Chromium, la fenêtre 2.0 affiche le contrôle de fichiers de l'OS et `sdk2-compat still binds` s'exécute dans le terminal (ADR 0149 §5, ADR 0161 §3) |
+| `Tests/HackerOs.SdkCompatibility.Tests` | l'app de compatibilité 2.0.0 : admise par le catalogue courant, entrée de menu inscrite et `HackFileView` référencé, chaque type et membre HackerOS qu'elle référence existe, chaque méthode compile contre le SDK courant (JIT), la commande tourne ; les apps 1.0.0 et 1.1.0 : refusées (`catalog.sdk.incompatible`) (ADR 0149 §5, ADR 0161 §3) |
 | `Tests/HackerOs.App.Abstractions.Tests` (`HackerOsSdkTests`) | lecture de la version, compatibilité des plages |
 | `Tests/HackerOs.Tools.ManifestGenerator.Tests` | version du SDK lue dans la référence, empreintes et `HOSAPP0023`, `HOSAPP0022`, app plus récente que le SDK de l'hôte (`HOSAPP0021`) |
 | `Tests/HackerOs.Platform.Core.Tests` | `AppCatalog` (refus, cascade des dépendances, propriétaire des commandes), `AppAssetStore`, `ShellCommandResolver` |
@@ -356,4 +414,5 @@ Vérifié à la main aussi : une app qui ajoute la référence
 - [x] Gel du SDK 1.0 (`v3/15`, ADR 0114) : tout en `Shipped`, version `1.0.0`, API obsolètes retirées, app de compatibilité et ses tests, guide [`building-on-hackeros.md`](building-on-hackeros.md).
 - [x] SDK 1.1 (`v3.1/4-sdk-1-1`, ADR 0117 §5) : `Unshipped` versé dans `Shipped`, version `1.1.0`, ruptures hors SDK listées, app de compatibilité 1.0 toujours chargée.
 - [x] SDK 1.2 (`exec/10-final`, ADR 0132 §2) : `build/tools/ship-public-api.sh`, `Unshipped` versé dans `Shipped`, version `1.2.0`, rupture hors SDK listée, app de compatibilité 1.1.0 ajoutée, 1.0.0 et 1.1.0 chargées.
+- [x] SDK 2.0 (`desk/6-sdk-2`, ADR 0149, ADR 0161) : `HackerOs.AppSdk.FileView` retiré du SDK (code dans l'explorateur), `HackFileOperations`, `Unshipped` versé dans `Shipped`, version `2.0.0`, ruptures hors SDK listées, app de compatibilité 2.0.0 ajoutée, apps 1.x refusées.
 - [x] Documentation (ce fichier, `app-model`, `app-sdk`, `sdk-reference`, `sdk-developer-guide`, `building-and-testing`, `project-overview`, mesure des ressources, notes des documents archivés) et index.

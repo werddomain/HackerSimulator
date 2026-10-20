@@ -105,7 +105,7 @@ ExplorerFileView ──► FileView (interne)    ── Ctrl+X/C/V, menus ──
         │                 ├─ FileViewBreadcrumb (fil d'Ariane, cibles de dépôt)
         │                 └─ FileViewDropZone   (Home, Trash, vue Corbeille)
         ├──► HackClipboard ──► IAppClipboardGateway ──► AppClipboardGateway ──► SystemClipboard (une sélection par session)
-        └──► FileTransfer (SDK) ──► HackFile / HackDirectory / HackTrash (contexte ambiant de l'app)
+        └──► HackFileOperations (SDK) ──► HackFile / HackDirectory / HackTrash (contexte ambiant de l'app)
 ```
 
 | Pièce | Où | Rôle |
@@ -114,8 +114,8 @@ ExplorerFileView ──► FileView (interne)    ── Ctrl+X/C/V, menus ──
 | `IAppClipboardGateway` | idem | Passerelle `IAppExecutionContext.Clipboard` : `clipboard.read` / `clipboard.write`, événement `Changed`. |
 | `SystemClipboard` | `Platform/HackerOs.Platform.Core/Clipboard/` | Presse-papiers de l'OS : une sélection par session, cibles MIME (`text/plain`, `x-special/gnome-copied-files`), vidée à la déconnexion. En mémoire, comme un vrai presse-papiers. Numéro de séquence, origine et partage du texte avec la vraie machine : [`clipboard.md`](clipboard.md) (ADR 0065). |
 | `AppClipboardGateway` | `Platform/HackerOs.Platform.Core/Execution/` | Passerelle de confiance par instance : vérifie la capacité à chaque appel, ne voit que sa session, rejoue `Changed` dans le contexte ambiant de l'app abonnée. |
-| `FileTransfer` et contrats | `Shared/HackerOs.AppSdk.FileView/Transfers/` | Copie, déplacement, import de fichiers de l'hôte, envoi à la corbeille ; noms Nautilus, conflits, refus d'un dossier dans lui-même, résumé des échecs. Tourne sur l'API `Hack*`, donc avec les droits de l'app. |
-| `FileView` (ajouts) | `Shared/HackerOs.AppSdk.FileView/` | Dépôt sur le fond, `DropRequested`, `ClipboardRequested`, `CanPaste`, `CutPaths` (éléments atténués), Ctrl+A. |
+| `HackFileOperations` et contrats (ex-`FileTransfer`) | `Shared/HackerOs.AppSdk/IO/HackFileOperations*.cs` | Copie, déplacement, import de fichiers de l'hôte, envoi à la corbeille ; noms Nautilus, conflits, refus d'un dossier dans lui-même, résumé des échecs. Tourne sur l'API `Hack*`, donc avec les droits de l'app. Dans le SDK depuis la 2.0 (ADR 0161 §2) ; `IDialogService.AsFileConflictResolver` (`HackerOs.AppSdk.Blazor.Files`) pose la question de conflit par `hackeros.file-dialogs`. |
+| `FileView` (ajouts) | `Apps/System/HackerOs.Apps.FileExplorer/FileControl/` (dans `Shared/HackerOs.AppSdk.FileView` avant le SDK 2.0, ADR 0161 §1) | Dépôt sur le fond, `DropRequested`, `ClipboardRequested`, `CanPaste`, `CutPaths` (éléments atténués), Ctrl+A. |
 | `FileViewBreadcrumb`, `FileViewDropZone` | idem | Fil d'Ariane cliquable et déposable ; zone de dépôt générique pour le chrome de l'hôte. |
 | `FileView.razor.js` | idem | Écouteurs natifs `dragover` / `drop` : curseur déplacer/copier, surbrillance de la cible, capture du contenu et des `File` de l'hôte. Depuis l'ADR 0065, Ctrl+V suit l'événement `paste` (`attachPasteTarget`) : des fichiers copiés sur la vraie machine et collés dans la vue sont importés comme un dépôt. |
 | `ExplorerFileDialogs` | `Apps/System/HackerOs.Apps.FileExplorer/` | Fenêtre « Replace / Keep both / Skip » (et « Ouvrir avec », « Propriétés ») du contrat `hackeros.file-dialogs`, en markup natif depuis `desk/3` ; l'ancien `FileConflictDialog` MudBlazor est retiré. |
@@ -146,13 +146,13 @@ file:///home/benoit/Documents
 formes de « copier » marquées `[Obsolete]` par l'ADR 0056 §12, sont retirées au gel
 du SDK 1.0 (ADR 0114 §3).
 
-### Transferts (`FileTransfer`)
+### Transferts (`HackFileOperations`, ex-`FileTransfer`)
 
 ```csharp
-FileTransferResult copied = await FileTransfer.CopyAsync(paths, "/home/benoit/Backup");
-FileTransferResult moved = await FileTransfer.MoveAsync(paths, destination, conflict => AskUserAsync(conflict));
-FileTransferResult imported = await FileTransfer.ImportAsync(hostFiles, destination);
-FileTransferResult trashed = await FileTransfer.MoveToTrashAsync(paths);
+HackFileTransferResult copied = await HackFileOperations.CopyAsync(paths, "/home/benoit/Backup");
+HackFileTransferResult moved = await HackFileOperations.MoveAsync(paths, destination, Dialogs.AsFileConflictResolver(AppContext));
+HackFileTransferResult imported = await HackFileOperations.ImportAsync(hostFiles, destination);
+HackFileTransferResult trashed = await HackFileOperations.MoveToTrashAsync(paths);
 string? summary = moved.DescribeFailures("move");   // « Could not move 'x': permission denied. »
 ```
 
@@ -183,7 +183,7 @@ Worker quand l'hôte en a. Une erreur revient comme clé de texte
 transferts : une demande d'arrêt attend leur fin.
 
 Restent dans la fenêtre, avec leur raison écrite dans le code : les copies et
-déplacements (`FileTransfer`, appels à l'OS attendus avec un point d'arrêt
+déplacements (`HackFileOperations`, appels à l'OS attendus avec un point d'arrêt
 entre deux éléments, et question de conflit dans la fenêtre) et le
 téléchargement d'une sélection en `.zip` (les octets vont au navigateur depuis
 la fenêtre et dépasseraient vite les 16 Mio d'un résultat).
@@ -258,9 +258,10 @@ l'app est traduit par `Resources/AppManifest.fr.resx`.
   mémoire `AppClipboardGateway` du SDK, non branchée, est supprimée.
 - **Format GNOME.** La liste est stockée en `x-special/gnome-copied-files` et en
   `text/plain` : une app qui lit du texte voit les chemins (ADR 0056 §12).
-- **`FileTransfer` dans `HackerOs.AppSdk.FileView`.** Toute app qui affiche une
-  `FileView` (sélecteurs, CodeEditor) peut reprendre les mêmes règles ; le code
-  n'utilise que l'API `Hack*`, donc les capacités et les droits de l'app.
+- **`HackFileOperations` dans le SDK** (ADR 0161 §2, ex-`FileTransfer` de
+  `HackerOs.AppSdk.FileView`). Toute app, tout fournisseur du contrôle de
+  fichiers et toute commande reprennent les mêmes règles ; le code n'utilise que
+  l'API `Hack*`, donc les capacités et les droits de l'app.
 - **`HackDirectory.CopyAsync`.** .NET n'a pas de `Directory.Copy` ; l'ADR 0058
   demande une copie récursive. Le moteur copie l'arbre en une transaction ; entre
   deux montages, la façade le recrée entrée par entrée (même repli que
@@ -274,7 +275,7 @@ l'app est traduit par `Resources/AppManifest.fr.resx`.
   fichiers de l'hôte hors de portée : ce n'est plus le cas.
 - **Remplacer un dossier le supprime définitivement**, comme Nautilus en mode
   « Replace » ; la fenêtre le dit.
-- **Envoi depuis la barre d'outils** : passe par `FileTransfer.ImportAsync` et ne
+- **Envoi depuis la barre d'outils** : passe par `HackFileOperations.ImportAsync` et ne
   remplace plus un fichier existant (nom de copie), comme un dépôt.
 - **Capacités de l'explorateur** : `clipboard.read`, `clipboard.write` et
   `notifications.post` (résumé des échecs), toutes normales.
@@ -284,10 +285,12 @@ l'app est traduit par `Resources/AppManifest.fr.resx`.
 - `Tests/HackerOs.Platform.Core.Tests/Execution/AppClipboardGatewayTests.cs` :
   partage entre apps d'une session, isolement des sessions, capacités,
   `Changed`, vidage à la déconnexion, façade `HackClipboard`, format GNOME.
-- `Tests/HackerOs.AppSdk.FileView.Tests/FileTransferTests.cs` : noms de copie,
+- `Tests/HackerOs.AppSdk.Tests/IO/HackFileOperationsTests.cs` : noms de copie,
   copie récursive, dossier dans lui-même, déplacement sur place, choix de
   conflit, « Apply to all », échec isolé, import, corbeille.
-- `Tests/HackerOs.AppSdk.FileView.Tests/FileViewDropAndClipboardTests.cs` : dépôt
+- `Tests/HackerOs.AppSdk.Blazor.Tests/HackFileOperationDialogsTests.cs` : question
+  de conflit posée par le dialogue du fournisseur.
+- `Tests/HackerOs.Apps.FileExplorer.FileControl.Tests/FileViewDropAndClipboardTests.cs` : dépôt
   sur le fond, remise à `DropRequested`, fichiers de l'hôte, raccourcis,
   éléments coupés, fil d'Ariane.
 - `Tests/HackerOs.AppSdk.Tests/IO/HackDirectoryTests.cs` : `HackDirectory.CopyAsync`.

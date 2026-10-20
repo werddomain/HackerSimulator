@@ -93,7 +93,8 @@ public sealed class TemplateWorkspace : IAsyncLifetime
         return Process.Start(start) ?? throw new InvalidOperationException("dotnet did not start.");
     }
 
-    private async Task<(int ExitCode, string Output)> RunAsync(string directory, string[] arguments)
+    /// <summary>Runs <c>dotnet</c> in <paramref name="directory"/> and returns its exit code and output (a build expected to fail).</summary>
+    public async Task<(int ExitCode, string Output)> RunAsync(string directory, params string[] arguments)
     {
         using Process process = Start(directory, arguments);
         StringBuilder output = new();

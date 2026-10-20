@@ -385,4 +385,41 @@ documentation et l'index [`README.md`](README.md).
 - [x] Chantier 3c : fournisseur du contrôle de fichiers remplaçable (contrats ouverts à toute app fenêtrée, `HOSAPP0025` retiré, `/etc/hackeros/components.config`, choix de l'administrateur après approbation, repli `component.fallback`, onglet « Composants de l'OS » ; [ADR 0156](adr/0156-replaceable-file-control-provider.md), [ADR 0158](adr/0158-replaceable-file-provider-implementation-adjustments.md)).
 - [x] Chantier 4 : entrées inscrites par les apps (`[RegisterFileContextMenu]` exécutée au build pour toutes les apps, `contextMenus` du manifeste, `/etc/hackeros/context-menus.d` aligné au démarrage, filtres, placement, lancement par intent ou arguments, capacité `shell.context-menu`, `HOSAPP0026` à `HOSAPP0028`, Paramètres ▸ Menus des fichiers et `HackFileMenuEntries`, « Extraire ici » et « Publier comme site web… » inscrits ; [ADR 0159](adr/0159-app-menu-entries-implementation-adjustments.md), [`context-menu.md`](context-menu.md#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4)).
 - [x] Chantier 5 : bureau (app système `org.hackeros.desktop` rendue par la coquille sous les fenêtres, mode Bureau du contrôle de fichiers, grille `HackDesktopLayout`, `~/.config/hackeros/desktop.config` par `HackDesktopSettings`, Dossier perso et Corbeille, raccourcis `.desktop` par glisser depuis le menu Démarrer et « Envoyer vers ▸ Bureau », menus Affichage et Trier par, Paramètres ▸ Bureau ; [ADR 0160](adr/0160-desktop-implementation-adjustments.md), [`desktop.md`](desktop.md)).
-- [ ] Chantier 6.
+- [x] Chantier 6 : SDK 2.0 (`HackerOs.AppSdk.FileView` retiré, son code dans l'explorateur sous `FileControl/`, règles de copie `HackFileOperations` dans le SDK, `PublicAPI` publié, version `2.0.0`, apps 1.x refusées au catalogue et au build de l'hôte, fixture `Contoso.Sdk2Compat.2.0.0`, migration dans [`sdk-packages.md`](sdk-packages.md#sdk-20) ; [ADR 0161](adr/0161-sdk-2-0-implementation-adjustments.md)) et vérification finale (§13).
+
+## 13. Vérification finale
+
+Faite le 2026-10-20 sur la branche `desk/6-sdk-2` (série complète : `desk/base`
+avec les chantiers 0 à 5 et le 6), dans un conteneur Linux, .NET 10.
+
+| Vérification | Résultat |
+|---|---|
+| `dotnet build HackerOs.sln` (Debug) | réussi, 0 avertissement, 0 erreur |
+| Tests unitaires et d'intégration (41 projets `Tests/*.Tests` hors E2E) | 3 968 réussis, 0 échec |
+| `build/publish-trimmed.sh` et `HackerOs.TrimmedPublish.E2E.Tests` | `RESULT: PASS` ; 136 fichiers `.wasm`, 27,7 Mio, 8,3 Mio en Brotli |
+| `build/verify-hosts.sh` (Ecosystem et ses variantes, hôte de test, serveur) | `RESULT: PASS`, les 13 lignes |
+| `HackerOs.E2E.Tests` | 18 réussis |
+| `HackerOs.UI.E2E.Tests` | 28 réussis |
+| `HackerOs.Templates.E2E.Tests` (dont un hôte qui refuse les apps 1.x par `HOSAPP0021` et lance l'app 2.0) | 6 réussis |
+| `HackerOs.Pwa.E2E.Tests` | 6 réussis |
+
+Aucun test n'a été désactivé ni ignoré. Les échecs connus d'avant la série
+(PWA sans IPv6, tests instables listés dans
+[`building-and-testing.md`](building-and-testing.md)) ne se sont pas montrés
+pendant ce passage.
+
+Ce que la série livre :
+
+- un SDK fait de contrats : `HackFileView`, les dialogues de fichiers et le menu
+  contextuel sont rendus par l'OS à l'exécution (ADR 0148, 0153) ;
+- le menu contextuel de l'OS (`Menus.Attach`, multi-niveaux, clavier, appui
+  long ; ADR 0150, 0154) ;
+- le contrôle de fichiers fourni par l'explorateur, montré aussi dans les
+  dialogues Ouvrir / Enregistrer, et remplaçable par l'administrateur
+  (ADR 0155, 0156, 0157, 0158) ;
+- les entrées de menu inscrites par les apps (`[RegisterFileContextMenu]`,
+  ADR 0151, 0159) ;
+- le bureau sur `~/Desktop` (ADR 0152, 0160) ;
+- le SDK 2.0.0, qui retire la `FileView` publique et refuse les apps 1.x
+  (ADR 0149, 0161).
+

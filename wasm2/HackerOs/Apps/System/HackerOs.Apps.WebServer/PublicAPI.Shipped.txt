@@ -71,6 +71,7 @@ const HackerOs.Apps.WebServer.Daemon.WwwDataAccess.AccountName = "www-data" -> s
 const HackerOs.Apps.WebServer.HackWebdApp.AppId = "org.hackeros.hackwebd" -> string!
 const HackerOs.Apps.WebServer.Manager.WebSiteStore.FirstSuggestedPort = 8080 -> int
 const HackerOs.Apps.WebServer.WebServerManagerApp.AppId = "org.hackeros.web-server-manager" -> string!
+const HackerOs.Apps.WebServer.WebServerManagerApp.PublishSiteIntent = "org.hackeros.web-server-manager.publish-site.v1" -> string!
 override HackerOs.Apps.WebServer.HackWebdApp.AutoStart.get -> bool
 override HackerOs.Apps.WebServer.HackWebdApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
 override HackerOs.Apps.WebServer.HackWebdApp.Category.get -> string!
@@ -84,11 +85,13 @@ override HackerOs.Apps.WebServer.HackWebdApp.PublisherId.get -> string!
 override HackerOs.Apps.WebServer.HackWebdApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 override HackerOs.Apps.WebServer.HackWebdApp.SingleInstancePerUser.get -> bool
 override HackerOs.Apps.WebServer.Manager.WebServerManagerWindow.OnAppInitializedAsync() -> System.Threading.Tasks.Task!
+override HackerOs.Apps.WebServer.Manager.WebServerManagerWindow.OnIntentReceivedAsync(HackerOs.App.Abstractions.AppIntentDelivery! intent) -> System.Threading.Tasks.Task!
 override HackerOs.Apps.WebServer.WebServerManagerApp.Capabilities.get -> System.Collections.Generic.IReadOnlyList<string!>!
 override HackerOs.Apps.WebServer.WebServerManagerApp.Category.get -> string!
 override HackerOs.Apps.WebServer.WebServerManagerApp.Description.get -> string!
 override HackerOs.Apps.WebServer.WebServerManagerApp.EntryPoint.get -> System.Type!
 override HackerOs.Apps.WebServer.WebServerManagerApp.Id.get -> string!
+override HackerOs.Apps.WebServer.WebServerManagerApp.Intents.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppIntentDeclarationManifest!>!
 override HackerOs.Apps.WebServer.WebServerManagerApp.Kind.get -> HackerOs.App.Abstractions.AppKind
 override HackerOs.Apps.WebServer.WebServerManagerApp.Name.get -> string!
 override HackerOs.Apps.WebServer.WebServerManagerApp.PublisherId.get -> string!
@@ -112,4 +115,5 @@ static HackerOs.Apps.WebServer.Manager.WebSiteStore.ReadLogsAsync(string! site, 
 static HackerOs.Apps.WebServer.Manager.WebSiteStore.SaveAsync(HackerOs.AppSdk.Net.Hosting.HackWebSite! site, HackerOs.AppSdk.Net.Hosting.HackWebSiteScope scope, string? previousPath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
 static HackerOs.Apps.WebServer.Manager.WebSiteStore.StateOf(HackerOs.AppSdk.Net.Hosting.HackWebSiteDeclaration! declaration, System.Collections.Generic.IReadOnlySet<string!>! servedPrefixes) -> HackerOs.Apps.WebServer.Manager.WebSiteState
 static HackerOs.Apps.WebServer.Manager.WebSiteStore.Suggest(string! folder, HackerOs.Apps.WebServer.Manager.WebServerSnapshot! snapshot) -> HackerOs.AppSdk.Net.Hosting.HackWebSite!
+static HackerOs.Apps.WebServer.WebServerManagerApp.RegisterFileContextMenu(HackerOs.AppSdk.Blazor.Files.RegisterFileContextMenuContext! context) -> void
 ~override HackerOs.Apps.WebServer.Manager.WebServerManagerWindow.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

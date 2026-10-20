@@ -1,4 +1,4 @@
-using HackerOs.AppSdk.FileView.Transfers;
+using HackerOs.AppSdk.IO;
 using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.FileExplorer;
@@ -20,20 +20,20 @@ internal static class ExplorerTransferReport
 {
     /// <summary>
     /// The failure summary in the explorer's texts, worded like
-    /// <see cref="FileTransferResult.DescribeFailures(string)"/>: <c>Could not copy 'a': reason.</c>, or
+    /// <see cref="HackFileTransferResult.DescribeFailures(string)"/>: <c>Could not copy 'a': reason.</c>, or
     /// the count and the list when several items failed; <see langword="null"/> when nothing failed.
     /// </summary>
     /// <param name="text">The explorer's texts in the language of the app that shows them.</param>
     /// <param name="result">The transfer's outcome.</param>
     /// <param name="verb">What the transfer was doing.</param>
-    internal static string? DescribeFailures(IStringLocalizer<Strings> text, FileTransferResult result, TransferVerb verb)
+    internal static string? DescribeFailures(IStringLocalizer<Strings> text, HackFileTransferResult result, TransferVerb verb)
     {
         if (result.Failures.Count == 0)
         {
             return null;
         }
 
-        string items = string.Join("; ", result.Failures.Select(failure => text["Error.Item", FileTransfer.GetName(failure.Path), failure.Reason].Value));
+        string items = string.Join("; ", result.Failures.Select(failure => text["Error.Item", HackFileOperations.GetName(failure.Path), failure.Reason].Value));
         return result.Failures.Count == 1
             ? text[$"Transfer.{verb}.One", items]
             : text[$"Transfer.{verb}.Many", result.Failures.Count, items];

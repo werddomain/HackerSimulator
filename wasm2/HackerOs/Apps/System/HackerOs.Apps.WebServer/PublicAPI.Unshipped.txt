@@ -1,5 +1,1 @@
 #nullable enable
-const HackerOs.Apps.WebServer.WebServerManagerApp.PublishSiteIntent = "org.hackeros.web-server-manager.publish-site.v1" -> string!
-override HackerOs.Apps.WebServer.Manager.WebServerManagerWindow.OnIntentReceivedAsync(HackerOs.App.Abstractions.AppIntentDelivery! intent) -> System.Threading.Tasks.Task!
-override HackerOs.Apps.WebServer.WebServerManagerApp.Intents.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppIntentDeclarationManifest!>!
-static HackerOs.Apps.WebServer.WebServerManagerApp.RegisterFileContextMenu(HackerOs.AppSdk.Blazor.Files.RegisterFileContextMenuContext! context) -> void

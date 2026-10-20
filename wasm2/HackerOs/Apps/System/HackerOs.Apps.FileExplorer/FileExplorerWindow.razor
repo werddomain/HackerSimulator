@@ -2,8 +2,8 @@
 @using HackerOs.AppSdk.Blazor
 @using HackerOs.AppSdk.Blazor.ContextMenus
 @using HackerOs.AppSdk.Blazor.Files
-@using HackerOs.AppSdk.FileView
-@using HackerOs.AppSdk.FileView.Events
+@using HackerOs.Apps.FileExplorer.FileControl
+@using HackerOs.Apps.FileExplorer.FileControl.Events
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Files
 @using HackerOs.Simulation.Abstractions.Gateways
@@ -11,7 +11,7 @@
 @using HackerOs.Simulation.Abstractions.FileSystem
 @using HackerOs.AppSdk.Blazor.Interop
 @using HackerOs.AppSdk.Icons
-@using HackerOs.AppSdk.FileView.Transfers
+@using HackerOs.AppSdk.IO
 @using HackerOs.Simulation.Abstractions.Notifications
 @using System.IO.Compression
 @using Microsoft.AspNetCore.Components.Forms
@@ -236,7 +236,7 @@
 
     /// <summary>
     /// Records a file operation so a stop request can wait for it: each item moves atomically and
-    /// <see cref="FileTransfer"/> stops between two when the process is asked to stop, so the window
+    /// <see cref="HackFileOperations"/> stops between two when the process is asked to stop, so the window
     /// closes after the current item, with nothing half-copied and the rest reported as not done.
     /// </summary>
     private async Task<T> TrackOperation<T>(Task<T> operation)
@@ -617,7 +617,7 @@
     {
         if (e.Entries.Count == 0) return;
 
-        FileTransferResult result = await TrackOperation(FileTransfer.MoveToTrashAsync(
+        HackFileTransferResult result = await TrackOperation(HackFileOperations.MoveToTrashAsync(
             e.Entries.Select(entry => entry.Path.Value).ToList(), AppContext.CancellationToken));
         ReportTransfer(result, TransferVerb.Trash);
         await RefreshAfterTransferAsync();
@@ -631,7 +631,7 @@
     /// Shows the end-of-operation summary: the failures (with their reason) in the error banner and as a
     /// desktop notification; nothing when everything went through.
     /// </summary>
-    private void ReportTransfer(FileTransferResult result, TransferVerb verb)
+    private void ReportTransfer(HackFileTransferResult result, TransferVerb verb)
     {
         string? summary = ExplorerTransferReport.DescribeFailures(L, result, verb);
         _errorMessage = summary;
@@ -687,14 +687,14 @@
     {
         if (_files is null) return;
 
-        IReadOnlyList<FileTransferHostFile> files = e.GetMultipleFiles(maximumFileCount: 100)
-            .Select(file => new FileTransferHostFile(
+        IReadOnlyList<HackHostFile> files = e.GetMultipleFiles(maximumFileCount: 100)
+            .Select(file => new HackHostFile(
                 file.Name,
                 file.Size,
                 file.ContentType,
                 (maxBytes, cancellationToken) => Task.FromResult(file.OpenReadStream(maxBytes, cancellationToken))))
             .ToList();
-        FileTransferResult result = await TrackOperation(FileTransfer.ImportAsync(files, _files.CurrentDirectory, AppContext.CancellationToken));
+        HackFileTransferResult result = await TrackOperation(HackFileOperations.ImportAsync(files, _files.CurrentDirectory, AppContext.CancellationToken));
         ReportTransfer(result, TransferVerb.Upload);
         await _files.RefreshAsync();
     }

@@ -3,9 +3,8 @@ using HackerOs.AppSdk.Apps;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Blazor.Files;
 using HackerOs.AppSdk.Clipboard;
-using HackerOs.AppSdk.FileView;
-using HackerOs.AppSdk.FileView.Events;
-using HackerOs.AppSdk.FileView.Transfers;
+using HackerOs.Apps.FileExplorer.FileControl;
+using HackerOs.Apps.FileExplorer.FileControl.Events;
 using HackerOs.AppSdk.IO;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
@@ -330,10 +329,10 @@ public sealed partial class ExplorerFileView
         bool cut = list.Operation == HackClipboardFileOperation.Cut;
         // Copies stay on the window's thread (ADR 0140): each item is an awaited OS call with a
         // checkpoint between two, and a name conflict asks the user between two items.
-        FileTransferResult result = await TrackOperation(FileTransfer.TransferAsync(
+        HackFileTransferResult result = await TrackOperation(HackFileOperations.TransferAsync(
             list.Paths,
             destination.Value,
-            cut ? FileTransferMode.Move : FileTransferMode.Copy,
+            cut ? HackFileTransferMode.Move : HackFileTransferMode.Copy,
             AskConflictAsync,
             HostContext.CancellationToken));
 
@@ -392,16 +391,16 @@ public sealed partial class ExplorerFileView
 
         await CreateShortcutsAsync(e.AppIds, destination);
 
-        List<FileTransferItemResult> completed = [];
+        List<HackFileTransferItemResult> completed = [];
         List<string> skipped = [];
-        List<FileTransferFailure> failures = [];
+        List<HackFileTransferFailure> failures = [];
 
         if (e.Entries.Count > 0)
         {
-            FileTransferResult moved = await TrackOperation(FileTransfer.TransferAsync(
+            HackFileTransferResult moved = await TrackOperation(HackFileOperations.TransferAsync(
                 [.. e.Entries.Select(entry => entry.Path.Value)],
                 destination.Value,
-                e.Copy ? FileTransferMode.Copy : FileTransferMode.Move,
+                e.Copy ? HackFileTransferMode.Copy : HackFileTransferMode.Move,
                 AskConflictAsync,
                 HostContext.CancellationToken));
             completed.AddRange(moved.Completed);
@@ -411,36 +410,36 @@ public sealed partial class ExplorerFileView
 
         if (e.HostFiles.Count > 0)
         {
-            FileTransferResult imported = await TrackOperation(FileTransfer.ImportAsync(e.HostFiles, destination.Value, HostContext.CancellationToken));
+            HackFileTransferResult imported = await TrackOperation(HackFileOperations.ImportAsync(e.HostFiles, destination.Value, HostContext.CancellationToken));
             completed.AddRange(imported.Completed);
             failures.AddRange(imported.Failures);
         }
 
         await ReportTransferAsync(
-            new FileTransferResult(completed, skipped, failures),
+            new HackFileTransferResult(completed, skipped, failures),
             e.Copy || e.Entries.Count == 0 ? TransferVerb.Copy : TransferVerb.Move);
         await RefreshAfterChangeAsync();
     }
 
     /// <summary>The provided "Replace / Keep both / Skip" dialog; closing it skips the item.</summary>
-    private async Task<FileConflictResolution> AskConflictAsync(FileTransferConflict conflict)
+    private async Task<HackFileConflictResolution> AskConflictAsync(HackFileTransferConflict conflict)
     {
         if (Dialogs is not { } dialogs)
         {
-            return new FileConflictResolution(FileConflictChoice.Skip);
+            return new HackFileConflictResolution(HackFileConflictChoice.Skip);
         }
 
         FileConflictDialogResult answer = await dialogs.ResolveFileConflictAsync(
             HostContext,
             new FileConflictDialogRequest(conflict.SourcePath, conflict.DestinationPath, conflict.SourceIsDirectory, conflict.DestinationIsDirectory),
             HostContext.CancellationToken);
-        FileConflictChoice choice = answer.Choice switch
+        HackFileConflictChoice choice = answer.Choice switch
         {
-            FileConflictDialogChoice.Replace => FileConflictChoice.Replace,
-            FileConflictDialogChoice.KeepBoth => FileConflictChoice.KeepBoth,
-            _ => FileConflictChoice.Skip
+            FileConflictDialogChoice.Replace => HackFileConflictChoice.Replace,
+            FileConflictDialogChoice.KeepBoth => HackFileConflictChoice.KeepBoth,
+            _ => HackFileConflictChoice.Skip
         };
-        return new FileConflictResolution(choice, answer.ApplyToAll);
+        return new HackFileConflictResolution(choice, answer.ApplyToAll);
     }
 
     // ---- Shared ----------------------------------------------------------------------------------------
@@ -471,7 +470,7 @@ public sealed partial class ExplorerFileView
     }
 
     /// <summary>The end-of-operation summary: the failures (with their reason) to the host; nothing when all went through.</summary>
-    private async Task ReportTransferAsync(FileTransferResult result, TransferVerb verb)
+    private async Task ReportTransferAsync(HackFileTransferResult result, TransferVerb verb)
     {
         if (ExplorerTransferReport.DescribeFailures(L, result, verb) is { } summary)
         {
