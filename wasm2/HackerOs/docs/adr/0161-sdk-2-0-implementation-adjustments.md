@@ -43,6 +43,10 @@ que porte la nouvelle fixture.
   `_content/HackerOs.Apps.FileExplorer/FileControl/…` ; les textes passent dans
   `Resources/FileControl/Strings*.resx` de l'explorateur, et ceux des transferts
   dans les `Strings*.resx` de `HackerOs.AppSdk`.
+- Devenus du code d'app (sous `Apps/`), ses composants suivent la règle du cadre
+  ambiant (ADR 0066, 0067) : ils dérivent de `HackComponentBase` et le rappel
+  JavaScript `OnPasteShortcutAsync` entre dans le cadre de l'app. Le temps de
+  la vue est donc compté à l'app qui l'affiche, plus au compositeur.
 - L'hôte (`HackerOs.Ecosystem.Host`) n'enregistre plus `IShellIconProvider` :
   la vue prend `DefaultShellIconProvider` quand aucun n'est fourni. L'OS ne
   référence donc plus le code de la vue avant le chargement de l'explorateur.

@@ -195,8 +195,6 @@ HackerOs.Apps.FileExplorer.FileControl.FileView.AllowDragDrop.get -> bool
 HackerOs.Apps.FileExplorer.FileControl.FileView.AllowDragDrop.set -> void
 HackerOs.Apps.FileExplorer.FileControl.FileView.AllowMultiSelect.get -> bool
 HackerOs.Apps.FileExplorer.FileControl.FileView.AllowMultiSelect.set -> void
-HackerOs.Apps.FileExplorer.FileControl.FileView.AppContext.get -> HackerOs.AppSdk.IAppExecutionContext?
-HackerOs.Apps.FileExplorer.FileControl.FileView.AppContext.set -> void
 HackerOs.Apps.FileExplorer.FileControl.FileView.CanPaste.get -> bool
 HackerOs.Apps.FileExplorer.FileControl.FileView.CanPaste.set -> void
 HackerOs.Apps.FileExplorer.FileControl.FileView.ClearSelect() -> void

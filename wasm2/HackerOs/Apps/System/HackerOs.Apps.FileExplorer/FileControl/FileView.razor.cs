@@ -1,4 +1,5 @@
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Blazor;
 using System.Text.Json;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.DragDrop;
@@ -62,12 +63,9 @@ public partial class FileView : IAsyncDisposable
     [Parameter]
     public IAppFileSystemWatchGateway? Watch { get; set; }
 
-    /// <summary>
-    /// Gets or sets the app this view belongs to, cascaded by the window host: its process's language
-    /// is the language of the view's texts (ADR 0104). Without one, the ambient app's language applies.
-    /// </summary>
-    [CascadingParameter]
-    public IAppExecutionContext? AppContext { get; set; }
+    // The app this view belongs to is HackComponentBase.AppContext, cascaded by the window host: its
+    // process's language is the language of the view's texts (ADR 0104), and the view's handlers run
+    // in its frame (ADR 0161 §1). Without one, the ambient app's language applies.
 
     /// <summary>Gets the library's texts in the owning app's language, shared by the mode renderers.</summary>
     internal Microsoft.Extensions.Localization.IStringLocalizer<Strings> L => AppContext is { } context
@@ -1058,6 +1056,8 @@ public partial class FileView : IAsyncDisposable
     [JSInvokable]
     public async Task OnPasteShortcutAsync(bool hostFiles)
     {
+        // Called from JavaScript, outside any frame: enter the app's frame first (ADR 0161 §1).
+        using IDisposable? scope = AppContext is { } context ? HackExecutionContext.Enter(context) : null;
         if (!hostFiles)
         {
             await RequestClipboardAsync(FileViewClipboardAction.Paste, CurrentDirectory);

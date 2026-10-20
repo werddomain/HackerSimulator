@@ -1,4 +1,5 @@
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Blazor;
 using HackerOs.Apps.FileExplorer.FileControl.Icons;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using Microsoft.AspNetCore.Components;

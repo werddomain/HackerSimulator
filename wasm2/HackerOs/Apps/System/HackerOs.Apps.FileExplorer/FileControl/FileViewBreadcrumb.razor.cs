@@ -1,4 +1,5 @@
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Blazor;
 using HackerOs.App.Abstractions;
 using HackerOs.Apps.FileExplorer.FileControl.Events;
 using Microsoft.AspNetCore.Components;
