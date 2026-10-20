@@ -536,6 +536,7 @@ HackerOs.Simulation.Abstractions.Gateways.IAppEnvironmentGateway.UserName.get ->
 HackerOs.Simulation.Abstractions.Gateways.IAppEventGateway
 HackerOs.Simulation.Abstractions.Gateways.IAppEventGateway.Publish<TEvent>(TEvent event) -> System.Collections.Generic.IReadOnlyList<HackerOs.Simulation.Abstractions.Events.EventDispatchFault!>!
 HackerOs.Simulation.Abstractions.Gateways.IAppEventGateway.Publish<TPayload>(HackerOs.Simulation.Abstractions.Events.TopicName topic, TPayload payload) -> HackerOs.Simulation.Abstractions.Events.TopicPublishResult!
+HackerOs.Simulation.Abstractions.Gateways.IAppEventGateway.PublishAsync<TPayload>(HackerOs.Simulation.Abstractions.Events.TopicName topic, TPayload payload, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Simulation.Abstractions.Events.TopicPublishResult!>!
 HackerOs.Simulation.Abstractions.Gateways.IAppEventGateway.RegisterSharedChannel(HackerOs.Simulation.Abstractions.Events.TopicName root, HackerOs.Simulation.Abstractions.Events.SharedChannelPolicy! policy) -> void
 HackerOs.Simulation.Abstractions.Gateways.IAppEventGateway.Subscribe<TEvent>(System.Action<TEvent>! handler) -> System.IDisposable!
 HackerOs.Simulation.Abstractions.Gateways.IAppEventGateway.Subscribe<TPayload>(HackerOs.Simulation.Abstractions.Events.TopicName topic, System.Action<HackerOs.Simulation.Abstractions.Events.TopicMessage<TPayload>!>! handler) -> System.IDisposable!

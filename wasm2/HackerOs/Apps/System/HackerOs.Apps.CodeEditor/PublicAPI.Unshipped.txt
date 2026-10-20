@@ -1,14 +1,1 @@
 #nullable enable
-HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnError.get -> Microsoft.AspNetCore.Components.EventCallback<string!>
-HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnError.set -> void
-HackerOs.Apps.CodeEditor.CodeEditorWorkspace.CodeEditorWorkspace(HackerOs.App.Abstractions.VirtualPath root, HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! fileSystem, HackerOs.Simulation.Abstractions.FileSystem.FileSystemSelectedResourceHandle? selectedResource = null) -> void
-HackerOs.Apps.CodeEditor.CodeEditorWorkspace.SelectedResource.get -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemSelectedResourceHandle?
-*REMOVED*HackerOs.Apps.CodeEditor.CodeEditorExplorer.Dispose() -> void
-*REMOVED*HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnDeleteRequested.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.FileView.Events.FileViewDeleteRequestedEventArgs!>
-*REMOVED*HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnDeleteRequested.set -> void
-*REMOVED*HackerOs.Apps.CodeEditor.CodeEditorExplorer.OwnerAppId.get -> string?
-*REMOVED*HackerOs.Apps.CodeEditor.CodeEditorExplorer.OwnerAppId.set -> void
-*REMOVED*HackerOs.Apps.CodeEditor.CodeEditorExplorer.Watch.get -> HackerOs.Simulation.Abstractions.FileSystem.IAppFileSystemWatchGateway?
-*REMOVED*HackerOs.Apps.CodeEditor.CodeEditorExplorer.Watch.set -> void
-*REMOVED*HackerOs.Apps.CodeEditor.CodeEditorWorkspace.CodeEditorWorkspace(HackerOs.App.Abstractions.VirtualPath root, HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! fileSystem) -> void
-*REMOVED*override HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnInitialized() -> void

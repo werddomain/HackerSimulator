@@ -56,9 +56,8 @@ HackerOs.Apps.CodeEditor.CodeEditorEditResult.Succeeded.init -> void
 HackerOs.Apps.CodeEditor.CodeEditorExplorer
 HackerOs.Apps.CodeEditor.CodeEditorExplorer.BeginNewFile() -> void
 HackerOs.Apps.CodeEditor.CodeEditorExplorer.CodeEditorExplorer() -> void
-HackerOs.Apps.CodeEditor.CodeEditorExplorer.Dispose() -> void
-HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnDeleteRequested.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.FileView.Events.FileViewDeleteRequestedEventArgs!>
-HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnDeleteRequested.set -> void
+HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnError.get -> Microsoft.AspNetCore.Components.EventCallback<string!>
+HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnError.set -> void
 HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnFindInFolder.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.App.Abstractions.VirtualPath>
 HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnFindInFolder.set -> void
 HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnOpenFile.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.App.Abstractions.VirtualPath>
@@ -71,11 +70,7 @@ HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnPreviewFile.get -> Microsoft.AspNe
 HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnPreviewFile.set -> void
 HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnRenamed.get -> Microsoft.AspNetCore.Components.EventCallback<(HackerOs.App.Abstractions.VirtualPath OldPath, HackerOs.App.Abstractions.VirtualPath NewPath)>
 HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnRenamed.set -> void
-HackerOs.Apps.CodeEditor.CodeEditorExplorer.OwnerAppId.get -> string?
-HackerOs.Apps.CodeEditor.CodeEditorExplorer.OwnerAppId.set -> void
 HackerOs.Apps.CodeEditor.CodeEditorExplorer.RefreshAsync() -> System.Threading.Tasks.Task!
-HackerOs.Apps.CodeEditor.CodeEditorExplorer.Watch.get -> HackerOs.Simulation.Abstractions.FileSystem.IAppFileSystemWatchGateway?
-HackerOs.Apps.CodeEditor.CodeEditorExplorer.Watch.set -> void
 HackerOs.Apps.CodeEditor.CodeEditorExplorer.Workspace.get -> HackerOs.Apps.CodeEditor.CodeEditorWorkspace?
 HackerOs.Apps.CodeEditor.CodeEditorExplorer.Workspace.set -> void
 HackerOs.Apps.CodeEditor.CodeEditorFileService
@@ -264,7 +259,7 @@ HackerOs.Apps.CodeEditor.CodeEditorWindow.OnDirtyChanged(string! documentId, boo
 HackerOs.Apps.CodeEditor.CodeEditorWindow.OnEditorChanged(string! documentId, string! content) -> System.Threading.Tasks.Task!
 HackerOs.Apps.CodeEditor.CodeEditorWindow.OnShortcut(string! name) -> System.Threading.Tasks.Task!
 HackerOs.Apps.CodeEditor.CodeEditorWorkspace
-HackerOs.Apps.CodeEditor.CodeEditorWorkspace.CodeEditorWorkspace(HackerOs.App.Abstractions.VirtualPath root, HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! fileSystem) -> void
+HackerOs.Apps.CodeEditor.CodeEditorWorkspace.CodeEditorWorkspace(HackerOs.App.Abstractions.VirtualPath root, HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! fileSystem, HackerOs.Simulation.Abstractions.FileSystem.FileSystemSelectedResourceHandle? selectedResource = null) -> void
 HackerOs.Apps.CodeEditor.CodeEditorWorkspace.Contains(HackerOs.App.Abstractions.VirtualPath path) -> bool
 HackerOs.Apps.CodeEditor.CodeEditorWorkspace.CreateDirectoryAsync(HackerOs.App.Abstractions.VirtualPath directory, string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Apps.CodeEditor.CodeEditorCreateResult!>!
 HackerOs.Apps.CodeEditor.CodeEditorWorkspace.CreateFileAsync(HackerOs.App.Abstractions.VirtualPath directory, string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Apps.CodeEditor.CodeEditorCreateResult!>!
@@ -273,6 +268,7 @@ HackerOs.Apps.CodeEditor.CodeEditorWorkspace.ListFilesAsync(System.Threading.Can
 HackerOs.Apps.CodeEditor.CodeEditorWorkspace.Name.get -> string!
 HackerOs.Apps.CodeEditor.CodeEditorWorkspace.RelativePathOf(HackerOs.App.Abstractions.VirtualPath path) -> string!
 HackerOs.Apps.CodeEditor.CodeEditorWorkspace.Root.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.Apps.CodeEditor.CodeEditorWorkspace.SelectedResource.get -> HackerOs.Simulation.Abstractions.FileSystem.FileSystemSelectedResourceHandle?
 HackerOs.Apps.CodeEditor.CodeEditorWorkspaceFile
 HackerOs.Apps.CodeEditor.CodeEditorWorkspaceFile.CodeEditorWorkspaceFile(HackerOs.App.Abstractions.VirtualPath Path, string! RelativePath, long Length) -> void
 HackerOs.Apps.CodeEditor.CodeEditorWorkspaceFile.Directory.get -> string!
@@ -312,7 +308,6 @@ override HackerOs.Apps.CodeEditor.CodeEditorApp.Name.get -> string!
 override HackerOs.Apps.CodeEditor.CodeEditorApp.PublisherId.get -> string!
 override HackerOs.Apps.CodeEditor.CodeEditorApp.Resources.get -> HackerOs.App.Abstractions.AppResourceProfileManifest!
 override HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
-override HackerOs.Apps.CodeEditor.CodeEditorExplorer.OnInitialized() -> void
 override HackerOs.Apps.CodeEditor.CodeEditorQuickOpenPalette.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override HackerOs.Apps.CodeEditor.CodeEditorSearchView.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override HackerOs.Apps.CodeEditor.CodeEditorSearchView.OnParametersSet() -> void

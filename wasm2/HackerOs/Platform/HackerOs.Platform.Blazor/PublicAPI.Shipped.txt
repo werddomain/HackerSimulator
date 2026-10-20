@@ -2,7 +2,130 @@
 HackerOs.Platform.Blazor.Components.HackComponentHost
 HackerOs.Platform.Blazor.Components.HackComponentHost.GetProviders(string! contract) -> System.Collections.Generic.IReadOnlyList<(string! AppId, HackerOs.App.Abstractions.AppComponentManifest! Component)>!
 HackerOs.Platform.Blazor.Components.HackComponentHost.HackComponentHost(HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry! enablement, System.Func<string!, System.Threading.CancellationToken, System.Threading.Tasks.Task<(HackerOs.Platform.Core.Discovery.AppDescriptor? Descriptor, string? Error)>!>! descriptors) -> void
+HackerOs.Platform.Blazor.Components.HackComponentHost.HackComponentHost(HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry! enablement, System.Func<string!, System.Threading.CancellationToken, System.Threading.Tasks.Task<(HackerOs.Platform.Core.Discovery.AppDescriptor? Descriptor, string? Error)>!>! descriptors, System.Collections.Generic.IEnumerable<HackerOs.Platform.Blazor.Components.HackPlatformComponent!>? platformComponents, System.Action<string!>? reportError) -> void
+HackerOs.Platform.Blazor.Components.HackComponentHost.ReportWarning.get -> System.Action<string!>?
+HackerOs.Platform.Blazor.Components.HackComponentHost.ReportWarning.init -> void
 HackerOs.Platform.Blazor.Components.HackComponentHost.ResolveAsync(string! contract, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Blazor.Components.HackComponentResolution!>!
+HackerOs.Platform.Blazor.Components.HackComponentHost.Selection.get -> HackerOs.Platform.Core.ComponentProviders.IComponentProviderSelection?
+HackerOs.Platform.Blazor.Components.HackComponentHost.Selection.init -> void
+HackerOs.Platform.Blazor.Components.HackPlatformComponent
+HackerOs.Platform.Blazor.Components.HackPlatformComponent.ComponentType.get -> System.Type!
+HackerOs.Platform.Blazor.Components.HackPlatformComponent.Contract.get -> string!
+HackerOs.Platform.Blazor.Components.HackPlatformComponent.HackPlatformComponent(string! contract, System.Type! componentType) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel.ContextMenuLevel(System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow!>! Rows) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel.Rows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow!>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel.Rows.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation.Close = 1 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation.Invoke = 2 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation.None = 0 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.Active.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.Back() -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.Chosen.get -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.Click(int level, int row) -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.ContextMenuNavigator(HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! root, bool highlightFirst) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.HandleKey(string! key) -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.Hover(int level, int row) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.Levels.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel!>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel.Highlight.get -> int
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel.Highlight.set -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel.Level.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel.OpenLevel(HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! level, int highlight) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel.ParentRow.get -> int
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel.ParentRow.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin.Code = 3 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin.Keyboard = 2 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin.Pointer = 0 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin.Touch = 1 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.ContextMenuOverlay() -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.OnDismissed() -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.OnRequestedAsync(string! token, double clientX, double clientY, string! origin) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.OnTokensReleased(string![]! tokens) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.Presentation.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuPresentation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.Presentation.set -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuPresentation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuPresentation.Popup = 0 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuPresentation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuPresentation.Sheet = 1 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuPresentation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.ContextMenuRow(HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition? Item, HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel? Submenu) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.IsSelectable.get -> bool
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.IsSeparator.get -> bool
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.Item.get -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.Item.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.Submenu.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.Submenu.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.Attach(string! name, object? item) -> System.Collections.Generic.IReadOnlyDictionary<string!, object!>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.AttachedCount.get -> int
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.Close() -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.Dispose() -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.Id.get -> string!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.IsDisposed.get -> bool
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.OpenAsync(string! name, object? item, double clientX, double clientY) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.Register(HackerOs.AppSdk.Blazor.ContextMenus.HackMenuRegistration! registration) -> System.IDisposable!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.Changed -> System.Action?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.Close() -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.ContextMenuService(Microsoft.Extensions.Logging.ILogger<HackerOs.Platform.Blazor.ContextMenus.ContextMenuService!>? logger = null, HackerOs.Platform.Blazor.ContextMenus.IFileMenuEntrySource? fileMenuEntries = null) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.CreateScope(HackerOs.AppSdk.IAppExecutionContext? context) -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.Current.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.InvokeAsync(HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition! item) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.OpenAsync(HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope! scope, string! name, object? item, double clientX, double clientY, HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin origin) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.OpenFromTokenAsync(string! token, double clientX, double clientY, HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin origin) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.Release(System.Collections.Generic.IEnumerable<string!>! tokens) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.TryResolve(string! token, out HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope? scope, out string? name, out object? item) -> bool
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.ClientX.get -> double
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.ClientX.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.ClientY.get -> double
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.ClientY.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.ContextMenuSession(HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope! Scope, string! Name, object? Item, string? Label, HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! Root, double ClientX, double ClientY, HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin Origin) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Item.get -> object?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Item.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Label.get -> string?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Label.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Name.get -> string!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Name.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Origin.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Origin.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Root.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Root.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Scope.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Scope.init -> void
+HackerOs.Platform.Blazor.ContextMenus.FileMenuEntries
+HackerOs.Platform.Blazor.ContextMenus.FileMenuEntries.ApplyAsync(HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition! menu, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.ContextMenus.FileMenuEntries.FileMenuEntries(HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry! registry, HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher! launcher, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlySet<string!>!>>! hidden, System.Func<System.Globalization.CultureInfo!>! culture, System.Func<string!, HackerOs.App.Abstractions.AppContextMenuEntryManifest!, string!, System.Collections.Generic.IReadOnlyList<string!>!, System.Threading.Tasks.Task!>! launch) -> void
+HackerOs.Platform.Blazor.ContextMenus.FileMenuEntryPlacement
+HackerOs.Platform.Blazor.ContextMenus.FileMenuEntryPlacement.Candidate
+HackerOs.Platform.Blazor.ContextMenus.FileMenuEntryPlacement.Candidate.AppId.get -> string!
+HackerOs.Platform.Blazor.ContextMenus.FileMenuEntryPlacement.Candidate.AppId.init -> void
+HackerOs.Platform.Blazor.ContextMenus.FileMenuEntryPlacement.Candidate.Candidate(string! AppId, HackerOs.App.Abstractions.AppContextMenuEntryManifest! Entry, HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition! Item) -> void
+HackerOs.Platform.Blazor.ContextMenus.FileMenuEntryPlacement.Candidate.Entry.get -> HackerOs.App.Abstractions.AppContextMenuEntryManifest!
+HackerOs.Platform.Blazor.ContextMenus.FileMenuEntryPlacement.Candidate.Entry.init -> void
+HackerOs.Platform.Blazor.ContextMenus.FileMenuEntryPlacement.Candidate.Item.get -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition!
+HackerOs.Platform.Blazor.ContextMenus.FileMenuEntryPlacement.Candidate.Item.init -> void
+HackerOs.Platform.Blazor.ContextMenus.IFileMenuEntrySource
+HackerOs.Platform.Blazor.ContextMenus.IFileMenuEntrySource.ApplyAsync(HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition! menu, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Build.get -> System.Func<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition!>?
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Build.set -> void
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Close() -> void
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Dispose() -> void
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Label.get -> string?
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Label.set -> void
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Name.get -> string!
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Name.set -> void
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.OpenAsync(object? item, double clientX, double clientY) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Opening.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuOpeningEventArgs!>
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Opening.set -> void
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.PlatformContextMenu() -> void
 HackerOs.Platform.Blazor.Controls.PlatformComplexControlsProof
 HackerOs.Platform.Blazor.Controls.PlatformComplexControlsProof.PlatformComplexControlsProof() -> void
 HackerOs.Platform.Blazor.Dialogs.AppChooserDialog
@@ -31,17 +154,21 @@ HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.ActiveRequestFor(System.Guid 
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.Cancel(System.Guid requestId) -> bool
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.Changed -> System.Action?
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.ChooseAppAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.AppChooserDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.AppChooserDialogResult!>
+HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.CompleteProvided(System.Guid requestId, object? result) -> bool
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.CredentialPromptAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.CredentialPromptDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.CredentialPromptDialogResult!>
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.DialogCoordinator(HackerOs.AppSdk.Blazor.IFileDialogService! fileDialogs) -> void
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.Dispose() -> void
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.MessageBoxAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.MessageBoxDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.MessageBoxDialogResult!>
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.OpenFileAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.OpenFileDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.OpenFileDialogResult!>
+HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.OpenWithAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.Files.OpenWithDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.Files.OpenWithDialogResult!>
+HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.ResolveFileConflictAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.Files.FileConflictDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.Files.FileConflictDialogResult!>
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.SaveFileAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.SaveFileDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.SaveFileDialogResult!>
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.SelectApp(System.Guid requestId, string! appId, bool alwaysUse) -> bool
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.SelectCredentialPrompt(System.Guid requestId, string! loginName, string! password) -> bool
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.SelectFolderAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.SelectFolderDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.SelectFolderDialogResult!>
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.SelectMessageBox(System.Guid requestId, HackerOs.AppSdk.Blazor.MessageBoxResult result) -> bool
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.SelectTextInput(System.Guid requestId, string? value) -> bool
+HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.ShowFilePropertiesAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.Files.FilePropertiesDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.Files.FilePropertiesDialogResult!>
 HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.TextInputAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.TextInputDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.TextInputDialogResult!>
 HackerOs.Platform.Blazor.Dialogs.DialogPresentation
 HackerOs.Platform.Blazor.Dialogs.DialogPresentation.AppId.get -> string!
@@ -55,6 +182,34 @@ HackerOs.Platform.Blazor.Dialogs.DialogPresentation.ProcessId.get -> HackerOs.Si
 HackerOs.Platform.Blazor.Dialogs.DialogPresentation.ProcessId.init -> void
 HackerOs.Platform.Blazor.Dialogs.DialogPresentation.UserId.get -> string!
 HackerOs.Platform.Blazor.Dialogs.DialogPresentation.UserId.init -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.AllowDirectorySelection.get -> bool
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.AllowDirectorySelection.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.AllowFileSelection.get -> bool
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.AllowFileSelection.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.AllowMultipleSelection.get -> bool
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.AllowMultipleSelection.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.Context.get -> HackerOs.AppSdk.IAppExecutionContext?
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.Context.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.DirectoryChanged.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.App.Abstractions.VirtualPath>
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.DirectoryChanged.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.Dispose() -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.Features.get -> HackerOs.AppSdk.Blazor.Files.HackFileViewFeatures
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.Features.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileActivated.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.App.Abstractions.VirtualPath>
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileActivated.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileDialogBrowser() -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileFilter.get -> System.Func<string!, string?, bool>?
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileFilter.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileSystem.get -> HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway!
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileSystem.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.InitialDirectory.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.InitialDirectory.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.RefreshAsync() -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.RefreshFilter() -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.RevealAsync(HackerOs.App.Abstractions.VirtualPath path) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.SelectionChanged.get -> Microsoft.AspNetCore.Components.EventCallback<System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.VirtualPath>!>
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.SelectionChanged.set -> void
 HackerOs.Platform.Blazor.Dialogs.FileDialogCoordinator
 HackerOs.Platform.Blazor.Dialogs.FileDialogCoordinator.ActiveRequest.get -> HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation?
 HackerOs.Platform.Blazor.Dialogs.FileDialogCoordinator.ActiveRequestFor(System.Guid appInstanceId) -> HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation?
@@ -74,6 +229,8 @@ HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.AppId.get -> string!
 HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.AppId.init -> void
 HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.AppInstanceId.get -> System.Guid
 HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.AppInstanceId.init -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.Context.get -> HackerOs.AppSdk.IAppExecutionContext?
+HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.Context.init -> void
 HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.FileDialogPresentation(System.Guid Id, string! AppId, System.Guid AppInstanceId, HackerOs.Simulation.Abstractions.Processes.ProcessId ProcessId, string! UserId, HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! FileSystem) -> void
 HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.FileSystem.get -> HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway!
 HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.FileSystem.init -> void
@@ -114,6 +271,20 @@ HackerOs.Platform.Blazor.Dialogs.OpenFileDialogPresentation
 HackerOs.Platform.Blazor.Dialogs.OpenFileDialogPresentation.OpenFileDialogPresentation(System.Guid Id, string! AppId, System.Guid AppInstanceId, HackerOs.Simulation.Abstractions.Processes.ProcessId ProcessId, string! UserId, HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! FileSystem, HackerOs.AppSdk.Blazor.OpenFileDialogRequest! Request) -> void
 HackerOs.Platform.Blazor.Dialogs.OpenFileDialogPresentation.Request.get -> HackerOs.AppSdk.Blazor.OpenFileDialogRequest!
 HackerOs.Platform.Blazor.Dialogs.OpenFileDialogPresentation.Request.init -> void
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.Coordinator.get -> HackerOs.Platform.Blazor.Dialogs.DialogCoordinator!
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.Coordinator.set -> void
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.Presentation.get -> HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation!
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.Presentation.set -> void
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.ProvidedFileDialog() -> void
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Context.get -> HackerOs.AppSdk.IAppExecutionContext!
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Context.init -> void
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Dialog.get -> string!
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Dialog.init -> void
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.ProvidedFileDialogPresentation(System.Guid Id, string! AppId, System.Guid AppInstanceId, HackerOs.Simulation.Abstractions.Processes.ProcessId ProcessId, string! UserId, string! Dialog, object! Request, HackerOs.AppSdk.IAppExecutionContext! Context) -> void
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Request.get -> object!
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Request.init -> void
 HackerOs.Platform.Blazor.Dialogs.SaveFileDialog
 HackerOs.Platform.Blazor.Dialogs.SaveFileDialog.Coordinator.get -> HackerOs.Platform.Blazor.Dialogs.FileDialogCoordinator!
 HackerOs.Platform.Blazor.Dialogs.SaveFileDialog.Coordinator.set -> void
@@ -231,10 +402,13 @@ HackerOs.Platform.Blazor.Security.DangerousCapabilityApprovalOverlay.Dispose() -
 HackerOs.Platform.Blazor.Shell.AppLauncher
 HackerOs.Platform.Blazor.Shell.AppLauncher.AppLauncher() -> void
 HackerOs.Platform.Blazor.Shell.AppLauncher.Dispose() -> void
+HackerOs.Platform.Blazor.Shell.AppLauncher.OnAppDragEnded(bool dropped) -> System.Threading.Tasks.Task!
 HackerOs.Platform.Blazor.Shell.AppLauncher.OnAppSelected.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.App.Abstractions.AppManifest!>
 HackerOs.Platform.Blazor.Shell.AppLauncher.OnAppSelected.set -> void
 HackerOs.Platform.Blazor.Shell.AppLauncher.OnClose.get -> Microsoft.AspNetCore.Components.EventCallback
 HackerOs.Platform.Blazor.Shell.AppLauncher.OnClose.set -> void
+HackerOs.Platform.Blazor.Shell.AppLauncher.OnSendToDesktop.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.App.Abstractions.AppManifest!>
+HackerOs.Platform.Blazor.Shell.AppLauncher.OnSendToDesktop.set -> void
 HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe
 HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.BrowserHostAccessibilityProbe(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
 HackerOs.Platform.Blazor.Shell.BrowserHostAccessibilityProbe.Changed -> System.Action?
@@ -283,8 +457,15 @@ HackerOs.Platform.Blazor.Shell.DesktopShell.DesktopShell() -> void
 HackerOs.Platform.Blazor.Shell.DesktopShell.Dispose() -> void
 HackerOs.Platform.Blazor.Shell.DesktopShell.OnLoggedOut.get -> Microsoft.AspNetCore.Components.EventCallback
 HackerOs.Platform.Blazor.Shell.DesktopShell.OnLoggedOut.set -> void
+HackerOs.Platform.Blazor.Shell.DesktopShell.ShowDesktopIcons.get -> bool
+HackerOs.Platform.Blazor.Shell.DesktopShell.ShowDesktopIcons.set -> void
 HackerOs.Platform.Blazor.Shell.DesktopShell.TestDemoEnabled.get -> bool
 HackerOs.Platform.Blazor.Shell.DesktopShell.TestDemoEnabled.set -> void
+HackerOs.Platform.Blazor.Shell.DesktopSurfaceHost
+HackerOs.Platform.Blazor.Shell.DesktopSurfaceHost.CreateShortcutAsync(string! appId) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.Shell.DesktopSurfaceHost.DesktopSurfaceHost() -> void
+HackerOs.Platform.Blazor.Shell.DesktopSurfaceHost.Dispose() -> void
+HackerOs.Platform.Blazor.Shell.DesktopSurfaceHost.ProcessId.get -> HackerOs.Simulation.Abstractions.Processes.ProcessId?
 HackerOs.Platform.Blazor.Shell.LauncherAppProjection
 HackerOs.Platform.Blazor.Shell.LauncherAppProjectionResult
 HackerOs.Platform.Blazor.Shell.LauncherAppProjectionResult.Categories.get -> System.Collections.Generic.IReadOnlyList<string!>!
@@ -499,8 +680,10 @@ HackerOs.Platform.Blazor.Windows.WindowKeyboardMode.Resizing = 3 -> HackerOs.Pla
 HackerOs.Platform.Blazor.Windows.WindowKeyboardMode.Switching = 1 -> HackerOs.Platform.Blazor.Windows.WindowKeyboardMode
 HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator
 HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.DefaultTitle(HackerOs.App.Abstractions.AppManifest! manifest) -> string!
+HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.IsShellSurface(string! appId) -> bool
 HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.PresentAsync(HackerOs.App.Abstractions.AppManifest! manifest, HackerOs.Platform.Core.Lifecycle.AppLaunchResult! launch, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.PresentAsync(HackerOs.App.Abstractions.AppManifest! manifest, HackerOs.Simulation.Abstractions.Processes.ProcessRecord! process, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.ReserveShellSurface(string! appId) -> System.IDisposable!
 HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.WindowLaunchCoordinator(HackerOs.Windowing.Core.WindowRuntime! windows) -> void
 HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.WindowLaunchCoordinator(HackerOs.Windowing.Core.WindowRuntime! windows, HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder! geometry) -> void
 HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.WindowLaunchCoordinator(HackerOs.Windowing.Core.WindowRuntime! windows, HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Globalization.SessionLocaleService! locale, HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder? geometry = null) -> void
@@ -557,12 +740,14 @@ HackerOs.Platform.Blazor._Imports
 HackerOs.Platform.Blazor._Imports.Execute() -> void
 HackerOs.Platform.Blazor._Imports._Imports() -> void
 const HackerOs.Platform.Blazor.Display.DisplaySurfaceService.NotificationSource = "org.hackeros.display" -> string!
+const HackerOs.Platform.Blazor.Shell.DesktopSurfaceHost.DesktopAppId = "org.hackeros.desktop" -> string!
 const HackerOs.Platform.Blazor.Sites.HackWebSiteHost.RendererArgument = "--type=renderer" -> string!
 const HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands.FineKeyboardStep = 1 -> double
 const HackerOs.Platform.Blazor.Windows.WindowKeyboardCommands.KeyboardStep = 10 -> double
 const HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.CascadeStep = 28 -> double
 override HackerOs.Platform.Blazor.Dialogs.AppChooserDialog.OnInitialized() -> void
 override HackerOs.Platform.Blazor.Dialogs.FolderSelectDialog.OnParametersSet() -> void
+override HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.OnInitialized() -> void
 override HackerOs.Platform.Blazor.Dialogs.SaveFileDialog.OnParametersSet() -> void
 override HackerOs.Platform.Blazor.Dialogs.TextInputDialog.OnInitialized() -> void
 override HackerOs.Platform.Blazor.Dialogs.VirtualFolderBrowser.OnParametersSetAsync() -> System.Threading.Tasks.Task!
@@ -573,6 +758,13 @@ override HackerOs.Platform.Blazor.Shell.DesktopShell.OnInitialized() -> void
 override HackerOs.Platform.Blazor.Shell.MobileShell.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override HackerOs.Platform.Blazor.Shell.MobileShell.OnInitialized() -> void
 override HackerOs.Platform.Blazor.Windows.UnresponsiveWindowOverlay.OnInitialized() -> void
+static HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout.Arrange(System.Collections.Generic.IEnumerable<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroupDefinition!>! groups) -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel?
+static HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout.FindByLetter(HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! level, int from, char letter) -> int
+static HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout.NextSelectable(HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! level, int from, int direction) -> int
+static HackerOs.Platform.Blazor.ContextMenus.FileMenuEntries.IconOf(string? assembly, HackerOs.App.Abstractions.AppContextMenuIconManifest? icon) -> HackerOs.AppSdk.Icons.HackIcon?
+static HackerOs.Platform.Blazor.ContextMenus.FileMenuEntries.IdOf(string! appId, string! name) -> string!
+static HackerOs.Platform.Blazor.ContextMenus.FileMenuEntries.ScopeName(HackerOs.AppSdk.Files.FileMenuScope scope) -> string!
+static HackerOs.Platform.Blazor.ContextMenus.FileMenuEntryPlacement.Place(HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition! menu, System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Blazor.ContextMenus.FileMenuEntryPlacement.Candidate!>! candidates) -> void
 static HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome.Cancelled(string! name) -> HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome!
 static HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome.Failed(string! name, string! detail) -> HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome!
 static HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome.Loaded(string! name, System.Reflection.Assembly! assembly) -> HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome!
@@ -591,6 +783,7 @@ static HackerOs.Platform.Blazor.Windows.WindowGeometrySettings.Serialize(string!
 static HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.InitialBounds(HackerOs.App.Abstractions.WindowOptions! options, int cascadeIndex, HackerOs.Windowing.Abstractions.WindowBounds workArea) -> HackerOs.Windowing.Abstractions.WindowBounds
 static HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.RestoredBounds(HackerOs.App.Abstractions.WindowOptions! options, double savedWidth, double savedHeight, int cascadeIndex, HackerOs.Windowing.Abstractions.WindowBounds workArea) -> HackerOs.Windowing.Abstractions.WindowBounds
 static HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.ToConstraints(HackerOs.App.Abstractions.WindowOptions! options) -> HackerOs.Windowing.Abstractions.WindowConstraints!
+static readonly HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.Separator -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow!
 static readonly HackerOs.Platform.Blazor.Windows.WindowGeometryRecorder.DefaultDebounce -> System.TimeSpan
 static readonly HackerOs.Platform.Blazor.Windows.WindowResponsivenessHost.SampleInterval -> System.TimeSpan
 static readonly HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.LongInputDelay -> System.TimeSpan
@@ -601,6 +794,7 @@ static readonly HackerOs.Platform.Blazor.Windows.WindowResponsivenessMonitor.Ter
 ~override HackerOs.Platform.Blazor.Dialogs.FolderSelectDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Dialogs.MessageBoxDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Dialogs.OpenFileDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Dialogs.SaveFileDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Dialogs.TextInputDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override HackerOs.Platform.Blazor.Dialogs.VirtualFolderBrowser.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

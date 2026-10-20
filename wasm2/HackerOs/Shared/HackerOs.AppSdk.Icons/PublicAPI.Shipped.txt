@@ -1,4 +1,16 @@
 #nullable enable
+HackerOs.AppSdk.Icons.HackIcon
+HackerOs.AppSdk.Icons.HackIcon.HackIcon(HackerOs.AppSdk.Icons.HackIconKind Kind, HackerOs.AppSdk.Icons.IconLibrary Library, string! Source) -> void
+HackerOs.AppSdk.Icons.HackIcon.Kind.get -> HackerOs.AppSdk.Icons.HackIconKind
+HackerOs.AppSdk.Icons.HackIcon.Kind.init -> void
+HackerOs.AppSdk.Icons.HackIcon.Library.get -> HackerOs.AppSdk.Icons.IconLibrary
+HackerOs.AppSdk.Icons.HackIcon.Library.init -> void
+HackerOs.AppSdk.Icons.HackIcon.Source.get -> string!
+HackerOs.AppSdk.Icons.HackIcon.Source.init -> void
+HackerOs.AppSdk.Icons.HackIconKind
+HackerOs.AppSdk.Icons.HackIconKind.Image = 1 -> HackerOs.AppSdk.Icons.HackIconKind
+HackerOs.AppSdk.Icons.HackIconKind.Vector = 0 -> HackerOs.AppSdk.Icons.HackIconKind
+HackerOs.AppSdk.Icons.HackIcons
 HackerOs.AppSdk.Icons.HackerIcon
 HackerOs.AppSdk.Icons.HackerIcon.AdditionalAttributes.get -> System.Collections.Generic.IDictionary<string!, object!>?
 HackerOs.AppSdk.Icons.HackerIcon.AdditionalAttributes.set -> void
@@ -51,4 +63,6 @@ HackerOs.AppSdk.Icons._Imports
 HackerOs.AppSdk.Icons._Imports.Execute() -> void
 HackerOs.AppSdk.Icons._Imports._Imports() -> void
 override HackerOs.AppSdk.Icons.HackerIcon.OnParametersSet() -> void
+static HackerOs.AppSdk.Icons.HackIcons.FromImage(string! assetPathOrUri) -> HackerOs.AppSdk.Icons.HackIcon!
+static HackerOs.AppSdk.Icons.HackIcons.Vector(HackerOs.AppSdk.Icons.IconLibrary library, string! name) -> HackerOs.AppSdk.Icons.HackIcon!
 ~override HackerOs.AppSdk.Icons.HackerIcon.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
