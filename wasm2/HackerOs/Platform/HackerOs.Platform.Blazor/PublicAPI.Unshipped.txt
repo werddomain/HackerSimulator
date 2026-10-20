@@ -4,3 +4,107 @@ HackerOs.Platform.Blazor.Components.HackPlatformComponent
 HackerOs.Platform.Blazor.Components.HackPlatformComponent.ComponentType.get -> System.Type!
 HackerOs.Platform.Blazor.Components.HackPlatformComponent.Contract.get -> string!
 HackerOs.Platform.Blazor.Components.HackPlatformComponent.HackPlatformComponent(string! contract, System.Type! componentType) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel.ContextMenuLevel(System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow!>! Rows) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel.Rows.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow!>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel.Rows.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation.Close = 1 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation.Invoke = 2 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation.None = 0 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.Active.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.Back() -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.Chosen.get -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.Click(int level, int row) -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.ContextMenuNavigator(HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! root, bool highlightFirst) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.HandleKey(string! key) -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.Hover(int level, int row) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.Levels.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel!>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel.Highlight.get -> int
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel.Highlight.set -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel.Level.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel.OpenLevel(HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! level, int highlight) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel.ParentRow.get -> int
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuNavigator.OpenLevel.ParentRow.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin.Code = 3 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin.Keyboard = 2 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin.Pointer = 0 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin.Touch = 1 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.ContextMenuOverlay() -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.OnDismissed() -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.OnRequestedAsync(string! token, double clientX, double clientY, string! origin) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.OnTokensReleased(string![]! tokens) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.Presentation.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuPresentation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay.Presentation.set -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuPresentation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuPresentation.Popup = 0 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuPresentation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuPresentation.Sheet = 1 -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuPresentation
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.ContextMenuRow(HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition? Item, HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel? Submenu) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.IsSelectable.get -> bool
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.IsSeparator.get -> bool
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.Item.get -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.Item.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.Submenu.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.Submenu.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.Attach(string! name, object? item) -> System.Collections.Generic.IReadOnlyDictionary<string!, object!>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.AttachedCount.get -> int
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.Close() -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.Dispose() -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.Id.get -> string!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.IsDisposed.get -> bool
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.OpenAsync(string! name, object? item, double clientX, double clientY) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope.Register(HackerOs.AppSdk.Blazor.ContextMenus.HackMenuRegistration! registration) -> System.IDisposable!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.Changed -> System.Action?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.Close() -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.ContextMenuService(Microsoft.Extensions.Logging.ILogger<HackerOs.Platform.Blazor.ContextMenus.ContextMenuService!>? logger = null) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.CreateScope(HackerOs.AppSdk.IAppExecutionContext? context) -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.Current.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.InvokeAsync(HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition! item) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.OpenAsync(HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope! scope, string! name, object? item, double clientX, double clientY, HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin origin) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.OpenFromTokenAsync(string! token, double clientX, double clientY, HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin origin) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.Release(System.Collections.Generic.IEnumerable<string!>! tokens) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuService.TryResolve(string! token, out HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope? scope, out string? name, out object? item) -> bool
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.ClientX.get -> double
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.ClientX.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.ClientY.get -> double
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.ClientY.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.ContextMenuSession(HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope! Scope, string! Name, object? Item, string? Label, HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! Root, double ClientX, double ClientY, HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin Origin) -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Item.get -> object?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Item.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Label.get -> string?
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Label.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Name.get -> string!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Name.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Origin.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuOrigin
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Origin.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Root.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Root.init -> void
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Scope.get -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuScope!
+HackerOs.Platform.Blazor.ContextMenus.ContextMenuSession.Scope.init -> void
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Build.get -> System.Func<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition!>?
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Build.set -> void
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Close() -> void
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Dispose() -> void
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Label.get -> string?
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Label.set -> void
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Name.get -> string!
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Name.set -> void
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.OpenAsync(object? item, double clientX, double clientY) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Opening.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuOpeningEventArgs!>
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Opening.set -> void
+HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.PlatformContextMenu() -> void
+static HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout.Arrange(System.Collections.Generic.IEnumerable<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroupDefinition!>! groups) -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel?
+static HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout.FindByLetter(HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! level, int from, char letter) -> int
+static HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout.NextSelectable(HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! level, int from, int direction) -> int
+static readonly HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.Separator -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow!

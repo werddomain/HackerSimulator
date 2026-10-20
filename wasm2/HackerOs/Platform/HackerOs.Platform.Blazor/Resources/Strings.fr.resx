@@ -147,6 +147,12 @@
   <data name="Common.Yes" xml:space="preserve">
     <value>Oui</value>
   </data>
+  <data name="ContextMenu.Back" xml:space="preserve">
+    <value>Retour</value>
+  </data>
+  <data name="ContextMenu.Label" xml:space="preserve">
+    <value>Menu contextuel</value>
+  </data>
   <data name="Credential.Authorize" xml:space="preserve">
     <value>Autoriser</value>
   </data>

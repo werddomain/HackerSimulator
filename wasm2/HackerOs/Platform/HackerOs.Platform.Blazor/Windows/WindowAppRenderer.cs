@@ -1,5 +1,7 @@
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.AppSdk.Blazor.ContextMenus;
+using HackerOs.Platform.Blazor.ContextMenus;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Windowing.Core;
 using HackerOs.Windowing.Abstractions;
@@ -56,6 +58,7 @@ public sealed class WindowAppRenderer : ComponentBase, IDisposable
 
     private IAppWindowGateway? _windowGateway;
     private WindowId _windowGatewayId;
+    private ContextMenuScope? _menus;
 
     /// <inheritdoc />
     /// <remarks>
@@ -73,6 +76,13 @@ public sealed class WindowAppRenderer : ComponentBase, IDisposable
         {
             _windowGateway = WindowGateways.Create(Window.Id, AppContext.Manifest);
             _windowGatewayId = Window.Id;
+        }
+
+        // ADR 0150 §4: the window's own context menus, forgotten when the window closes. Optional:
+        // a host without the menu service (a unit test) renders the app without them.
+        if (_menus is null && Services.GetService(typeof(ContextMenuService)) is ContextMenuService menus)
+        {
+            _menus = menus.CreateScope(AppContext);
         }
     }
 
@@ -92,6 +102,22 @@ public sealed class WindowAppRenderer : ComponentBase, IDisposable
     }
 
     private void RenderApp(RenderTreeBuilder builder)
+    {
+        if (_menus is null)
+        {
+            RenderWithGateway(builder);
+            return;
+        }
+
+        // ADR 0150 §4: Menus.Attach and HackContextMenu find the window's menus in cascade.
+        builder.OpenComponent<CascadingValue<IHackMenuHost>>(0);
+        builder.AddComponentParameter(1, nameof(CascadingValue<IHackMenuHost>.Value), _menus);
+        builder.AddComponentParameter(2, nameof(CascadingValue<IHackMenuHost>.IsFixed), true);
+        builder.AddComponentParameter(3, nameof(CascadingValue<IHackMenuHost>.ChildContent), (RenderFragment)RenderWithGateway);
+        builder.CloseComponent();
+    }
+
+    private void RenderWithGateway(RenderTreeBuilder builder)
     {
         if (_windowGateway is null)
         {
@@ -157,5 +183,8 @@ public sealed class WindowAppRenderer : ComponentBase, IDisposable
 
         _windowEventsRegistration?.Dispose();
         _windowEventsRegistration = null;
+
+        _menus?.Dispose();
+        _menus = null;
     }
 }

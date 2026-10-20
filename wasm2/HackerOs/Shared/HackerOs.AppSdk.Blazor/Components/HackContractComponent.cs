@@ -48,6 +48,13 @@ public abstract class HackContractComponent<TController> : HackComponentBase
     [Parameter]
     public RenderFragment<string>? Unavailable { get; set; }
 
+    /// <summary>
+    /// Gets what this host shows when no <see cref="Unavailable"/> is given; <see langword="null"/>
+    /// keeps the SDK's default notice. A host that draws nothing in place (the context menu) returns
+    /// an empty fragment.
+    /// </summary>
+    protected virtual RenderFragment<string>? DefaultUnavailable => null;
+
     /// <summary>Gets the provider's controller, once ready; valid while this component is rendered.</summary>
     public TController? Controller { get; private set; }
 
@@ -86,9 +93,9 @@ public abstract class HackContractComponent<TController> : HackComponentBase
             4,
             nameof(HackEmbeddedComponent<TController>.ControllerChanged),
             EventCallback.Factory.Create<TController?>(this, HandleControllerChangedAsync));
-        if (Unavailable is not null)
+        if ((Unavailable ?? DefaultUnavailable) is { } unavailable)
         {
-            builder.AddComponentParameter(5, nameof(HackEmbeddedComponent<TController>.Unavailable), Unavailable);
+            builder.AddComponentParameter(5, nameof(HackEmbeddedComponent<TController>.Unavailable), unavailable);
         }
 
         builder.CloseComponent();
