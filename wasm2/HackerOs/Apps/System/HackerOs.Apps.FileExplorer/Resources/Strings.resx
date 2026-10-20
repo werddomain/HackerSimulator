@@ -393,4 +393,52 @@
   <data name="Error.RememberFailed" xml:space="preserve">
     <value>The app was not saved as your default for {0} files.</value>
   </data>
+  <data name="Menu.Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="Menu.OpenWith" xml:space="preserve">
+    <value>Open with</value>
+  </data>
+  <data name="Menu.OpenWithOther" xml:space="preserve">
+    <value>Choose another app…</value>
+  </data>
+  <data name="Menu.Cut" xml:space="preserve">
+    <value>Cut</value>
+  </data>
+  <data name="Menu.Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Menu.Paste" xml:space="preserve">
+    <value>Paste</value>
+  </data>
+  <data name="Menu.PasteInto" xml:space="preserve">
+    <value>Paste into folder</value>
+  </data>
+  <data name="Menu.Rename" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="Menu.Delete" xml:space="preserve">
+    <value>Move to trash</value>
+  </data>
+  <data name="Menu.DeletePermanently" xml:space="preserve">
+    <value>Delete permanently</value>
+  </data>
+  <data name="Menu.NewFolder" xml:space="preserve">
+    <value>New folder</value>
+  </data>
+  <data name="Menu.Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Menu.Properties" xml:space="preserve">
+    <value>Properties</value>
+  </data>
+  <data name="Error.DialogsUnavailable" xml:space="preserve">
+    <value>The file dialogs cannot be shown here.</value>
+  </data>
+  <data name="Dialog.Loading" xml:space="preserve">
+    <value>Loading…</value>
+  </data>
+  <data name="Dialog.UnknownDialog" xml:space="preserve">
+    <value>This file dialog does not exist: {0}.</value>
+  </data>
 </root>

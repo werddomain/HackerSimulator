@@ -321,4 +321,35 @@ public interface IDialogService : IFileDialogService
         AppChooserDialogRequest request,
         CancellationToken cancellationToken = default) =>
         ValueTask.FromResult(new AppChooserDialogResult(AppChooserStatus.Cancelled, null, false));
+
+    /// <summary>
+    /// Displays the "Open with" dialog of the file dialogs contract (<c>hackeros.file-dialogs</c>,
+    /// ADR 0155 §5), provided by the File Explorer, modal to the requesting app's window and with its
+    /// rights. The default answers "unavailable", for hosts written before the contract.
+    /// </summary>
+    ValueTask<Files.OpenWithDialogResult> OpenWithAsync(
+        IAppExecutionContext context,
+        Files.OpenWithDialogRequest request,
+        CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(new Files.OpenWithDialogResult(Files.OpenWithDialogStatus.Unavailable, null, false));
+
+    /// <summary>
+    /// Displays the properties of a file or folder (<c>hackeros.file-dialogs</c>, ADR 0155 §5). The
+    /// default answers "unavailable".
+    /// </summary>
+    ValueTask<Files.FilePropertiesDialogResult> ShowFilePropertiesAsync(
+        IAppExecutionContext context,
+        Files.FilePropertiesDialogRequest request,
+        CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(new Files.FilePropertiesDialogResult(Files.FilePropertiesDialogStatus.Unavailable));
+
+    /// <summary>
+    /// Asks how to settle a name conflict of a move or a copy (<c>hackeros.file-dialogs</c>,
+    /// ADR 0155 §5). The default skips the item.
+    /// </summary>
+    ValueTask<Files.FileConflictDialogResult> ResolveFileConflictAsync(
+        IAppExecutionContext context,
+        Files.FileConflictDialogRequest request,
+        CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(new Files.FileConflictDialogResult(Files.FileConflictDialogChoice.Skip, false));
 }

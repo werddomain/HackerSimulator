@@ -630,4 +630,13 @@
   <data name="WindowMode.ResizeHint" xml:space="preserve">
     <value>Flèches : redimensionner · Ctrl : 1 px · Entrée : valider · Échap : annuler</value>
   </data>
+  <data name="Dialog.Properties" xml:space="preserve">
+    <value>Propriétés</value>
+  </data>
+  <data name="Dialog.FileConflict" xml:space="preserve">
+    <value>Nom déjà utilisé</value>
+  </data>
+  <data name="Dialog.FileDialogsUnavailable" xml:space="preserve">
+    <value>Les boîtes de dialogue de fichiers de l’OS sont indisponibles.</value>
+  </data>
 </root>

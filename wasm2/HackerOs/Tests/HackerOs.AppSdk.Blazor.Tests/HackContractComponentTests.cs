@@ -16,7 +16,7 @@ namespace HackerOs.AppSdk.Blazor.Tests;
 /// ADR 0148 §1 and §4: a typed host component of the SDK renders the provider the OS resolved for its
 /// contract, forwards its ordinary parameters and callbacks, and keeps the host's rights.
 /// </summary>
-public sealed class HackContractComponentTests
+public sealed partial class HackContractComponentTests
 {
     private const string Contract = "hackeros.tests-view";
 
@@ -183,11 +183,12 @@ public sealed class HackContractComponentTests
     {
         public override Dispatcher Dispatcher { get; } = Dispatcher.CreateDefault();
 
-        public Task RenderAsync(HostWindow window, IAppExecutionContext context) =>
+        /// <summary>Renders a host window whose <c>Context</c> parameter receives <paramref name="context"/>.</summary>
+        public Task RenderAsync(IComponent window, IAppExecutionContext context) =>
             Dispatcher.InvokeAsync(async () =>
             {
                 int id = AssignRootComponentId(window);
-                await RenderRootComponentAsync(id, ParameterView.FromDictionary(new Dictionary<string, object?> { [nameof(HostWindow.Context)] = context }));
+                await RenderRootComponentAsync(id, ParameterView.FromDictionary(new Dictionary<string, object?> { ["Context"] = context }));
             });
 
         /// <summary>Waits for the asynchronous resolution and after-render work to settle.</summary>

@@ -9,7 +9,7 @@ using HackerOs.Simulation.Abstractions.Sessions;
 
 namespace HackerOs.Platform.Blazor.Tests;
 
-public sealed class DialogCoordinatorTests
+public sealed partial class DialogCoordinatorTests
 {
     private static readonly SessionId TestSessionId =
         SessionId.FromGuid(Guid.Parse("50000000-0000-0000-0000-000000000002"));

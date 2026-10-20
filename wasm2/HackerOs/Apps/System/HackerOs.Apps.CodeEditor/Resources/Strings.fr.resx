@@ -51,26 +51,8 @@
   <data name="Cursor.Selected.Other" xml:space="preserve">
     <value> ({0} sélectionnés)</value>
   </data>
-  <data name="Delete.Failed" xml:space="preserve">
-    <value>Impossible de supprimer {0}</value>
-  </data>
-  <data name="Delete.Failure" xml:space="preserve">
-    <value>« {0} » : {1}</value>
-  </data>
-  <data name="Delete.PermissionDenied" xml:space="preserve">
-    <value>« {0} » : permission refusée</value>
-  </data>
   <data name="Dialog.Cancel" xml:space="preserve">
     <value>Annuler</value>
-  </data>
-  <data name="Dialog.Delete.Many" xml:space="preserve">
-    <value>Supprimer définitivement ces {0} éléments ? Cette action est irréversible.</value>
-  </data>
-  <data name="Dialog.Delete.One" xml:space="preserve">
-    <value>Supprimer définitivement « {0} » ? Cette action est irréversible.</value>
-  </data>
-  <data name="Dialog.Delete.Title" xml:space="preserve">
-    <value>Supprimer définitivement</value>
   </data>
   <data name="Dialog.Discard" xml:space="preserve">
     <value>Abandonner</value>

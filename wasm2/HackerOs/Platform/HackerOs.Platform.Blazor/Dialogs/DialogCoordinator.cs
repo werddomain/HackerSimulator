@@ -1,6 +1,7 @@
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.AppSdk.Blazor.Files;
 using HackerOs.Simulation.Abstractions.Processes;
 
 namespace HackerOs.Platform.Blazor.Dialogs;
@@ -51,6 +52,29 @@ public sealed record AppChooserPresentation(
     ProcessId ProcessId,
     string UserId,
     AppChooserDialogRequest Request)
+    : DialogPresentation(Id, AppId, AppInstanceId, ProcessId, UserId);
+
+/// <summary>
+/// Describes an active dialog of the file dialogs contract (<c>hackeros.file-dialogs</c>, ADR 0155 §5):
+/// the OS shows the provider's component, modal to the requesting window and with its context.
+/// </summary>
+/// <param name="Id">The request id.</param>
+/// <param name="AppId">The requesting app.</param>
+/// <param name="AppInstanceId">The requesting window's instance.</param>
+/// <param name="ProcessId">The requesting process.</param>
+/// <param name="UserId">The user the dialog is shown to.</param>
+/// <param name="Dialog">The dialog's name (<c>HackFileDialogs.OpenWith</c>…).</param>
+/// <param name="Request">The request record of that dialog.</param>
+/// <param name="Context">The requesting app, whose rights the provider uses (ADR 0148 §4).</param>
+public sealed record ProvidedFileDialogPresentation(
+    Guid Id,
+    string AppId,
+    Guid AppInstanceId,
+    ProcessId ProcessId,
+    string UserId,
+    string Dialog,
+    object Request,
+    IAppExecutionContext Context)
     : DialogPresentation(Id, AppId, AppInstanceId, ProcessId, UserId);
 
 /// <summary>
@@ -191,6 +215,62 @@ public sealed class DialogCoordinator : IDialogService, IDisposable
             cancellationToken);
     }
 
+    /// <inheritdoc />
+    public ValueTask<OpenWithDialogResult> OpenWithAsync(
+        IAppExecutionContext context,
+        OpenWithDialogRequest request,
+        CancellationToken cancellationToken = default) =>
+        EnqueueProvided(
+            context,
+            HackFileDialogs.OpenWith,
+            request,
+            static () => new OpenWithDialogResult(OpenWithDialogStatus.Cancelled, null, false),
+            cancellationToken);
+
+    /// <inheritdoc />
+    public ValueTask<FilePropertiesDialogResult> ShowFilePropertiesAsync(
+        IAppExecutionContext context,
+        FilePropertiesDialogRequest request,
+        CancellationToken cancellationToken = default) =>
+        EnqueueProvided(
+            context,
+            HackFileDialogs.Properties,
+            request,
+            static () => new FilePropertiesDialogResult(FilePropertiesDialogStatus.Closed),
+            cancellationToken);
+
+    /// <inheritdoc />
+    public ValueTask<FileConflictDialogResult> ResolveFileConflictAsync(
+        IAppExecutionContext context,
+        FileConflictDialogRequest request,
+        CancellationToken cancellationToken = default) =>
+        EnqueueProvided(
+            context,
+            HackFileDialogs.Conflict,
+            request,
+            static () => new FileConflictDialogResult(FileConflictDialogChoice.Skip, false),
+            cancellationToken);
+
+    /// <summary>
+    /// Completes a provided file dialog (ADR 0155 §5) with the result its provider handed back;
+    /// <see langword="null"/>, or a result of the wrong type, closes it as cancelled.
+    /// </summary>
+    /// <param name="requestId">The dialog.</param>
+    /// <param name="result">The dialog's result record.</param>
+    /// <returns>Whether the dialog was still pending.</returns>
+    public bool CompleteProvided(Guid requestId, object? result)
+    {
+        lock (_gate)
+        {
+            if (!_pending.Any(pending => pending.Presentation.Id == requestId && pending.Presentation is ProvidedFileDialogPresentation))
+            {
+                return false;
+            }
+        }
+
+        return Complete(requestId, result);
+    }
+
     /// <summary>Completes the active app-chooser request with the picked app; refuses an app that was not offered.</summary>
     public bool SelectApp(Guid requestId, string appId, bool alwaysUse)
     {
@@ -291,6 +371,23 @@ public sealed class DialogCoordinator : IDialogService, IDisposable
         return new ValueTask<TResult>(pending.Task);
     }
 
+    private ValueTask<TResult> EnqueueProvided<TResult>(
+        IAppExecutionContext context,
+        string dialog,
+        object request,
+        Func<TResult> cancelledResult,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(request);
+
+        return Enqueue(
+            new ProvidedFileDialogPresentation(
+                Guid.NewGuid(), context.Manifest.Id, context.InstanceId, context.ProcessId, context.UserId, dialog, request, context),
+            cancelledResult,
+            cancellationToken);
+    }
+
     private bool Complete(Guid requestId, object? selectedResult)
     {
         PendingDialog? pending;
@@ -316,6 +413,13 @@ public sealed class DialogCoordinator : IDialogService, IDisposable
         bool completed = selectedResult is null
             ? pending.Cancel()
             : pending.TryComplete(selectedResult);
+        if (!completed && selectedResult is not null)
+        {
+            // A result of the wrong type (a provided dialog's provider) cannot complete the typed
+            // task: cancel rather than leave the caller waiting.
+            pending.Cancel();
+        }
+
         pending.Dispose();
         if (activeChanged)
         {

@@ -1,18 +1,15 @@
 @inherits HackerOs.AppSdk.Blazor.HackComponentBase
 @using HackerOs.App.Abstractions
-@using HackerOs.AppSdk.FileView
-@using HackerOs.AppSdk.FileView.ContextMenu
-@using HackerOs.AppSdk.FileView.Events
+@using HackerOs.AppSdk.Blazor.Files
 @using HackerOs.AppSdk.Icons
 @using HackerOs.Simulation.Abstractions.FileSystem
 @using HackerOs.Simulation.Abstractions.Gateways
-@implements IDisposable
 
 @*
-    The Explorer view of the side bar, as in VS Code: the open folder as a tree (FileView, Tree
-    mode), a single click opens a file, and the header's buttons (or the tree's context menu)
-    create a file or a folder in the selected folder, with the name typed in place. Rename,
-    cut/copy and drag-and-drop are FileView's own; deletion is handed to the window (trash).
+    The Explorer view of the side bar, as in VS Code: the open folder as a tree (the OS file control,
+    HackFileView, provided by the File Explorer, ADR 0155), a single click previews a file, and the
+    header's buttons (or the tree's file menu) create a file or a folder in the selected folder, with
+    the name typed in place. Rename, cut/copy/paste, drag and drop and the trash are the control's own.
 *@
 <div class="explorer">
     <div class="view-title">@L["Explorer.Title"]</div>
@@ -64,16 +61,17 @@
         }
 
         <div class="explorer-tree">
-            <FileView @ref="_fileView"
-                      @key="Workspace.Root"
-                      FileSystem="Workspace.FileSystem"
-                      Watch="Watch"
-                      InitialDirectory="Workspace.Root"
-                      Mode="FileViewMode.Tree"
-                      AllowMultiSelect="false"
-                      ContextMenuProviders="_menuProviders"
-                      DeleteRequested="OnTreeDeleteRequestedAsync"
-                      OwnerAppId="OwnerAppId" />
+            <HackFileView @key="Workspace.Root"
+                          InitialDirectory="@Workspace.Root.Value"
+                          SelectedResource="Workspace.SelectedResource"
+                          Mode="HackFileViewMode.Tree"
+                          AllowMultiSelect="false"
+                          Opening="OnOpening"
+                          SelectionChanged="OnSelectionChanged"
+                          Renamed="OnRenamedItem"
+                          ContextMenuOpening="OnContextMenuOpening"
+                          ErrorOccurred="OnError"
+                          ControllerChanged="OnControllerChanged" />
         </div>
     }
 </div>

@@ -1,3 +1,4 @@
+using HackerOs.AppSdk.Blazor.Files;
 using HackerOs.AppSdk.Globalization;
 using HackerOs.Platform.Core.Globalization;
 using HackerOs.Windowing.Core;
@@ -188,6 +189,9 @@ public sealed class FileDialogWindowAdapter : IDisposable
             TextInputPresentation => (480, 240),
             CredentialPromptPresentation => (420, 300),
             AppChooserPresentation => (460, 380),
+            ProvidedFileDialogPresentation { Dialog: HackFileDialogs.OpenWith } => (480, 460),
+            ProvidedFileDialogPresentation { Dialog: HackFileDialogs.Properties } => (480, 380),
+            ProvidedFileDialogPresentation { Dialog: HackFileDialogs.Conflict } => (520, 300),
             _ => (480, 240)
         };
 
@@ -292,6 +296,13 @@ public sealed class FileDialogWindowAdapter : IDisposable
             builder.AddAttribute(2, nameof(AppChooserDialog.Coordinator), _basicCoordinator);
             builder.CloseComponent();
         },
+        ProvidedFileDialogPresentation provided => builder =>
+        {
+            builder.OpenComponent<ProvidedFileDialog>(0);
+            builder.AddAttribute(1, nameof(ProvidedFileDialog.Presentation), provided);
+            builder.AddAttribute(2, nameof(ProvidedFileDialog.Coordinator), _basicCoordinator);
+            builder.CloseComponent();
+        },
         _ => throw new NotSupportedException($"Unsupported dialog presentation '{presentation.GetType()}'."),
     };
 
@@ -309,6 +320,9 @@ public sealed class FileDialogWindowAdapter : IDisposable
         TextInputPresentation input => !string.IsNullOrWhiteSpace(input.Request.Title) ? input.Request.Title : _text["Dialog.Input"],
         CredentialPromptPresentation credential => !string.IsNullOrWhiteSpace(credential.Request.Title) ? credential.Request.Title : _text["Dialog.AuthorizationRequired"],
         AppChooserPresentation chooser => !string.IsNullOrWhiteSpace(chooser.Request.Title) ? chooser.Request.Title : _text["Dialog.OpenWith"],
+        ProvidedFileDialogPresentation { Dialog: HackFileDialogs.OpenWith } => _text["Dialog.OpenWith"],
+        ProvidedFileDialogPresentation { Dialog: HackFileDialogs.Properties } => _text["Dialog.Properties"],
+        ProvidedFileDialogPresentation { Dialog: HackFileDialogs.Conflict } => _text["Dialog.FileConflict"],
         _ => _text["Dialog.Title"],
     };
 }

@@ -13,6 +13,13 @@ fichiers (chantier 3) et des entrées inscrites par les apps (chantier 4) du pla
 Décisions : [ADR 0150](adr/0150-os-context-menu.md) ; ajustements de la mise en
 œuvre : [ADR 0154](adr/0154-context-menu-implementation-adjustments.md).
 
+Depuis le chantier 3 (ADR 0155), les menus du contrôle de fichiers
+(`HackFileView`) sont des menus de l'OS : le fournisseur de l'explorateur
+définit un menu par contrôle, le remplit à chaque ouverture (plan §7) et le
+passe à `ContextMenuOpening` de l'hôte ; le `MudMenu` de `FileView` n'est plus
+dessiné quand la vue est liée au menu de l'OS. Voir
+[`embedded-components.md`](embedded-components.md#hackfileview-et-ihackfileview).
+
 ## Utiliser un menu dans une app
 
 ### Dans le markup

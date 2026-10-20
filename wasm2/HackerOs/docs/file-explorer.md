@@ -20,13 +20,61 @@ le legacy (`src/apps/file-explorer.ts`) et la dépasse :
 - un **résumé des échecs** à la fin de chaque opération (bandeau et
   notification), avec la raison par élément ; une erreur n'arrête pas les autres.
 - depuis `web/5-static-sites`, **« Publish as a web site… »** dans le menu d'un
-  dossier (`PublishSiteContextMenuProvider`) : ouvre Web Server Manager avec ce
-  dossier comme racine d'un nouveau site ([`static-sites.md`](static-sites.md)).
+  dossier : ouvre Web Server Manager avec ce dossier comme racine d'un nouveau
+  site ([`static-sites.md`](static-sites.md)). Depuis `desk/3`, la fenêtre
+  l'ajoute au menu de l'OS par `ContextMenuOpening`
+  (`FileExplorerMenuEntries`), en attendant les entrées inscrites du chantier 4.
+- depuis `desk/3-file-control` (ADR 0155), **l'explorateur fournit le contrôle
+  de fichiers de l'OS** (`hackeros.file-view`) et ses dialogues
+  (`hackeros.file-dialogs`), et s'en sert lui-même : voir la section suivante.
+
+## Fournisseur du contrôle de fichiers (ADR 0148, ADR 0155)
+
+Le manifeste (`FileExplorerApp.Components`) inscrit deux composants :
+
+| Contrat | Composant | Rôle |
+|---|---|---|
+| `hackeros.file-view` | `ExplorerFileView` | `FileView` (implémentation interne, ADR 0155 §1) liée au menu de l'OS, avec la corbeille, le presse-papiers, les transferts et leurs conflits, l'ouverture et « Ouvrir avec ». Contrôleur `IHackFileView`. |
+| `hackeros.file-dialogs` | `ExplorerFileDialogs` | « Ouvrir avec » (« Toujours utiliser »), « Propriétés », conflit de noms, en markup natif. |
+
+Toute app l'affiche par `HackFileView` du SDK (`HackerOs.AppSdk.Blazor.Files`)
+et l'explorateur aussi : sa fenêtre rend `<HackFileView>` et garde le chrome
+(barres, Emplacements, Corbeille, barre d'état). Les boutons Renommer,
+Supprimer, Couper, Copier, Coller, Propriétés et Ouvrir avec appellent
+`IHackFileView.ExecuteAsync` avec l'identifiant de l'entrée de menu
+correspondante, donc font la même chose que le menu. Nouveau dossier/fichier
+par nom, envoi, téléchargement, compression, extraction et dépôt sur la
+Corbeille restent dans la fenêtre ; ils passent eux aussi par `IHackFileView`
+(dossier courant, sélection, `RefreshAsync`). Seuls le fil d'Ariane et les
+dépôts sur Home et Trash utilisent l'implémentation interne (`FileView`) : si
+un administrateur choisit un autre fournisseur (ADR 0156, code dans un chantier
+suivant), la fenêtre affiche ce fournisseur et seuls ces deux extras
+disparaissent.
+
+Tout s'exécute **avec les droits de l'hôte** (`HostContext`) : l'éditeur de
+code qui affiche le contrôle ne voit, ne copie et ne supprime que ce qu'il peut.
+
+```text
+App hôte ──► HackFileView (SDK) ──► registre ──► ExplorerFileView (explorateur)
+                                                   ├─ FileView + FileViewMenuBinding ──► Menus.Attach (menu de l'OS)
+                                                   ├─ ExplorerFileMenu (menus du plan §7) ──► ContextMenuOpening de l'hôte
+                                                   └─ IDialogService ──► DialogCoordinator ──► ProvidedFileDialog ──► ExplorerFileDialogs
+```
+
+Menus (plan §7) : `ExplorerFileMenu` remplit le menu à chaque ouverture ; un
+élément hors de la sélection devient la sélection ; « Ouvrir avec ▸ » liste les
+apps du type (défaut en tête, `open-with:<appId>`) puis « Choisir une autre
+application… » ; plusieurs éléments : ni Renommer ni Ouvrir avec, Propriétés
+désactivé. Un hôte retire des fonctions par `Features` et ajuste le menu par
+`ContextMenuOpening`. Détails : [ADR 0155](adr/0155-file-control-implementation-adjustments.md).
 
 ## Architecture
 
+Depuis `desk/3`, ce schéma est celui du fournisseur `ExplorerFileView`, que la
+fenêtre affiche par `HackFileView` (section précédente).
+
 ```text
-FileExplorerWindow ──► FileView (SDK)        ── Ctrl+X/C/V, menus ──► ClipboardRequested
+ExplorerFileView ──► FileView (interne)    ── Ctrl+X/C/V, menus ──► ClipboardRequested
         │                 │  FileView.razor.js  ── dépôts ─────────► DropRequested
         │                 ├─ FileViewBreadcrumb (fil d'Ariane, cibles de dépôt)
         │                 └─ FileViewDropZone   (Home, Trash, vue Corbeille)
@@ -44,7 +92,7 @@ FileExplorerWindow ──► FileView (SDK)        ── Ctrl+X/C/V, menus ─�
 | `FileView` (ajouts) | `Shared/HackerOs.AppSdk.FileView/` | Dépôt sur le fond, `DropRequested`, `ClipboardRequested`, `CanPaste`, `CutPaths` (éléments atténués), Ctrl+A. |
 | `FileViewBreadcrumb`, `FileViewDropZone` | idem | Fil d'Ariane cliquable et déposable ; zone de dépôt générique pour le chrome de l'hôte. |
 | `FileView.razor.js` | idem | Écouteurs natifs `dragover` / `drop` : curseur déplacer/copier, surbrillance de la cible, capture du contenu et des `File` de l'hôte. Depuis l'ADR 0065, Ctrl+V suit l'événement `paste` (`attachPasteTarget`) : des fichiers copiés sur la vraie machine et collés dans la vue sont importés comme un dépôt. |
-| `FileConflictDialog` | `Apps/System/HackerOs.Apps.FileExplorer/` | Fenêtre « Replace / Keep both / Skip » (MudBlazor, style gothique). |
+| `ExplorerFileDialogs` | `Apps/System/HackerOs.Apps.FileExplorer/` | Fenêtre « Replace / Keep both / Skip » (et « Ouvrir avec », « Propriétés ») du contrat `hackeros.file-dialogs`, en markup natif depuis `desk/3` ; l'ancien `FileConflictDialog` MudBlazor est retiré. |
 
 ## Usage et API
 
@@ -169,8 +217,11 @@ l'app est traduit par `Resources/AppManifest.fr.resx`.
 - Les noms de fichiers et de dossiers ne sont jamais traduits (`NewFile.txt`,
   `Archive.zip`, `~/.local/share/Trash`) ; seul le nom proposé pour un nouveau
   dossier l'est, comme « Dossier sans titre » sous GNOME.
-- `ZipFileContextMenuProvider` et `PublishSiteContextMenuProvider` reçoivent le
-  localiseur de la fenêtre pour le libellé de leur entrée de menu.
+- Les menus et les dialogues du contrôle fourni (`ExplorerFileView`,
+  `ExplorerFileDialogs`) parlent la langue de l'**app hôte**
+  (`HostContext.GetLocalizer<Strings>()`) : dans l'éditeur de code en français,
+  le menu de l'arbre est en français même si l'explorateur tourne en anglais.
+  Clés `Menu.*`, `Dialog.Loading`, `Error.DialogsUnavailable` (desk/3).
 
 ## Décisions clés
 
@@ -247,3 +298,13 @@ l'app est traduit par `Resources/AppManifest.fr.resx`.
 - [x] Compresser, Extraire et « UnZip Here… » en tâches `file-explorer:compress` et `file-explorer:extract`.
 - [x] Copies et téléchargement gardés dans la fenêtre, raison écrite.
 - [x] Test de l'aller-retour compression puis extraction (`FileExplorerZipJobsTests`).
+
+## Tâches du chantier `desk/3-file-control` (ADR 0155)
+
+- [x] Contrats du SDK : `HackFileView`, `IHackFileView`, `HackFileViewItem`, `HackFileViewFeatures`, `HackFileMenuOpeningEventArgs`, `FileMenuScope`, `HackFileMenuItems`.
+- [x] `ExplorerFileView` : `FileView` liée au menu de l'OS (`FileViewMenuBinding`), commandes, corbeille, presse-papiers, transferts, ouverture.
+- [x] Menus du plan §7 (`ExplorerFileMenu`), « Ouvrir avec » en sous-menu.
+- [x] Dialogues fournis (`ExplorerFileDialogs`) par `IDialogService` et le proxy de la plateforme ; dialogues MudBlazor retirés.
+- [x] Fenêtre de l'explorateur sur `HackFileView` ; « UnZip Here… » et « Publish as a web site… » par `ContextMenuOpening`.
+- [x] Éditeur de code sur `HackFileView` ([`code-editor.md`](code-editor.md)).
+- [ ] Vue des dialogues Ouvrir / Enregistrer : chantier `desk/3b` (ADR 0155 §6).

@@ -176,6 +176,22 @@ public partial class FileView : IAsyncDisposable
     [Parameter]
     public IReadOnlyCollection<string>? CutPaths { get; set; }
 
+    /// <summary>
+    /// Gets or sets the binding to the OS context menu, cascaded by the File Explorer (ADR 0155 §1);
+    /// <see langword="null"/> keeps the view's own menu.
+    /// </summary>
+    [CascadingParameter]
+    internal FileViewMenuBinding? MenuBinding { get; set; }
+
+    /// <summary>Gets whether the view opens its own menu (no OS menu binding).</summary>
+    internal bool UsesOwnMenu => MenuBinding is null;
+
+    /// <summary>Gets the attributes that open the OS menu on <paramref name="item"/> (the background for <see langword="null"/>).</summary>
+    internal IReadOnlyDictionary<string, object>? MenuAttributesFor(FileViewItem? item) => MenuBinding?.Attach(item);
+
+    /// <summary>Gets whether items may be renamed in place (always, unless the OS menu binding forbids it).</summary>
+    internal bool CanRenameItems => MenuBinding?.AllowRename ?? true;
+
     /// <summary>Gets the directory currently displayed.</summary>
     public VirtualPath CurrentDirectory { get; private set; }
 
@@ -612,7 +628,7 @@ public partial class FileView : IAsyncDisposable
     /// <param name="permanent">Whether the user asked for a permanent deletion (Shift+Delete).</param>
     internal async Task DeleteSelectedAsync(bool permanent = false)
     {
-        if (_selection.Count == 0)
+        if (_selection.Count == 0 || MenuBinding is { AllowDelete: false })
         {
             return;
         }
@@ -1169,6 +1185,27 @@ public partial class FileView : IAsyncDisposable
     }
 
     internal void RaiseContextMenuOpening(FileViewContextMenuOpeningEventArgs args) => ContextMenuOpening?.Invoke(this, args);
+
+    /// <summary>
+    /// A right click on an item: with the OS menu, only the selection follows (an item outside the
+    /// selection becomes the selection, as in Windows) and the OS script opens the menu; otherwise the
+    /// view's own menu opens.
+    /// </summary>
+    internal Task OnItemContextMenuAsync(MouseEventArgs args, FileViewItem item)
+    {
+        if (!UsesOwnMenu)
+        {
+            if (!item.IsSelected)
+            {
+                item.Select();
+            }
+
+            return Task.CompletedTask;
+        }
+
+        item.Select();
+        return OpenItemContextMenuAsync(args, item);
+    }
 
     internal Task OpenItemContextMenuAsync(MouseEventArgs args, FileViewItem item) =>
         _contextMenu is null

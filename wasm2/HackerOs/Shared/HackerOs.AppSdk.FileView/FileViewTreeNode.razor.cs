@@ -94,11 +94,7 @@ public partial class FileViewTreeNode
 
     internal Task OnRowDoubleClickAsync() => Owner.ActivateItemAsync(Node.Item);
 
-    internal Task OnRowContextMenuAsync(MouseEventArgs args)
-    {
-        Node.Item.Select();
-        return Owner.OpenItemContextMenuAsync(args, Node.Item);
-    }
+    internal Task OnRowContextMenuAsync(MouseEventArgs args) => Owner.OnItemContextMenuAsync(args, Node.Item);
 
     internal Task OnRowKeyDownAsync(KeyboardEventArgs args) => args.Key switch
     {

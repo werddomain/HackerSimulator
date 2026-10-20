@@ -115,15 +115,13 @@
             <div class="side-view @(_view == SideView.Explorer ? "is-active" : null)">
                 <CodeEditorExplorer @ref="_explorer"
                                     Workspace="_workspace"
-                                    Watch="AppContext.Watch"
-                                    OwnerAppId="@Manifest.Id"
                                     OnOpenFile="OpenFromWorkspaceAsync"
                                     OnPreviewFile="PreviewFromWorkspaceAsync"
                                     OnOpenFolder="OpenFolderAsync"
                                     OnFindInFolder="FindInFolderAsync"
                                     OnOpenInTerminal="OpenInTerminalAsync"
                                     OnRenamed="OnWorkspaceRenamed"
-                                    OnDeleteRequested="DeleteItemsAsync" />
+                                    OnError="OnExplorerError" />
             </div>
             <div class="side-view @(_view == SideView.Search ? "is-active" : null)">
                 <CodeEditorSearchView @ref="_search"
