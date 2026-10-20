@@ -876,6 +876,13 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISessionService>(),
             provider.GetRequiredService<ISimulationClock>(),
             provider.GetRequiredService<HackerOs.Platform.Core.Globalization.SessionLocaleService>()));
+        // ADR 0150: the OS context menu. The platform provides the contract hackeros.context-menu
+        // itself; the service holds each window's menus and the one menu open in the OS.
+        services.AddScoped(provider => new HackerOs.Platform.Blazor.ContextMenus.ContextMenuService(
+            provider.GetService<ILogger<HackerOs.Platform.Blazor.ContextMenus.ContextMenuService>>()));
+        services.AddSingleton(new HackPlatformComponent(
+            HackerOs.AppSdk.Components.HackComponentContracts.ContextMenu,
+            typeof(HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu)));
         // Embeddable components registered in manifests (ADR 0063): a window embeds another app's
         // component by contract; the provider's assembly is loaded as a launch would load it.
         services.AddScoped<IHackComponentHost>(provider =>

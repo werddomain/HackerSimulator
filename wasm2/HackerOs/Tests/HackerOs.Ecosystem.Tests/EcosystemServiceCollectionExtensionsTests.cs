@@ -77,6 +77,14 @@ public sealed class EcosystemServiceCollectionExtensionsTests
         Assert.NotNull(provider.GetRequiredService<IEventBus>());
         Assert.NotNull(provider.GetRequiredService<ITopicMessageBus>());
 
+        // ADR 0150 §1: the platform itself provides the OS context menu, without loading an app.
+        Assert.NotNull(provider.GetRequiredService<HackerOs.Platform.Blazor.ContextMenus.ContextMenuService>());
+        HackerOs.AppSdk.Blazor.Components.HackComponentResolution menu = await provider
+            .GetRequiredService<HackerOs.AppSdk.Blazor.Components.IHackComponentHost>()
+            .ResolveAsync(HackerOs.AppSdk.Components.HackComponentContracts.ContextMenu);
+        Assert.Equal(typeof(HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu), menu.ComponentType);
+        Assert.Equal(HackerOs.AppSdk.Blazor.Components.HackComponentResolution.PlatformProviderId, menu.ProviderAppId);
+
         SessionId sessionId = SessionId.FromGuid(Guid.NewGuid());
         IFileDialogService dialogs = provider.GetRequiredService<FileDialogServiceFactory>().Create(sessionId);
         Assert.Equal(sessionId, Assert.IsType<HackerOs.Platform.Blazor.Dialogs.FileDialogCoordinator>(dialogs).SessionId);

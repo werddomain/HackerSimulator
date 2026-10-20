@@ -1,6 +1,9 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk
 @using HackerOs.AppSdk.Blazor
+@using HackerOs.AppSdk.Blazor.ContextMenus
+@using HackerOs.AppSdk.Icons
+@using Microsoft.AspNetCore.Components.Web
 @using HackerOs.AppSdk.Diagnostics
 @using HackerOs.AppSdk.Threading
 @using HackerOs.Simulation.Abstractions
@@ -51,6 +54,46 @@
             <div class="output-box" data-sample-background-status>@_taskStatus</div>
         </section>
 
+        <section class="sample-section" data-sample-context-menu>
+            <h3>Context Menu (ADR 0150)</h3>
+            @* Drawn by the OS: right click, long press, the Menu key or Shift+F10 on a note. *@
+            <HackContextMenu Name="sample-notes" Opening="OnNotesMenuOpening">
+                <HackMenuItem Id="open" Title="Open" Icon="FileIcon" OnClick="@(item => ShowNote(item, "opened"))" />
+                <HackMenuGroup>
+                    <HackMenuItem Id="copy-name" Title="Copy name" Shortcut="Ctrl+C" OnClick="@(item => ShowNote(item, "name copied"))" />
+                    <HackMenuItem Id="label" Title="Label" Icon="TagIcon">
+                        <HackMenuItem Id="label-red" Title="Red" OnClick="@(item => LabelNote(item, "red"))" />
+                        <HackMenuItem Id="label-green" Title="Green" OnClick="@(item => LabelNote(item, "green"))" />
+                        <HackMenuGroup>
+                            <HackMenuItem Id="label-more" Title="More colours">
+                                <HackMenuItem Id="label-blue" Title="Blue" OnClick="@(item => LabelNote(item, "blue"))" />
+                                <HackMenuItem Id="label-amber" Title="Amber" OnClick="@(item => LabelNote(item, "amber"))" />
+                            </HackMenuItem>
+                        </HackMenuGroup>
+                    </HackMenuItem>
+                </HackMenuGroup>
+                <HackMenuGroup>
+                    <HackMenuItem Id="delete" Title="Delete" Icon="TrashIcon" Shortcut="Del" OnClick="DeleteNote" />
+                </HackMenuGroup>
+            </HackContextMenu>
+            <ul class="sample-notes" @attributes="@(Menus.Attach(NotesAreaMenu))">
+                @foreach (SampleNote note in _notes)
+                {
+                    <li class="sample-note" tabindex="0" data-sample-note="@note.Name" @attributes="@(Menus.Attach("sample-notes", note))">
+                        <span>@note.Name</span>
+                        @if (note.Label is { } label)
+                        {
+                            <span class="sample-note-label">@label</span>
+                        }
+                    </li>
+                }
+            </ul>
+            <div class="button-row">
+                <button class="sample-btn" data-sample-menu-button @onclick="OpenNotesAreaMenuAsync">⋯ Menu from code</button>
+            </div>
+            <div class="output-box" data-sample-context-menu-status>@_menuStatus</div>
+        </section>
+
         <section class="sample-section">
             <h3>Capability Check</h3>
             <div class="button-row">
@@ -63,6 +106,78 @@
 
 @code {
     private readonly List<string> _windowEvents = [];
+
+    // ADR 0150: the notes of the context menu demo, and a second menu defined in C#.
+    private const string NotesAreaMenu = "sample-notes-area";
+    private static readonly HackIcon FileIcon = HackIcons.Vector(IconLibrary.Lucide, "file-text");
+    private static readonly HackIcon TagIcon = HackIcons.Vector(IconLibrary.Lucide, "tag");
+    private static readonly HackIcon TrashIcon = HackIcons.Vector(IconLibrary.Lucide, "trash-2");
+    private readonly List<SampleNote> _notes = [new("readme.md"), new("todo.txt"), new("ideas.txt")];
+    private string _menuStatus = "Right-click a note, or the empty area below the notes.";
+    private int _created;
+
+    protected override void OnAppInitialized()
+    {
+        // The same model as the markup, built in C#: called again at each opening. The window's
+        // closing removes it; disposing the result would remove it sooner.
+        _ = Menus.Define(NotesAreaMenu, menu => menu
+            .Item("new-note", "New note", _ =>
+            {
+                _notes.Add(new SampleNote($"note-{++_created}.txt"));
+                _menuStatus = $"Created note-{_created}.txt.";
+                return Task.CompletedTask;
+            }, icon: HackIcons.Vector(IconLibrary.Lucide, "file-plus"))
+            .Group(group => group
+                .Submenu("sort", "Sort by", sort => sort
+                    .Item("sort-name", "Name", _ => SortNotesAsync())
+                    .Item("sort-none", "Nothing yet", _ => Task.CompletedTask, isDisabled: true))));
+    }
+
+    private sealed class SampleNote(string name)
+    {
+        public string Name { get; } = name;
+
+        public string? Label { get; set; }
+    }
+
+    private void ShowNote(object? item, string action) =>
+        _menuStatus = item is SampleNote note ? $"{note.Name}: {action}." : action;
+
+    private void LabelNote(object? item, string label)
+    {
+        if (item is SampleNote note)
+        {
+            note.Label = label;
+            _menuStatus = $"{note.Name} labelled {label}.";
+        }
+    }
+
+    private void DeleteNote(object? item)
+    {
+        if (item is SampleNote note && _notes.Remove(note))
+        {
+            _menuStatus = $"{note.Name} deleted.";
+        }
+    }
+
+    private Task SortNotesAsync()
+    {
+        _notes.Sort((left, right) => string.CompareOrdinal(left.Name, right.Name));
+        _menuStatus = "Sorted by name.";
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The readme cannot be deleted: its entry is shown disabled for it only.</summary>
+    private void OnNotesMenuOpening(HackMenuOpeningEventArgs args)
+    {
+        if (args.Item is SampleNote { Name: "readme.md" })
+        {
+            args.Menu.Disable("delete");
+        }
+    }
+
+    private Task OpenNotesAreaMenuAsync(MouseEventArgs args) =>
+        Menus.OpenAsync(NotesAreaMenu, null, args.ClientX, args.ClientY);
     private string _fileStatus = "No file operation performed.";
 
     // ADR 0095 §1: the window manager's events, newest first, at most eight.

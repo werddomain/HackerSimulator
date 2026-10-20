@@ -121,7 +121,7 @@ en affichant le contrôle d'une autre.
 | `hackeros.terminal` (`HackComponentContracts.Terminal`) | `IHackTerminal` | `HackTerminalOptions` (`WorkingDirectory`, `ShowBanner`, `FocusOnStart`) | Terminal (`TerminalEmbed`) |
 | `hackeros.file-view` (`HackComponentContracts.FileView`) | `IHackFileView` (chantier 3 du plan) | — | Explorateur de fichiers |
 | `hackeros.file-dialogs` (`HackComponentContracts.FileDialogs`) | dialogues de fichiers (chantier 3) | — | Explorateur de fichiers |
-| `hackeros.context-menu` (`HackComponentContracts.ContextMenu`) | `IHackContextMenu` (chantier 2) | — | Plateforme |
+| `hackeros.context-menu` (`HackComponentContracts.ContextMenu`) | `IHackContextMenu`, composant `HackContextMenu` ([`context-menu.md`](context-menu.md)) | — | Plateforme (`PlatformContextMenu`, qui inscrit le menu ; `ContextMenuOverlay` le dessine, ADR 0154) |
 
 ### `IHackTerminal`
 

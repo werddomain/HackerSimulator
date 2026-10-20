@@ -2,6 +2,10 @@
 abstract HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.AddProviderParameters(System.Collections.Generic.IDictionary<string!, object?>! parameters) -> void
 abstract HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.Contract.get -> string!
 const HackerOs.AppSdk.Blazor.Components.HackComponentResolution.PlatformProviderId = "platform" -> string!
+const HackerOs.AppSdk.Blazor.ContextMenus.HackMenuAttributes.Menu = "data-hack-menu" -> string!
+const HackerOs.AppSdk.Blazor.ContextMenus.HackMenuAttributes.Suppress = "data-hack-menu-suppress" -> string!
+const HackerOs.AppSdk.Blazor.ContextMenus.HackMenuAttributes.Token = "data-hack-menu-token" -> string!
+const HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition.MaxDepth = 3 -> int
 HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>
 HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.Controller.get -> TController?
 HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.ControllerChanged.get -> Microsoft.AspNetCore.Components.EventCallback<TController?>
@@ -13,7 +17,114 @@ HackerOs.AppSdk.Blazor.Components.HackEmbeddableComponent.UnmatchedParameters.ge
 HackerOs.AppSdk.Blazor.Components.HackEmbeddableComponent.UnmatchedParameters.set -> void
 HackerOs.AppSdk.Blazor.Components.HackEmbeddedComponent<TController>.Parameters.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>?
 HackerOs.AppSdk.Blazor.Components.HackEmbeddedComponent<TController>.Parameters.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackContextMenu
+HackerOs.AppSdk.Blazor.ContextMenus.HackContextMenu.ChildContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
+HackerOs.AppSdk.Blazor.ContextMenus.HackContextMenu.ChildContent.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackContextMenu.HackContextMenu() -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackContextMenu.Label.get -> string?
+HackerOs.AppSdk.Blazor.ContextMenus.HackContextMenu.Label.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackContextMenu.Name.get -> string!
+HackerOs.AppSdk.Blazor.ContextMenus.HackContextMenu.Name.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackContextMenu.Opening.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuOpeningEventArgs!>
+HackerOs.AppSdk.Blazor.ContextMenus.HackContextMenu.Opening.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuAttributes
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuBuilder
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuBuilder.Group(System.Action<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuBuilder!>! group) -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuBuilder!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuBuilder.HackMenuBuilder(HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition! menu, object? receiver) -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuBuilder.Item(string! id, string! title, System.Func<object?, System.Threading.Tasks.Task!>! onClick, HackerOs.AppSdk.Icons.HackIcon? icon = null, string? shortcut = null, bool isDisabled = false) -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuBuilder!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuBuilder.Submenu(string! id, string! title, System.Action<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuBuilder!>! children, HackerOs.AppSdk.Icons.HackIcon? icon = null) -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuBuilder!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition.AddGroup() -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroupDefinition!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition.Clone() -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition.Disable(string! id) -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition.Find(string! id) -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition?
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition.Groups.get -> System.Collections.Generic.IList<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroupDefinition!>!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition.HackMenuDefinition(string! name) -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition.Hide(string! id) -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition.Label.get -> string?
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition.Label.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition.Name.get -> string!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition.Validate() -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroup
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroup.ChildContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroup.ChildContent.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroup.Dispose() -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroup.HackMenuGroup() -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroupDefinition
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroupDefinition.Add(string! id, string! title) -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroupDefinition.Clone() -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroupDefinition!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroupDefinition.HackMenuGroupDefinition() -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroupDefinition.Items.get -> System.Collections.Generic.IList<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition!>!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.ChildContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.ChildContent.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.Dispose() -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.HackMenuItem() -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.Icon.get -> HackerOs.AppSdk.Icons.HackIcon?
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.Icon.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.Id.get -> string!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.Id.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.IsDisabled.get -> bool
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.IsDisabled.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.IsVisible.get -> bool
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.IsVisible.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.OnClick.get -> Microsoft.AspNetCore.Components.EventCallback<object?>
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.OnClick.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.Shortcut.get -> string?
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.Shortcut.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.Title.get -> string!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItem.Title.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.Children.get -> System.Collections.Generic.IList<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroupDefinition!>!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.Clone() -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.HackMenuItemDefinition(string! id, string! title) -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.Icon.get -> HackerOs.AppSdk.Icons.HackIcon?
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.Icon.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.Id.get -> string!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.IsDisabled.get -> bool
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.IsDisabled.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.IsVisible.get -> bool
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.IsVisible.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.OnClick.get -> Microsoft.AspNetCore.Components.EventCallback<object?>
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.OnClick.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.Shortcut.get -> string?
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.Shortcut.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.Title.get -> string!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuItemDefinition.Title.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuOpeningEventArgs
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuOpeningEventArgs.Cancel.get -> bool
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuOpeningEventArgs.Cancel.set -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuOpeningEventArgs.HackMenuOpeningEventArgs(HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition! menu, object? item) -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuOpeningEventArgs.Item.get -> object?
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuOpeningEventArgs.Menu.get -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuRegistration
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuRegistration.Build.get -> System.Func<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition!>!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuRegistration.Build.init -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuRegistration.HackMenuRegistration(string! Name, System.Func<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition!>! Build, Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuOpeningEventArgs!> Opening) -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuRegistration.Name.get -> string!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuRegistration.Name.init -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuRegistration.Opening.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuOpeningEventArgs!>
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenuRegistration.Opening.init -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenus
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenus.Attach(string! name, object? item = null) -> System.Collections.Generic.IReadOnlyDictionary<string!, object!>!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenus.Close() -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenus.Define(string! name, System.Action<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuBuilder!>! build, System.Func<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuOpeningEventArgs!, System.Threading.Tasks.Task!>? opening = null) -> System.IDisposable!
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenus.HackMenus(HackerOs.AppSdk.Blazor.ContextMenus.IHackMenuHost? host, object? receiver) -> void
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenus.IsAvailable.get -> bool
+HackerOs.AppSdk.Blazor.ContextMenus.HackMenus.OpenAsync(string! name, object? item, double clientX, double clientY) -> System.Threading.Tasks.Task<bool>!
+HackerOs.AppSdk.Blazor.ContextMenus.IHackContextMenu
+HackerOs.AppSdk.Blazor.ContextMenus.IHackContextMenu.Close() -> void
+HackerOs.AppSdk.Blazor.ContextMenus.IHackContextMenu.Name.get -> string!
+HackerOs.AppSdk.Blazor.ContextMenus.IHackContextMenu.OpenAsync(object? item, double clientX, double clientY) -> System.Threading.Tasks.Task<bool>!
+HackerOs.AppSdk.Blazor.ContextMenus.IHackMenuHost
+HackerOs.AppSdk.Blazor.ContextMenus.IHackMenuHost.Attach(string! name, object? item) -> System.Collections.Generic.IReadOnlyDictionary<string!, object!>!
+HackerOs.AppSdk.Blazor.ContextMenus.IHackMenuHost.Close() -> void
+HackerOs.AppSdk.Blazor.ContextMenus.IHackMenuHost.OpenAsync(string! name, object? item, double clientX, double clientY) -> System.Threading.Tasks.Task<bool>!
+HackerOs.AppSdk.Blazor.ContextMenus.IHackMenuHost.Register(HackerOs.AppSdk.Blazor.ContextMenus.HackMenuRegistration! registration) -> System.IDisposable!
+HackerOs.AppSdk.Blazor.HackComponentBase.Menus.get -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenus!
+HackerOs.AppSdk.Blazor.WindowAppBase.Menus.get -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenus!
 override HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder! builder) -> void
 override HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.OnParametersSet() -> void
+virtual HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.DefaultUnavailable.get -> Microsoft.AspNetCore.Components.RenderFragment<string!>?
 virtual HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.OnControllerChangedAsync(TController? controller) -> System.Threading.Tasks.Task!
 virtual HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.Options.get -> object?

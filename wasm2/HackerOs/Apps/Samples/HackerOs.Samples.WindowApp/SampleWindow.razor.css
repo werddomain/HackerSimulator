@@ -120,3 +120,32 @@
     margin-bottom: 8px;
     accent-color: #42d392;
 }
+
+/* ADR 0150: the context menu demo's notes. */
+.sample-notes {
+    min-height: 96px;
+    margin: 0 0 10px;
+    padding: 6px;
+    list-style: none;
+    border: 1px dashed #30363d;
+    border-radius: 4px;
+}
+
+.sample-note {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 8px;
+    border-radius: 3px;
+    cursor: default;
+
+    &:hover,
+    &:focus-visible {
+        background-color: #21262d;
+        outline: none;
+    }
+}
+
+.sample-note-label {
+    color: #42d392;
+    font-size: 12px;
+}

@@ -1,4 +1,5 @@
 using HackerOs.AppSdk;
+using HackerOs.AppSdk.Blazor.ContextMenus;
 using Microsoft.AspNetCore.Components;
 
 namespace HackerOs.AppSdk.Blazor;
@@ -19,10 +20,24 @@ namespace HackerOs.AppSdk.Blazor;
 public abstract class HackComponentBase : ComponentBase, IHandleEvent, IHandleAfterRender
 {
     private bool _hasCalledOnAfterRender;
+    private HackMenus? _menus;
 
     /// <summary>Gets the execution context of the window app this component belongs to.</summary>
     [CascadingParameter]
     protected IAppExecutionContext? AppContext { get; set; }
+
+    /// <summary>Gets or sets the window's context menus, cascaded by the OS (ADR 0150 §4).</summary>
+    [CascadingParameter]
+    private IHackMenuHost? MenuHost { get; set; }
+
+    /// <summary>
+    /// Gets the window's context menus (ADR 0150 §4): <c>@attributes="Menus.Attach(name, item)"</c>
+    /// on any element, <c>Menus.Define(name, builder =&gt; …)</c> in C#. Callbacks defined here run
+    /// in this component's app context and re-render it.
+    /// </summary>
+    protected HackMenus Menus => _menus is { } menus && menus.Host == MenuHost
+        ? menus
+        : _menus = new HackMenus(MenuHost, this);
 
     /// <summary>Assigns parameters and runs the synchronous lifecycle inside the app's ambient scope.</summary>
     public override Task SetParametersAsync(ParameterView parameters)

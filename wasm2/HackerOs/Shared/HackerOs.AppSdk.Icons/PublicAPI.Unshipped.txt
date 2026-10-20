@@ -1,1 +1,15 @@
 #nullable enable
+HackerOs.AppSdk.Icons.HackIcon
+HackerOs.AppSdk.Icons.HackIcon.HackIcon(HackerOs.AppSdk.Icons.HackIconKind Kind, HackerOs.AppSdk.Icons.IconLibrary Library, string! Source) -> void
+HackerOs.AppSdk.Icons.HackIcon.Kind.get -> HackerOs.AppSdk.Icons.HackIconKind
+HackerOs.AppSdk.Icons.HackIcon.Kind.init -> void
+HackerOs.AppSdk.Icons.HackIcon.Library.get -> HackerOs.AppSdk.Icons.IconLibrary
+HackerOs.AppSdk.Icons.HackIcon.Library.init -> void
+HackerOs.AppSdk.Icons.HackIcon.Source.get -> string!
+HackerOs.AppSdk.Icons.HackIcon.Source.init -> void
+HackerOs.AppSdk.Icons.HackIconKind
+HackerOs.AppSdk.Icons.HackIconKind.Image = 1 -> HackerOs.AppSdk.Icons.HackIconKind
+HackerOs.AppSdk.Icons.HackIconKind.Vector = 0 -> HackerOs.AppSdk.Icons.HackIconKind
+HackerOs.AppSdk.Icons.HackIcons
+static HackerOs.AppSdk.Icons.HackIcons.FromImage(string! assetPathOrUri) -> HackerOs.AppSdk.Icons.HackIcon!
+static HackerOs.AppSdk.Icons.HackIcons.Vector(HackerOs.AppSdk.Icons.IconLibrary library, string! name) -> HackerOs.AppSdk.Icons.HackIcon!
