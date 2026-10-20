@@ -161,11 +161,12 @@ en affichant le contrôle d'une autre.
 
 | Paramètre | Rôle |
 | --- | --- |
-| `InitialDirectory`, `Mode`/`ModeChanged`, `AllowMultiSelect`, `Filter` | Dossier, disposition (`Details`, `Icons`, `Tree`), sélection, filtre (rappeler `RefreshFilter`). |
+| `InitialDirectory`, `Mode`/`ModeChanged`, `AllowMultiSelect`, `Filter` | Dossier, disposition (`Details`, `Icons`, `Tree`, `Desktop`), sélection, filtre (rappeler `RefreshFilter`). |
 | `Features` | Ce que le contrôle fait seul (`Clipboard`, `Delete`, `Rename`, `CreateFolder`, `DragDrop`, `OpenWith`, `Properties`) ; une fonction retirée disparaît du menu et sa touche ne fait rien. |
 | `SelectedResource` | Poignée d'un dossier choisi dans le dialogue de l'OS : le contrôle liste avec elle. |
 | `Opening` | Avant l'ouverture d'un élément ; `Handled = true` laisse l'hôte l'ouvrir lui-même. |
 | `Navigated`, `SelectionChanged`, `Renamed`, `Deleted`, `ErrorOccurred` | Ce qui s'est passé ; sans `ErrorOccurred`, les erreurs deviennent des notifications. |
+| `DesktopOptions`, `DesktopPositions`, `DesktopPositionsChanged` | Mode `Desktop` seulement (ADR 0160 §2) : options de `[view]`, case de chaque élément (`::home`, `::trash` pour les icônes système), positions à enregistrer après un déplacement ou un élément nouveau. L'hôte garde `desktop.config`, le fournisseur place avec `HackDesktopLayout`. Voir [`desktop.md`](desktop.md). |
 | `ContextMenuOpening` | Après la construction du menu du plan §7 : `Scope`, `Items`, `Directory`, `Menu` (trouver, cacher, désactiver, ajouter un groupe), `Cancel`. Les entrées inscrites par les apps sont ajoutées **après** par l'OS (ADR 0159 §4). |
 
 `IHackFileView` : `CurrentDirectory`, `Items`, `SelectedItems`, `CanPaste`,

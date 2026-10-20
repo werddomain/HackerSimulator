@@ -19,7 +19,7 @@
             @BackgroundContent
         </section>
     }
-    <section class="window-layer @(BackgroundInteractive && BackgroundContent is not null ? "pass-through" : null)" aria-label="@L["Desktop.OpenWindows"]">
+    <section class="@WindowLayerClass" aria-label="@L["Desktop.OpenWindows"]">
         @foreach (WindowRuntimeState window in Windows)
         {
             <WindowHost @key="window.Id"
@@ -43,6 +43,9 @@
 </main>
 
 @code {
+    /// <summary>The window layer lets the pointer reach an interactive background between the windows (ADR 0160 §1).</summary>
+    private string WindowLayerClass => BackgroundInteractive && BackgroundContent is not null ? "window-layer pass-through" : "window-layer";
+
     private ElementReference _desktopElement;
     private IJSObjectReference? _module;
     private DotNetObjectReference<DesktopArea>? _dotNetHelper;

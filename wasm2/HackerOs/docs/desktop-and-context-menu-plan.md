@@ -109,6 +109,11 @@ Explorateur de fichiers (app système)          Plateforme (shell)
 
 ## 5. Le bureau
 
+> Mis en œuvre par le chantier 5 : voir [`desktop.md`](desktop.md) et
+> l'[ADR 0160](adr/0160-desktop-implementation-adjustments.md) (le bureau est
+> l'app système `org.hackeros.desktop`, `desktop.config` est un fichier de
+> l'utilisateur seulement).
+
 - `DesktopShell` remplit `DesktopArea.BackgroundContent` avec `HackFileView`
   en **mode Bureau** sur `~/Desktop`, avec les droits de la session.
 - **Icônes système** : Dossier perso et Corbeille, entrées virtuelles
@@ -379,4 +384,5 @@ documentation et l'index [`README.md`](README.md).
 - [x] Chantier 3b : les dialogues Ouvrir / Enregistrer / Choisir un dossier montrent le contrôle `hackeros.file-view` avec les droits de l'app qui demande (`FileDialogBrowser`, repli sur `VirtualFolderBrowser` sans fournisseur ; [ADR 0157](adr/0157-file-dialogs-show-the-file-control.md)).
 - [x] Chantier 3c : fournisseur du contrôle de fichiers remplaçable (contrats ouverts à toute app fenêtrée, `HOSAPP0025` retiré, `/etc/hackeros/components.config`, choix de l'administrateur après approbation, repli `component.fallback`, onglet « Composants de l'OS » ; [ADR 0156](adr/0156-replaceable-file-control-provider.md), [ADR 0158](adr/0158-replaceable-file-provider-implementation-adjustments.md)).
 - [x] Chantier 4 : entrées inscrites par les apps (`[RegisterFileContextMenu]` exécutée au build pour toutes les apps, `contextMenus` du manifeste, `/etc/hackeros/context-menus.d` aligné au démarrage, filtres, placement, lancement par intent ou arguments, capacité `shell.context-menu`, `HOSAPP0026` à `HOSAPP0028`, Paramètres ▸ Menus des fichiers et `HackFileMenuEntries`, « Extraire ici » et « Publier comme site web… » inscrits ; [ADR 0159](adr/0159-app-menu-entries-implementation-adjustments.md), [`context-menu.md`](context-menu.md#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4)).
-- [ ] Chantiers 5 et 6.
+- [x] Chantier 5 : bureau (app système `org.hackeros.desktop` rendue par la coquille sous les fenêtres, mode Bureau du contrôle de fichiers, grille `HackDesktopLayout`, `~/.config/hackeros/desktop.config` par `HackDesktopSettings`, Dossier perso et Corbeille, raccourcis `.desktop` par glisser depuis le menu Démarrer et « Envoyer vers ▸ Bureau », menus Affichage et Trier par, Paramètres ▸ Bureau ; [ADR 0160](adr/0160-desktop-implementation-adjustments.md), [`desktop.md`](desktop.md)).
+- [ ] Chantier 6.

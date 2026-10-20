@@ -40,8 +40,11 @@ C'est le rôle d'`explorer.exe` sous Windows ou de `xfdesktop` sous Xfce.
   manifeste pour l'utilisateur de la session.
 - La coquille rend son composant d'entrée **hors de toute fenêtre**, dans la
   couche de fond, avec son contexte et une portée de menus en cascade, comme
-  `WindowAppRenderer` le fait dans une fenêtre. `ShellSurfaceRegistry` retient
-  le processus pour que la coquille ne lui ouvre jamais de fenêtre.
+  `WindowAppRenderer` le fait dans une fenêtre. Avant le lancement,
+  `WindowLaunchCoordinator.ReserveShellSurface(appId)` réserve l'app comme
+  surface de la coquille : `PresentAsync` ne lui ouvre jamais de fenêtre, quel
+  que soit celui qui la lance (réservation comptée, libérée quand la coquille
+  se ferme).
 - `kill` ou « Fin de tâche » arrête le bureau : les icônes disparaissent. S'il
   **plante** (`Faulted`), la coquille le relance une fois, comme Windows
   relance l'Explorateur ; arrêté volontairement, il revient à la connexion
@@ -100,17 +103,20 @@ devient nouveau et se range dans l'ordre du tri.
 
 ### 4. `desktop.config`
 
-- Un document de l'OS, `desktop`, déclaré par `DesktopSettingsDocuments` et
-  ouvert par `HackSettings.OpenSystemAsync(context, "desktop")` : la section
-  `[view]` (`icon-size`, `auto-arrange`, `align-to-grid`, `sort`, `show-home`,
-  `show-trash`) a ses deux couches (`/etc/hackeros/desktop.config` pour les
-  défauts de la machine, `~/.config/hackeros/desktop.config` pour
-  l'utilisateur).
-- `[positions]` est une **section libre** : `SettingsSchema.FreeGroups`
-  (nouveau) dit au lecteur des couches de ne pas la résoudre et de ne pas
-  signaler ses clés comme inconnues. L'app Bureau la lit et la réécrit ligne à
-  ligne dans le fichier de l'utilisateur (`ConfigDocumentEditor`), sans toucher
-  aux autres lignes.
+- Un **fichier de l'utilisateur seulement**, `~/.config/hackeros/desktop.config`,
+  comme le fichier de configuration d'un bureau Linux sous `~/.config/` : pas
+  de document de l'OS ni de couche `/etc` (le bureau est propre à chaque
+  utilisateur, et `[positions]` n'a pas de schéma). Le format est lu et écrit
+  par `HackDesktopSettings` (SDK, `HackerOs.AppSdk.Files`) : `Parse`,
+  `WithOptions`, `WithPositions`, `ReadAsync`, `SaveOptionsAsync`,
+  `SavePositionsAsync`, avec les droits de l'app ambiante.
+- `[view]` (`icon-size`, `auto-arrange`, `align-to-grid`, `sort`, `show-home`,
+  `show-trash`) est réécrit ligne à ligne (`ConfigDocumentEditor`) : les
+  commentaires et les clés inconnues restent. `[positions]` est réécrit en
+  entier, à la fin du fichier. Une ligne ou une valeur fausse est ignorée et
+  le défaut s'applique ; le dossier est créé s'il manque.
+- L'app Bureau suit `~/.config/hackeros` (`HackFileSystemWatcher`) et se
+  redessine quand le fichier change (Paramètres, un éditeur, `nano`).
 - Une clé est un nom de fichier ; `%`, `=`, `\`, `#`, `;`, `[`, `]`, les
   caractères de contrôle et les espaces de bord y sont encodés en `%XX`.
   La valeur est `colonne,ligne`, à partir de 0.
@@ -160,18 +166,21 @@ ajoute par `ContextMenuOpening` :
   automatiquement, Aligner sur la grille, Afficher Dossier perso, Afficher
   Corbeille (cases à cocher) ;
 - « Trier par ▸ » : Nom, Taille, Type, Date de modification ;
-- « Arrière-plan… » : lance Paramètres avec `--page=appearance`.
+- « Arrière-plan… » : lance Paramètres avec `--page=appearance` ;
+- « Paramètres du bureau… » : lance Paramètres avec `--page=desktop`.
 
 Ouvrir un dossier du bureau ouvre une fenêtre de l'explorateur, pas une
 navigation dans le bureau.
 
 ### 8. Paramètres ▸ Bureau
 
-Un onglet **Bureau**, après Apparence, règle `[view]` par
-`HackSettings.OpenSystemAsync(context, "desktop")`, avec le choix « Moi
-seulement » / « Tous les utilisateurs » de l'onglet Apparence. Paramètres
-accepte `--page=appearance` et `--page=desktop`. L'index de l'onglet
-« Application » (`--app=`) est désormais compté à partir des onglets affichés.
+Un onglet **Bureau**, après Apparence, règle `[view]` du fichier de
+l'utilisateur par `HackDesktopSettings` (taille des icônes, réorganisation
+automatique, alignement, icônes système, tri) et peut oublier les positions.
+Paramètres accepte `--page=appearance` et `--page=desktop`. L'index de
+l'onglet « Application » (`--app=`) est désormais compté à partir des onglets
+fixes et de Sauvegarde (il était décalé d'un depuis l'onglet Menus des
+fichiers).
 
 ### 9. Mobile
 
@@ -182,10 +191,12 @@ accepte `--page=appearance` et `--page=desktop`. L'index de l'onglet
 - Une app de plus dans l'écosystème et ses modèles d'hôte ; le bureau est
   chargé à la connexion, avec l'assembly de l'explorateur (fournisseur du
   contrôle).
-- Nouvelles API non livrées (`PublicAPI.Unshipped.txt`) dans `AppSdk`,
-  `AppSdk.Blazor`, `AppSdk.FileView`, `Simulation.Abstractions`,
-  `Windowing.Blazor`, `Platform.Core` et `Platform.Blazor`, publiées avec le
-  SDK 2.0 (chantier 6).
+- Nouvelles API non livrées (`PublicAPI.Unshipped.txt`) dans `AppSdk`
+  (`HackDesktop*`, `HackDesktopEntry`, `HackDesktopSettings`, `HackAppIcons`,
+  `HackFileMenuItems.EmptyTrash`), `AppSdk.Blazor`, `AppSdk.FileView`,
+  `Windowing.Blazor` et `Platform.Blazor`, publiées avec le SDK 2.0
+  (chantier 6). `empty-trash` rejoint les entrées par défaut connues du
+  manifeste (`AppContextMenus.DefaultItemIds`).
 - [`settings-files.md`](../settings-files.md) gagne `desktop.config`,
   [`embedded-components.md`](../embedded-components.md) les paramètres du mode
   Bureau.

@@ -136,6 +136,6 @@ public static class AppContextMenus
     public static IReadOnlySet<string> DefaultItemIds { get; } = new[]
     {
         "open", "open-with", "open-with-other", "cut", "copy", "paste", "paste-into", "rename", "delete",
-        "delete-permanently", "new-folder", "refresh", "properties", "view", "sort", "background"
+        "delete-permanently", "empty-trash", "new-folder", "refresh", "properties", "view", "sort", "background"
     }.ToFrozenSet(StringComparer.Ordinal);
 }
