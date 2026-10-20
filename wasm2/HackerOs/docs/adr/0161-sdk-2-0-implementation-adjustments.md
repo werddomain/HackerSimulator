@@ -85,8 +85,7 @@ ADR avant la fusion du chantier.
 
 - Les fixtures `Contoso.Sdk1Compat.1.0.0` et `Contoso.Sdk11Compat.1.1.0` restent
   telles quelles. Les tests de compatibilité vérifient désormais que le
-  catalogue les **refuse** (état `Incompatible`, majeure différente) et que
-  leurs fichiers ne sont pas touchés.
+  catalogue les **refuse** (`catalog.sdk.incompatible`, majeure différente).
 - `Contoso.Sdk2Compat.2.0.0` est produite par `produce-fixture.sh` contre les
   paquets 2.0.0, committée et jamais reconstruite. Sa fenêtre affiche
   `HackFileView`, son manifeste inscrit une entrée de menu de fichiers
@@ -94,8 +93,10 @@ ADR avant la fusion du chantier.
   `HackFileOperations`. Les tests vérifient qu'elle est admise, qu'elle se lie
   et que sa commande tourne.
 - Le scénario de l'hôte généré par le modèle (`HackerOs.Templates.E2E.Tests`)
-  installe la fixture 2.0 et vérifie que les deux fixtures 1.x sont affichées
-  comme incompatibles.
+  vérifie qu'un hôte qui référence les deux fixtures 1.x ne se construit pas
+  (`HOSAPP0021`, la règle du catalogue appliquée au build, ADR 0098 §3), puis
+  qu'avec la fixture 2.0 il démarre, montre le contrôle de fichiers dans la
+  fenêtre tierce et exécute la commande.
 
 ### 4. Publication
 
@@ -106,8 +107,9 @@ Toutes les entrées de `PublicAPI.Unshipped.txt` passent dans
 
 ## Conséquences
 
-- Le premier démarrage d'un OS 2.0 affiche toute app tierce 1.x comme
-  incompatible ; elle doit être recompilée contre les paquets 2.0.0.
+- Un hôte qui référence une app tierce 1.x ne se construit plus, et un OS 2.0
+  qui en trouve une à son catalogue l'affiche comme incompatible ; elle doit
+  être recompilée contre les paquets 2.0.0.
 - Une correction des règles de copie touche le SDK, donc suit le SemVer.
 - Le code de la vue ne se charge qu'avec l'explorateur (assemblage à la
   demande) : le téléchargement initial de l'OS diminue d'autant.
