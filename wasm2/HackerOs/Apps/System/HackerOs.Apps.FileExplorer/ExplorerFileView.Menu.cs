@@ -63,6 +63,9 @@ public sealed partial class ExplorerFileView
             id => EventCallback.Factory.Create<object?>(this, _ => RunMenuCommandAsync(id, targets, directory)),
             key => L[key]);
 
+        // ADR 0159 §5: tells the OS what this menu is drawn for, so it adds the entries apps registered.
+        args.Menu.FileMenu = new HackFileMenuContext(scope, snapshots, directory.Value);
+
         if (ContextMenuOpening.HasDelegate)
         {
             HackFileMenuOpeningEventArgs hostArgs = new(scope, snapshots, directory.Value, args.Menu);

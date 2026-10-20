@@ -107,6 +107,22 @@ public static class GeneratorCodes
     // HOSAPP0025 (a non-system app registering hackeros.file-view or hackeros.file-dialogs, ADR 0153
     // §4) is retired: ADR 0156 opens both contracts to any window app. The code is not reused.
 
+    /// <summary>
+    /// A file menu entry an app registers is invalid (ADR 0151 §5, ADR 0159): a bad
+    /// <c>[RegisterFileContextMenu]</c> method, a method that throws or is not deterministic, a title
+    /// key missing from <c>Resources/AppManifest.resx</c>, or a rule of the entries broken.
+    /// </summary>
+    public const string InvalidContextMenu = "HOSAPP0026";
+
+    /// <summary>An app registers file menu entries without the <c>shell.context-menu</c> capability (ADR 0151 §6).</summary>
+    public const string ContextMenuCapability = "HOSAPP0027";
+
+    /// <summary>
+    /// Aggregation (ADR 0151 §5): a file menu entry targets an app the host does not have, or one
+    /// that does not declare the entry's intent.
+    /// </summary>
+    public const string ContextMenuTarget = "HOSAPP0028";
+
     /// <summary>The tool was called with invalid arguments.</summary>
     public const string InvalidArguments = "HOSAPP0090";
 

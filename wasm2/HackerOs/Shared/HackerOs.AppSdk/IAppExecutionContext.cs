@@ -308,6 +308,13 @@ public interface IAppExecutionContext
     IAppComponentProviderAdministrationGateway ComponentProviderAdministration => UnsupportedAdministrationGateways.ComponentProviders;
 
     /// <summary>
+    /// Gets this instance's gateway listing and hiding the entries apps added to the file menus, behind
+    /// <see cref="HackFileMenuEntries"/> (ADR 0159 §8; capability <c>apps.manage</c>). Defaults to an
+    /// unsupported gateway; the trusted platform factory overrides it.
+    /// </summary>
+    IAppFileMenuEntryAdministrationGateway FileMenuEntryAdministration => UnsupportedAdministrationGateways.FileMenuEntries;
+
+    /// <summary>
     /// Gets this instance's ability to host interactive shells (<c>shell.host</c>, ADR 0056
     /// section 7), read by <see cref="Shell.HackShell"/>. Defaults to an unsupported gateway so
     /// existing <see cref="IAppExecutionContext"/> implementations that predate this member keep
@@ -409,6 +416,18 @@ public static class UnsupportedAdministrationGateways
 
     /// <summary>Unsupported <see cref="IAppComponentProviderAdministrationGateway"/>.</summary>
     public static IAppComponentProviderAdministrationGateway ComponentProviders { get; } = new UnsupportedComponentProviders();
+
+    /// <summary>Unsupported <see cref="IAppFileMenuEntryAdministrationGateway"/>.</summary>
+    public static IAppFileMenuEntryAdministrationGateway FileMenuEntries { get; } = new UnsupportedFileMenuEntries();
+
+    private sealed class UnsupportedFileMenuEntries : IAppFileMenuEntryAdministrationGateway
+    {
+        public ValueTask<IReadOnlyList<HackFileMenuEntryInfo>> GetEntriesAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask SetHiddenAsync(string appId, string name, bool hidden, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
 
     private sealed class UnsupportedComponentProviders : IAppComponentProviderAdministrationGateway
     {

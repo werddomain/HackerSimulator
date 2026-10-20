@@ -1104,4 +1104,34 @@
   <data name="Memory.Error.CannotSave" xml:space="preserve">
     <value>Impossible d'enregistrer {0} : {1}</value>
   </data>
+  <data name="Tab.FileMenus" xml:space="preserve">
+    <value>Menus des fichiers</value>
+  </data>
+  <data name="FileMenus.Unavailable" xml:space="preserve">
+    <value>Les entrées des menus des fichiers ne sont pas disponibles sur cet hôte.</value>
+  </data>
+  <data name="FileMenus.Description" xml:space="preserve">
+    <value>Entrées que les applications ajoutent aux menus des fichiers (explorateur, bureau, fenêtres de fichiers). Décochez une entrée pour la masquer de vos menus ; le choix est enregistré dans {0} et s'applique au prochain menu ouvert.</value>
+  </data>
+  <data name="FileMenus.Empty" xml:space="preserve">
+    <value>Aucune application installée n'ajoute d'entrée aux menus des fichiers.</value>
+  </data>
+  <data name="FileMenus.HiddenByParent" xml:space="preserve">
+    <value>Masquée avec son menu parent.</value>
+  </data>
+  <data name="FileMenus.Error.CannotSave" xml:space="preserve">
+    <value>Le choix n'a pas pu être enregistré : {0}</value>
+  </data>
+  <data name="FileMenus.Scope.File" xml:space="preserve">
+    <value>Fichiers</value>
+  </data>
+  <data name="FileMenus.Scope.Directory" xml:space="preserve">
+    <value>Dossiers</value>
+  </data>
+  <data name="FileMenus.Scope.Background" xml:space="preserve">
+    <value>Espace vide</value>
+  </data>
+  <data name="FileMenus.Scope.Desktop" xml:space="preserve">
+    <value>Bureau</value>
+  </data>
 </root>

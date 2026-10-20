@@ -153,12 +153,6 @@
   <data name="Kind.SymbolicLink" xml:space="preserve">
     <value>SymbolicLink</value>
   </data>
-  <data name="Menu.PublishSite" xml:space="preserve">
-    <value>Publish as a web site…</value>
-  </data>
-  <data name="Menu.UnzipHere" xml:space="preserve">
-    <value>UnZip Here…</value>
-  </data>
   <data name="Nav.Back" xml:space="preserve">
     <value>Back</value>
   </data>

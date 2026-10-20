@@ -19,7 +19,9 @@ namespace HackerOs.Tools.ManifestGenerator;
 /// <para>
 /// A missing key keeps the English text of the <c>AppDefinition</c>. A key naming no app, an
 /// unknown suffix or a malformed file fails the build (<c>HOSAPP0040</c>). The English texts stay in
-/// C#: there is no <c>AppManifest.resx</c>.
+/// C#. The one exception is the titles of the file menu entries (ADR 0159 §3): their English text is
+/// in <c>Resources/AppManifest.resx</c>, their translations here, and
+/// <see cref="ContextMenuRegistrationInspector"/> copies both into the manifest.
 /// </para>
 /// </remarks>
 public static class ManifestLocalizationGenerator
@@ -90,6 +92,12 @@ public static class ManifestLocalizationGenerator
             Dictionary<string, Dictionary<string, string>> byApp = new(StringComparer.Ordinal);
             foreach ((string key, string value) in values)
             {
+                // ADR 0159 §3: the titles of the file menu entries live here too; the inspector copied them.
+                if (IsMenuTitleKey(key, multi, manifests))
+                {
+                    continue;
+                }
+
                 if (!TrySplitKey(key, multi, manifests, out string appId, out string suffix))
                 {
                     diagnostics.Add(new(GeneratorCodes.InvalidLocalization, path,
@@ -193,6 +201,10 @@ public static class ManifestLocalizationGenerator
 
         return result;
     }
+
+    private static bool IsMenuTitleKey(string key, bool multi, IReadOnlyList<GeneratedManifest> manifests) =>
+        manifests.Any(generated => ContextMenuRegistrationInspector.TitleKeys(generated.Manifest)
+            .Any(title => string.Equals(multi ? $"{generated.Manifest.Id}.{title}" : title, key, StringComparison.Ordinal)));
 
     private static bool TrySplitKey(
         string key, bool multi, IReadOnlyList<GeneratedManifest> manifests, out string appId, out string suffix)

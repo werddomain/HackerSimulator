@@ -55,13 +55,19 @@ public sealed class ContextMenuService
 {
     private readonly Dictionary<string, ContextMenuScope> _scopes = new(StringComparer.Ordinal);
     private readonly ILogger<ContextMenuService>? _logger;
+    private readonly IFileMenuEntrySource? _fileMenuEntries;
     private int _nextScope;
 
     /// <summary>Initializes the service.</summary>
     /// <param name="logger">Writes failing menus to the system log; optional.</param>
-    public ContextMenuService(ILogger<ContextMenuService>? logger = null)
+    /// <param name="fileMenuEntries">
+    /// Adds the entries apps registered to the file menus (ADR 0151, ADR 0159 §5); <see langword="null"/>
+    /// draws file menus with the provider's entries only.
+    /// </param>
+    public ContextMenuService(ILogger<ContextMenuService>? logger = null, IFileMenuEntrySource? fileMenuEntries = null)
     {
         _logger = logger;
+        _fileMenuEntries = fileMenuEntries;
     }
 
     /// <summary>Raised when a menu opens or closes.</summary>
@@ -146,6 +152,12 @@ public sealed class ContextMenuService
                     return false;
                 }
 
+                // ADR 0159 §5: a file menu gets the entries apps registered, whichever app provides the control.
+                if (menu.FileMenu is not null && _fileMenuEntries is not null)
+                {
+                    await AddFileMenuEntriesAsync(menu, name);
+                }
+
                 menu.Validate();
             }
         }
@@ -164,6 +176,22 @@ public sealed class ContextMenuService
         Current = new ContextMenuSession(scope, name, item, menu.Label, root, clientX, clientY, origin);
         Changed?.Invoke();
         return true;
+    }
+
+    /// <summary>
+    /// Adds the registered file menu entries; a failure is written to the system log and the menu
+    /// opens with the provider's entries only, so one broken registration never hides a file menu.
+    /// </summary>
+    private async Task AddFileMenuEntriesAsync(HackMenuDefinition menu, string name)
+    {
+        try
+        {
+            await _fileMenuEntries!.ApplyAsync(menu);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger?.LogError(exception, "context-menu: the registered entries of the file menu '{Name}' could not be added.", name);
+        }
     }
 
     /// <summary>Closes the open menu, if any.</summary>

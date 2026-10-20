@@ -1,3 +1,4 @@
+using HackerOs.AppSdk.Blazor.Files;
 using HackerOs.AppSdk.Icons;
 using Microsoft.AspNetCore.Components;
 
@@ -33,6 +34,14 @@ public sealed class HackMenuDefinition
 
     /// <summary>Gets the menu's groups, in order.</summary>
     public IList<HackMenuGroupDefinition> Groups { get; } = [];
+
+    /// <summary>
+    /// Gets or sets what a file menu is drawn for, or <see langword="null"/> for any other menu
+    /// (ADR 0159 §5). The provider of the file control (<c>hackeros.file-view</c>) sets it in its
+    /// <c>Opening</c> handler; the OS then adds the entries apps registered (ADR 0151) to this
+    /// opening, whichever app provides the control.
+    /// </summary>
+    public HackFileMenuContext? FileMenu { get; set; }
 
     /// <summary>Finds an entry by id, at any depth.</summary>
     /// <param name="id">The entry id.</param>
@@ -70,7 +79,7 @@ public sealed class HackMenuDefinition
     /// <summary>Copies the menu, entries and groups included; callbacks and icons are shared.</summary>
     public HackMenuDefinition Clone()
     {
-        HackMenuDefinition copy = new(Name) { Label = Label };
+        HackMenuDefinition copy = new(Name) { Label = Label, FileMenu = FileMenu };
         foreach (HackMenuGroupDefinition group in Groups)
         {
             copy.Groups.Add(group.Clone());

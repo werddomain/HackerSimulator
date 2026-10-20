@@ -333,6 +333,7 @@ public static partial class AppManifestValidator
         ValidateWindow(manifest, errors);
         ValidateWeb(manifest, errors);
         ValidateComponents(manifest, errors);
+        ValidateContextMenus(manifest, errors);
 
         foreach (FileHandlerManifest handler in manifest.FileHandlers)
         {
@@ -452,6 +453,183 @@ public static partial class AppManifestValidator
             }
         }
     }
+
+    /// <summary>
+    /// Checks the file menu entries of ADR 0151 §5 that one manifest can check by itself: the
+    /// capability, unique names, a parent of the same app without intent, three levels at most, one
+    /// position, anchors among the default ids or the app's own entries, an intent on every entry
+    /// without children, and an English title. Whether another app declares the intent of a
+    /// <c>target</c> is checked where every manifest is known (aggregation, and the OS at boot).
+    /// </summary>
+    private static void ValidateContextMenus(AppManifest manifest, List<ManifestValidationError> errors)
+    {
+        if (manifest.ContextMenus is not { Count: > 0 } entries)
+        {
+            return;
+        }
+
+        if (manifest.Kind is not (AppKind.Window or AppKind.Service))
+        {
+            AddError(errors, "manifest.context-menu.forbidden", "contextMenus", "Only window and service apps can add entries to the file menus: an entry launches the app.");
+        }
+
+        if (!manifest.Capabilities.Contains(AppCapabilities.ShellContextMenu, StringComparer.Ordinal))
+        {
+            AddError(errors, "manifest.context-menu.capability", "contextMenus", $"An app adding file menu entries must request the '{AppCapabilities.ShellContextMenu}' capability (ADR 0151 §6).");
+        }
+
+        ValidateUniqueValues(entries.Select(entry => entry.Name ?? string.Empty), "contextMenus.name", errors);
+        Dictionary<string, AppContextMenuEntryManifest> byName = new(StringComparer.Ordinal);
+        foreach (AppContextMenuEntryManifest entry in entries)
+        {
+            if (entry.Name is { } name)
+            {
+                byName.TryAdd(name, entry);
+            }
+        }
+
+        HashSet<string> parents = new(entries.Where(entry => entry.Parent is not null).Select(entry => entry.Parent!), StringComparer.Ordinal);
+        foreach (AppContextMenuEntryManifest entry in entries)
+        {
+            string name = entry.Name ?? string.Empty;
+            if (!ContextMenuNamePattern().IsMatch(name))
+            {
+                AddError(errors, "manifest.context-menu.name.invalid", "contextMenus.name", $"Menu entry name '{name}' must be lower-case words joined by dashes, e.g. 'extract-here'.");
+            }
+
+            RequireText(entry.Title, "contextMenus.title", errors);
+            if (!(entry.Titles ?? []).Any(title => string.Equals(title.Culture, AppContextMenus.EnglishCulture, StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(title.Text)))
+            {
+                AddError(errors, "manifest.context-menu.title.english", "contextMenus.titles", $"Menu entry '{name}' has no English title: add '{entry.Title}' to Resources/AppManifest.resx (ADR 0159 §3).");
+            }
+
+            string target = entry.Target ?? string.Empty;
+            if (target != AppContextMenus.SelfTarget && !AppIdPattern().IsMatch(target))
+            {
+                AddError(errors, "manifest.context-menu.target.invalid", "contextMenus.target", $"Menu entry '{name}' targets '{target}': use 'self' or an app id.");
+            }
+
+            bool hasChildren = parents.Contains(name);
+            if (hasChildren && entry.Intent is not null)
+            {
+                AddError(errors, "manifest.context-menu.parent.intent", "contextMenus.intent", $"Menu entry '{name}' opens a submenu: it cannot also have an intent.");
+            }
+            else if (!hasChildren && string.IsNullOrWhiteSpace(entry.Intent))
+            {
+                AddError(errors, "manifest.context-menu.intent.required", "contextMenus.intent", $"Menu entry '{name}' has no submenu and no intent: it would do nothing.");
+            }
+            else if (entry.Intent is { } intent && (intent.Any(char.IsWhiteSpace) || intent.Length > 128 || AppIntentIds.IsBuiltIn(intent)))
+            {
+                AddError(errors, "manifest.context-menu.intent.invalid", "contextMenus.intent", $"Menu entry '{name}' has an invalid intent '{intent}': no spaces, 128 characters at most, not an intent of the OS.");
+            }
+
+            if (entry.Target != AppContextMenus.SelfTarget && entry.Intent is { } targetIntent && !AppIntentIds.IsWellFormed(targetIntent))
+            {
+                AddError(errors, "manifest.context-menu.intent.invalid", "contextMenus.intent", $"Menu entry '{name}' targets another app: its intent '{targetIntent}' must be an intent id that app declares (domain.name.vN).");
+            }
+
+            IReadOnlyList<string> scopes = entry.Scopes ?? [];
+            if (scopes.Count == 0 || scopes.Any(scope => !AppContextMenus.Scopes.Contains(scope, StringComparer.Ordinal)))
+            {
+                AddError(errors, "manifest.context-menu.scope.invalid", "contextMenus.scopes", $"Menu entry '{name}' needs one or more scopes among file, directory, background and desktop.");
+            }
+
+            if (!AppContextMenus.Selections.Contains(entry.Selection ?? string.Empty, StringComparer.Ordinal))
+            {
+                AddError(errors, "manifest.context-menu.selection.invalid", "contextMenus.selection", $"Menu entry '{name}' has an unknown selection '{entry.Selection}' (all, each or single).");
+            }
+
+            foreach (string type in entry.Types ?? [])
+            {
+                if (!IsContextMenuType(type))
+                {
+                    AddError(errors, "manifest.context-menu.type.invalid", "contextMenus.types", $"Menu entry '{name}' has an invalid type '{type}': use '.ext', 'type/subtype', 'type/*' or '*'.");
+                }
+            }
+
+            if (entry.Icon is { } icon)
+            {
+                bool vector = icon.Kind == AppContextMenus.VectorIcon;
+                if ((!vector && icon.Kind != AppContextMenus.ImageIcon)
+                    || string.IsNullOrWhiteSpace(icon.Source)
+                    || (vector && !AppContextMenus.VectorLibraries.Contains(icon.Library ?? string.Empty, StringComparer.Ordinal))
+                    || (!vector && icon.Library is not null))
+                {
+                    AddError(errors, "manifest.context-menu.icon.invalid", "contextMenus.icon", $"Menu entry '{name}' has an invalid icon: a vector icon names its library, an image names its asset.");
+                }
+            }
+
+            int positions = (entry.First ? 1 : 0) + (entry.After is null ? 0 : 1) + (entry.AfterGroup is null ? 0 : 1);
+            if (positions > 1)
+            {
+                AddError(errors, "manifest.context-menu.position.many", "contextMenus", $"Menu entry '{name}' has several positions: choose one of first, after and afterGroup.");
+            }
+
+            if (entry.Parent is { } parent)
+            {
+                if (positions > 0)
+                {
+                    AddError(errors, "manifest.context-menu.position.child", "contextMenus", $"Menu entry '{name}' is in the submenu of '{parent}': first, after and afterGroup only place top-level entries.");
+                }
+
+                if (!byName.TryGetValue(parent, out AppContextMenuEntryManifest? parentEntry) || ReferenceEquals(parentEntry, entry))
+                {
+                    AddError(errors, "manifest.context-menu.parent.unknown", "contextMenus.parent", $"Menu entry '{name}' names an unknown parent '{parent}' (an entry of the same app).");
+                }
+                else if (!(parentEntry.Scopes ?? []).Any() || scopes.Any(scope => !(parentEntry.Scopes ?? []).Contains(scope, StringComparer.Ordinal)))
+                {
+                    AddError(errors, "manifest.context-menu.parent.scope", "contextMenus.scopes", $"Menu entry '{name}' appears where its parent '{parent}' does not.");
+                }
+            }
+
+            foreach ((string? anchor, string property) in new[] { (entry.After, "after"), (entry.AfterGroup, "afterGroup") })
+            {
+                if (anchor is not null
+                    && !AppContextMenus.DefaultItemIds.Contains(anchor)
+                    && !(byName.TryGetValue(anchor, out AppContextMenuEntryManifest? anchored) && anchored.Parent is null && !ReferenceEquals(anchored, entry)))
+                {
+                    AddError(errors, "manifest.context-menu.anchor.unknown", $"contextMenus.{property}", $"Menu entry '{name}' is placed after '{anchor}', which is neither an entry of the file menus nor a top-level entry of this app.");
+                }
+            }
+        }
+
+        // Depth and cycles: follow each entry's parents; a chain longer than MaxDepth or looping is refused.
+        foreach (AppContextMenuEntryManifest entry in entries)
+        {
+            int depth = 1;
+            HashSet<string> seen = new(StringComparer.Ordinal) { entry.Name ?? string.Empty };
+            string? parent = entry.Parent;
+            while (parent is not null && byName.TryGetValue(parent, out AppContextMenuEntryManifest? next))
+            {
+                depth++;
+                if (!seen.Add(parent))
+                {
+                    AddError(errors, "manifest.context-menu.parent.cycle", "contextMenus.parent", $"Menu entry '{entry.Name}' is its own ancestor.");
+                    break;
+                }
+
+                if (depth > AppContextMenus.MaxDepth)
+                {
+                    AddError(errors, "manifest.context-menu.depth", "contextMenus.parent", $"Menu entry '{entry.Name}' is deeper than {AppContextMenus.MaxDepth} levels.");
+                    break;
+                }
+
+                parent = next.Parent;
+            }
+        }
+    }
+
+    /// <summary>Whether <paramref name="type"/> is a menu entry type filter: <c>*</c>, <c>.ext</c>, <c>type/subtype</c> or <c>type/*</c>.</summary>
+    private static bool IsContextMenuType(string? type) =>
+        type is "*"
+        || (type is { Length: > 1 } && type[0] == '.' && type.Skip(1).All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c is '-' or '_' or '.'))
+        || ContextMenuMediaTypePattern().IsMatch(type ?? string.Empty);
+
+    [GeneratedRegex("^[a-z0-9]+(-[a-z0-9]+)*$", RegexOptions.CultureInvariant)]
+    private static partial Regex ContextMenuNamePattern();
+
+    [GeneratedRegex("^[a-z0-9][a-z0-9!#$&^_.+-]*/(\\*|[a-z0-9][a-z0-9!#$&^_.+-]*)$", RegexOptions.CultureInvariant)]
+    private static partial Regex ContextMenuMediaTypePattern();
 
     private static void ValidateAssets(IReadOnlyList<AssetManifest> assets, List<ManifestValidationError> errors)
     {

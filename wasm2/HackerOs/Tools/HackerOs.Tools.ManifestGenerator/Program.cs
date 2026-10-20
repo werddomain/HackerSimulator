@@ -77,7 +77,8 @@ public static class Program
             }
 
             // ADR 0098 §5: declared asset paths are relative to the project's wwwroot/ (served as _content/<assembly>/).
-            InspectionResult result = AppDefinitionInspector.Inspect(assembly, candidates, Path.Combine(Path.GetDirectoryName(project)!, "wwwroot"));
+            InspectionResult result = AppDefinitionInspector.Inspect(
+                assembly, candidates, Path.Combine(Path.GetDirectoryName(project)!, "wwwroot"), Path.GetDirectoryName(project)!);
             if (!result.IsSuccess)
             {
                 return Fail(project, [.. result.Diagnostics]);

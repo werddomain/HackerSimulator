@@ -18,6 +18,9 @@
   <data name="org.hackeros.web-server-manager.Description" xml:space="preserve">
     <value>Publier des dossiers comme sites web et gérer le serveur web hackwebd</value>
   </data>
+  <data name="org.hackeros.web-server-manager.Menu.PublishSite" xml:space="preserve">
+    <value>Publier comme site web…</value>
+  </data>
   <data name="org.hackeros.web-server-manager.Name" xml:space="preserve">
     <value>Gestionnaire de serveur web</value>
   </data>

@@ -1,21 +1,19 @@
 namespace HackerOs.Apps.FileExplorer;
 
 /// <summary>
-/// The File Explorer's own entries in the file menus of its window (ADR 0155 §7): they used to be
-/// providers of the old FileView menu, and become entries registered by their apps in chantier 4
-/// (ADR 0151).
+/// The File Explorer's entry in the file menus of every host (ADR 0151 §8): "Extract here" on
+/// <c>.zip</c> files, registered by <see cref="FileExplorerApp.RegisterFileContextMenu"/>. The OS
+/// launches the explorer with <see cref="ExtractHereIntent"/>; the new window opens the archive's folder
+/// and extracts each archive next to itself, like the toolbar's Extract.
 /// </summary>
 internal static class FileExplorerMenuEntries
 {
-    /// <summary>"UnZip Here…" on one <c>.zip</c> file: extracts it next to itself, like the toolbar's Extract.</summary>
-    internal const string UnzipHere = "unzip-here";
+    /// <summary>The entry's name in the explorer's registration.</summary>
+    internal const string ExtractHere = "extract-here";
 
-    /// <summary>
-    /// "Publish as a web site…" on one folder (ADR 0077 §3): opens Web Server Manager with the folder as
-    /// its first argument, which fills in a new hosted static site rooted there.
-    /// </summary>
-    internal const string PublishSite = "publish-site";
+    /// <summary>The intent the OS hands the explorer for "Extract here", with <c>{"paths":[…]}</c>.</summary>
+    internal const string ExtractHereIntent = "org.hackeros.file-explorer.extract-here.v1";
 
-    /// <summary>The app id of Web Server Manager.</summary>
-    internal const string WebServerManagerAppId = "org.hackeros.web-server-manager";
+    /// <summary>The resource key of the entry's title (<c>Resources/AppManifest*.resx</c>, ADR 0159 §3).</summary>
+    internal const string ExtractHereTitle = "Menu.ExtractHere";
 }

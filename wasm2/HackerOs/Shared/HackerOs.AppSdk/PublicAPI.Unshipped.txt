@@ -16,6 +16,26 @@ const HackerOs.AppSdk.Files.HackFileMenuItems.Refresh = "refresh" -> string!
 const HackerOs.AppSdk.Files.HackFileMenuItems.Rename = "rename" -> string!
 const HackerOs.AppSdk.Files.HackFileMenuItems.Sort = "sort" -> string!
 const HackerOs.AppSdk.Files.HackFileMenuItems.View = "view" -> string!
+HackerOs.AppSdk.Administration.HackFileMenuEntries
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.AppId.get -> string!
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.AppId.init -> void
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.AppName.get -> string!
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.AppName.init -> void
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.HackFileMenuEntryInfo(string! AppId, string! AppName, string! Name, string! Title, string? Parent, System.Collections.Generic.IReadOnlyList<string!>! Scopes, bool IsHidden) -> void
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.IsHidden.get -> bool
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.IsHidden.init -> void
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.Name.get -> string!
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.Name.init -> void
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.Parent.get -> string?
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.Parent.init -> void
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.Scopes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.Scopes.init -> void
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.Title.get -> string!
+HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.Title.init -> void
+HackerOs.AppSdk.Administration.IAppFileMenuEntryAdministrationGateway
+HackerOs.AppSdk.Administration.IAppFileMenuEntryAdministrationGateway.GetEntriesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackFileMenuEntryInfo!>!>
+HackerOs.AppSdk.Administration.IAppFileMenuEntryAdministrationGateway.SetHiddenAsync(string! appId, string! name, bool hidden, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolation
 HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason
 HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.Browser = 4 -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason
@@ -36,8 +56,18 @@ HackerOs.AppSdk.Files.FileMenuScope.Desktop = 8 -> HackerOs.AppSdk.Files.FileMen
 HackerOs.AppSdk.Files.FileMenuScope.Directory = 2 -> HackerOs.AppSdk.Files.FileMenuScope
 HackerOs.AppSdk.Files.FileMenuScope.File = 1 -> HackerOs.AppSdk.Files.FileMenuScope
 HackerOs.AppSdk.Files.FileMenuScope.None = 0 -> HackerOs.AppSdk.Files.FileMenuScope
+HackerOs.AppSdk.Files.HackFileMenuIntent
 HackerOs.AppSdk.Files.HackFileMenuItems
+HackerOs.AppSdk.Files.MenuSelection
+HackerOs.AppSdk.Files.MenuSelection.All = 0 -> HackerOs.AppSdk.Files.MenuSelection
+HackerOs.AppSdk.Files.MenuSelection.Each = 1 -> HackerOs.AppSdk.Files.MenuSelection
+HackerOs.AppSdk.Files.MenuSelection.Single = 2 -> HackerOs.AppSdk.Files.MenuSelection
 HackerOs.AppSdk.IAppExecutionContext.CrossOriginIsolation.get -> HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway!
+HackerOs.AppSdk.IAppExecutionContext.FileMenuEntryAdministration.get -> HackerOs.AppSdk.Administration.IAppFileMenuEntryAdministrationGateway!
+static HackerOs.AppSdk.Administration.HackFileMenuEntries.GetEntriesAsync(HackerOs.AppSdk.IAppExecutionContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackFileMenuEntryInfo!>!>!
+static HackerOs.AppSdk.Administration.HackFileMenuEntries.GetEntriesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackFileMenuEntryInfo!>!>!
+static HackerOs.AppSdk.Administration.HackFileMenuEntries.SetHiddenAsync(HackerOs.AppSdk.IAppExecutionContext! context, string! appId, string! name, bool hidden, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Administration.HackFileMenuEntries.SetHiddenAsync(string! appId, string! name, bool hidden, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 static HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolation.GetStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus!>
 HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus
 HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.IsIsolated.get -> bool
@@ -89,4 +119,7 @@ static HackerOs.AppSdk.Administration.HackComponentProviders.GetOverviewAsync(Ha
 static HackerOs.AppSdk.Administration.HackComponentProviders.GetOverviewAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackComponentContractInfo!>!>!
 static HackerOs.AppSdk.Administration.HackComponentProviders.SetProviderAsync(HackerOs.AppSdk.IAppExecutionContext! context, System.Collections.Generic.IReadOnlyList<string!>! contracts, string? appId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 static HackerOs.AppSdk.Administration.HackComponentProviders.SetProviderAsync(System.Collections.Generic.IReadOnlyList<string!>! contracts, string? appId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Files.HackFileMenuIntent.ReadPaths(string? payloadJson) -> System.Collections.Generic.IReadOnlyList<string!>!
+static HackerOs.AppSdk.Files.HackFileMenuIntent.ReadScope(string? payloadJson) -> HackerOs.AppSdk.Files.FileMenuScope
 static HackerOs.AppSdk.UnsupportedAdministrationGateways.ComponentProviders.get -> HackerOs.AppSdk.Administration.IAppComponentProviderAdministrationGateway!
+static HackerOs.AppSdk.UnsupportedAdministrationGateways.FileMenuEntries.get -> HackerOs.AppSdk.Administration.IAppFileMenuEntryAdministrationGateway!
