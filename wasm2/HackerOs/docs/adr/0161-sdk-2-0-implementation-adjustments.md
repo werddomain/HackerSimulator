@@ -11,8 +11,8 @@ Accepté le 2026-10-20.
   restent vraies : `HackerOs.AppSdk.FileView` quitte le SDK, la version passe à
   `2.0.0`, une app 1.x est refusée. Cet ADR fixe ce qu'elles laissaient ouvert.
 - **Question posée à Benoit** (2026-10-20, fil « Desk 6 ») : où vivent les
-  règles de copie et de déplacement (§2). Le chantier suit l'option
-  recommandée en attendant la réponse.
+  règles de copie et de déplacement (§2). Réponse de Benoit le 2026-10-20 :
+  « Règles dans le SDK ».
 
 ## Contexte
 
@@ -77,9 +77,6 @@ les réécrire, et les rendrait inaccessibles à une commande dans un worker.
 - L'explorateur, le bureau et tout fournisseur appellent ces règles ; elles ne
   vivent qu'à un endroit, et la promesse 2.x les couvre.
 - Il n'y a pas de type `IHackFileOperations`.
-
-Si Benoit choisit une autre option, cette section est remplacée par un nouvel
-ADR avant la fusion du chantier.
 
 ### 3. Refus des apps 1.x et fixtures
 
