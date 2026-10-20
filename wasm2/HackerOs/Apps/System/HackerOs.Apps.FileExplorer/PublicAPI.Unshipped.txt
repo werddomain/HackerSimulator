@@ -95,3 +95,5 @@ override HackerOs.Apps.FileExplorer.FileExplorerApp.Components.get -> System.Col
 *REMOVED*~override HackerOs.Apps.FileExplorer.FilePropertiesDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 *REMOVED*~override HackerOs.Apps.FileExplorer.OpenWithDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 *REMOVED*override HackerOs.Apps.FileExplorer.FileExplorerWindow.OnAppAfterRender(bool firstRender) -> void
+override HackerOs.Apps.FileExplorer.FileExplorerApp.Intents.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppIntentDeclarationManifest!>!
+static HackerOs.Apps.FileExplorer.FileExplorerApp.RegisterFileContextMenu(HackerOs.AppSdk.Blazor.Files.RegisterFileContextMenuContext! context) -> void

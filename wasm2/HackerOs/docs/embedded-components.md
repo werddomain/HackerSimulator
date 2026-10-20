@@ -166,7 +166,7 @@ en affichant le contrôle d'une autre.
 | `SelectedResource` | Poignée d'un dossier choisi dans le dialogue de l'OS : le contrôle liste avec elle. |
 | `Opening` | Avant l'ouverture d'un élément ; `Handled = true` laisse l'hôte l'ouvrir lui-même. |
 | `Navigated`, `SelectionChanged`, `Renamed`, `Deleted`, `ErrorOccurred` | Ce qui s'est passé ; sans `ErrorOccurred`, les erreurs deviennent des notifications. |
-| `ContextMenuOpening` | Après la construction du menu du plan §7 : `Scope`, `Items`, `Directory`, `Menu` (trouver, cacher, désactiver, ajouter un groupe), `Cancel`. |
+| `ContextMenuOpening` | Après la construction du menu du plan §7 : `Scope`, `Items`, `Directory`, `Menu` (trouver, cacher, désactiver, ajouter un groupe), `Cancel`. Les entrées inscrites par les apps sont ajoutées **après** par l'OS (ADR 0159 §4). |
 
 `IHackFileView` : `CurrentDirectory`, `Items`, `SelectedItems`, `CanPaste`,
 `IsBusy`, `StateChanged`, `NavigateAsync`, `RefreshAsync`, `RevealAsync`,
@@ -174,6 +174,12 @@ en affichant le contrôle d'une autre.
 `CanExecute`/`ExecuteAsync(commande)` dont les commandes sont les
 identifiants de `HackFileMenuItems` (`open`, `cut`, `paste`, `rename`,
 `delete`, `properties`…). Tout s'exécute avec les droits de l'hôte.
+
+Un fournisseur du contrôle (l'explorateur, ou l'app tierce choisie par
+l'administrateur) **pose `HackMenuDefinition.FileMenu`** (`HackFileMenuContext` :
+portée, éléments, dossier affiché) sur chaque menu de fichiers qu'il ouvre :
+c'est ce qui permet à l'OS d'y ajouter les entrées des apps (ADR 0159 §4, voir
+[`context-menu.md`](context-menu.md#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4)).
 
 ### `IHackTerminal`
 

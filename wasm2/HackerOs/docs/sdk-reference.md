@@ -81,7 +81,7 @@ Détails : [`app-model.md`](app-model.md).
 | `FileSystemUserHomeRead` / `Write` | `filesystem.user-home.read` / `.write` | normale | dossier personnel |
 | `FileSystemSystemRead` / `Write` | `filesystem.system.read` / `.write` | **dangereuse** | tout le reste (`/etc`, `/var`, `/proc`…) ; écrire `/etc`, `/bin`, `/var` exige aussi un administrateur |
 | `AppsLaunch` | `apps.launch` | normale | `HackApps.LaunchAsync`, `OpenFileAsync`, `EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `SendIntentAsync` |
-| `AppsManage` | `apps.manage` | **dangereuse** | `HackAppManagement`, `HackComponentProviders` |
+| `AppsManage` | `apps.manage` | **dangereuse** | `HackAppManagement`, `HackComponentProviders`, `HackFileMenuEntries` |
 | `DialogFileOpen`, `DialogFileSave`, `DialogFolderSelect` | `dialogs.file-open`, `.file-save`, `.folder-select` | normale | dialogues de fichiers (fenêtres seulement) |
 | `FileAssociationsRead` | `file-associations.read` | normale | associations de fichiers ; avec `filesystem.user-home.write`, choix propre à l'utilisateur (ADR 0121) |
 | `FileAssociationsWrite` | `file-associations.write` | **dangereuse** | changer les associations de la machine |
@@ -96,6 +96,7 @@ Détails : [`app-model.md`](app-model.md).
 | `NetworkListen` | `network.listen` | normale | `HackHttpListener` sur un préfixe hors de son manifeste |
 | `NetworkListenPrivileged` | `network.listen.privileged` | **dangereuse** | écouter un port sous 1024 |
 | `ShellControl` | `shell.control` | normale | agir sur le shell appelant (`IShellSession`) |
+| `ShellContextMenu` | `shell.context-menu` | normale | ajouter des entrées aux menus des fichiers (`[RegisterFileContextMenu]`, ADR 0151) |
 | `ShellHost` | `shell.host` | **dangereuse** | `HackShell` |
 | `KeyringReadAll` | `keyring.read-all` | **dangereuse** | `HackKeyring` sur les entrées des autres apps |
 | `UsersManage` | `users.manage` | **dangereuse** | `HackUserAccounts.ResetPasswordAsync` / `RemovePasswordAsync` (ADR 0120) |
@@ -303,6 +304,7 @@ les lit ici. Voir [`accessibility.md`](accessibility.md).
 |---|---|---|
 | `HackPermissionAdministration` | `GetPolicyAsync`, `SetPolicyAsync`, `GetOverviewAsync`, `SetMachineDecisionAsync`, `RemoveOwnDenialAsync` | `permissions.manage` |
 | `HackComponentProviders` | `GetOverviewAsync` (`HackComponentContractInfo`, `HackComponentProviderInfo`), `SetProviderAsync(contracts, appId)` : app qui fournit le contrôle de fichiers et ses dialogues pour toute la machine, `null` = explorateur ([`embedded-components.md`](embedded-components.md), ADR 0156) | `apps.manage` + administrateur (fenêtre d'approbation pour une app non système) |
+| `HackFileMenuEntries` | `GetEntriesAsync` (`HackFileMenuEntryInfo`), `SetHiddenAsync(appId, name, hidden)` : entrées que les apps ajoutent aux menus des fichiers, masquées pour l'utilisateur de la session dans `~/.config/hackeros/context-menus.config` ([`context-menu.md`](context-menu.md), ADR 0159) | `apps.manage` |
 | `HackServerConnection` | `GetStateAsync`, `ConnectAsync`, `CreateAccountAsync`, `DisconnectAsync`, `SyncAsync`, `GetConflictsAsync`, `GetRelayPolicyAsync`, `ShowConflictsAsync`, `GetSyncStatusAsync` (`HackSyncStatus`), `SetSyncPausedAsync`, `SyncNowAsync` ([`synchronization.md`](synchronization.md)) | `server.connection.manage` |
 | `HackSystem` | `RebootAsync`, `FactoryResetAsync` | `system.power` + administrateur |
 | `HackStorageDiagnostics` | `GetSnapshotAsync`, `GetWebSiteDatabasesAsync`, `DeleteWebSiteDatabaseAsync` (bases `hackweb.*` des sites, ADR 0088 §4) | `system.storage.inspect` |
@@ -423,6 +425,7 @@ annulation.
 | `IDisplaySurfaceService`, `IDisplaySurface`, `DisplaySurfaceContent` (`.Display`) | Fenêtres détachées du navigateur hôte (ADR 0078) : `OpenAsync(DisplaySurfaceOptions)` → `DisplaySurfaceOpenResult` (`Opened`, `Blocked`, `Unavailable`), `Surfaces`, `SurfacesChanged`, `CloseAllAsync` ; surface `Id`, `Title`, `Width`, `Height`, `HasFocus`, `State`, `Changed`, `SetTitleAsync`, `FocusAsync`, `CloseAsync` ; `<DisplaySurfaceContent Surface="…">` y dessine son contenu (`Surface` facultatif : sans surface ouverte, le contenu reste en place) | [`detached-display-windows.md`](detached-display-windows.md) |
 | `IAppWindowGateway` | Fenêtre d'une app vue par le SDK (SDK 1.1, ADR 0123) : `Title`, `DefaultTitle`, `SetTitleAsync`. Implémentée par la plateforme et donnée à `WindowAppBase` par valeur en cascade ; une app passe par `SetWindowTitleAsync` | [`window-model.md`](window-model.md) |
 | `HackContextMenu`, `HackMenuItem`, `HackMenuGroup`, `HackMenus` (`Menus`), `HackMenuBuilder`, `HackMenuDefinition`, `HackMenuOpeningEventArgs`, `IHackContextMenu`, `IHackMenuHost` (`.ContextMenus`) | Menu contextuel de l'OS (ADR 0150, ADR 0154) : déclaré dans le markup ou en C# (`Menus.Define`), attaché à n'importe quel élément (`@attributes="@(Menus.Attach(nom, objet))"`), ouvert depuis le code (`Menus.OpenAsync`) ; groupes, trois niveaux, `Opening` pour l'objet attaché ; dessiné par la plateforme. `Menus` existe sur `WindowAppBase` et `HackComponentBase`. Icônes : `HackIcons.Vector`/`FromImage` (`HackerOs.AppSdk.Icons`) | [`context-menu.md`](context-menu.md) |
+| `RegisterFileContextMenuAttribute`, `RegisterFileContextMenuContext` (`.Files`), `MenuSelection`, `HackFileMenuIntent` (`HackerOs.AppSdk.Files`), `HackFileMenuContext`, `HackMenuDefinition.FileMenu` | Entrées d'une app dans les menus des fichiers (ADR 0151, ADR 0159) : méthode statique `[RegisterFileContextMenu]` de la classe `[AppManifest]` qui appelle `Register(title, name, target, intent, icon, scope, types, selection, first, after, afterGroup, parent)`, exécutée au build ; capacité `shell.context-menu` ; la cible lit les chemins de l'intent par `HackFileMenuIntent.ReadPaths`. Un fournisseur du contrôle de fichiers pose `FileMenu` pour que l'OS ajoute ces entrées | [`context-menu.md`](context-menu.md#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4) |
 | `HackEmbeddedComponent<TController>` (`.Components`) | Affiche le composant d'une autre app pour un contrat : `Contract`, `Options`, `Parameters`, `ControllerChanged`, `Unavailable` ; `HackEmbeddableComponent` est la base du composant fourni (`Options`, `ControllerReady`, `HostContext`, `UnmatchedParameters`) ; `HackContractComponent<TController>` est la base des composants typés (`AddProviderParameters`, `Controller`, `DefaultUnavailable`, ADR 0153, ADR 0154) | [`embedded-components.md`](embedded-components.md) |
 
 ### Sites Blazor (`HackerOs.AppSdk.Web.Blazor.Sites`)

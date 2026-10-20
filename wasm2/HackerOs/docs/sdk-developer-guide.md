@@ -650,6 +650,18 @@ ligne avec la même sérialisation. Guide complet et exemple :
 [`background-jobs.md`](background-jobs.md) et la section « Background Task » de
 `Apps/Samples/HackerOs.Samples.WindowApp`.
 
+### Ajouter des entrées aux menus des fichiers
+
+Une app peut ajouter « Convertir en PNG », « Extraire ici »… aux menus des
+fichiers de tout l'OS (explorateur, dialogues de fichiers, bureau) : elle
+demande la capacité `shell.context-menu` et déclare dans sa classe
+`[AppManifest]` une méthode statique `[RegisterFileContextMenu]` qui appelle
+`context.Register(title, name, intent: …, types: […], after: HackFileMenuItems.Open)`.
+Le titre est une clé de `Resources/AppManifest.resx` (anglais, obligatoire) et
+de `Resources/AppManifest.fr.resx`. La méthode s'exécute au build ; au clic,
+l'app reçoit l'intent et lit les chemins par `HackFileMenuIntent.ReadPaths`.
+Guide complet : [`context-menu.md`](context-menu.md#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4).
+
 ### Capacités dangereuses
 
 `filesystem.system.*`, `apps.manage`, `process.manage`, `services.manage`,

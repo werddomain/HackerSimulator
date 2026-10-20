@@ -20,6 +20,9 @@ passe à `ContextMenuOpening` de l'hôte ; le `MudMenu` de `FileView` n'est plus
 dessiné quand la vue est liée au menu de l'OS. Voir
 [`embedded-components.md`](embedded-components.md#hackfileview-et-ihackfileview).
 
+Depuis le chantier 4 (ADR 0159), l'OS ajoute à ces menus les entrées que les
+apps inscrivent : voir [Entrées des apps](#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4).
+
 ## Utiliser un menu dans une app
 
 ### Dans le markup
@@ -225,6 +228,167 @@ ouvre garde donc son focus). Mouvement réduit : pas d'animation.
   bureau.
 - L'ordre des entrées du markup est celui de leur premier rendu (voir
   `IsVisible` plus haut).
+
+## Entrées des apps dans les menus des fichiers (chantier 4)
+
+Décisions : [ADR 0151](adr/0151-app-registered-file-menu-entries.md) ;
+ajustements : [ADR 0159](adr/0159-app-menu-entries-implementation-adjustments.md).
+
+### Objet
+
+Une app ajoute ses propres entrées aux menus des fichiers (« Extraire ici »,
+« Publier comme site web… ») sans que l'app qui affiche les fichiers la
+connaisse. Les entrées paraissent partout où le contrôle de fichiers
+(`HackFileView`) est affiché : explorateur, dialogues Ouvrir / Enregistrer,
+toute app hôte et, au chantier 5, le bureau — quel que soit le fournisseur du
+contrôle choisi par l'administrateur (ADR 0156).
+
+### Déclarer des entrées
+
+La classe `[AppManifest]` de l'app demande la capacité `shell.context-menu` et
+déclare **une** méthode statique marquée `[RegisterFileContextMenu]` :
+
+```csharp
+using HackerOs.AppSdk.Blazor.Files;
+using HackerOs.AppSdk.Files;
+using HackerOs.AppSdk.Icons;
+
+[AppManifest]
+public sealed class ZipperApp : AppDefinition
+{
+    public const string ExtractIntent = "com.example.zipper.extract.v1";
+
+    public override IReadOnlyList<string> Capabilities => [AppCapabilities.ShellContextMenu];
+    public override IReadOnlyList<AppIntentDeclarationManifest> Intents => [new(ExtractIntent)];
+
+    [RegisterFileContextMenu]
+    public static void RegisterFileContextMenu(RegisterFileContextMenuContext context)
+    {
+        context.Register("Menu.Extract", "extract", intent: ExtractIntent,
+            icon: HackIcons.Vector(IconLibrary.Lucide, "package-open"),
+            types: [".zip", "application/zip"], after: HackFileMenuItems.Open);
+
+        // Un sous-menu : le parent n'a pas d'intent, les enfants prennent sa portée.
+        context.Register("Menu.Convert", "convert", scope: FileMenuScope.File | FileMenuScope.Directory);
+        context.Register("Menu.ToPng", "to-png", intent: "com.example.zipper.to-png.v1",
+            parent: "convert", selection: MenuSelection.Each);
+    }
+}
+```
+
+| Paramètre | Rôle | Défaut |
+|---|---|---|
+| `title` | Clé de ressource : anglais dans `Resources/AppManifest.resx`, traductions dans `Resources/AppManifest.<culture>.resx` | requis |
+| `name` | Identifiant court, unique dans l'app (`extract-here`) | requis |
+| `target` | `"self"` ou l'id d'une autre app qui déclare l'intent | `"self"` |
+| `intent` | Intent remis à la cible ; absent sur un parent de sous-menu | — |
+| `icon` | `HackIcons.Vector(…)` ou `HackIcons.FromImage("icons/x.svg")` (asset de l'app) | — |
+| `scope` | `File`, `Directory`, `Background`, `Desktop`, combinables | `File` (celle du parent pour un enfant) |
+| `types` | `.zip`, `application/zip`, `image/*`, `*`, `inode/directory` | tous |
+| `selection` | `All` (un lancement, tous les chemins), `Each` (un par chemin), `Single` (masquée si plusieurs) | `All` |
+| `first` / `after` / `afterGroup` | Groupe commun en tête ; juste après X dans son groupe ; nouveau groupe après celui de X | groupe commun avant « Propriétés » |
+| `parent` | Sous-menu d'une entrée de la même app (3 niveaux au plus) | — |
+
+`X` est une constante de `HackFileMenuItems` (`open`, `copy`, `properties`…)
+ou le `name` d'une entrée de l'app. La méthode **n'enregistre que les appels** :
+elle s'exécute au build, deux fois, et doit donner le même résultat. Le
+générateur écrit les entrées dans `manifest.json` (`contextMenus`) et signale
+une erreur par `HOSAPP0026` (règle, exception, titre anglais manquant),
+`HOSAPP0027` (capacité absente) ou `HOSAPP0028` (cible absente de l'hôte ou
+qui ne déclare pas l'intent).
+
+### Recevoir le clic
+
+La cible est lancée avec ses propres droits. Si elle déclare l'intent, elle le
+reçoit dans `AppContext.LaunchIntent` (ou `OnIntentReceivedAsync` pour une
+instance unique déjà ouverte), avec la charge utile
+`{"paths":["/home/alice/a.zip"],"scope":"File"}`, que `HackFileMenuIntent` lit :
+
+```csharp
+if (LaunchIntent is { IntentId: ZipperApp.ExtractIntent } intent)
+{
+    foreach (string path in HackFileMenuIntent.ReadPaths(intent.PayloadJson))
+    {
+        await ExtractAsync(path);
+    }
+}
+```
+
+Sinon, elle reçoit les arguments `["<intent>", "<chemin>", …]`. Dans
+l'espace vide (portées `Background` et `Desktop`), le chemin est le dossier
+affiché.
+
+### Comment l'OS les applique
+
+1. Au démarrage et à chaque changement des apps installées,
+   `FileContextMenuRegistry` (Platform Core) copie les entrées des manifestes
+   dans `/etc/hackeros/context-menus.d/<appId>.json` (rang d'installation,
+   empreinte, version de l'app), retire les fichiers des apps désinstallées
+   pour la machine, puis relit le dossier. Un fichier invalide est ignoré et
+   signalé dans `/var/log/syslog`.
+2. Le fournisseur du contrôle de fichiers pose `HackMenuDefinition.FileMenu`
+   (`HackFileMenuContext` : portée, éléments, dossier) sur le menu qu'il ouvre.
+3. Après `Opening`, `ContextMenuService` appelle `IFileMenuEntrySource`
+   (`FileMenuEntries`, Platform Blazor) : filtres (`FileContextMenuMatcher` :
+   portée, types, sélection), apps installées pour l'utilisateur et cibles
+   valides (`FileContextMenuLauncher.IsAvailable`), entrées masquées par
+   l'utilisateur, puis placement (`FileMenuEntryPlacement`). Les entrées ont
+   l'id `app:<appId>/<name>`.
+4. Au clic, `FileContextMenuLauncher` revérifie la cible et lance l'app par
+   `AppLifecycleOrchestrator`, l'OS (`org.hackeros.shell`) comme expéditeur.
+
+### Masquer une entrée
+
+Paramètres ▸ **Menus des fichiers** liste les entrées de toutes les apps
+(sous-menus sous leur parent) avec une case par entrée. Le choix est écrit
+dans `~/.config/hackeros/context-menus.config` :
+
+```ini
+[hidden]
+org.hackeros.file-explorer.extract-here=true
+```
+
+Masquer un parent masque son sous-menu ; le fichier est relu à chaque
+ouverture, donc une modification avec `nano` vaut pour le menu suivant. Une
+app système le fait par l'API publique `HackFileMenuEntries`
+(`GetEntriesAsync`, `SetHiddenAsync`, capacité `apps.manage`).
+
+### Entrées de l'OS migrées
+
+| App | Entrée | Portée et types | Intent |
+|---|---|---|---|
+| Explorateur | « Extraire ici » (`extract-here`), après « Ouvrir » | fichiers `.zip`, `application/zip` | `org.hackeros.file-explorer.extract-here.v1` |
+| Web Server Manager | « Publier comme site web… » (`publish-site`) | dossiers, un seul | `org.hackeros.web-server-manager.publish-site.v1` |
+
+### Tests
+
+- `Tests/HackerOs.App.Abstractions.Tests/AppManifestContextMenusTests.cs` :
+  règles du validateur, forme canonique, aller-retour JSON.
+- `Tests/HackerOs.AppSdk.Blazor.Tests/RegisterFileContextMenuTests.cs` :
+  `Register`, charge utile, identifiants par défaut identiques dans le SDK et le
+  validateur.
+- `Tests/HackerOs.Tools.ManifestGenerator.Tests/ContextMenuRegistrationTests.cs` :
+  titres par culture, `HOSAPP0026` à `HOSAPP0028`, déterminisme.
+- `Tests/HackerOs.Platform.Core.Tests/ContextMenus/FileContextMenuTests.cs` :
+  dossier `context-menus.d` (rang, réécriture, retrait, fichiers invalides),
+  filtres, préférences, lancements, `HackFileMenuEntries`.
+- `Tests/HackerOs.Platform.Blazor.Tests/ContextMenus/FileMenuEntriesTests.cs` :
+  placement, sous-menus vidés, clic, espace vide, service.
+- `Tests/HackerOs.Apps.Settings.Tests/FileMenuEntriesPanelTests.cs` : ordre de la
+  liste.
+- `Tests/HackerOs.UI.E2E.Tests/FileMenuEntriesTests.cs` : « Extraire ici » après
+  « Ouvrir » sur une archive téléversée, extraction, « Publier comme site
+  web… » sur le dossier extrait.
+
+### Tâches (chantier 4)
+
+- [x] Contrat du manifeste `contextMenus`, schéma, sérialiseur, validateur, capacité `shell.context-menu`.
+- [x] SDK : `[RegisterFileContextMenu]`, `RegisterFileContextMenuContext`, `MenuSelection`, `HackFileMenuIntent`, `HackMenuDefinition.FileMenu`.
+- [x] Générateur : exécution de la méthode, titres EN/FR, `HOSAPP0026` à `HOSAPP0028`.
+- [x] OS : `context-menus.d`, filtres, placement, lancement, entrées masquées.
+- [x] Migration de « Extraire ici » et « Publier comme site web… ».
+- [x] Paramètres ▸ Menus des fichiers et `HackFileMenuEntries`.
+- [x] Tests, ADR 0159, documents et index.
 
 ## Tests
 

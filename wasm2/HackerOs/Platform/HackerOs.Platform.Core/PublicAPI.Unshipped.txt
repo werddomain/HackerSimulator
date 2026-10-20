@@ -1,4 +1,12 @@
 #nullable enable
+const HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher.ShellAppId = "org.hackeros.shell" -> string!
+const HackerOs.Platform.Core.ContextMenus.FileContextMenuMatcher.DirectoryMediaType = "inode/directory" -> string!
+const HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.FileName = "context-menus.config" -> string!
+const HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.Header = "# ~/.config/hackeros/context-menus.config\n# File menu entries added by apps that you hid (ADR 0151). One '<app id>.<entry>=true' line\n# per hidden entry; change it in Settings > File menus.\n" -> string!
+const HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.HiddenGroup = "hidden" -> string!
+const HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry.DirectoryPath = "/etc/hackeros/context-menus.d" -> string!
+HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.FileMenuEntries.get -> System.Func<HackerOs.Platform.Core.ContextMenus.FileContextMenuAdministration!>?
+HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.FileMenuEntries.init -> void
 HackerOs.Platform.Core.AppCatalog.ComponentProviders.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.AppComponentProvider!>!>!
 HackerOs.Platform.Core.AppCatalog.GetComponentProviders(string! contract) -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.AppComponentProvider!>!
 HackerOs.Platform.Core.AppComponentProvider
@@ -7,11 +15,86 @@ HackerOs.Platform.Core.AppComponentProvider.AppId.get -> string!
 HackerOs.Platform.Core.AppComponentProvider.AppId.init -> void
 HackerOs.Platform.Core.AppComponentProvider.Component.get -> HackerOs.App.Abstractions.AppComponentManifest!
 HackerOs.Platform.Core.AppComponentProvider.Component.init -> void
+HackerOs.Platform.Core.ContextMenus.FileContextMenuAdministration
+HackerOs.Platform.Core.ContextMenus.FileContextMenuAdministration.FileContextMenuAdministration(HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry! registry, HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences! preferences, HackerOs.Platform.Core.AppCatalog! catalog) -> void
+HackerOs.Platform.Core.ContextMenus.FileContextMenuAdministration.GetOverviewAsync(System.Globalization.CultureInfo! culture, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.ContextMenus.FileMenuEntryOverview!>!>
+HackerOs.Platform.Core.ContextMenus.FileContextMenuAdministration.SetHiddenAsync(string! appId, string! name, bool hidden, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument.AppId.get -> string!
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument.AppId.init -> void
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument.AppVersion.get -> string!
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument.AppVersion.init -> void
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument.Entries.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppContextMenuEntryManifest!>!
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument.Entries.init -> void
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument.FileContextMenuDocument(int SchemaVersion, string! AppId, string! AppVersion, int Rank, string! Source, System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppContextMenuEntryManifest!>! Entries) -> void
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument.Rank.get -> int
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument.Rank.init -> void
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument.SchemaVersion.get -> int
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument.SchemaVersion.init -> void
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument.Source.get -> string!
+HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument.Source.init -> void
+HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher
+HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher.BuildLaunches(string! ownerAppId, HackerOs.App.Abstractions.AppContextMenuEntryManifest! entry, string! scope, System.Collections.Generic.IReadOnlyList<string!>! paths, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal! principal) -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Lifecycle.AppLaunchRequest!>!
+HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher.FileContextMenuLauncher(HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry! enablement, HackerOs.Platform.Core.Lifecycle.AppLifecycleOrchestrator? orchestrator) -> void
+HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher.IsAvailable(string! ownerAppId, HackerOs.App.Abstractions.AppContextMenuEntryManifest! entry) -> bool
+HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher.LaunchAsync(string! ownerAppId, HackerOs.App.Abstractions.AppContextMenuEntryManifest! entry, string! scope, System.Collections.Generic.IReadOnlyList<string!>! paths, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal! principal) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.Lifecycle.AppLaunchResult!>!>!
+HackerOs.Platform.Core.ContextMenus.FileContextMenuMatcher
+HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences
+HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.FileContextMenuPreferences(HackerOs.Platform.Core.Settings.IOsSettingsService! settings) -> void
+HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.GetHiddenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlySet<string!>!>
+HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.SetHiddenAsync(string! appId, string! name, bool hidden, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry
+HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry.Apps.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.ContextMenus.RegisteredFileMenuApp!>!
+HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry.Changed -> System.EventHandler?
+HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry.FileContextMenuRegistry(HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway! system, System.Func<string!, bool>? isUninstalledForMachine = null, Microsoft.Extensions.Logging.ILogger<HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry!>? logger = null) -> void
+HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry.ReloadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry.SyncAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.ContextMenus.FileMenuEntryOverview
+HackerOs.Platform.Core.ContextMenus.FileMenuEntryOverview.AppId.get -> string!
+HackerOs.Platform.Core.ContextMenus.FileMenuEntryOverview.AppId.init -> void
+HackerOs.Platform.Core.ContextMenus.FileMenuEntryOverview.AppName.get -> string!
+HackerOs.Platform.Core.ContextMenus.FileMenuEntryOverview.AppName.init -> void
+HackerOs.Platform.Core.ContextMenus.FileMenuEntryOverview.Entry.get -> HackerOs.App.Abstractions.AppContextMenuEntryManifest!
+HackerOs.Platform.Core.ContextMenus.FileMenuEntryOverview.Entry.init -> void
+HackerOs.Platform.Core.ContextMenus.FileMenuEntryOverview.FileMenuEntryOverview(string! AppId, string! AppName, HackerOs.App.Abstractions.AppContextMenuEntryManifest! Entry, string! Title, bool IsHidden) -> void
+HackerOs.Platform.Core.ContextMenus.FileMenuEntryOverview.IsHidden.get -> bool
+HackerOs.Platform.Core.ContextMenus.FileMenuEntryOverview.IsHidden.init -> void
+HackerOs.Platform.Core.ContextMenus.FileMenuEntryOverview.Title.get -> string!
+HackerOs.Platform.Core.ContextMenus.FileMenuEntryOverview.Title.init -> void
+HackerOs.Platform.Core.ContextMenus.FileMenuTarget
+HackerOs.Platform.Core.ContextMenus.FileMenuTarget.FileMenuTarget(string! Path, bool IsDirectory, string? MediaType) -> void
+HackerOs.Platform.Core.ContextMenus.FileMenuTarget.IsDirectory.get -> bool
+HackerOs.Platform.Core.ContextMenus.FileMenuTarget.IsDirectory.init -> void
+HackerOs.Platform.Core.ContextMenus.FileMenuTarget.MediaType.get -> string?
+HackerOs.Platform.Core.ContextMenus.FileMenuTarget.MediaType.init -> void
+HackerOs.Platform.Core.ContextMenus.FileMenuTarget.Path.get -> string!
+HackerOs.Platform.Core.ContextMenus.FileMenuTarget.Path.init -> void
+HackerOs.Platform.Core.ContextMenus.RegisteredFileMenuApp
+HackerOs.Platform.Core.ContextMenus.RegisteredFileMenuApp.AppId.get -> string!
+HackerOs.Platform.Core.ContextMenus.RegisteredFileMenuApp.AppId.init -> void
+HackerOs.Platform.Core.ContextMenus.RegisteredFileMenuApp.Entries.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppContextMenuEntryManifest!>!
+HackerOs.Platform.Core.ContextMenus.RegisteredFileMenuApp.Entries.init -> void
+HackerOs.Platform.Core.ContextMenus.RegisteredFileMenuApp.Rank.get -> int
+HackerOs.Platform.Core.ContextMenus.RegisteredFileMenuApp.Rank.init -> void
+HackerOs.Platform.Core.ContextMenus.RegisteredFileMenuApp.RegisteredFileMenuApp(string! AppId, int Rank, System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppContextMenuEntryManifest!>! Entries) -> void
 HackerOs.Platform.Core.Execution.SystemMetricsServices.CrossOriginIsolation.get -> HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway?
 HackerOs.Platform.Core.Execution.SystemMetricsServices.CrossOriginIsolation.init -> void
 HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway
 HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway.AppCrossOriginIsolationGateway(System.Func<HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus?>! status) -> void
 HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway.GetStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus!>
+static HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher.PayloadOf(System.Collections.Generic.IReadOnlyList<string!>! paths, string! scope) -> string!
+static HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher.TargetOf(string! ownerAppId, HackerOs.App.Abstractions.AppContextMenuEntryManifest! entry) -> string!
+static HackerOs.Platform.Core.ContextMenus.FileContextMenuMatcher.Matches(HackerOs.App.Abstractions.AppContextMenuEntryManifest! entry, string! scope, System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.ContextMenus.FileMenuTarget!>! targets) -> bool
+static HackerOs.Platform.Core.ContextMenus.FileContextMenuMatcher.TitleOf(HackerOs.App.Abstractions.AppContextMenuEntryManifest! entry, System.Globalization.CultureInfo! culture) -> string!
+static HackerOs.Platform.Core.ContextMenus.FileContextMenuMatcher.TypeMatches(string! type, HackerOs.Platform.Core.ContextMenus.FileMenuTarget! target) -> bool
+static HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.Edit(string? content, string! key, bool hidden) -> string?
+static HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.File.get -> HackerOs.Platform.Core.Settings.OsSettingsFile!
+static HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.KeyOf(string! appId, string! name) -> string!
+static HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences.Parse(string? content) -> System.Collections.Generic.IReadOnlySet<string!>!
+static HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry.PathOf(string! appId) -> HackerOs.App.Abstractions.VirtualPath
+static HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry.Serialize(HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument! document) -> string!
+static HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry.SourceOf(System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AppContextMenuEntryManifest!>! entries) -> string!
+static HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry.TryDeserialize(string! json) -> HackerOs.Platform.Core.ContextMenus.FileContextMenuDocument?
 static HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway.ToSdk(HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus! status) -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus!
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.ApprovalPrompt.get -> System.Func<HackerOs.Platform.Core.Policy.IDangerousCapabilityApprovalPrompt!>?
 HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.ApprovalPrompt.init -> void

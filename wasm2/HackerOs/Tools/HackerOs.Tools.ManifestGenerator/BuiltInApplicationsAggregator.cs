@@ -79,6 +79,7 @@ public static class BuiltInApplicationsAggregator
         {
             diagnostics.AddRange(FindDuplicateCommands(applications.Select(item => item.Manifest)));
             diagnostics.AddRange(FindNegativeOomScoreAdjust(applications));
+            diagnostics.AddRange(FindInvalidContextMenuTargets(applications.Select(item => item.Manifest)));
         }
 
         return diagnostics.Count > 0
@@ -137,6 +138,41 @@ public static class BuiltInApplicationsAggregator
                 GeneratorCodes.NegativeOomScoreAdjust,
                 item.Manifest.Id,
                 $"oomScoreAdj {item.Manifest.OomScoreAdj} is negative: only a system app (IsSystemApp=\"true\" on the host's ProjectReference) may lower its OOM score."))];
+    }
+
+    /// <summary>
+    /// ADR 0151 §5, at build: a file menu entry that targets another app needs that app in the host,
+    /// declaring the entry's intent. One <c>HOSAPP0028</c> per offending entry, in app id order.
+    /// </summary>
+    /// <param name="manifests">The host's manifests.</param>
+    /// <returns>The diagnostics, empty when every target is valid.</returns>
+    public static IReadOnlyList<GeneratorDiagnostic> FindInvalidContextMenuTargets(IEnumerable<AppManifest> manifests)
+    {
+        ArgumentNullException.ThrowIfNull(manifests);
+        AppManifest[] all = [.. manifests.OrderBy(static item => item.Id, StringComparer.Ordinal)];
+        Dictionary<string, AppManifest> byId = all.GroupBy(item => item.Id, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        List<GeneratorDiagnostic> diagnostics = [];
+        foreach (AppManifest manifest in all)
+        {
+            foreach (AppContextMenuEntryManifest entry in manifest.ContextMenus ?? [])
+            {
+                if (entry.Target == AppContextMenus.SelfTarget || entry.Target == manifest.Id || entry.Intent is null)
+                {
+                    continue;
+                }
+
+                if (!byId.TryGetValue(entry.Target, out AppManifest? target))
+                {
+                    diagnostics.Add(new(GeneratorCodes.ContextMenuTarget, manifest.Id, $"Menu entry '{entry.Name}' targets '{entry.Target}', which this host does not have."));
+                }
+                else if (!target.Intents.Any(intent => string.Equals(intent.IntentId, entry.Intent, StringComparison.Ordinal)))
+                {
+                    diagnostics.Add(new(GeneratorCodes.ContextMenuTarget, manifest.Id, $"Menu entry '{entry.Name}' targets '{entry.Target}', which does not declare the intent '{entry.Intent}'."));
+                }
+            }
+        }
+
+        return diagnostics;
     }
 
     /// <summary>

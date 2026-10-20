@@ -84,3 +84,19 @@ public static class HackFileMenuItems
     /// <summary>The desktop's "Background…" entry, which opens Settings (ADR 0152).</summary>
     public const string Background = "background";
 }
+
+/// <summary>
+/// How an entry an app registers in the file menus handles a selection of several items
+/// (ADR 0151 §7).
+/// </summary>
+public enum MenuSelection
+{
+    /// <summary>One launch of the target with every selected path (default).</summary>
+    All,
+
+    /// <summary>One launch of the target per selected path.</summary>
+    Each,
+
+    /// <summary>The entry is hidden when several items are selected.</summary>
+    Single
+}

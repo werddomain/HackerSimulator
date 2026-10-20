@@ -738,6 +738,8 @@ public static class EcosystemServiceCollectionExtensions
                 // HackComponentProviders (ADR 0156): a third-party provider goes through the approval window.
                 ComponentProviders = () => provider.GetRequiredService<HackerOs.Platform.Core.ComponentProviders.ComponentProviderService>(),
                 ApprovalPrompt = () => provider.GetRequiredService<IDangerousCapabilityApprovalPrompt>(),
+                // HackFileMenuEntries (ADR 0159 §8): Settings lists and hides the registered entries.
+                FileMenuEntries = () => provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuAdministration>(),
             })
         {
             // HackBackground (ADR 0128): each task a child process, in a worker when the host has some.
@@ -828,6 +830,9 @@ public static class EcosystemServiceCollectionExtensions
             // ADR 0156 §4: an app uninstalled for the machine loses its line in components.config,
             // whether Settings, the terminal or an edit of apps.config uninstalled it.
             installation.Changed += (_, _) => _ = RemoveUninstalledComponentProvidersAsync(provider, installation);
+            // ADR 0151 §3: the first reload (at boot, StartAsync) writes and reads context-menus.d; an app
+            // uninstalled for the machine then loses its file, a reinstalled one gets it back.
+            installation.Changed += (_, _) => _ = SyncFileContextMenusAsync(provider);
             return installation;
         });
         services.AddScoped<IAppInstallationService>(provider => provider.GetRequiredService<AppInstallationService>());
@@ -889,7 +894,57 @@ public static class EcosystemServiceCollectionExtensions
         // ADR 0150: the OS context menu. The platform provides the contract hackeros.context-menu
         // itself; the service holds each window's menus and the one menu open in the OS.
         services.AddScoped(provider => new HackerOs.Platform.Blazor.ContextMenus.ContextMenuService(
-            provider.GetService<ILogger<HackerOs.Platform.Blazor.ContextMenus.ContextMenuService>>()));
+            provider.GetService<ILogger<HackerOs.Platform.Blazor.ContextMenus.ContextMenuService>>(),
+            provider.GetRequiredService<HackerOs.Platform.Blazor.ContextMenus.IFileMenuEntrySource>()));
+        // ADR 0151, ADR 0159: the file menu entries apps register. The registry copies the manifests'
+        // entries to /etc/hackeros/context-menus.d at boot and after each install change, and reads the
+        // folder; the source adds them to every file menu, whichever app provides the file control.
+        services.AddScoped(provider => new HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry(
+            provider.GetRequiredService<AppCatalog>(),
+            ((OsSettingsService)provider.GetRequiredService<IOsSettingsService>()).CreateSystemGateway(),
+            appId => provider.GetRequiredService<AppInstallationService>().GetState(appId) == AppInstallationState.UninstalledForMachine,
+            provider.GetService<ILogger<HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry>>()));
+        services.AddScoped(provider => new HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences(
+            provider.GetRequiredService<IOsSettingsService>()));
+        services.AddScoped(provider => new HackerOs.Platform.Core.ContextMenus.FileContextMenuAdministration(
+            provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry>(),
+            provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences>(),
+            provider.GetRequiredService<AppCatalog>()));
+        services.AddScoped(provider => new HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher(
+            provider.GetRequiredService<AppCatalog>(),
+            provider.GetRequiredService<IAppEnablementRegistry>(),
+            provider.GetRequiredService<AppLifecycleOrchestrator>()));
+        services.AddScoped<HackerOs.Platform.Blazor.ContextMenus.IFileMenuEntrySource>(provider =>
+        {
+            HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher launcher =
+                provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher>();
+            HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences preferences =
+                provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences>();
+            ILogger? logger = provider.GetService<ILogger<HackerOs.Platform.Blazor.ContextMenus.FileMenuEntries>>();
+            return new HackerOs.Platform.Blazor.ContextMenus.FileMenuEntries(
+                provider.GetRequiredService<AppCatalog>(),
+                provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry>(),
+                launcher,
+                preferences.GetHiddenAsync,
+                () => provider.GetRequiredService<HackerOs.Platform.Core.Globalization.SessionLocaleService>().Culture,
+                async (appId, entry, scope, paths) =>
+                {
+                    if (provider.GetRequiredService<ISessionService>().CurrentPrincipal is not { } principal)
+                    {
+                        return;
+                    }
+
+                    foreach (AppLaunchResult result in await launcher.LaunchAsync(appId, entry, scope, paths, principal))
+                    {
+                        if (!result.IsSuccess)
+                        {
+                            logger?.LogWarning(
+                                "context-menu: the entry '{Name}' of {AppId} could not launch its app: {Status} {Code}",
+                                entry.Name, appId, result.Status, result.ErrorCode);
+                        }
+                    }
+                });
+        });
         services.AddSingleton(new HackPlatformComponent(
             HackerOs.AppSdk.Components.HackComponentContracts.ContextMenu,
             typeof(HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu)));
@@ -1044,6 +1099,26 @@ public static class EcosystemServiceCollectionExtensions
                 DiagnosticSeverity.Warning,
                 "components",
                 $"component.provider.removed: components.config could not be updated after an uninstall: {exception.Message}");
+        }
+    }
+
+    /// <summary>
+    /// ADR 0151 §3.5: brings <c>/etc/hackeros/context-menus.d</c> in line with the installed apps after
+    /// each change of the installed state; a failure is written to the system log and never blocks it.
+    /// </summary>
+    private static async Task SyncFileContextMenusAsync(IServiceProvider provider)
+    {
+        try
+        {
+            await provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry>().SyncAsync().ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            provider.GetService<LogFileWriter>()?.Write(
+                LogFileTarget.Syslog,
+                DiagnosticSeverity.Warning,
+                "context-menu",
+                $"context-menus.d could not be updated after an install change: {exception.Message}");
         }
     }
 

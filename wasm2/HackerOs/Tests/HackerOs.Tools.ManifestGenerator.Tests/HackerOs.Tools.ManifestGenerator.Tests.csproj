@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Tools\HackerOs.Tools.ManifestGenerator\HackerOs.Tools.ManifestGenerator.csproj" />
     <ProjectReference Include="..\..\Shared\HackerOs.AppSdk\HackerOs.AppSdk.csproj" />
+    <ProjectReference Include="..\..\Shared\HackerOs.AppSdk.Blazor\HackerOs.AppSdk.Blazor.csproj" />
   </ItemGroup>
 
 </Project>

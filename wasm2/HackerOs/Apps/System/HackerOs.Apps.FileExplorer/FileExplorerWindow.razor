@@ -180,7 +180,6 @@
                       Filter="_searchFilter"
                       Navigated="OnNavigated"
                       SelectionChanged="OnSelectionChanged"
-                      ContextMenuOpening="OnContextMenuOpening"
                       ErrorOccurred="ReportError"
                       ControllerChanged="OnControllerChangedAsync" />
     </div>
@@ -267,6 +266,17 @@
         // adds --select=<path> (RevealFileIntent, ADR 0096 section 1).
         (VirtualPath? folder, VirtualPath? select) = ParseLaunchArguments(LaunchArguments);
         _pendingReveal = select;
+        // "Extract here" from a file menu (ADR 0151 §8): open the first archive's folder, extract once ready.
+        if (LaunchIntent is { IntentId: FileExplorerMenuEntries.ExtractHereIntent } intent)
+        {
+            _pendingExtracts = [.. HackFileMenuIntent.ReadPaths(intent.PayloadJson)
+                .Where(static path => path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))];
+            if (_pendingExtracts.Count > 0)
+            {
+                folder ??= ParentOf(VirtualPath.Parse(_pendingExtracts[0]));
+            }
+        }
+
         string startPath = (folder ?? _homeDirectory).Value;
         _state = new FileExplorerState(startPath);
         _initialDirectory = VirtualPath.Parse(startPath);
@@ -335,7 +345,20 @@
             _pendingReveal = null;
             await RevealAsync(reveal);
         }
+
+        if (_pendingExtracts.Count > 0)
+        {
+            IReadOnlyList<string> archives = _pendingExtracts;
+            _pendingExtracts = [];
+            foreach (string archive in archives)
+            {
+                await ExtractAsync(archive, archive[(archive.LastIndexOf('/') + 1)..]);
+            }
+        }
     }
+
+    /// <summary>Archives to extract once the control is ready ("Extract here", ADR 0151 §8).</summary>
+    private IReadOnlyList<string> _pendingExtracts = [];
 
     /// <summary>The clipboard, the selection or the operations in flight changed: the toolbar follows.</summary>
     private void OnFilesStateChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
@@ -515,60 +538,6 @@
     {
         _errorMessage = null;
         return _files?.ExecuteAsync(command) ?? Task.CompletedTask;
-    }
-
-    // ---- The explorer's own entries in the file menus ------------------------------------------------
-
-    /// <summary>
-    /// Adds the explorer's own entries after <c>open</c>: "UnZip Here…" on one <c>.zip</c> file and
-    /// "Publish as a web site…" on one folder (ADR 0077 §3). Apps will register such entries for every
-    /// host in chantier 4 (ADR 0151); until then they exist in this window only.
-    /// </summary>
-    private void OnContextMenuOpening(HackFileMenuOpeningEventArgs e)
-    {
-        if (e.Items is not [{ } item])
-        {
-            return;
-        }
-
-        if (!item.IsDirectory && item.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-        {
-            AddAfterOpen(e.Menu, FileExplorerMenuEntries.UnzipHere, L["Menu.UnzipHere"], "package-open", () => ExtractAsync(item.Path, item.Name));
-        }
-        else if (item.IsDirectory)
-        {
-            AddAfterOpen(e.Menu, FileExplorerMenuEntries.PublishSite, L["Menu.PublishSite"], "globe",
-                () => LaunchWithAsync(FileExplorerMenuEntries.WebServerManagerAppId, item.Path));
-        }
-    }
-
-    private void AddAfterOpen(HackMenuDefinition menu, string id, string title, string icon, Func<Task> action)
-    {
-        HackMenuGroupDefinition? group = menu.Groups.FirstOrDefault(candidate => candidate.Items.Any(entry => entry.Id == HackFileMenuItems.Open));
-        if (group is null)
-        {
-            group = menu.AddGroup();
-        }
-
-        HackMenuItemDefinition entry = new(id, title)
-        {
-            Icon = HackIcons.Vector(IconLibrary.Lucide, icon),
-            OnClick = EventCallback.Factory.Create<object?>(this, _ => action())
-        };
-        int open = group.Items.ToList().FindIndex(candidate => candidate.Id == HackFileMenuItems.Open);
-        group.Items.Insert(open + 1, entry);
-    }
-
-    private async Task LaunchWithAsync(string appId, string fullPath)
-    {
-        try
-        {
-            await AppContext.Intents.LaunchAsync(appId, [fullPath]);
-        }
-        catch (AppGatewayAccessDeniedException)
-        {
-            ReportError(L["Error.LaunchDenied"]);
-        }
     }
 
     private static VirtualPath CombineChild(VirtualPath parent, string name) =>
@@ -830,12 +799,15 @@
     private Task ExtractSelectedAsync() =>
         CanExtractSelection ? ExtractAsync(_files!.SelectedItems[0].Path, _files.SelectedItems[0].Name) : Task.CompletedTask;
 
-    /// <summary>Extracts a <c>.zip</c> into a folder of its name next to it: the toolbar's Extract and the menu's "UnZip Here…".</summary>
+    /// <summary>Extracts a <c>.zip</c> into a folder of its name next to it: the toolbar's Extract and the registered "Extract here".</summary>
     private async Task ExtractAsync(string archivePath, string archiveName)
     {
         if (_files is null) return;
 
-        string folderName = archiveName[..^".zip".Length];
+        // A registered entry also accepts application/zip files without the extension: they get a ".d" folder.
+        string folderName = archiveName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && archiveName.Length > ".zip".Length
+            ? archiveName[..^".zip".Length]
+            : archiveName + ".d";
         VirtualPath destDir = CombineChild(ParentOf(VirtualPath.Parse(archivePath)), folderName);
 
         // ADR 0128/0140: inflating and writing every entry happen in a child process of the explorer.

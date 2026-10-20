@@ -68,6 +68,15 @@ public sealed record HackFileViewItem(
     string MediaType,
     DateTimeOffset ModifiedAt);
 
+/// <summary>
+/// What a file menu is drawn for (ADR 0159 §5): set on <c>HackMenuDefinition.FileMenu</c> by the
+/// provider of the file control, so the OS adds the entries apps registered (ADR 0151) for these items.
+/// </summary>
+/// <param name="Scope">Where the menu opens: <see cref="FileMenuScope.File"/>, <see cref="FileMenuScope.Directory"/>, <see cref="FileMenuScope.Background"/> or <see cref="FileMenuScope.Desktop"/>.</param>
+/// <param name="Items">The items the menu acts on; empty in the background.</param>
+/// <param name="Directory">The folder the view shows.</param>
+public sealed record HackFileMenuContext(FileMenuScope Scope, IReadOnlyList<HackFileViewItem> Items, string Directory);
+
 /// <summary>Before the file control opens an item (double click, Enter, the menu's Open).</summary>
 public sealed class HackFileViewOpeningEventArgs
 {

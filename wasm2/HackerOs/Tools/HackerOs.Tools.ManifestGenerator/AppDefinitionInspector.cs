@@ -51,7 +51,19 @@ public static class AppDefinitionInspector
     /// hashes the definition declares.
     /// </param>
     /// <returns>The manifests, or the diagnostics that must fail the build.</returns>
-    public static InspectionResult Inspect(Assembly assembly, IEnumerable<string> dependencyPaths, string? assetRoot)
+    public static InspectionResult Inspect(Assembly assembly, IEnumerable<string> dependencyPaths, string? assetRoot) =>
+        Inspect(assembly, dependencyPaths, assetRoot, projectDirectory: null);
+
+    /// <summary>Inspects every type of <paramref name="assembly"/>, with the app's dependency list and project directory.</summary>
+    /// <param name="assembly">Compiled app assembly, typically loaded in an <see cref="AppAssemblyLoadContext"/>.</param>
+    /// <param name="dependencyPaths">The app's resolved dependencies, where the SDK version it was compiled against is read.</param>
+    /// <param name="assetRoot">Folder of the declared assets, hashed into the manifest; <see langword="null"/> keeps the declared hashes.</param>
+    /// <param name="projectDirectory">
+    /// The app project directory, whose <c>Resources/AppManifest*.resx</c> give the titles of the
+    /// file menu entries (ADR 0159 §3); <see langword="null"/> makes each title key its English text.
+    /// </param>
+    /// <returns>The manifests, or the diagnostics that must fail the build.</returns>
+    public static InspectionResult Inspect(Assembly assembly, IEnumerable<string> dependencyPaths, string? assetRoot, string? projectDirectory)
     {
         ArgumentNullException.ThrowIfNull(assembly);
 
@@ -69,7 +81,7 @@ public static class AppDefinitionInspector
                 $"The app assembly's types could not be loaded: {details}"));
         }
 
-        return Inspect(assembly, types.Where(HasAppManifestAttribute), SdkMinimumVersionOf(assembly, dependencyPaths), assetRoot);
+        return Inspect(assembly, types.Where(HasAppManifestAttribute), SdkMinimumVersionOf(assembly, dependencyPaths), assetRoot, projectDirectory);
     }
 
     /// <summary>
@@ -80,8 +92,9 @@ public static class AppDefinitionInspector
     /// <param name="definitionTypes">Types marked <c>[AppManifest]</c>.</param>
     /// <param name="sdkMinimumVersion">Value written to <c>sdkCompatibility.minimumVersion</c>.</param>
     /// <param name="assetRoot">Folder of the declared assets, hashed into the manifest; <see langword="null"/> keeps the declared hashes.</param>
+    /// <param name="projectDirectory">The app project directory for the menu titles (ADR 0159 §3); <see langword="null"/> makes each key its English text.</param>
     /// <returns>The manifests, or the diagnostics that must fail the build.</returns>
-    public static InspectionResult Inspect(Assembly assembly, IEnumerable<Type> definitionTypes, string sdkMinimumVersion, string? assetRoot = null)
+    public static InspectionResult Inspect(Assembly assembly, IEnumerable<Type> definitionTypes, string sdkMinimumVersion, string? assetRoot = null, string? projectDirectory = null)
     {
         ArgumentNullException.ThrowIfNull(assembly);
         ArgumentNullException.ThrowIfNull(definitionTypes);
@@ -99,7 +112,7 @@ public static class AppDefinitionInspector
         List<GeneratedManifest> manifests = [];
         foreach (Type type in candidates)
         {
-            GeneratedManifest? manifest = InspectType(assembly, type, sdkMinimumVersion, assetRoot, diagnostics);
+            GeneratedManifest? manifest = InspectType(assembly, type, sdkMinimumVersion, assetRoot, projectDirectory, candidates.Length > 1, diagnostics);
             if (manifest is not null)
             {
                 manifests.Add(manifest);
@@ -162,7 +175,14 @@ public static class AppDefinitionInspector
         return HackerOsSdk.ReadVersion(typeof(AppDefinition).Assembly);
     }
 
-    private static GeneratedManifest? InspectType(Assembly assembly, Type type, string sdkMinimumVersion, string? assetRoot, List<GeneratorDiagnostic> diagnostics)
+    private static GeneratedManifest? InspectType(
+        Assembly assembly,
+        Type type,
+        string sdkMinimumVersion,
+        string? assetRoot,
+        string? projectDirectory,
+        bool multi,
+        List<GeneratorDiagnostic> diagnostics)
     {
         string subject = type.FullName ?? type.Name;
         int before = diagnostics.Count;
@@ -212,6 +232,20 @@ public static class AppDefinitionInspector
             json = AppManifestJsonSerializer.SerializeCanonical(manifest);
         }
 
+        // ADR 0151 §3, ADR 0159 §2: the registration method runs here, at build, never in the OS.
+        if (ContextMenuRegistrationInspector.Run(type, subject, diagnostics) is { Count: > 0 } entries)
+        {
+            IReadOnlyList<AppContextMenuEntryManifest> titled = ContextMenuRegistrationInspector.ResolveTitles(
+                entries, projectDirectory, manifest!.Id, multi, subject, diagnostics);
+            manifest = manifest with { ContextMenus = titled };
+            json = AppManifestJsonSerializer.SerializeCanonical(manifest);
+        }
+
+        if (diagnostics.Count > before)
+        {
+            return null;
+        }
+
         CheckEntryPointAssembly(first!.EntryPoint, "EntryPoint", assembly, subject, diagnostics);
         if (first.MobileEntryPoint is Type mobile)
         {
@@ -226,7 +260,14 @@ public static class AppDefinitionInspector
         foreach (ManifestValidationError error in AppManifestValidator.Validate(manifest!).Errors)
         {
             // ADR 0073, section 3: a site asking for the file system has its own code.
-            string code = error.Code == "manifest.web.filesystem" ? GeneratorCodes.WebFileSystem : GeneratorCodes.InvalidManifest;
+            string code = error.Code switch
+            {
+                "manifest.web.filesystem" => GeneratorCodes.WebFileSystem,
+                // ADR 0151 §6: entries without the capability have their own code.
+                "manifest.context-menu.capability" => GeneratorCodes.ContextMenuCapability,
+                _ when error.Code.StartsWith("manifest.context-menu.", StringComparison.Ordinal) => GeneratorCodes.InvalidContextMenu,
+                _ => GeneratorCodes.InvalidManifest
+            };
             diagnostics.Add(new(code, subject, $"{error.Path}: {error.Message} ({error.Code})"));
         }
 

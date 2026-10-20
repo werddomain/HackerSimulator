@@ -61,6 +61,7 @@ public static class AppManifestJsonSerializer
             "fileHandlers",
             "terminal",
             "components",
+            "contextMenus",
             "singleInstancePerUser",
             "autoStart",
             "serviceStartup",
@@ -95,7 +96,16 @@ public static class AppManifestJsonSerializer
             Assets = manifest.Assets ?? [],
             FileHandlers = manifest.FileHandlers ?? [],
             Terminal = manifest.Terminal is null ? null : manifest.Terminal with { Aliases = manifest.Terminal.Aliases ?? [] },
-            Web = manifest.Web is null ? null : manifest.Web with { Urls = manifest.Web.Urls ?? [] }
+            Web = manifest.Web is null ? null : manifest.Web with { Urls = manifest.Web.Urls ?? [] },
+            ContextMenus = manifest.ContextMenus is null
+                ? null
+                : [.. manifest.ContextMenus.Select(entry => entry with
+                {
+                    Titles = entry.Titles ?? [],
+                    Scopes = entry.Scopes ?? [AppContextMenus.FileScope],
+                    Target = entry.Target ?? AppContextMenus.SelfTarget,
+                    Selection = entry.Selection ?? AppContextMenus.SelectionAll
+                })]
         };
     }
 
@@ -156,9 +166,33 @@ public static class AppManifestJsonSerializer
                 ? null
                 : [.. manifest.Components.OrderBy(item => item.Contract, StringComparer.Ordinal)
                     .ThenBy(item => item.Type, StringComparer.Ordinal)],
+            // ADR 0159: the declared order of the entries is their order at a shared place, so it is
+            // kept; an empty list is written as no property, like a manifest without entries.
+            ContextMenus = manifest.ContextMenus is not { Count: > 0 }
+                ? null
+                : [.. manifest.ContextMenus.Select(entry => entry with
+                {
+                    Titles = [.. entry.Titles.OrderBy(title => title.Culture, StringComparer.Ordinal)],
+                    Scopes = [.. entry.Scopes.OrderBy(scope => AppContextMenusOrder(scope))],
+                    Types = entry.Types is null ? null : [.. entry.Types.OrderBy(type => type, StringComparer.Ordinal)]
+                })],
             // The first URL is the site's primary address: the declared order is kept.
             Web = manifest.Web
         };
+    }
+
+    /// <summary>Sorts scopes in menu order (file, directory, background, desktop), an unknown one last.</summary>
+    private static int AppContextMenusOrder(string scope)
+    {
+        for (int index = 0; index < AppContextMenus.Scopes.Count; index++)
+        {
+            if (string.Equals(AppContextMenus.Scopes[index], scope, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+
+        return int.MaxValue;
     }
 
     private static void ValidateObject(JsonElement element, string path, IReadOnlyCollection<string> allowedProperties)
@@ -232,6 +266,27 @@ public static class AppManifestJsonSerializer
                 case "components":
                     ValidateArray(property.Value, $"{path}.components", ["contract", "assembly", "type"]);
                     break;
+                case "contextMenus":
+                    ValidateArray(property.Value, $"{path}.contextMenus", ["name", "title", "titles", "target", "intent", "icon", "scopes", "types", "selection", "first", "after", "afterGroup", "parent"]);
+                    if (property.Value.ValueKind != JsonValueKind.Array)
+                    {
+                        break;
+                    }
+
+                    foreach (JsonElement entry in property.Value.EnumerateArray().Where(static entry => entry.ValueKind == JsonValueKind.Object))
+                    {
+                        if (entry.TryGetProperty("titles", out JsonElement titles))
+                        {
+                            ValidateArray(titles, $"{path}.contextMenus.titles", ["culture", "text"]);
+                        }
+
+                        if (entry.TryGetProperty("icon", out JsonElement icon))
+                        {
+                            ValidateObject(icon, $"{path}.contextMenus.icon", ["kind", "source", "library"]);
+                        }
+                    }
+
+                    break;
                 case "window":
                     ValidateObject(property.Value, $"{path}.window", ["defaultWidth", "defaultHeight", "minWidth", "minHeight", "maxWidth", "maxHeight", "resizable", "rememberGeometry"]);
                     break;
@@ -293,6 +348,9 @@ public static class AppManifestJsonSerializer
 [JsonSerializable(typeof(FileHandlerManifest))]
 [JsonSerializable(typeof(TerminalCommandManifest))]
 [JsonSerializable(typeof(AppComponentManifest))]
+[JsonSerializable(typeof(AppContextMenuEntryManifest))]
+[JsonSerializable(typeof(AppContextMenuTitleManifest))]
+[JsonSerializable(typeof(AppContextMenuIconManifest))]
 [JsonSerializable(typeof(WindowOptions))]
 [JsonSerializable(typeof(WebAppManifest))]
 [JsonSerializable(typeof(WebBlazorManifest))]

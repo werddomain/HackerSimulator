@@ -175,6 +175,13 @@ public static class AppCapabilities
     public const string UsersManage = "users.manage";
 
     /// <summary>
+    /// Add entries to the file menus of the OS (ADR 0151 §6): an app declares it with its
+    /// <c>[RegisterFileContextMenu]</c> method, and the OS ignores the entries of an app without it.
+    /// Normal: an entry only launches the app with its own rights, and the user can hide it in Settings.
+    /// </summary>
+    public const string ShellContextMenu = "shell.context-menu";
+
+    /// <summary>
     /// Exact classification of every catalog capability (ADR 0049 section 1). The catalog is the
     /// key set of this table, so a capability cannot be added without choosing its risk.
     /// </summary>
@@ -263,6 +270,7 @@ public static class AppCapabilities
             KeyringReadAll,
             "Lire tout le trousseau",
             "Lire les mots de passe, jetons et clés que toutes vos applications ont enregistrés."),
+        Normal(ShellContextMenu, "Ajouter des entrées aux menus des fichiers"),
         Dangerous(
             UsersManage,
             "Gérer les mots de passe des comptes",

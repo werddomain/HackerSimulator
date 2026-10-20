@@ -1104,4 +1104,34 @@
   <data name="Memory.Error.CannotSave" xml:space="preserve">
     <value>Cannot save {0}: {1}</value>
   </data>
+  <data name="Tab.FileMenus" xml:space="preserve">
+    <value>File menus</value>
+  </data>
+  <data name="FileMenus.Unavailable" xml:space="preserve">
+    <value>File menu entries are not available on this host.</value>
+  </data>
+  <data name="FileMenus.Description" xml:space="preserve">
+    <value>Entries that apps add to the file menus (explorer, desktop, file dialogs). Uncheck an entry to hide it from your menus; the choice is saved in {0} and applies to the next menu opened.</value>
+  </data>
+  <data name="FileMenus.Empty" xml:space="preserve">
+    <value>No installed app adds entries to the file menus.</value>
+  </data>
+  <data name="FileMenus.HiddenByParent" xml:space="preserve">
+    <value>Hidden with its parent menu.</value>
+  </data>
+  <data name="FileMenus.Error.CannotSave" xml:space="preserve">
+    <value>The choice could not be saved: {0}</value>
+  </data>
+  <data name="FileMenus.Scope.File" xml:space="preserve">
+    <value>Files</value>
+  </data>
+  <data name="FileMenus.Scope.Directory" xml:space="preserve">
+    <value>Folders</value>
+  </data>
+  <data name="FileMenus.Scope.Background" xml:space="preserve">
+    <value>Empty space</value>
+  </data>
+  <data name="FileMenus.Scope.Desktop" xml:space="preserve">
+    <value>Desktop</value>
+  </data>
 </root>
