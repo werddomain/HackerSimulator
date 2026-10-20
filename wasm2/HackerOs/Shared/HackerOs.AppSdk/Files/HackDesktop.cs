@@ -104,6 +104,12 @@ public static class HackDesktopItems
     /// <summary>Gets whether <paramref name="key"/> is one of the system icons.</summary>
     /// <param name="key">A position key.</param>
     public static bool IsSystemItem(string? key) => key is Home or Trash;
+
+    /// <summary>
+    /// The intent the shell sends to the running desktop app for "Send to ▸ Desktop" (ADR 0160 §6), with
+    /// <c>{"appId":"…"}</c>: the desktop writes a shortcut to that app in <c>~/Desktop</c>.
+    /// </summary>
+    public const string CreateShortcutIntent = "org.hackeros.desktop.create-shortcut.v1";
 }
 
 /// <summary>One item to order for the desktop (<see cref="HackDesktopLayout.Order"/>).</summary>

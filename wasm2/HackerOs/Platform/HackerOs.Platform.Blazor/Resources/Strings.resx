@@ -651,4 +651,13 @@
   <data name="Dialog.FileDialogsUnavailable" xml:space="preserve">
     <value>The file dialogs of the OS are unavailable.</value>
   </data>
+  <data name="Launcher.Menu.Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="Launcher.Menu.SendTo" xml:space="preserve">
+    <value>Send to</value>
+  </data>
+  <data name="Launcher.Menu.Desktop" xml:space="preserve">
+    <value>Desktop (create shortcut)</value>
+  </data>
 </root>

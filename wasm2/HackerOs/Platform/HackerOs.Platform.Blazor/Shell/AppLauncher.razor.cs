@@ -89,6 +89,7 @@ public partial class AppLauncher : ComponentBase, IDisposable
     protected override async Task OnInitializedAsync()
     {
         _principal = SessionService.CurrentPrincipal;
+        InitializeMenus();
         // An uninstall or reinstall (ADR 0048) while the menu is open updates it in place.
         Enablement.Changed += OnEnablementChanged;
         if (_principal is not null)
@@ -110,6 +111,7 @@ public partial class AppLauncher : ComponentBase, IDisposable
             return;
         }
 
+        await AttachAppDragAsync();
         try
         {
             await _searchInputRef.FocusAsync();

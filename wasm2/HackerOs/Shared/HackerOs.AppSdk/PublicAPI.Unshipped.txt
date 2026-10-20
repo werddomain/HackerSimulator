@@ -4,6 +4,8 @@ const HackerOs.AppSdk.Files.HackDesktopEntry.Group = "Desktop Entry" -> string!
 const HackerOs.AppSdk.Files.HackDesktopEntry.MaxFileSize = 16384 -> int
 const HackerOs.AppSdk.Files.HackDesktopItems.Home = "::home" -> string!
 const HackerOs.AppSdk.Files.HackDesktopItems.Trash = "::trash" -> string!
+const HackerOs.AppSdk.Files.HackDesktopSettings.PositionsGroup = "positions" -> string!
+const HackerOs.AppSdk.Files.HackDesktopSettings.ViewGroup = "view" -> string!
 const HackerOs.AppSdk.Files.HackFileMenuItems.Background = "background" -> string!
 const HackerOs.AppSdk.Files.HackFileMenuItems.Copy = "copy" -> string!
 const HackerOs.AppSdk.Files.HackFileMenuItems.Cut = "cut" -> string!
@@ -108,6 +110,13 @@ HackerOs.AppSdk.Files.HackDesktopOptions.ShowTrash.get -> bool
 HackerOs.AppSdk.Files.HackDesktopOptions.ShowTrash.init -> void
 HackerOs.AppSdk.Files.HackDesktopOptions.Sort.get -> HackerOs.AppSdk.Files.HackDesktopSort
 HackerOs.AppSdk.Files.HackDesktopOptions.Sort.init -> void
+HackerOs.AppSdk.Files.HackDesktopSettings
+HackerOs.AppSdk.Files.HackDesktopSettingsDocument
+HackerOs.AppSdk.Files.HackDesktopSettingsDocument.HackDesktopSettingsDocument(HackerOs.AppSdk.Files.HackDesktopOptions! Options, System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.AppSdk.Files.HackDesktopCell>! Positions) -> void
+HackerOs.AppSdk.Files.HackDesktopSettingsDocument.Options.get -> HackerOs.AppSdk.Files.HackDesktopOptions!
+HackerOs.AppSdk.Files.HackDesktopSettingsDocument.Options.init -> void
+HackerOs.AppSdk.Files.HackDesktopSettingsDocument.Positions.get -> System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.AppSdk.Files.HackDesktopCell>!
+HackerOs.AppSdk.Files.HackDesktopSettingsDocument.Positions.init -> void
 HackerOs.AppSdk.Files.HackDesktopSort
 HackerOs.AppSdk.Files.HackDesktopSort.Date = 3 -> HackerOs.AppSdk.Files.HackDesktopSort
 HackerOs.AppSdk.Files.HackDesktopSort.Name = 0 -> HackerOs.AppSdk.Files.HackDesktopSort
@@ -202,9 +211,20 @@ static HackerOs.AppSdk.Files.HackDesktopLayout.GridSize(double width, double hei
 static HackerOs.AppSdk.Files.HackDesktopLayout.Move(HackerOs.AppSdk.Files.HackDesktopArrangement! current, System.Collections.Generic.IReadOnlyList<string!>! moved, string! anchor, HackerOs.AppSdk.Files.HackDesktopCell target, int columns, int rows, bool autoArrange) -> System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.AppSdk.Files.HackDesktopCell>!
 static HackerOs.AppSdk.Files.HackDesktopLayout.Order(System.Collections.Generic.IEnumerable<HackerOs.AppSdk.Files.HackDesktopSortItem!>! items, HackerOs.AppSdk.Files.HackDesktopSort sort, bool showHome, bool showTrash) -> System.Collections.Generic.IReadOnlyList<string!>!
 static HackerOs.AppSdk.Files.HackDesktopOptions.Default.get -> HackerOs.AppSdk.Files.HackDesktopOptions!
+static HackerOs.AppSdk.Files.HackDesktopSettings.DefaultPath.get -> string!
+static HackerOs.AppSdk.Files.HackDesktopSettings.EncodeKey(string! name) -> string!
+static HackerOs.AppSdk.Files.HackDesktopSettings.GetPath(string! homeDirectory) -> string!
+static HackerOs.AppSdk.Files.HackDesktopSettings.Parse(string? content) -> HackerOs.AppSdk.Files.HackDesktopSettingsDocument!
+static HackerOs.AppSdk.Files.HackDesktopSettings.ReadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.Files.HackDesktopSettingsDocument!>!
+static HackerOs.AppSdk.Files.HackDesktopSettings.SaveOptionsAsync(HackerOs.AppSdk.Files.HackDesktopOptions! options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Files.HackDesktopSettings.SavePositionsAsync(System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.AppSdk.Files.HackDesktopCell>! positions, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Files.HackDesktopSettings.TryDecodeKey(string! key, out string! name) -> bool
+static HackerOs.AppSdk.Files.HackDesktopSettings.WithOptions(string? content, HackerOs.AppSdk.Files.HackDesktopOptions! options) -> string!
+static HackerOs.AppSdk.Files.HackDesktopSettings.WithPositions(string? content, System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.AppSdk.Files.HackDesktopCell>! positions) -> string!
 static HackerOs.AppSdk.Files.HackFileMenuIntent.ReadPaths(string? payloadJson) -> System.Collections.Generic.IReadOnlyList<string!>!
 static HackerOs.AppSdk.Files.HackFileMenuIntent.ReadScope(string? payloadJson) -> HackerOs.AppSdk.Files.FileMenuScope
 static HackerOs.AppSdk.UnsupportedAdministrationGateways.ComponentProviders.get -> HackerOs.AppSdk.Administration.IAppComponentProviderAdministrationGateway!
 static HackerOs.AppSdk.UnsupportedAdministrationGateways.FileMenuEntries.get -> HackerOs.AppSdk.Administration.IAppFileMenuEntryAdministrationGateway!
 HackerOs.AppSdk.Apps.HackAppIcons
 static HackerOs.AppSdk.Apps.HackAppIcons.LucideName(string! appId, string? category) -> string!
+const HackerOs.AppSdk.Files.HackDesktopItems.CreateShortcutIntent = "org.hackeros.desktop.create-shortcut.v1" -> string!

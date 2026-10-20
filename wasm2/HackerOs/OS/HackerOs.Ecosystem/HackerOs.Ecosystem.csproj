@@ -42,6 +42,7 @@
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Diagnostic\HackerOs.Apps.Diagnostic.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.ErrorLogViewer\HackerOs.Apps.ErrorLogViewer.csproj" IsSystemApp="true" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.FileExplorer\HackerOs.Apps.FileExplorer.csproj" IsSystemApp="true" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Desktop\HackerOs.Apps.Desktop.csproj" IsSystemApp="true" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.HackPaint\HackerOs.Apps.HackPaint.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.IconViewer\HackerOs.Apps.IconViewer.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Settings\HackerOs.Apps.Settings.csproj" IsSystemApp="true" />

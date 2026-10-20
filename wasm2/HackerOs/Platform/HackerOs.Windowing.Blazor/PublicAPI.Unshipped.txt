@@ -1,1 +1,3 @@
 #nullable enable
+HackerOs.Windowing.Blazor.DesktopArea.BackgroundInteractive.get -> bool
+HackerOs.Windowing.Blazor.DesktopArea.BackgroundInteractive.set -> void

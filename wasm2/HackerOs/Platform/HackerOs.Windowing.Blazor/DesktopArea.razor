@@ -6,13 +6,20 @@
 
 <main @ref="_desktopElement" class="desktop-area" aria-label="@L["Desktop.Workspace"]">
     <div class="desktop-grid" aria-hidden="true"></div>
-    @if (BackgroundContent is not null)
+    @if (BackgroundContent is not null && BackgroundInteractive)
+    {
+        @* ADR 0160 §1: the desktop icons are reachable, by the pointer and by assistive technologies. *@
+        <section class="background-layer interactive">
+            @BackgroundContent
+        </section>
+    }
+    else if (BackgroundContent is not null)
     {
         <section class="background-layer" aria-hidden="true">
             @BackgroundContent
         </section>
     }
-    <section class="window-layer" aria-label="@L["Desktop.OpenWindows"]">
+    <section class="window-layer @(BackgroundInteractive && BackgroundContent is not null ? "pass-through" : null)" aria-label="@L["Desktop.OpenWindows"]">
         @foreach (WindowRuntimeState window in Windows)
         {
             <WindowHost @key="window.Id"
@@ -55,6 +62,14 @@
     /// </summary>
     [Parameter]
     public RenderFragment? BackgroundContent { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether <see cref="BackgroundContent"/> receives the pointer and is exposed to
+    /// assistive technologies (ADR 0160 §1): the desktop icons. The window layer then lets the pointer
+    /// through where there is no window. <see langword="false"/> by default: a decorative background.
+    /// </summary>
+    [Parameter]
+    public bool BackgroundInteractive { get; set; }
 
     /// <summary>
     /// Gets or sets content layered over one window's content area, such as the platform's

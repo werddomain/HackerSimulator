@@ -25,7 +25,20 @@
     pointer-events: none;
 }
 
+.background-layer.interactive {
+    pointer-events: auto;
+}
+
 .window-layer {
     position: absolute;
     inset: 0;
+}
+
+/* ADR 0160 §1: over an interactive desktop, only the windows take the pointer. */
+.window-layer.pass-through {
+    pointer-events: none;
+}
+
+.window-layer.pass-through ::deep .window-host {
+    pointer-events: auto;
 }

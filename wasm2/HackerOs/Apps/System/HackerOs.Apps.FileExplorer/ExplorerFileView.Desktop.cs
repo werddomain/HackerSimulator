@@ -1,4 +1,5 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk;
 using HackerOs.AppSdk.Apps;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Blazor.ContextMenus;
@@ -90,6 +91,7 @@ public sealed partial class ExplorerFileView
         }
 
         _trashWatched = true;
+        using IDisposable scope = HackExecutionContext.Enter(HostContext);
         await RefreshTrashStateAsync();
         try
         {
@@ -111,7 +113,11 @@ public sealed partial class ExplorerFileView
         {
             await foreach (TopicMessage<FileSystemChangeEvent> _ in subscription.Reader.ReadAllAsync(cancellationToken))
             {
-                await InvokeAsync(RefreshTrashStateAsync);
+                await InvokeAsync(async () =>
+                {
+                    using IDisposable scope = HackExecutionContext.Enter(HostContext);
+                    await RefreshTrashStateAsync();
+                });
             }
         }
         catch (OperationCanceledException)
@@ -329,7 +335,12 @@ public sealed partial class ExplorerFileView
         if (!_loadingShortcuts)
         {
             _loadingShortcuts = true;
-            _ = InvokeAsync(LoadShortcutsAsync);
+            _ = InvokeAsync(async () =>
+            {
+                // Runs outside any event of the host: its rights are made ambient for the reads.
+                using IDisposable scope = HackExecutionContext.Enter(HostContext);
+                await LoadShortcutsAsync();
+            });
         }
     }
 

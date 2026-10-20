@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Menu.View" xml:space="preserve">
+    <value>Affichage</value>
+  </data>
+  <data name="Menu.View.Large" xml:space="preserve">
+    <value>Grandes icônes</value>
+  </data>
+  <data name="Menu.View.Medium" xml:space="preserve">
+    <value>Icônes moyennes</value>
+  </data>
+  <data name="Menu.View.Small" xml:space="preserve">
+    <value>Petites icônes</value>
+  </data>
+  <data name="Menu.View.AutoArrange" xml:space="preserve">
+    <value>Réorganiser automatiquement</value>
+  </data>
+  <data name="Menu.View.AlignToGrid" xml:space="preserve">
+    <value>Aligner sur la grille</value>
+  </data>
+  <data name="Menu.View.ShowHome" xml:space="preserve">
+    <value>Afficher le dossier perso</value>
+  </data>
+  <data name="Menu.View.ShowTrash" xml:space="preserve">
+    <value>Afficher la corbeille</value>
+  </data>
+  <data name="Menu.Sort" xml:space="preserve">
+    <value>Trier par</value>
+  </data>
+  <data name="Menu.Sort.Name" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="Menu.Sort.Size" xml:space="preserve">
+    <value>Taille</value>
+  </data>
+  <data name="Menu.Sort.Type" xml:space="preserve">
+    <value>Type d'élément</value>
+  </data>
+  <data name="Menu.Sort.Date" xml:space="preserve">
+    <value>Date de modification</value>
+  </data>
+  <data name="Menu.Background" xml:space="preserve">
+    <value>Changer l'arrière-plan…</value>
+  </data>
+  <data name="Menu.DesktopSettings" xml:space="preserve">
+    <value>Paramètres du bureau…</value>
+  </data>
+  <data name="Error.Settings" xml:space="preserve">
+    <value>Les paramètres du bureau n'ont pas pu être enregistrés : {0}</value>
+  </data>
+  <data name="Error.Shortcut" xml:space="preserve">
+    <value>Le raccourci n'a pas pu être créé : {0}</value>
+  </data>
+  <data name="Error.Folder" xml:space="preserve">
+    <value>Le dossier Bureau n'a pas pu être créé : {0}</value>
+  </data>
+  <data name="Notification.Title" xml:space="preserve">
+    <value>Bureau</value>
+  </data>
+</root>

@@ -3,3 +3,5 @@ HackerOs.Apps.Settings.OsComponentsPanel
 HackerOs.Apps.Settings.OsComponentsPanel.OsComponentsPanel() -> void
 HackerOs.Apps.Settings.FileMenuEntriesPanel
 HackerOs.Apps.Settings.FileMenuEntriesPanel.FileMenuEntriesPanel() -> void
+HackerOs.Apps.Settings.DesktopPanel
+HackerOs.Apps.Settings.DesktopPanel.DesktopPanel() -> void

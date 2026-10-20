@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Menu.View" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="Menu.View.Large" xml:space="preserve">
+    <value>Large icons</value>
+  </data>
+  <data name="Menu.View.Medium" xml:space="preserve">
+    <value>Medium icons</value>
+  </data>
+  <data name="Menu.View.Small" xml:space="preserve">
+    <value>Small icons</value>
+  </data>
+  <data name="Menu.View.AutoArrange" xml:space="preserve">
+    <value>Auto-arrange icons</value>
+  </data>
+  <data name="Menu.View.AlignToGrid" xml:space="preserve">
+    <value>Align icons to grid</value>
+  </data>
+  <data name="Menu.View.ShowHome" xml:space="preserve">
+    <value>Show Home</value>
+  </data>
+  <data name="Menu.View.ShowTrash" xml:space="preserve">
+    <value>Show Trash</value>
+  </data>
+  <data name="Menu.Sort" xml:space="preserve">
+    <value>Sort by</value>
+  </data>
+  <data name="Menu.Sort.Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Menu.Sort.Size" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="Menu.Sort.Type" xml:space="preserve">
+    <value>Item type</value>
+  </data>
+  <data name="Menu.Sort.Date" xml:space="preserve">
+    <value>Date modified</value>
+  </data>
+  <data name="Menu.Background" xml:space="preserve">
+    <value>Change background…</value>
+  </data>
+  <data name="Menu.DesktopSettings" xml:space="preserve">
+    <value>Desktop settings…</value>
+  </data>
+  <data name="Error.Settings" xml:space="preserve">
+    <value>The desktop settings could not be saved: {0}</value>
+  </data>
+  <data name="Error.Shortcut" xml:space="preserve">
+    <value>The shortcut could not be created: {0}</value>
+  </data>
+  <data name="Error.Folder" xml:space="preserve">
+    <value>The Desktop folder could not be created: {0}</value>
+  </data>
+  <data name="Notification.Title" xml:space="preserve">
+    <value>Desktop</value>
+  </data>
+</root>

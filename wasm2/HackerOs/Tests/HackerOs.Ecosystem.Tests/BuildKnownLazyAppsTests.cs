@@ -99,6 +99,8 @@ public sealed class BuildKnownLazyAppsTests
         [
             // ADR 0056 §7: its terminal panel hosts a shell (shell.host) without an approval prompt.
             "org.hackeros.code-editor",
+            // ADR 0160 §1: the desktop, started by the shell under the windows.
+            "org.hackeros.desktop",
             "org.hackeros.error-log-viewer",
             "org.hackeros.file-explorer",
             // ADR 0077: the static web server and its manager (companion service of the same assembly).
