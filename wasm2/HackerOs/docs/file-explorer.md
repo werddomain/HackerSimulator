@@ -21,9 +21,13 @@ le legacy (`src/apps/file-explorer.ts`) et la dépasse :
   notification), avec la raison par élément ; une erreur n'arrête pas les autres.
 - depuis `web/5-static-sites`, **« Publish as a web site… »** dans le menu d'un
   dossier : ouvre Web Server Manager avec ce dossier comme racine d'un nouveau
-  site ([`static-sites.md`](static-sites.md)). Depuis `desk/3`, la fenêtre
-  l'ajoute au menu de l'OS par `ContextMenuOpening`
-  (`FileExplorerMenuEntries`), en attendant les entrées inscrites du chantier 4.
+  site ([`static-sites.md`](static-sites.md)). Depuis `desk/4` (ADR 0159),
+  c'est une entrée **inscrite par Web Server Manager**, et « Extract here »
+  une entrée inscrite par l'explorateur (`[RegisterFileContextMenu]` de
+  `FileExplorerApp`, intent `org.hackeros.file-explorer.extract-here.v1` :
+  l'explorateur s'ouvre sur le dossier de l'archive et l'extrait) ; la fenêtre
+  n'ajoute plus rien par `ContextMenuOpening`. Voir
+  [`context-menu.md`](context-menu.md#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4).
 - depuis `desk/3-file-control` (ADR 0155), **l'explorateur fournit le contrôle
   de fichiers de l'OS** (`hackeros.file-view`) et ses dialogues
   (`hackeros.file-dialogs`), et s'en sert lui-même : voir la section suivante.
@@ -154,7 +158,7 @@ Après un collage d'éléments coupés sans échec, le presse-papiers est vidé.
 
 ### Archives en arrière-plan (ADR 0140)
 
-Compresser, Extraire et « UnZip Here… » passent par des tâches
+Compresser, Extraire et « Extract here » passent par des tâches
 `HackBackground` ([`background-jobs.md`](background-jobs.md)) :
 `FileExplorerZipService.CompressInBackgroundAsync` et `ExtractInBackgroundAsync`
 lancent les processus enfants `file-explorer:compress` et
@@ -313,6 +317,6 @@ l'app est traduit par `Resources/AppManifest.fr.resx`.
 - [x] `ExplorerFileView` : `FileView` liée au menu de l'OS (`FileViewMenuBinding`), commandes, corbeille, presse-papiers, transferts, ouverture.
 - [x] Menus du plan §7 (`ExplorerFileMenu`), « Ouvrir avec » en sous-menu.
 - [x] Dialogues fournis (`ExplorerFileDialogs`) par `IDialogService` et le proxy de la plateforme ; dialogues MudBlazor retirés.
-- [x] Fenêtre de l'explorateur sur `HackFileView` ; « UnZip Here… » et « Publish as a web site… » par `ContextMenuOpening`.
+- [x] Fenêtre de l'explorateur sur `HackFileView` ; « UnZip Here… » et « Publish as a web site… » par `ContextMenuOpening` (remplacés au chantier 4 par des entrées inscrites, ADR 0159).
 - [x] Éditeur de code sur `HackFileView` ([`code-editor.md`](code-editor.md)).
 - [x] Vue des dialogues Ouvrir / Enregistrer : chantier `desk/3b` ([ADR 0157](adr/0157-file-dialogs-show-the-file-control.md)).

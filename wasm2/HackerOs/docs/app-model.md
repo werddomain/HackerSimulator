@@ -33,6 +33,7 @@ Valeurs par défaut des membres facultatifs :
 | `LaunchVisibility` | `Visible` |
 | `Icons`, `Capabilities`, `FileHandlers`, `Dependencies`, `Intents`, `DeclaredTopicPermissions`, `Localizations`, `Assets` | liste vide |
 | `Terminal`, `MobileEntryPoint`, `Settings` | `null` |
+| `[RegisterFileContextMenu]` | aucune méthode ; `contextMenus` est alors omis du manifeste. Une méthode statique de la classe elle-même, exécutée deux fois au build, inscrit les entrées de l'app dans les menus des fichiers (ADR 0151, ADR 0159, [`context-menu.md`](context-menu.md#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4)) ; titres dans `Resources/AppManifest.resx` |
 | `Components` | liste vide ; `components` est alors omis du manifeste (ADR 0063, [`embedded-components.md`](embedded-components.md)) ; `hackeros.context-menu` est refusé (plateforme) ; `hackeros.file-view` et `hackeros.file-dialogs` sont ouverts à toute app fenêtrée, un administrateur choisit celle en service (ADR 0156, ADR 0158) |
 | `SingleInstancePerUser`, `AutoStart`, `SupportsBack` | `false` |
 | `ServiceStartup` | `null` (= `Login`) ; `serviceStartup` est alors omis du manifeste. `Boot` ne vaut que pour une app système de genre `Service` (ADR 0097 §4, ADR 0107) |

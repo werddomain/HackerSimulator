@@ -282,6 +282,10 @@ public sealed class SuperApp : AppDefinition
   entrées. Paramètres ▸ Applications liste les entrées de chaque app et
   permet de les masquer, dans `~/.config/hackeros/context-menus.config`
   (`[hidden]` `<appId>.<name>=true`).
+  *Mis en œuvre (ADR 0159) : la méthode tourne au build pour toutes les apps
+  (il n'y a pas d'installation de paquet à l'exécution), les titres viennent
+  de `Resources/AppManifest.resx`, et le réglage est l'onglet Paramètres ▸
+  Menus des fichiers.*
 - Le générateur vérifie : `name` unique, `parent` existant dans la même app
   et sans intent, profondeur ≤ 3, `after`/`afterGroup` qui visent un
   identifiant connu de l'OS ou de la même app, `target` valide.
@@ -374,4 +378,5 @@ documentation et l'index [`README.md`](README.md).
 - [x] Chantier 3 : contrôle de fichiers fourni par l'explorateur (`HackFileView`, `IHackFileView`, `ExplorerFileView` lié au menu de l'OS, menus du §7 avec « Ouvrir avec » en sous-menu, dialogues fournis par `IDialogService`, explorateur et éditeur de code migrés ; [ADR 0155](adr/0155-file-control-implementation-adjustments.md), [`file-explorer.md`](file-explorer.md)). La vue des dialogues Ouvrir / Enregistrer est le chantier `desk/3b`, séparé (choix de Benoit, ADR 0155 §6).
 - [x] Chantier 3b : les dialogues Ouvrir / Enregistrer / Choisir un dossier montrent le contrôle `hackeros.file-view` avec les droits de l'app qui demande (`FileDialogBrowser`, repli sur `VirtualFolderBrowser` sans fournisseur ; [ADR 0157](adr/0157-file-dialogs-show-the-file-control.md)).
 - [x] Chantier 3c : fournisseur du contrôle de fichiers remplaçable (contrats ouverts à toute app fenêtrée, `HOSAPP0025` retiré, `/etc/hackeros/components.config`, choix de l'administrateur après approbation, repli `component.fallback`, onglet « Composants de l'OS » ; [ADR 0156](adr/0156-replaceable-file-control-provider.md), [ADR 0158](adr/0158-replaceable-file-provider-implementation-adjustments.md)).
-- [ ] Chantiers 4 à 6.
+- [x] Chantier 4 : entrées inscrites par les apps (`[RegisterFileContextMenu]` exécutée au build pour toutes les apps, `contextMenus` du manifeste, `/etc/hackeros/context-menus.d` aligné au démarrage, filtres, placement, lancement par intent ou arguments, capacité `shell.context-menu`, `HOSAPP0026` à `HOSAPP0028`, Paramètres ▸ Menus des fichiers et `HackFileMenuEntries`, « Extraire ici » et « Publier comme site web… » inscrits ; [ADR 0159](adr/0159-app-menu-entries-implementation-adjustments.md), [`context-menu.md`](context-menu.md#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4)).
+- [ ] Chantiers 5 et 6.

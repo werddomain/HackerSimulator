@@ -45,7 +45,7 @@ Publier un dossier comme site web, comme avec IIS, Apache ou nginx :
 | `HackWebdApp`, `HackWebdService` | `Apps/System/HackerOs.Apps.WebServer` | Le service : réconciliation des écoutes, boucle d'acceptation, journaux. |
 | `StaticFileHandler`, `WwwDataAccess`, `HackWebdLog` | idem, `Daemon/` | Traitement d'une requête, droits de `www-data`, formats des journaux. |
 | `WebServerManagerApp`, `WebServerManagerWindow`, `WebSiteStore` | idem, `Manager/` | L'app à fenêtre et sa logique sans interface. |
-| `FileExplorerMenuEntries.PublishSite` | `Apps/System/HackerOs.Apps.FileExplorer` | Entrée de menu d'un dossier, ajoutée au menu de l'OS par la fenêtre de l'explorateur (ADR 0155 §7 ; entrée inscrite par Web Server Manager au chantier 4). Était `PublishSiteContextMenuProvider`. |
+| `WebServerManagerApp.RegisterFileContextMenu`, `PublishSiteIntent` | `Apps/System/HackerOs.Apps.WebServer` | Entrée « Publish as a web site… » des menus de dossiers, inscrite par Web Server Manager (ADR 0151 §8, ADR 0159) : portée `Directory`, un seul dossier, intent `org.hackeros.web-server-manager.publish-site.v1` reçu au lancement ou par `IntentReceived`. Était `PublishSiteContextMenuProvider`, puis `FileExplorerMenuEntries.PublishSite`. |
 | `HostedSiteNameSource` | `Platform/HackerOs.Platform.Core/Network/Local` | Source 4 du résolveur (`IHostedSiteNameSource`, asynchrone). |
 | `IAppLoggingGateway.AppendToLogFile`, `LogFileTarget.ForDaemon` | `Simulation.Abstractions`, `Platform.Core` | Journaux des démons système (ADR 0080 §3). |
 

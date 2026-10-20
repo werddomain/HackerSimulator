@@ -40,9 +40,10 @@ public sealed class FileMenuEntriesTests(ITestOutputHelper output)
             await E2ESupport.CreateLocalProfileAndReachDesktopAsync(page, output);
             await E2ESupport.OpenAppAsync(page, "File Explorer", output);
 
+            // Upload into the home folder once its listing is shown.
             ILocator addressInput = page.GetByLabel("Current path address");
-            await addressInput.FillAsync($"{E2ESupport.HomePath}/Documents");
-            await addressInput.PressAsync("Enter");
+            await Assertions.Expect(addressInput).ToHaveValueAsync(E2ESupport.HomePath, new() { Timeout = 15000 });
+            await page.Locator("tr.entry-row", new() { HasText = "Documents" }).WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 15000 });
             await page.Locator("#fileInput").SetInputFilesAsync(zipPath);
 
             ILocator zipRow = page.Locator("tr.entry-row", new() { HasText = folderName + ".zip" });
@@ -61,8 +62,9 @@ public sealed class FileMenuEntriesTests(ITestOutputHelper output)
 
             await items.Filter(new() { HasText = "Extract here" }).ClickAsync();
 
-            // The explorer is launched with the intent and extracts next to the archive.
-            ILocator folderRow = page.Locator("tr.entry-row", new() { HasText = folderName }).Filter(new() { HasNotText = ".zip" }).First;
+            // A second explorer window is launched with the intent, on the archive's folder, and
+            // extracts next to it; it opens on top, so its row is the last one.
+            ILocator folderRow = page.Locator("tr.entry-row", new() { HasText = folderName }).Filter(new() { HasNotText = ".zip" }).Last;
             await folderRow.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30000 });
             output.WriteLine($"[test] '{folderName}' was extracted.");
 

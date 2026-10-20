@@ -97,6 +97,12 @@ Le générateur de manifestes lit `Resources/AppManifest.<culture>.resx` :
 Dans un projet à plusieurs apps (les commandes), chaque clé est préfixée de
 l'id : `org.hackeros.commands.ls.Description`.
 
+Les titres des entrées de menu de fichiers (ADR 0159 §3) vivent aussi dans ces
+fichiers, mais à part : l'anglais dans le fichier **neutre**
+`Resources/AppManifest.resx` (obligatoire, `HOSAPP0026` sinon), les traductions
+dans `AppManifest.<culture>.resx`. Le générateur les copie dans `contextMenus`
+du manifeste (`titles`) et non dans `localization/<culture>.json`.
+
 Il écrit `localization/<culture>.json` (une app) ou
 `localization/<appId>/<culture>.json` (plusieurs apps), au format strict
 `{"name","description","terminalUsage"?}`, ajoute l'entrée
