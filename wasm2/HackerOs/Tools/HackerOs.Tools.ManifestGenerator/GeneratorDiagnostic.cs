@@ -104,12 +104,8 @@ public static class GeneratorCodes
     /// </summary>
     public const string NegativeOomScoreAdjust = "HOSAPP0024";
 
-    /// <summary>
-    /// Aggregation (ADR 0148, section 3.3): a non-system app registers a component for a contract
-    /// reserved to system apps (<c>hackeros.file-view</c>, <c>hackeros.file-dialogs</c>), so it could
-    /// stand in for the OS's own file view or dialogs.
-    /// </summary>
-    public const string ReservedComponentContract = "HOSAPP0025";
+    // HOSAPP0025 (a non-system app registering hackeros.file-view or hackeros.file-dialogs, ADR 0153
+    // §4) is retired: ADR 0156 opens both contracts to any window app. The code is not reused.
 
     /// <summary>The tool was called with invalid arguments.</summary>
     public const string InvalidArguments = "HOSAPP0090";

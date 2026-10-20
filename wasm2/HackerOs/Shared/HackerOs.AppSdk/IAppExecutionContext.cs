@@ -301,6 +301,13 @@ public interface IAppExecutionContext
     IAppUserAccountsGateway UserAccounts => UnsupportedAdministrationGateways.UserAccounts;
 
     /// <summary>
+    /// Gets this instance's gateway choosing which app provides the OS's file view and file dialogs,
+    /// behind <see cref="HackComponentProviders"/> (ADR 0156; capability <c>apps.manage</c> plus an
+    /// administrator). Defaults to an unsupported gateway; the trusted platform factory overrides it.
+    /// </summary>
+    IAppComponentProviderAdministrationGateway ComponentProviderAdministration => UnsupportedAdministrationGateways.ComponentProviders;
+
+    /// <summary>
     /// Gets this instance's ability to host interactive shells (<c>shell.host</c>, ADR 0056
     /// section 7), read by <see cref="Shell.HackShell"/>. Defaults to an unsupported gateway so
     /// existing <see cref="IAppExecutionContext"/> implementations that predate this member keep
@@ -399,6 +406,18 @@ public static class UnsupportedAdministrationGateways
 
     /// <summary>Unsupported <see cref="IAppUserAccountsGateway"/>.</summary>
     public static IAppUserAccountsGateway UserAccounts { get; } = new UnsupportedUserAccounts();
+
+    /// <summary>Unsupported <see cref="IAppComponentProviderAdministrationGateway"/>.</summary>
+    public static IAppComponentProviderAdministrationGateway ComponentProviders { get; } = new UnsupportedComponentProviders();
+
+    private sealed class UnsupportedComponentProviders : IAppComponentProviderAdministrationGateway
+    {
+        public ValueTask<IReadOnlyList<HackComponentContractInfo>> GetOverviewAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+
+        public ValueTask SetProviderAsync(IReadOnlyList<string> contracts, string? appId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException(Message);
+    }
 
     private sealed class UnsupportedUserAccounts : IAppUserAccountsGateway
     {

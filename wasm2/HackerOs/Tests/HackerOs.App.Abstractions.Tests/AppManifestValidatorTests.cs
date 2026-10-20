@@ -309,21 +309,18 @@ public sealed class AppManifestValidatorTests
     }
 
     [Theory]
-    [InlineData(AppComponentContracts.FileView, false, true)]
-    [InlineData(AppComponentContracts.FileDialogs, false, true)]
-    [InlineData(AppComponentContracts.FileView, true, false)]
-    [InlineData("hackeros.terminal", false, false)]
-    public void ValidateComponentProviders_keeps_reserved_contracts_to_system_apps(string contract, bool isSystemApp, bool refused)
+    [InlineData(AppComponentContracts.FileView)]
+    [InlineData(AppComponentContracts.FileDialogs)]
+    public void Validate_accepts_the_file_contracts_from_any_window_app(string contract)
     {
+        // ADR 0156 §1: the file view and the file dialogs are open; an administrator picks the provider.
         AppManifest manifest = CreateValidManifest() with
         {
             Components = [new AppComponentManifest(contract, "HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.Embed")]
         };
 
-        // The file contracts are well-formed for Validate: only the host knows whether the app is a system app.
         Assert.True(AppManifestValidator.Validate(manifest).IsValid);
-        IReadOnlyList<ManifestValidationError> errors = AppManifestValidator.ValidateComponentProviders(manifest, isSystemApp);
-        Assert.Equal(refused, errors.Any(error => error.Code == "manifest.component.contract.system"));
+        Assert.Equal(AppComponentProviderScope.AdministratorSelected, AppComponentContracts.GetProviderScope(contract));
     }
 
     [Fact]

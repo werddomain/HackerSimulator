@@ -81,7 +81,7 @@ Détails : [`app-model.md`](app-model.md).
 | `FileSystemUserHomeRead` / `Write` | `filesystem.user-home.read` / `.write` | normale | dossier personnel |
 | `FileSystemSystemRead` / `Write` | `filesystem.system.read` / `.write` | **dangereuse** | tout le reste (`/etc`, `/var`, `/proc`…) ; écrire `/etc`, `/bin`, `/var` exige aussi un administrateur |
 | `AppsLaunch` | `apps.launch` | normale | `HackApps.LaunchAsync`, `OpenFileAsync`, `EditFileAsync`, `RevealFileAsync`, `OpenUriAsync`, `SendIntentAsync` |
-| `AppsManage` | `apps.manage` | **dangereuse** | `HackAppManagement` |
+| `AppsManage` | `apps.manage` | **dangereuse** | `HackAppManagement`, `HackComponentProviders` |
 | `DialogFileOpen`, `DialogFileSave`, `DialogFolderSelect` | `dialogs.file-open`, `.file-save`, `.folder-select` | normale | dialogues de fichiers (fenêtres seulement) |
 | `FileAssociationsRead` | `file-associations.read` | normale | associations de fichiers ; avec `filesystem.user-home.write`, choix propre à l'utilisateur (ADR 0121) |
 | `FileAssociationsWrite` | `file-associations.write` | **dangereuse** | changer les associations de la machine |
@@ -302,6 +302,7 @@ les lit ici. Voir [`accessibility.md`](accessibility.md).
 | API | Membres | Capacité |
 |---|---|---|
 | `HackPermissionAdministration` | `GetPolicyAsync`, `SetPolicyAsync`, `GetOverviewAsync`, `SetMachineDecisionAsync`, `RemoveOwnDenialAsync` | `permissions.manage` |
+| `HackComponentProviders` | `GetOverviewAsync` (`HackComponentContractInfo`, `HackComponentProviderInfo`), `SetProviderAsync(contracts, appId)` : app qui fournit le contrôle de fichiers et ses dialogues pour toute la machine, `null` = explorateur ([`embedded-components.md`](embedded-components.md), ADR 0156) | `apps.manage` + administrateur (fenêtre d'approbation pour une app non système) |
 | `HackServerConnection` | `GetStateAsync`, `ConnectAsync`, `CreateAccountAsync`, `DisconnectAsync`, `SyncAsync`, `GetConflictsAsync`, `GetRelayPolicyAsync`, `ShowConflictsAsync`, `GetSyncStatusAsync` (`HackSyncStatus`), `SetSyncPausedAsync`, `SyncNowAsync` ([`synchronization.md`](synchronization.md)) | `server.connection.manage` |
 | `HackSystem` | `RebootAsync`, `FactoryResetAsync` | `system.power` + administrateur |
 | `HackStorageDiagnostics` | `GetSnapshotAsync`, `GetWebSiteDatabasesAsync`, `DeleteWebSiteDatabaseAsync` (bases `hackweb.*` des sites, ADR 0088 §4) | `system.storage.inspect` |

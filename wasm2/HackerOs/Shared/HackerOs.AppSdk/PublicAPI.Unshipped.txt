@@ -60,3 +60,33 @@ HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus.HackCrossOriginIsolat
 const HackerOs.AppSdk.Components.HackComponentContracts.ContextMenu = "hackeros.context-menu" -> string!
 const HackerOs.AppSdk.Components.HackComponentContracts.FileDialogs = "hackeros.file-dialogs" -> string!
 const HackerOs.AppSdk.Components.HackComponentContracts.FileView = "hackeros.file-view" -> string!
+HackerOs.AppSdk.Administration.HackComponentContractInfo
+HackerOs.AppSdk.Administration.HackComponentContractInfo.Contract.get -> string!
+HackerOs.AppSdk.Administration.HackComponentContractInfo.Contract.init -> void
+HackerOs.AppSdk.Administration.HackComponentContractInfo.DefaultAppId.get -> string?
+HackerOs.AppSdk.Administration.HackComponentContractInfo.DefaultAppId.init -> void
+HackerOs.AppSdk.Administration.HackComponentContractInfo.HackComponentContractInfo(string! Contract, string? SelectedAppId, string? DefaultAppId, System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackComponentProviderInfo!>! Providers) -> void
+HackerOs.AppSdk.Administration.HackComponentContractInfo.Providers.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackComponentProviderInfo!>!
+HackerOs.AppSdk.Administration.HackComponentContractInfo.Providers.init -> void
+HackerOs.AppSdk.Administration.HackComponentContractInfo.SelectedAppId.get -> string?
+HackerOs.AppSdk.Administration.HackComponentContractInfo.SelectedAppId.init -> void
+HackerOs.AppSdk.Administration.HackComponentProviderInfo
+HackerOs.AppSdk.Administration.HackComponentProviderInfo.AppId.get -> string!
+HackerOs.AppSdk.Administration.HackComponentProviderInfo.AppId.init -> void
+HackerOs.AppSdk.Administration.HackComponentProviderInfo.HackComponentProviderInfo(string! AppId, string! Name, bool IsSystemApp, bool IsInstalled) -> void
+HackerOs.AppSdk.Administration.HackComponentProviderInfo.IsInstalled.get -> bool
+HackerOs.AppSdk.Administration.HackComponentProviderInfo.IsInstalled.init -> void
+HackerOs.AppSdk.Administration.HackComponentProviderInfo.IsSystemApp.get -> bool
+HackerOs.AppSdk.Administration.HackComponentProviderInfo.IsSystemApp.init -> void
+HackerOs.AppSdk.Administration.HackComponentProviderInfo.Name.get -> string!
+HackerOs.AppSdk.Administration.HackComponentProviderInfo.Name.init -> void
+HackerOs.AppSdk.Administration.HackComponentProviders
+HackerOs.AppSdk.Administration.IAppComponentProviderAdministrationGateway
+HackerOs.AppSdk.Administration.IAppComponentProviderAdministrationGateway.GetOverviewAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackComponentContractInfo!>!>
+HackerOs.AppSdk.Administration.IAppComponentProviderAdministrationGateway.SetProviderAsync(System.Collections.Generic.IReadOnlyList<string!>! contracts, string? appId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+HackerOs.AppSdk.IAppExecutionContext.ComponentProviderAdministration.get -> HackerOs.AppSdk.Administration.IAppComponentProviderAdministrationGateway!
+static HackerOs.AppSdk.Administration.HackComponentProviders.GetOverviewAsync(HackerOs.AppSdk.IAppExecutionContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackComponentContractInfo!>!>!
+static HackerOs.AppSdk.Administration.HackComponentProviders.GetOverviewAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackComponentContractInfo!>!>!
+static HackerOs.AppSdk.Administration.HackComponentProviders.SetProviderAsync(HackerOs.AppSdk.IAppExecutionContext! context, System.Collections.Generic.IReadOnlyList<string!>! contracts, string? appId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.Administration.HackComponentProviders.SetProviderAsync(System.Collections.Generic.IReadOnlyList<string!>! contracts, string? appId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static HackerOs.AppSdk.UnsupportedAdministrationGateways.ComponentProviders.get -> HackerOs.AppSdk.Administration.IAppComponentProviderAdministrationGateway!
