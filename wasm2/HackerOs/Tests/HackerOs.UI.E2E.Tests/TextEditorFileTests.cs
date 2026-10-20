@@ -62,10 +62,15 @@ public sealed class TextEditorFileTests(ITestOutputHelper output)
             await openDialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
             output.WriteLine("[test] Open File dialog is visible.");
 
-            await openDialog.GetByRole(AriaRole.Option, new() { NameString = "Documents", Exact = false }).DblClickAsync();
-            await openDialog.GetByRole(AriaRole.Option, new() { NameString = TestDemoFixtureSeeder.FixtureRootName, Exact = false }).DblClickAsync();
+            // ADR 0157: the dialog shows the OS file control (the File Explorer's), as a table, under
+            // its own breadcrumb; the platform's fallback browser has neither.
+            await openDialog.Locator(".file-dialog-toolbar").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+            Assert.Equal(0, await openDialog.Locator(".folder-browser").CountAsync());
 
-            ILocator editableOption = openDialog.GetByRole(AriaRole.Option, new() { NameString = TestDemoFixtureSeeder.EditableFileName, Exact = false });
+            await openDialog.GetByRole(AriaRole.Row, new() { NameString = "Documents", Exact = false }).DblClickAsync();
+            await openDialog.GetByRole(AriaRole.Row, new() { NameString = TestDemoFixtureSeeder.FixtureRootName, Exact = false }).DblClickAsync();
+
+            ILocator editableOption = openDialog.GetByRole(AriaRole.Row, new() { NameString = TestDemoFixtureSeeder.EditableFileName, Exact = false });
             await editableOption.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
             await editableOption.ClickAsync();
 

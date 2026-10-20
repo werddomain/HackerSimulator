@@ -28,7 +28,7 @@ ADR de la section 10 sont écrits avant le code de chaque chantier.
 | Entrées ajoutées | « UnZip Here » et « Publish as a web site… », codées dans l'explorateur | `ZipFileContextMenuProvider`, `PublishSiteContextMenuProvider` |
 | « Ouvrir avec » | Boîte de l'explorateur (barre d'outils), « Toujours utiliser » | `OpenWithDialog`, ADR 0121 |
 | Composants intégrables | Contrat `hackeros.terminal` fourni par l'app Terminal, affiché par `HackEmbeddedComponent<T>` | ADR 0063, [`embedded-components.md`](embedded-components.md) |
-| Dialogues de l'OS | Contrats `IDialogService`/`IFileDialogService` dans le SDK, mis en œuvre par la plateforme (`VirtualFolderBrowser` pour Ouvrir/Enregistrer) | `HackerOs.AppSdk.Blazor`, `Platform.Blazor/Dialogs` |
+| Dialogues de l'OS | Contrats `IDialogService`/`IFileDialogService` dans le SDK, mis en œuvre par la plateforme (`VirtualFolderBrowser` pour Ouvrir/Enregistrer ; depuis `desk/3b`, le contrôle `hackeros.file-view`, ADR 0157) | `HackerOs.AppSdk.Blazor`, `Platform.Blazor/Dialogs` |
 | Bureau | `~/Desktop` créé pour chaque utilisateur ; emplacement `DesktopArea.BackgroundContent` prévu mais vide | `FileSystemSeeder`, `DesktopArea.razor` |
 | Intents | Intents définis par les apps, `IntentReceived` pour une instance ouverte | ADR 0096, [`app-intents.md`](app-intents.md) |
 
@@ -93,7 +93,7 @@ Explorateur de fichiers (app système)          Plateforme (shell)
 | Contrat | Contrôleur et composant du SDK | Fournisseur |
 |---|---|---|
 | `hackeros.file-view` | `IHackFileView`, `HackFileView` | Explorateur |
-| `hackeros.file-dialogs` | dialogues Ouvrir avec, Propriétés, conflit de noms, et la vue de fichiers des dialogues Ouvrir / Enregistrer / Choisir un dossier | Explorateur |
+| `hackeros.file-dialogs` | dialogues Ouvrir avec, Propriétés, conflit de noms, et la vue de fichiers des dialogues Ouvrir / Enregistrer / Choisir un dossier (finalement le contrôle `hackeros.file-view` dans le dialogue de la plateforme, [ADR 0157](adr/0157-file-dialogs-show-the-file-control.md)) | Explorateur |
 | `hackeros.context-menu` | `IHackContextMenu`, `HackContextMenu`, `Menus.Attach` | Plateforme |
 
 - **Fournisseur remplaçable.** Une app tierce peut fournir `hackeros.file-view`
@@ -372,4 +372,5 @@ documentation et l'index [`README.md`](README.md).
 - [x] Chantier 1 : hôte de contrats générique (`HackContractComponent<T>`, registre dans `AppCatalog`, contrats réservés et `HOSAPP0025`, fournisseurs de la plateforme, erreur au journal ; [ADR 0153](adr/0153-contract-host-implementation-adjustments.md), [`embedded-components.md`](embedded-components.md)).
 - [x] Chantier 2 : menu contextuel de l'OS (`HackContextMenu`, `Menus.Attach`/`Define`/`OpenAsync`, fournisseur de la plateforme, rendu natif multi-niveaux et feuille mobile, script du clic droit, de l'appui long, de la Touche Menu et de Maj+F10, clavier et ARIA ; [ADR 0154](adr/0154-context-menu-implementation-adjustments.md), [`context-menu.md`](context-menu.md)).
 - [x] Chantier 3 : contrôle de fichiers fourni par l'explorateur (`HackFileView`, `IHackFileView`, `ExplorerFileView` lié au menu de l'OS, menus du §7 avec « Ouvrir avec » en sous-menu, dialogues fournis par `IDialogService`, explorateur et éditeur de code migrés ; [ADR 0155](adr/0155-file-control-implementation-adjustments.md), [`file-explorer.md`](file-explorer.md)). La vue des dialogues Ouvrir / Enregistrer est le chantier `desk/3b`, séparé (choix de Benoit, ADR 0155 §6).
+- [x] Chantier 3b : les dialogues Ouvrir / Enregistrer / Choisir un dossier montrent le contrôle `hackeros.file-view` avec les droits de l'app qui demande (`FileDialogBrowser`, repli sur `VirtualFolderBrowser` sans fournisseur ; [ADR 0157](adr/0157-file-dialogs-show-the-file-control.md)).
 - [ ] Chantiers 4 à 6.

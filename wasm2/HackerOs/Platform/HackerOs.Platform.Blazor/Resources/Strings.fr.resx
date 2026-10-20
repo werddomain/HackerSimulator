@@ -243,6 +243,18 @@
   <data name="FileDialog.Title" xml:space="preserve">
     <value>Sélecteur de fichiers</value>
   </data>
+  <data name="FileDialog.Up" xml:space="preserve">
+    <value>Dossier parent</value>
+  </data>
+  <data name="FileDialog.View" xml:space="preserve">
+    <value>Affichage</value>
+  </data>
+  <data name="FileDialog.ViewDetails" xml:space="preserve">
+    <value>Détails</value>
+  </data>
+  <data name="FileDialog.ViewIcons" xml:space="preserve">
+    <value>Icônes</value>
+  </data>
   <data name="FolderBrowser.CurrentFolder" xml:space="preserve">
     <value>Dossier courant</value>
   </data>
