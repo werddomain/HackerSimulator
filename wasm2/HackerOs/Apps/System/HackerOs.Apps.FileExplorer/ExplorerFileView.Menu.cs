@@ -52,7 +52,8 @@ public sealed partial class ExplorerFileView
 
         VirtualPath directory = _view.CurrentDirectory;
         IReadOnlyList<HackFileViewItem> snapshots = [.. targets.Select(Snapshot)];
-        FileMenuScope scope = ExplorerFileMenu.ScopeOf(snapshots);
+        // ADR 0151, ADR 0160 §7: the background of a desktop is its own scope, for the apps' entries and the host.
+        FileMenuScope scope = snapshots.Count == 0 && IsDesktop ? FileMenuScope.Desktop : ExplorerFileMenu.ScopeOf(snapshots);
         IReadOnlyList<HackAppInfo> handlers = snapshots is [{ IsDirectory: false }] && Has(HackFileViewFeatures.OpenWith)
             ? await GetHandlersAsync(targets[0])
             : [];

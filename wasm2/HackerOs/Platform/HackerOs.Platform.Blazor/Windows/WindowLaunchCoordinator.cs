@@ -16,6 +16,7 @@ public sealed class WindowLaunchCoordinator
     private readonly Func<AppManifest, string> _title;
     private readonly WindowGeometryRecorder? _geometry;
     private readonly HashSet<WindowOwnerId> _presenting = [];
+    private readonly Dictionary<string, int> _shellSurfaces = new(StringComparer.Ordinal);
 
     /// <summary>Initializes the coordinator over the authoritative desktop window runtime.</summary>
     /// <param name="windows">The desktop window runtime.</param>
@@ -75,6 +76,54 @@ public sealed class WindowLaunchCoordinator
     }
 
     /// <summary>
+    /// Marks <paramref name="appId"/> as a shell surface (ADR 0160 §1): the shell draws it itself (the
+    /// desktop under the windows), so none of its processes is ever presented as a window, whoever
+    /// launched it. Reserved before the launch, so the process's <c>Running</c> state, which the shell
+    /// turns into a window, finds the reservation already there.
+    /// </summary>
+    /// <param name="appId">The app drawn by the shell.</param>
+    /// <returns>Disposing it releases the reservation.</returns>
+    public IDisposable ReserveShellSurface(string appId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(appId);
+        _shellSurfaces[appId] = _shellSurfaces.GetValueOrDefault(appId) + 1;
+        return new SurfaceReservation(this, appId);
+    }
+
+    /// <summary>Gets whether <paramref name="appId"/> is drawn by the shell rather than in a window.</summary>
+    /// <param name="appId">The app id.</param>
+    public bool IsShellSurface(string appId) => _shellSurfaces.ContainsKey(appId);
+
+    private void ReleaseShellSurface(string appId)
+    {
+        if (_shellSurfaces.TryGetValue(appId, out int count))
+        {
+            if (count <= 1)
+            {
+                _shellSurfaces.Remove(appId);
+            }
+            else
+            {
+                _shellSurfaces[appId] = count - 1;
+            }
+        }
+    }
+
+    private sealed class SurfaceReservation(WindowLaunchCoordinator owner, string appId) : IDisposable
+    {
+        private bool _released;
+
+        public void Dispose()
+        {
+            if (!_released)
+            {
+                _released = true;
+                owner.ReleaseShellSurface(appId);
+            }
+        }
+    }
+
+    /// <summary>
     /// Creates a desktop window for a newly launched process, or restores and focuses the
     /// existing window returned by a single-instance launch.
     /// </summary>
@@ -117,7 +166,7 @@ public sealed class WindowLaunchCoordinator
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(process);
 
-        if (manifest.Kind != AppKind.Window)
+        if (manifest.Kind != AppKind.Window || IsShellSurface(manifest.Id))
         {
             return false;
         }

@@ -651,4 +651,13 @@
   <data name="Dialog.FileDialogsUnavailable" xml:space="preserve">
     <value>Les boîtes de dialogue de fichiers de l’OS sont indisponibles.</value>
   </data>
+  <data name="Launcher.Menu.Open" xml:space="preserve">
+    <value>Ouvrir</value>
+  </data>
+  <data name="Launcher.Menu.SendTo" xml:space="preserve">
+    <value>Envoyer vers</value>
+  </data>
+  <data name="Launcher.Menu.Desktop" xml:space="preserve">
+    <value>Bureau (créer un raccourci)</value>
+  </data>
 </root>

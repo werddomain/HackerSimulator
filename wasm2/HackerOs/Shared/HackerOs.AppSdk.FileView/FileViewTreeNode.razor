@@ -7,7 +7,7 @@
     rename/context-menu handlers as FileViewDetails/FileViewIcons — a node doesn't know it's in a tree.
 *@
 <li role="treeitem" aria-level="@Depth" aria-selected="@(Node.Item.IsSelected ? "true" : "false")" aria-expanded="@AriaExpanded">
-    <div class="file-view-tree-row @(Node.Item.IsSelected ? "selected" : null) @(Node.Item.IsCut ? "cut" : null)"
+    <div class="file-view-tree-row @(Node.Item.IsSelected ? "selected" : null) @(Node.Item.IsCut ? "cut" : null) @(Node.Item.IsDimmed ? "dimmed" : null)"
          data-drop-target="@(Node.Item.IsDirectory && Owner.AllowDragDrop ? "true" : null)"
          data-item-path="@Node.Item.FullPath.Value"
          tabindex="@(IsTabStop() ? 0 : -1)"
@@ -47,7 +47,7 @@
         }
         else
         {
-            <span>@Node.Item.FileName</span>
+            <span>@Node.Item.Label</span>
         }
     </div>
     @if (Node.Item.IsDirectory && Node.IsExpanded && Node.Children is not null)

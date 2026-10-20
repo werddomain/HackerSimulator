@@ -31,6 +31,26 @@ public sealed class WindowLaunchCoordinatorTests
     }
 
     [Fact]
+    public async Task A_reserved_shell_surface_gets_no_window_until_the_reservation_ends()
+    {
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
+        WindowLaunchCoordinator coordinator = new(runtime);
+        AppManifest manifest = CreateManifest();
+
+        IDisposable first = coordinator.ReserveShellSurface(manifest.Id);
+        IDisposable second = coordinator.ReserveShellSurface(manifest.Id);
+        Assert.False(await coordinator.PresentAsync(manifest, CreateProcess()));
+        Assert.Empty(runtime.Windows);
+
+        first.Dispose();
+        first.Dispose();
+        Assert.True(coordinator.IsShellSurface(manifest.Id));
+        second.Dispose();
+        Assert.False(coordinator.IsShellSurface(manifest.Id));
+        Assert.True(await coordinator.PresentAsync(manifest, CreateProcess()));
+    }
+
+    [Fact]
     public async Task Present_restores_existing_singleton_window_without_duplicating_it()
     {
         WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));

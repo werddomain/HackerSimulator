@@ -1,8 +1,8 @@
 namespace HackerOs.AppSdk.FileView;
 
 /// <summary>
-/// Binds a <see cref="FileView"/> to the OS context menu (ADR 0150) instead of its own
-/// <c>MudMenu</c> (ADR 0155 §1). The File Explorer, provider of <c>hackeros.file-view</c>, cascades
+/// Binds a <see cref="FileView"/> to its provider, the File Explorer: the OS context menu (ADR 0150) instead of its own
+/// <c>MudMenu</c> (ADR 0155 §1), the decoration of shortcuts and the desktop mode (ADR 0160). The File Explorer, provider of <c>hackeros.file-view</c>, cascades
 /// one around the view: every row, tile, tree node and the background then carry the attributes of
 /// <c>Menus.Attach</c>, and the OS script opens the explorer's menu on them.
 /// </summary>
@@ -21,6 +21,15 @@ internal sealed class FileViewMenuBinding
 
     /// <summary>Gets or sets whether the Delete key and the delete commands may remove items.</summary>
     public bool AllowDelete { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets what decorates each item when the folder is read: the name and icon of a
+    /// <c>.desktop</c> shortcut, greyed when its app is missing (ADR 0160 §6). <see langword="null"/> leaves the items as listed.
+    /// </summary>
+    public Action<FileViewItem>? Decorate { get; set; }
+
+    /// <summary>Gets or sets the desktop mode's state and callbacks (ADR 0160); <see langword="null"/> outside the desktop.</summary>
+    public FileViewDesktopBinding? Desktop { get; set; }
 
     private static readonly IReadOnlyDictionary<string, object> Empty = new Dictionary<string, object>();
 }

@@ -1134,4 +1134,73 @@
   <data name="FileMenus.Scope.Desktop" xml:space="preserve">
     <value>Desktop</value>
   </data>
+  <data name="Tab.Desktop" xml:space="preserve">
+    <value>Desktop</value>
+  </data>
+  <data name="Desktop.Description" xml:space="preserve">
+    <value>The desktop shows the files of {0}. These options live in {1}; the desktop follows the file as soon as it changes.</value>
+  </data>
+  <data name="Desktop.IconSize.Title" xml:space="preserve">
+    <value>Icon size</value>
+  </data>
+  <data name="Desktop.IconSize.Small" xml:space="preserve">
+    <value>Small</value>
+  </data>
+  <data name="Desktop.IconSize.Medium" xml:space="preserve">
+    <value>Medium</value>
+  </data>
+  <data name="Desktop.IconSize.Large" xml:space="preserve">
+    <value>Large</value>
+  </data>
+  <data name="Desktop.Layout.Title" xml:space="preserve">
+    <value>Layout</value>
+  </data>
+  <data name="Desktop.Layout.Description" xml:space="preserve">
+    <value>Auto-arrange keeps the icons packed in columns; otherwise each icon stays where you drop it.</value>
+  </data>
+  <data name="Desktop.AutoArrange" xml:space="preserve">
+    <value>Auto-arrange icons</value>
+  </data>
+  <data name="Desktop.AlignToGrid" xml:space="preserve">
+    <value>Align icons to the grid</value>
+  </data>
+  <data name="Desktop.ShowHome" xml:space="preserve">
+    <value>Show the Home icon</value>
+  </data>
+  <data name="Desktop.ShowTrash" xml:space="preserve">
+    <value>Show the Trash icon</value>
+  </data>
+  <data name="Desktop.Sort.Title" xml:space="preserve">
+    <value>Sort</value>
+  </data>
+  <data name="Desktop.Sort.Description" xml:space="preserve">
+    <value>Sorting arranges the icons once in this order and forgets the positions you chose.</value>
+  </data>
+  <data name="Desktop.Sort.Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Desktop.Sort.Size" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="Desktop.Sort.Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Desktop.Sort.Date" xml:space="preserve">
+    <value>Date modified</value>
+  </data>
+  <data name="Desktop.ResetPositions" xml:space="preserve">
+    <value>Forget icon positions</value>
+  </data>
+  <data name="Desktop.Saved" xml:space="preserve">
+    <value>Saved. The desktop has been updated.</value>
+  </data>
+  <data name="Desktop.SaveFailed" xml:space="preserve">
+    <value>The desktop settings could not be saved: {0}</value>
+  </data>
+  <data name="Desktop.On" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="Desktop.Off" xml:space="preserve">
+    <value>Off</value>
+  </data>
 </root>

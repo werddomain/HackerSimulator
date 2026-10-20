@@ -18,6 +18,12 @@ HackerOs.Apps.FileExplorer.ExplorerFileView.ContextMenuOpening.set -> void
 HackerOs.Apps.FileExplorer.ExplorerFileView.CurrentDirectory.get -> string!
 HackerOs.Apps.FileExplorer.ExplorerFileView.Deleted.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.Blazor.Files.HackFileViewDeletedEventArgs!>
 HackerOs.Apps.FileExplorer.ExplorerFileView.Deleted.set -> void
+HackerOs.Apps.FileExplorer.ExplorerFileView.DesktopOptions.get -> HackerOs.AppSdk.Files.HackDesktopOptions?
+HackerOs.Apps.FileExplorer.ExplorerFileView.DesktopOptions.set -> void
+HackerOs.Apps.FileExplorer.ExplorerFileView.DesktopPositions.get -> System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.AppSdk.Files.HackDesktopCell>?
+HackerOs.Apps.FileExplorer.ExplorerFileView.DesktopPositions.set -> void
+HackerOs.Apps.FileExplorer.ExplorerFileView.DesktopPositionsChanged.get -> Microsoft.AspNetCore.Components.EventCallback<System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.AppSdk.Files.HackDesktopCell>!>
+HackerOs.Apps.FileExplorer.ExplorerFileView.DesktopPositionsChanged.set -> void
 HackerOs.Apps.FileExplorer.ExplorerFileView.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Apps.FileExplorer.ExplorerFileView.ErrorOccurred.get -> Microsoft.AspNetCore.Components.EventCallback<string!>
 HackerOs.Apps.FileExplorer.ExplorerFileView.ErrorOccurred.set -> void

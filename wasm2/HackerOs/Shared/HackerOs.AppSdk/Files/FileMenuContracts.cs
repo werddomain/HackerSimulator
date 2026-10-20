@@ -83,6 +83,9 @@ public static class HackFileMenuItems
 
     /// <summary>The desktop's "Background…" entry, which opens Settings (ADR 0152).</summary>
     public const string Background = "background";
+
+    /// <summary>"Empty Trash" in the menu of the desktop's Trash icon, after a confirmation (ADR 0152 §4).</summary>
+    public const string EmptyTrash = "empty-trash";
 }
 
 /// <summary>

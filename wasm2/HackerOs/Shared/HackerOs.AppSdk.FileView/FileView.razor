@@ -25,6 +25,10 @@
     {
         <FileViewIcons Owner="this" />
     }
+    else if (Mode == FileViewMode.Desktop && MenuBinding?.Desktop is not null)
+    {
+        <FileViewDesktop Owner="this" />
+    }
     else
     {
         <FileViewTree Owner="this" />

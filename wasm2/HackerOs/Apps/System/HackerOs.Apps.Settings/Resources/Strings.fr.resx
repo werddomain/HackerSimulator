@@ -1134,4 +1134,73 @@
   <data name="FileMenus.Scope.Desktop" xml:space="preserve">
     <value>Bureau</value>
   </data>
+  <data name="Tab.Desktop" xml:space="preserve">
+    <value>Bureau</value>
+  </data>
+  <data name="Desktop.Description" xml:space="preserve">
+    <value>Le bureau affiche les fichiers de {0}. Ces options sont rangées dans {1} ; le bureau suit le fichier dès qu'il change.</value>
+  </data>
+  <data name="Desktop.IconSize.Title" xml:space="preserve">
+    <value>Taille des icônes</value>
+  </data>
+  <data name="Desktop.IconSize.Small" xml:space="preserve">
+    <value>Petites</value>
+  </data>
+  <data name="Desktop.IconSize.Medium" xml:space="preserve">
+    <value>Moyennes</value>
+  </data>
+  <data name="Desktop.IconSize.Large" xml:space="preserve">
+    <value>Grandes</value>
+  </data>
+  <data name="Desktop.Layout.Title" xml:space="preserve">
+    <value>Disposition</value>
+  </data>
+  <data name="Desktop.Layout.Description" xml:space="preserve">
+    <value>La réorganisation automatique range les icônes en colonnes ; sinon, chaque icône reste où vous la déposez.</value>
+  </data>
+  <data name="Desktop.AutoArrange" xml:space="preserve">
+    <value>Réorganiser automatiquement les icônes</value>
+  </data>
+  <data name="Desktop.AlignToGrid" xml:space="preserve">
+    <value>Aligner les icônes sur la grille</value>
+  </data>
+  <data name="Desktop.ShowHome" xml:space="preserve">
+    <value>Afficher l'icône Dossier personnel</value>
+  </data>
+  <data name="Desktop.ShowTrash" xml:space="preserve">
+    <value>Afficher l'icône Corbeille</value>
+  </data>
+  <data name="Desktop.Sort.Title" xml:space="preserve">
+    <value>Trier</value>
+  </data>
+  <data name="Desktop.Sort.Description" xml:space="preserve">
+    <value>Trier range une fois les icônes dans cet ordre et oublie les positions choisies.</value>
+  </data>
+  <data name="Desktop.Sort.Name" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="Desktop.Sort.Size" xml:space="preserve">
+    <value>Taille</value>
+  </data>
+  <data name="Desktop.Sort.Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Desktop.Sort.Date" xml:space="preserve">
+    <value>Date de modification</value>
+  </data>
+  <data name="Desktop.ResetPositions" xml:space="preserve">
+    <value>Oublier les positions des icônes</value>
+  </data>
+  <data name="Desktop.Saved" xml:space="preserve">
+    <value>Enregistré. Le bureau a été mis à jour.</value>
+  </data>
+  <data name="Desktop.SaveFailed" xml:space="preserve">
+    <value>Impossible d'enregistrer les réglages du bureau : {0}</value>
+  </data>
+  <data name="Desktop.On" xml:space="preserve">
+    <value>Activé</value>
+  </data>
+  <data name="Desktop.Off" xml:space="preserve">
+    <value>Désactivé</value>
+  </data>
 </root>

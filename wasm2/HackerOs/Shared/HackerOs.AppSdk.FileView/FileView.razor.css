@@ -22,3 +22,15 @@
 .file-view ::deep .cut {
     opacity: 0.45;
 }
+
+/* A shortcut to an app that is not installed (ADR 0152 §5): greyed, still selectable. */
+.file-view ::deep .dimmed {
+    opacity: 0.5;
+    filter: grayscale(1);
+}
+
+/* The desktop (ADR 0160): no scrollbars, the theme's wallpaper shows through. */
+.file-view[data-mode="Desktop"] {
+    overflow: hidden;
+    background: transparent;
+}

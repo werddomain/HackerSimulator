@@ -167,6 +167,7 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `HackWriteOptions` | `ExpectedRevision` (concurrence optimiste), `CreateMode` | [`hack-file-api.md`](hack-file-api.md) |
 | `HackFileSystemWatcher` | `Created`, `Changed`, `Deleted`, `Renamed`, `Error`, `Filter`, `IncludeSubdirectories`, `StartAsync` | [`hack-file-api.md`](hack-file-api.md) |
 | `HackTrash` | `MoveToTrashAsync`, `GetItemsAsync`, `RestoreAsync`, `DeleteAsync`, `EmptyAsync`, `TrashDirectory` | [`trash.md`](trash.md) |
+| `HackDesktopLayout`, `HackDesktopCell`, `HackDesktopOptions`, `HackDesktopItems`, `HackDesktopEntry`, `HackDesktopSettings` (`.Files`) | Grille du bureau en fonctions pures (`Order`, `Arrange`, `Move`, `CellAtPoint`, `GridSize`), raccourcis `.desktop` (`TryParse`, `Format`, `CreateShortcutAsync`), `~/.config/hackeros/desktop.config` (`ReadAsync`, `SaveOptionsAsync`, `SavePositionsAsync`) ; SDK 2.0 (ADR 0160) | [`desktop.md`](desktop.md) |
 | `HackTextContent` | `TryDecode`, `TryReadAsync` (texte ou binaire, comme `file`) | [`text-editor.md`](text-editor.md) |
 | `HackRecoveryDraft` | `Open(name)`, `SaveAsync`, `TryReadAsync`, `TakeAsync`, `DeleteAsync` : brouillon de travail non enregistré dans `~/.local/state/<appId>/recovery/` (ADR 0069) | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
 | `HackDriveInfo` | `GetDrivesAsync` : taille et espace libre (comme `df`) | [`system-metrics.md`](system-metrics.md) |
@@ -216,6 +217,7 @@ porte le code du moteur, et `ShellErrorText.Describe` donne le message Linux.
 | API | Membres | Capacité | Document |
 |---|---|---|---|
 | `HackApps` | `GetInstalledAsync`, `GetHandlersAsync(path)`, `LaunchAsync(appId, args)`, `OpenFileAsync(path)`, `EditFileAsync(path)`, `RevealFileAsync(path)`, `OpenUriAsync(uri, appId)`, `ShowSettingsAsync(appId)`, `SendIntentAsync(intentId, payloadJson, targetAppId, rememberChoice)`, `GetDefaultHandlersAsync()`, `SetDefaultHandlerAsync(target, appId, action)`, `ResetDefaultHandlerAsync(target, action)` (ADR 0121), `Changed` ; `HackFileAssociation`, `HackFileAssociationLayer`, `HackDefaultHandlerStatus`, `HackAppInfo` (avec `Capabilities`), `HackOpenFileResult` (`FellBackToOpen`), `HackIntentResult` (`HackIntentStatus`), `HackAppLaunchException` | lecture et `ShowSettingsAsync` : aucune ; défauts : `file-associations.read` (et `filesystem.user-home.write` pour écrire) ; le reste : `apps.launch` | [`app-sdk.md`](app-sdk.md#catalogue-des-apps-adr-0056-2), [`app-intents.md`](app-intents.md), [`user-file-associations.md`](user-file-associations.md) |
+| `HackAppIcons` | `LucideName(appId, category)` : icône Lucide d'une app, celle du menu Démarrer et des raccourcis ; SDK 2.0 (ADR 0160) | aucune | [`desktop.md`](desktop.md) |
 | `HackBrowser` | `OpenAsync(url)`, `OpenDetachedAsync(url)` (fenêtre détachée, ADR 0078) ; `AppId`, `DetachedArgument` (`--detached`) | `apps.launch` | [`detached-display-windows.md`](detached-display-windows.md) |
 | `HackAppManagement` | `GetAllAsync`, `UninstallAsync`, `ReinstallAsync` ; `HackInstallScope`, `HackAppInstallState` | `apps.manage` | [`app-installation.md`](app-installation.md) |
 

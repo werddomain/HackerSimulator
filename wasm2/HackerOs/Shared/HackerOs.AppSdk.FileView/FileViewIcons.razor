@@ -22,7 +22,7 @@
              @key="item.FullPath.Value"
              data-item-path="@item.FullPath.Value"
              aria-selected="@(item.IsSelected ? "true" : "false")"
-             class="file-view-tile @(item.IsSelected ? "selected" : null) @(item.IsCut ? "cut" : null)"
+             class="file-view-tile @(item.IsSelected ? "selected" : null) @(item.IsCut ? "cut" : null) @(item.IsDimmed ? "dimmed" : null)"
              data-drop-target="@(item.IsDirectory && Owner.AllowDragDrop ? "true" : null)"
              tabindex="@(IsTabStop(item) ? 0 : -1)"
              draggable="@(Owner.AllowDragDrop ? "true" : "false")"
@@ -52,7 +52,7 @@
             }
             else
             {
-                <span class="file-view-tile-label">@item.FileName</span>
+                <span class="file-view-tile-label">@item.Label</span>
             }
         </div>
     }

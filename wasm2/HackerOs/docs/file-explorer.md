@@ -80,6 +80,20 @@ Nouveau dossier et Renommer. Un fichier activé y est pris par le dialogue
 (`Opening` mis à `Handled`), pas ouvert dans son app. Sans fournisseur, la
 plateforme reprend sa liste `VirtualFolderBrowser`.
 
+### Mode Bureau et raccourcis (`desk/5`, ADR 0160)
+
+`ExplorerFileView` fournit aussi le mode `Desktop` du contrôle, que l'app
+Bureau affiche sur `~/Desktop` (voir [`desktop.md`](desktop.md)) : la grille
+`FileViewDesktop`, les icônes Dossier perso et Corbeille avec leurs menus
+(Ouvrir, Vider la corbeille, Propriétés) et leurs dépôts, et la Corbeille
+pleine ou vide selon `~/.local/share/Trash/files`. Ouvrir un dossier du bureau
+ouvre une fenêtre de l'explorateur ; l'argument `trash:///` ouvre la fenêtre
+sur la vue Corbeille.
+
+Dans tous les modes, un fichier `.desktop` valide s'affiche avec le nom et
+l'icône de son app (grisé si l'app manque) et l'ouvrir lance l'app ; déposer
+une app glissée du menu Démarrer crée un raccourci dans le dossier visé.
+
 ## Architecture
 
 Depuis `desk/3`, ce schéma est celui du fournisseur `ExplorerFileView`, que la

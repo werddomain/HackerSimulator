@@ -155,6 +155,7 @@ public sealed partial class ExplorerFileView : IHackFileView
     {
         HackFileViewMode.Icons => FileViewMode.Icons,
         HackFileViewMode.Tree => FileViewMode.Tree,
+        HackFileViewMode.Desktop => FileViewMode.Desktop,
         _ => FileViewMode.Details
     };
 
@@ -273,6 +274,7 @@ public sealed partial class ExplorerFileView : IHackFileView
 
         _binding.AllowRename = Has(HackFileViewFeatures.Rename);
         _binding.AllowDelete = Has(HackFileViewFeatures.Delete);
+        ConfigureDesktop();
     }
 
     /// <inheritdoc />
@@ -313,6 +315,8 @@ public sealed partial class ExplorerFileView : IHackFileView
             }
         }
 
+        await StartDesktopAsync();
+
         if (!_controllerSent && _view is not null)
         {
             _controllerSent = true;
@@ -322,7 +326,7 @@ public sealed partial class ExplorerFileView : IHackFileView
     }
 
     /// <inheritdoc />
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         Unsubscribe();
         _menu?.Dispose();
@@ -332,7 +336,7 @@ public sealed partial class ExplorerFileView : IHackFileView
             _subscribedToClipboard = false;
         }
 
-        return ValueTask.CompletedTask;
+        await StopDesktopAsync();
     }
 
     private void Unsubscribe()
@@ -394,14 +398,32 @@ public sealed partial class ExplorerFileView : IHackFileView
     {
         FileViewMode.Icons => HackFileViewMode.Icons,
         FileViewMode.Tree => HackFileViewMode.Tree,
+        FileViewMode.Desktop => HackFileViewMode.Desktop,
         _ => HackFileViewMode.Details
     });
 
-    /// <summary>A folder activated: the host may handle it (a desktop opens a window), else the view enters it.</summary>
+    /// <summary>
+    /// A folder activated: the host may handle it; on a desktop it opens in a new explorer window
+    /// (ADR 0160 §7); elsewhere the view enters it.
+    /// </summary>
     private async Task ActivateFolderAsync(FileViewItem item)
     {
         if (await RaiseOpeningAsync(item))
         {
+            return;
+        }
+
+        if (IsDesktop)
+        {
+            try
+            {
+                await HostContext.Intents.OpenFileAsync(item.FullPath, "inode/directory", HostContext.CancellationToken);
+            }
+            catch (Exception exception) when (exception is AppGatewayAccessDeniedException or NotSupportedException)
+            {
+                await ReportErrorAsync(L["Error.OpenDenied"]);
+            }
+
             return;
         }
 

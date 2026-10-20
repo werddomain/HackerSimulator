@@ -1,5 +1,6 @@
 using HackerOs.AppSdk.Blazor.Components;
 using HackerOs.AppSdk.Components;
+using HackerOs.AppSdk.Files;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using Microsoft.AspNetCore.Components;
 
@@ -95,6 +96,31 @@ public sealed class HackFileView : HackContractComponent<IHackFileView>
     [Parameter]
     public FileSystemSelectedResourceHandle? SelectedResource { get; set; }
 
+    /// <summary>
+    /// Gets or sets the <c>[view]</c> options of <see cref="HackFileViewMode.Desktop"/> (ADR 0160 §2):
+    /// icon size, auto-arrange, alignment, sort, system icons. <see langword="null"/> uses
+    /// <see cref="HackDesktopOptions.Default"/>. Ignored by the other modes.
+    /// </summary>
+    [Parameter]
+    public HackDesktopOptions? DesktopOptions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the cell of each item in <see cref="HackFileViewMode.Desktop"/>, by file name
+    /// (<see cref="HackDesktopItems.Home"/> and <see cref="HackDesktopItems.Trash"/> for the system
+    /// icons): the <c>[positions]</c> of <c>desktop.config</c>. The host owns the file; the control
+    /// places the items with <see cref="HackDesktopLayout"/>.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyDictionary<string, HackDesktopCell>? DesktopPositions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback told the positions to save in <see cref="HackFileViewMode.Desktop"/>:
+    /// after the user moved icons, and when new items took a cell. The host writes them and passes
+    /// them back through <see cref="DesktopPositions"/>.
+    /// </summary>
+    [Parameter]
+    public EventCallback<IReadOnlyDictionary<string, HackDesktopCell>> DesktopPositionsChanged { get; set; }
+
     /// <inheritdoc />
     protected override string Contract => HackComponentContracts.FileView;
 
@@ -115,5 +141,8 @@ public sealed class HackFileView : HackContractComponent<IHackFileView>
         parameters[nameof(ContextMenuOpening)] = ContextMenuOpening;
         parameters[nameof(ErrorOccurred)] = ErrorOccurred;
         parameters[nameof(SelectedResource)] = SelectedResource;
+        parameters[nameof(DesktopOptions)] = DesktopOptions;
+        parameters[nameof(DesktopPositions)] = DesktopPositions;
+        parameters[nameof(DesktopPositionsChanged)] = DesktopPositionsChanged;
     }
 }

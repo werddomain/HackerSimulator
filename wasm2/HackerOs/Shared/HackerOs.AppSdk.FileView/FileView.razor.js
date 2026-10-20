@@ -18,6 +18,11 @@ const hostFileStore = new Map();
 let nextToken = 1;
 let lastDrop = null;
 
+// An app dragged from the Start menu (ADR 0160 §6): dropped on a folder, it becomes a .desktop shortcut.
+const appMimeType = 'application/vnd.hackeros.app+json';
+// A desktop icon moved on its own desktop (ADR 0160 §3): the desktop places it, nothing is transferred.
+const desktopItemMimeType = 'application/vnd.hackeros.desktop-item+json';
+
 export function setDragData(mimeType, json) {
     const event = window.event;
     if (!event || !event.dataTransfer) {
@@ -29,9 +34,25 @@ export function setDragData(mimeType, json) {
     return true;
 }
 
+// Several payloads in one call, while dragstart is still being dispatched: a desktop drag carries the
+// files (for other windows) and the icon keys (for its own desktop).
+export function setDragDataMany(data) {
+    const event = window.event;
+    if (!event || !event.dataTransfer) {
+        return false;
+    }
+
+    event.dataTransfer.effectAllowed = 'copyMove';
+    for (const [mimeType, json] of Object.entries(data)) {
+        event.dataTransfer.setData(mimeType, json);
+    }
+
+    return true;
+}
+
 export function getDragData(mimeType) {
-    if (lastDrop && lastDrop.mimeType === mimeType && performance.now() - lastDrop.at < 5000) {
-        return lastDrop.json;
+    if (lastDrop && lastDrop.data && performance.now() - lastDrop.at < 5000 && mimeType in lastDrop.data) {
+        return lastDrop.data[mimeType];
     }
 
     const event = window.event;
@@ -91,9 +112,11 @@ export function attachDropZone(element, mimeType) {
         }
 
         const types = Array.from(transfer.types || []);
-        if (types.includes(mimeType)) {
+        if (types.includes(desktopItemMimeType)) {
+            transfer.dropEffect = 'move';
+        } else if (types.includes(mimeType)) {
             transfer.dropEffect = e.ctrlKey ? 'copy' : 'move';
-        } else if (types.includes('Files')) {
+        } else if (types.includes('Files') || types.includes(appMimeType)) {
             transfer.dropEffect = 'copy';
         } else {
             return;
@@ -117,11 +140,15 @@ export function attachDropZone(element, mimeType) {
             return;
         }
 
-        const json = transfer.getData(mimeType);
+        const data = {};
+        for (const type of [mimeType, appMimeType, desktopItemMimeType]) {
+            const value = transfer.getData(type);
+            data[type] = value ? value : null;
+        }
+
         lastDrop = {
-            mimeType,
             at: performance.now(),
-            json: json ? json : null,
+            data,
             files: Array.from(transfer.files || [])
         };
     };
@@ -184,7 +211,7 @@ export function attachPasteTarget(element, callbacks) {
         const files = Array.from((e.clipboardData && e.clipboardData.files) || []);
         const hostFiles = files.length > 0 && e.hackerOsHostFiles !== false;
         if (hostFiles) {
-            lastDrop = { mimeType: null, at: performance.now(), json: null, files };
+            lastDrop = { at: performance.now(), data: {}, files };
         }
 
         callbacks.invokeMethodAsync('OnPasteShortcutAsync', hostFiles);

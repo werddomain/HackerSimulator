@@ -229,6 +229,15 @@ ouvre garde donc son focus). Mouvement réduit : pas d'animation.
 - L'ordre des entrées du markup est celui de leur premier rendu (voir
   `IsVisible` plus haut).
 
+### Menus du bureau et du menu Démarrer (chantier 5)
+
+Le fond du bureau a la portée `Desktop` ; l'app Bureau y ajoute
+« Affichage ▸ », « Trier par ▸ », « Arrière-plan… » et « Paramètres du
+bureau… ». Le menu Démarrer porte un menu de la coquille,
+`hackeros.start-menu.app`, sur chaque app : Ouvrir, Épingler / Désépingler,
+« Envoyer vers ▸ Bureau (créer un raccourci) ». Détails :
+[`desktop.md`](desktop.md#menus).
+
 ## Entrées des apps dans les menus des fichiers (chantier 4)
 
 Décisions : [ADR 0151](adr/0151-app-registered-file-menu-entries.md) ;

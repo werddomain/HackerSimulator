@@ -1,4 +1,5 @@
 #nullable enable
+const HackerOs.Platform.Blazor.Shell.DesktopSurfaceHost.DesktopAppId = "org.hackeros.desktop" -> string!
 HackerOs.Platform.Blazor.Components.HackComponentHost.HackComponentHost(HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry! enablement, System.Func<string!, System.Threading.CancellationToken, System.Threading.Tasks.Task<(HackerOs.Platform.Core.Discovery.AppDescriptor? Descriptor, string? Error)>!>! descriptors, System.Collections.Generic.IEnumerable<HackerOs.Platform.Blazor.Components.HackPlatformComponent!>? platformComponents, System.Action<string!>? reportError) -> void
 HackerOs.Platform.Blazor.Components.HackPlatformComponent
 HackerOs.Platform.Blazor.Components.HackPlatformComponent.ComponentType.get -> System.Type!
@@ -130,6 +131,16 @@ HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Dialog.init -> v
 HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.ProvidedFileDialogPresentation(System.Guid Id, string! AppId, System.Guid AppInstanceId, HackerOs.Simulation.Abstractions.Processes.ProcessId ProcessId, string! UserId, string! Dialog, object! Request, HackerOs.AppSdk.IAppExecutionContext! Context) -> void
 HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Request.get -> object!
 HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Request.init -> void
+HackerOs.Platform.Blazor.Shell.AppLauncher.OnAppDragEnded(bool dropped) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.Shell.AppLauncher.OnSendToDesktop.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.App.Abstractions.AppManifest!>
+HackerOs.Platform.Blazor.Shell.AppLauncher.OnSendToDesktop.set -> void
+HackerOs.Platform.Blazor.Shell.DesktopSurfaceHost
+HackerOs.Platform.Blazor.Shell.DesktopSurfaceHost.CreateShortcutAsync(string! appId) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.Shell.DesktopSurfaceHost.DesktopSurfaceHost() -> void
+HackerOs.Platform.Blazor.Shell.DesktopSurfaceHost.Dispose() -> void
+HackerOs.Platform.Blazor.Shell.DesktopSurfaceHost.ProcessId.get -> HackerOs.Simulation.Abstractions.Processes.ProcessId?
+HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.IsShellSurface(string! appId) -> bool
+HackerOs.Platform.Blazor.Windows.WindowLaunchCoordinator.ReserveShellSurface(string! appId) -> System.IDisposable!
 static HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout.Arrange(System.Collections.Generic.IEnumerable<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroupDefinition!>! groups) -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel?
 static HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout.FindByLetter(HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! level, int from, char letter) -> int
 static HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout.NextSelectable(HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! level, int from, int direction) -> int
@@ -180,3 +191,5 @@ HackerOs.Platform.Blazor.Components.HackComponentHost.ReportWarning.get -> Syste
 HackerOs.Platform.Blazor.Components.HackComponentHost.ReportWarning.init -> void
 HackerOs.Platform.Blazor.Components.HackComponentHost.Selection.get -> HackerOs.Platform.Core.ComponentProviders.IComponentProviderSelection?
 HackerOs.Platform.Blazor.Components.HackComponentHost.Selection.init -> void
+HackerOs.Platform.Blazor.Shell.DesktopShell.ShowDesktopIcons.get -> bool
+HackerOs.Platform.Blazor.Shell.DesktopShell.ShowDesktopIcons.set -> void

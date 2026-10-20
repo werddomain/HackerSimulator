@@ -14,5 +14,11 @@ public enum FileViewMode
     Details,
 
     /// <summary>Wrapping grid of icon tiles.</summary>
-    Icons
+    Icons,
+
+    /// <summary>
+    /// The desktop grid (ADR 0152 §2, ADR 0160): one icon per cell, kept where the user put it, with
+    /// the Home and Trash system icons. Only drawn with the File Explorer's desktop binding.
+    /// </summary>
+    Desktop
 }

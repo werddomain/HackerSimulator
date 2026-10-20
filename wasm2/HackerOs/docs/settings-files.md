@@ -34,6 +34,7 @@ migration, en lecture seule.
 | Partage du presse-papiers avec l'hôte (clé `sharing`, ADR 0065, voir [`clipboard.md`](clipboard.md)) | `/etc/hackeros/clipboard.config` | `~/.config/hackeros/clipboard.config` |
 | Synchro périodique (ADR 0101 §4, voir [`synchronization.md`](synchronization.md)) | `/etc/hackeros/sync.config` (`intervalMinutes`, lu seulement ici) | `~/.config/hackeros/sync.config` (`paused`) |
 | Conflits de synchro en attente (ADR 0101 §2) | aucune | `~/.local/state/hackeros/sync-conflicts.json` |
+| Bureau (`[view]` taille, réorganisation, tri, icônes système ; `[positions]` case de chaque icône ; lu et écrit par `HackDesktopSettings`, sans schéma ; ADR 0152, 0160, voir [`desktop.md`](desktop.md)) | aucune | `~/.config/hackeros/desktop.config` |
 
 `~/.local/state/` contient l'état propre à l'appareil : la synchronisation du
 système de fichiers l'ignore (`IFileSystemSyncService.IsDeviceLocal`).

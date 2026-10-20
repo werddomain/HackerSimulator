@@ -16,7 +16,7 @@ public sealed class BuildKnownLazyAppsTests
         // ausearch with ADR 0100, xdg-open with ADR 0096, hackbackup with ADR 0099, localectl with ADR 0104,
         // xdg-mime with ADR 0121, passwd with ADR 0120, prlimit with ADR 0125, nice and renice with ADR 0127, dmesg with ADR 0126), plus sample-cmd, the third-party command the worker
         // pool loads on demand (ADR 0124 §4).
-        Assert.Equal(92, catalog.Manifests.Count);
+        Assert.Equal(93, catalog.Manifests.Count);
         // ADR 0064: the Linux commands added with the POSIX shell.
         foreach (string command in new[] { "locate", "zip", "unzip", "cut", "tee", "whoami", "df", "du", "top", "htop", "systemctl", "watch", "jobs", "wget", "ip", "netstat", "ln", "test", "read", "stress", "nslookup", "ausearch", "xdg-open", "localectl", "xdg-mime", "prlimit", "dmesg" })
         {
@@ -49,13 +49,16 @@ public sealed class BuildKnownLazyAppsTests
         // Window apps (the launcher-visible desktop suite) stay Visible; terminal commands and
         // background daemons (hackwebd, ADR 0077) and web sites (started on demand by a request,
         // ADR 0073; the sample Blazor site, ADR 0084) are deliberately Hidden — they're invoked by
-        // name or started at boot, not double-clicked from a launcher, and shouldn't clutter it.
+        // name or started at boot, not double-clicked from a launcher, and shouldn't clutter it. The
+        // desktop (ADR 0160 §1) is a window app the shell draws under the windows: hidden too.
         Assert.All(catalog.Manifests.Values, manifest => Assert.Equal(
-            manifest.Kind is AppKind.Terminal or AppKind.Service or AppKind.Web ? AppLaunchVisibility.Hidden : AppLaunchVisibility.Visible,
+            manifest.Kind is AppKind.Terminal or AppKind.Service or AppKind.Web || manifest.Id == "org.hackeros.desktop"
+                ? AppLaunchVisibility.Hidden
+                : AppLaunchVisibility.Visible,
             manifest.Presentation.LaunchVisibility));
-        // One assembly per window app, the two sample sites, the sample command (ADR 0124), plus the
+        // One assembly per window app (the desktop included, ADR 0160), the two sample sites, the sample command (ADR 0124), plus the
         // single HackerOs.Commands assembly (ADR 0051).
-        Assert.Equal(18, BuildKnownLazyAssemblies.Names.Count);
+        Assert.Equal(19, BuildKnownLazyAssemblies.Names.Count);
         Assert.Contains("HackerOs.Samples.TerminalApp.dll", BuildKnownLazyAssemblies.Names);
         Assert.Contains("HackerOs.Samples.BlazorSite.dll", BuildKnownLazyAssemblies.Names);
         Assert.Contains("HackerOs.Samples.Intranet.dll", BuildKnownLazyAssemblies.Names);
@@ -99,6 +102,8 @@ public sealed class BuildKnownLazyAppsTests
         [
             // ADR 0056 §7: its terminal panel hosts a shell (shell.host) without an approval prompt.
             "org.hackeros.code-editor",
+            // ADR 0160 §1: the desktop, started by the shell under the windows.
+            "org.hackeros.desktop",
             "org.hackeros.error-log-viewer",
             "org.hackeros.file-explorer",
             // ADR 0077: the static web server and its manager (companion service of the same assembly).
