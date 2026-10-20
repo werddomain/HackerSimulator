@@ -43,7 +43,7 @@ DesktopShell ──► DesktopArea.BackgroundContent (BackgroundInteractive)
 | `DesktopSurfaceHost` | `Platform.Blazor` (`Shell/`) | Réserve l'app comme surface de la coquille (`WindowLaunchCoordinator.ReserveShellSurface`), la lance pour l'utilisateur de la session, rend son composant d'entrée hors fenêtre avec le contexte d'app et une portée de menus, la relance une fois si elle plante. `CreateShortcutAsync(appId)` envoie l'intent de raccourci. |
 | `DesktopArea.BackgroundInteractive` | `Windowing.Blazor` | Rend la couche de fond cliquable et lisible ; la couche des fenêtres laisse passer le pointeur hors des fenêtres. |
 | App **Bureau** (`org.hackeros.desktop`) | `Apps/System/HackerOs.Apps.Desktop` | App système cachée, à instance unique, SDK public seulement. Crée `~/Desktop` s'il manque, lit et écrit `desktop.config`, suit `~/.config/hackeros`, complète le menu du fond, reçoit l'intent de raccourci. |
-| `FileViewDesktop` | `AppSdk.FileView` | Le mode Bureau du contrôle interne : grille mesurée (`ResizeObserver`), sélection, lasso, clavier, glisser-déposer, icônes système. Script collocalisé `FileViewDesktop.razor.js`. |
+| `FileViewDesktop` | explorateur, `FileControl/` (`AppSdk.FileView` avant le SDK 2.0) | Le mode Bureau du contrôle interne : grille mesurée (`ResizeObserver`), sélection, lasso, clavier, glisser-déposer, icônes système. Script collocalisé `FileViewDesktop.razor.js`. |
 | `ExplorerFileView` (`ExplorerFileView.Desktop.cs`) | `Apps.FileExplorer` | Le fournisseur : menus et actions de Dossier perso et Corbeille, état plein ou vide de la Corbeille, décor des raccourcis (nom et icône de l'app, grisé si l'app manque), lancement d'un raccourci, création de raccourcis à un dépôt d'app. |
 | `HackDesktopLayout`, `HackDesktopCell`, `HackDesktopOptions`, `HackDesktopItems` | `AppSdk` (`Files/HackDesktop.cs`) | La grille en fonctions pures, partagée par tout fournisseur. |
 | `HackDesktopEntry` | `AppSdk` (`Files/HackDesktopEntry.cs`) | Lecture et écriture des `.desktop`, `CreateShortcutAsync`. |
@@ -183,7 +183,7 @@ Paramètres s'ouvre directement sur un onglet avec `--page=appearance` ou
   collisions, hors écran, réorganisation automatique, déplacements, raccourcis
   (lecture, écriture, rejet, noms numérotés), `desktop.config` (lecture,
   écriture, clés encodées, création du dossier).
-- `HackerOs.AppSdk.FileView.Tests/FileViewDesktopTests.cs` : charge d'un glisser
+- `HackerOs.Apps.FileExplorer.FileControl.Tests/FileViewDesktopTests.cs` : charge d'un glisser
   d'app.
 - `HackerOs.Platform.Blazor.Tests/WindowLaunchCoordinatorTests.cs` :
   réservation de surface.

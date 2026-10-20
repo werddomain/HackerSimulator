@@ -4,9 +4,11 @@
 
 Le guide d'un dépôt qui **utilise** HackerOS sans en copier le code : tout
 projet qui veut ses propres apps et son propre hôte d'OS. **Aucun jeu sur ce repository** ([ADR 0135](adr/0135-no-game-in-this-repository.md)). Il part du SDK 1.0, gelé par le chantier `v3/15`
-([ADR 0114](adr/0114-sdk-1-0-freeze.md)) ; la version courante est la **1.2.0**
-(série `exec`, [ADR 0132](adr/0132-exec-series-sdk-1-2-and-merge-rules.md) §2, voir « Ce que la 1.2 ajoute » ;
-la 1.1 vient de la série v3.1, [ADR 0117](adr/0117-sdk-window-title-and-sdk-1-1.md) §5).
+([ADR 0114](adr/0114-sdk-1-0-freeze.md)) ; la version courante est la **2.0.0**
+(série du bureau et du menu contextuel, [ADR 0149](adr/0149-sdk-2-0-file-view-removal.md)
+et [ADR 0161](adr/0161-sdk-2-0-implementation-adjustments.md), voir « Passer à la 2.0 » ;
+la 1.2 vient de la série `exec`, [ADR 0132](adr/0132-exec-series-sdk-1-2-and-merge-rules.md) §2,
+la 1.1 de la série v3.1, [ADR 0117](adr/0117-sdk-window-title-and-sdk-1-1.md) §5).
 
 Détails des paquets et du mode paquet de `HackerOs.App.Build` :
 [`sdk-packages.md`](sdk-packages.md). Écrire une app (API, exemples) :
@@ -32,7 +34,7 @@ nuget.org). Dans un clone de HackerOS, sur la version voulue :
 ```bash
 git -C ../HackerSimulator checkout <tag ou branche>
 ../HackerSimulator/wasm2/HackerOs/build/pack-local.sh      # ou pack-local.ps1
-# -> ../HackerSimulator/wasm2/HackerOs/artifacts/local-nupkg/*.1.2.0.nupkg
+# -> ../HackerSimulator/wasm2/HackerOs/artifacts/local-nupkg/*.2.0.0.nupkg
 ```
 
 `--output <dossier>` écrit ailleurs (par exemple un dossier partagé de votre
@@ -78,7 +80,7 @@ que celle-ci :
 ```xml
 <Project>
   <PropertyGroup>
-    <HackerOsVersion>1.2.0</HackerOsVersion>
+    <HackerOsVersion>2.0.0</HackerOsVersion>
   </PropertyGroup>
 </Project>
 ```
@@ -86,7 +88,7 @@ que celle-ci :
 ## 4. Créer les projets
 
 ```bash
-dotnet new install ../HackerSimulator/wasm2/HackerOs/artifacts/local-nupkg/HackerOs.Templates.1.2.0.nupkg
+dotnet new install ../HackerSimulator/wasm2/HackerOs/artifacts/local-nupkg/HackerOs.Templates.2.0.0.nupkg
 dotnet new hackeros-window  -n Contoso.Notes -o src/Contoso.Notes --appId com.contoso.notes --publisherId pub.contoso
 dotnet new hackeros-command -n Contoso.Hello -o src/Contoso.Hello --appId com.contoso.hello --publisherId pub.contoso
 dotnet new hackeros-service -n Contoso.Sync  -o src/Contoso.Sync  --appId com.contoso.sync  --publisherId pub.contoso
@@ -172,12 +174,40 @@ statique ; le service worker ne s'enregistre que hors de `localhost`. Voir
 4. Les manifestes régénérés portent le nouveau minimum : une app reconstruite
    ne se charge plus sur un OS plus ancien.
 
-### Ce que la 1.2 ajoute
+### Passer à la 2.0
 
-Une mineure : une app compilée contre 1.0.0 ou 1.1.0 tourne sans changement
-sur l'OS 1.2 (vérifié par les deux apps figées de `Tests/fixtures/sdk-compat`).
-Pour utiliser les ajouts, passer `HackerOsVersion` à `1.2.0` et reconstruire ;
-l'app exige alors un OS 1.2 ou plus récent.
+Une majeure : l'OS 2.0 refuse une app compilée contre 1.x, et un hôte qui en
+référence une ne se construit plus (`HOSAPP0021`). Toute app doit être
+recompilée contre les paquets 2.0.0 (vérifié par `Tests/fixtures/sdk-compat`,
+où les apps 1.0.0 et 1.1.0 sont refusées et l'app 2.0.0 tourne).
+
+- **Seule rupture** : le paquet `HackerOs.AppSdk.FileView` n'existe plus. Une
+  app qui affichait `FileView` affiche `HackFileView` (contrôle de fichiers
+  fourni par l'OS, `HackerOs.AppSdk.Blazor.Files`) ; `FileTransfer` devient
+  `HackFileOperations` (`HackerOs.AppSdk.IO`). Le tableau complet est dans
+  [`sdk-packages.md`](sdk-packages.md#migration-dune-app-1x).
+- **Menu contextuel de l'OS** : `Menus.Attach(nom, élément)` sur n'importe quel
+  élément, `Menus.Define` en C#, sous-menus, clavier et appui long
+  (ADR 0150, [`context-menu.md`](context-menu.md)).
+- **Entrées dans les menus des fichiers** : `[RegisterFileContextMenu]` dans la
+  classe `[AppManifest]`, capacité `shell.context-menu` ; l'entrée lance l'app
+  avec un intent et les chemins (ADR 0151, 0159).
+- **Bureau** : `HackDesktopSettings`, raccourcis `.desktop` (`HackDesktopEntry`,
+  ADR 0152, 0160, [`desktop.md`](desktop.md)).
+- **Fournir un contrôle de l'OS** : une app peut fournir `hackeros.file-view`
+  et `hackeros.file-dialogs` ; l'administrateur choisit le fournisseur
+  (ADR 0156, 0158, [`embedded-components.md`](embedded-components.md)).
+- **Aussi** : `IAppEventGateway.PublishAsync` (ADR 0145) et
+  `HackCrossOriginIsolation` (ADR 0146), prévus pour une 1.3 jamais publiée.
+
+Les ruptures hors SDK d'un hôte (explorateur de fichiers, éditeur de code,
+`IShellIconProvider` de l'hôte) sont dans
+[`sdk-packages.md`](sdk-packages.md#ruptures-hors-sdk).
+
+### Ce que la 1.2 ajoutait
+
+Une mineure : une app compilée contre 1.0.0 ou 1.1.0 tournait sans changement
+sur l'OS 1.2. Ses ajouts font partie de la 2.0.
 
 - **Tâches lourdes hors de la fenêtre** : `HackBackground.RunAsync` avec une
   méthode statique et des arguments sérialisables, ou une classe
@@ -245,4 +275,5 @@ La liste exacte et les ruptures hors SDK d'un hôte (trois changements de
 - [x] Modèles, hôte, apps en projets et en paquets.
 - [x] Tests, publication trimmée, montée de version.
 - [x] SDK 1.1 : ajouts et lien vers les ruptures hors SDK (`v3.1/4-sdk-1-1`).
-- [x] SDK 1.2 : version courante, ajouts et lien vers la rupture hors SDK (`exec/10-final`).
+- [x] SDK 1.2 : ajouts et lien vers la rupture hors SDK (`exec/10-final`).
+- [x] SDK 2.0 : version courante, rupture, migration et ajouts (`desk/6-sdk-2`).

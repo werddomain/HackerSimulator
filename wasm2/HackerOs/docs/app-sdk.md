@@ -25,7 +25,6 @@ API publiques, la [référence du SDK](sdk-reference.md).
 |---|---|
 | `Shared/HackerOs.AppSdk` | `IAppExecutionContext` et ses passerelles, façades statiques `Hack*`, classes de base des points d'entrée (`TerminalAppBase`…). |
 | `Shared/HackerOs.AppSdk.Blazor` | Composants et services Blazor des apps fenêtrées (fenêtre, téléchargement, graphiques, composants intégrables `HackEmbeddedComponent<T>`…). |
-| `Shared/HackerOs.AppSdk.FileView` | Vue de fichiers réutilisable (explorateur, dialogues). |
 | `Shared/HackerOs.AppSdk.Icons` | Catalogue d'icônes. |
 | `Shared/HackerOs.AppSdk.Terminal` | Terminal xterm.js (`TerminalPanel`, ADR 0061), qui héberge un shell par `HackShell`, et console à onglets (`TerminalTabs`). |
 | `Shared/HackerOs.AppSdk.VirtualKeyboard` | Clavier virtuel. |
@@ -178,7 +177,7 @@ Façades statiques existantes au début de la phase 4 :
 | `HackTrash` | corbeille | [`trash.md`](trash.md) |
 | `HackDns`, `HackPing`, `HackHttpClient`, `HackTcpClient`, `HackUdpClient` | réseau, repli réel décidé par l'OS (`4-sdk-network`), sockets relayés (`v3/10`) | [`sdk-network.md`](sdk-network.md) |
 | `HackDriveInfo` | taille et espace libre des disques (`4-proc-metrics`) | [`system-metrics.md`](system-metrics.md) |
-| `HackCrossOriginIsolation` | page isolée ou non, et ce que ça active (ADR 0146, après la 1.2.0) | [`worker-processes.md`](worker-processes.md#isolation-cross-origin-adr-0131-adr-0143) |
+| `HackCrossOriginIsolation` | page isolée ou non, et ce que ça active (ADR 0146, SDK 2.0) | [`worker-processes.md`](worker-processes.md#isolation-cross-origin-adr-0131-adr-0143) |
 | `HackClipboard` | presse-papiers de session, texte et liste de fichiers (`4-file-explorer`) | [`file-explorer.md`](file-explorer.md) |
 | `HackTextContent` | texte ou binaire décidé sur le contenu, comme `file` (`4-file-explorer`) | [`text-editor.md`](text-editor.md) |
 
@@ -309,7 +308,7 @@ l'isolation que l'OS a décidée au démarrage : `IsIsolated`, `Reason`
 `TimerResolution`. Aucune capacité, comme `uname`. Passerelle
 `IAppCrossOriginIsolationGateway CrossOriginIsolation`, implémentée par
 `AppCrossOriginIsolationGateway` dans Platform Core et par l'opération
-`coi.get` dans un worker. Ajout après la 1.2.0, pour la prochaine mineure.
+`coi.get` dans un worker. Publié avec le SDK 2.0 (aucune 1.3 n'a été publiée).
 
 ### Processus et services (ADR 0056 §4 et §5)
 
@@ -355,7 +354,7 @@ Ce que font les apps existantes (section 5.1 du
 |---|---|---|
 | TextEditor | brouillon `HackRecoveryDraft` si le document est modifié ; restauré au démarrage suivant comme nouveau tampon non enregistré | — |
 | CodeEditor | instantané de récupération écrit tout de suite (au lieu d'attendre l'anti-rebond de 1,5 s) | recherche dans le dossier, parcours du dossier |
-| FileExplorer | attend l'élément en cours ; `FileTransfer` s'arrête entre deux éléments (atomiques) et rapporte les autres « stopped before this item » (`FileTransferResult.Cancelled`) | copie, déplacement, import, corbeille, zip, extraction, restauration de la corbeille |
+| FileExplorer | attend l'élément en cours ; `HackFileOperations` s'arrête entre deux éléments (atomiques) et rapporte les autres « stopped before this item » (`HackFileTransferResult.Cancelled`) | copie, déplacement, import, corbeille, zip, extraction, restauration de la corbeille |
 | Settings | attend l'écriture de réglage en cours, qui n'utilise plus le jeton du processus | — |
 | Services (`SampleTickerService`) | `OnStoppingAsync` (une fois) | — |
 | `HackerOs.Commands` | jeton annulé : sortie 130 ; tuée : 137 | `find`, `grep` (dont `-r`), `du`, `zip`, `unzip`, `locate` |
@@ -412,7 +411,7 @@ Sans déclaration, l'abonnement ou la publication lève dans le worker une
 `NotSupportedException` qui nomme le type et l'attribut ; sur le fil principal,
 rien ne change. Dans un worker, `Publish` renvoie un résultat provisoire
 (`Delivered`) : un refus de l'OS (sujet d'une autre app, canal verrouillé) est
-écrit dans le journal de l'app. `PublishAsync` (ADR 0145, après le SDK 1.2.0)
+écrit dans le journal de l'app. `PublishAsync` (ADR 0145, SDK 2.0)
 renvoie le vrai résultat de l'OS, fautes des abonnés comprises, sur le fil
 principal comme dans un worker : c'est la forme à préférer dans le code qui
 peut tourner en worker.
@@ -455,8 +454,9 @@ string? text = await HackClipboard.GetTextAsync();
   l'entrée courante, selon la clé `sharing` de `/etc/hackeros/clipboard.config`.
   Une app ne parle jamais à `navigator.clipboard` ; `BrowserClipboard` a été
   retiré au gel du SDK 1.0 (ADR 0114 §3). Voir [`clipboard.md`](clipboard.md).
-- `HackDirectory.CopyAsync` (copie récursive) et `FileTransfer`
-  (`HackerOs.AppSdk.FileView`, transferts de l'explorateur) sont décrits dans
+- `HackDirectory.CopyAsync` (copie récursive) et `HackFileOperations`
+  (`HackerOs.AppSdk.IO`, ex-`FileTransfer`, transferts de l'explorateur et de
+  toute app depuis le SDK 2.0) sont décrits dans
   [`file-explorer.md`](file-explorer.md).
 
 ### Administration du système (ADR 0056 §8 à §11, ADR 0060)
@@ -540,6 +540,22 @@ dans la [référence du SDK](sdk-reference.md).
 | `AppDefinition.OomScoreAdjust` (manifeste `oomScoreAdj`), `ProcessExitReason.OutOfMemory` | `oom_score_adj` de départ, négatif pour une app système seulement (`HOSAPP0024`) ; raison de fin d'une victime de l'OOM killer | — | [`oom-killer.md`](oom-killer.md) |
 | `HackProcess.Nice`, `BasePriority`, `IShellSession.RunNicedAsync`, `ProcessNice` | Priorité `nice` d'un processus ; lancer une commande avec un ajustement | `process.manage` hors de son processus et de ses enfants ; `shell.control` | [`process-priority-and-unresponsive-windows.md`](process-priority-and-unresponsive-windows.md) |
 | `HackBackground.RunAsync`, `HackBackgroundJob<TInput, TResult>`, `HackBackgroundContext`, `IAppExecutionContext.Background` ; analyseur `HOSBG0001` à `HOSBG0004` | Calcul long dans un processus enfant de l'app, placé dans un worker ; méthode statique vérifiée au build | — | [`background-jobs.md`](background-jobs.md) |
+
+### API du SDK 2.0 (série du bureau, ADR 0148 à 0161)
+
+Une majeure : une app 1.x est refusée et doit être recompilée. Le seul retrait
+est le paquet `HackerOs.AppSdk.FileView` ; le tableau de migration est dans
+[`sdk-packages.md`](sdk-packages.md#migration-dune-app-1x).
+
+| API | Rôle | Capacité | Document |
+|---|---|---|---|
+| `HackFileView`, `IHackFileView` (`HackerOs.AppSdk.Blazor.Files`) | Contrôle de fichiers fourni par l'OS (l'explorateur par défaut), avec les droits de l'app qui l'affiche | celles des fichiers montrés | [`embedded-components.md`](embedded-components.md), [`file-explorer.md`](file-explorer.md) |
+| `Menus.Attach`, `Menus.Define`, `HackContextMenu`, `HackMenuDefinition` | Menu contextuel de l'OS, multi-niveaux, clavier et appui long | — | [`context-menu.md`](context-menu.md) |
+| `[RegisterFileContextMenu]`, `RegisterFileContextMenuContext`, `HackFileMenuItems` | Entrées d'une app dans les menus des fichiers, inscrites au build | `shell.context-menu` | [`context-menu.md`](context-menu.md#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4) |
+| `HackFileOperations`, `IDialogService.AsFileConflictResolver` | Copie, déplacement, import, corbeille, conflits à la Nautilus (ex-`FileTransfer`) | celles des fichiers | [`file-explorer.md`](file-explorer.md) |
+| `HackDesktopSettings`, `HackDesktopEntry`, `HackDesktopLayout` | Réglages, raccourcis `.desktop` et grille du bureau | celles du dossier perso | [`desktop.md`](desktop.md) |
+| `HackComponentProviders`, `HackFileMenuEntries` | Choisir le fournisseur d'un contrat, masquer une entrée de menu | `apps.manage` | [`embedded-components.md`](embedded-components.md) |
+| `IAppEventGateway.PublishAsync`, `HackCrossOriginIsolation` | Prévus pour une 1.3 jamais publiée (ADR 0145, 0146) | — | ci-dessus |
 
 ### API ajoutées après la phase 4 (ADR 0061 à 0065)
 

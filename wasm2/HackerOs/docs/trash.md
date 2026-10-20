@@ -147,7 +147,7 @@ Sans argument, `trash` affiche l'aide sur la sortie d'erreur et renvoie 1.
 
 ## Explorateur de fichiers
 
-- **FileView** (`Shared/HackerOs.AppSdk.FileView`) reçoit un paramètre
+- **FileView** (`Shared/HackerOs.AppSdk.FileView` à l'époque, dans l'explorateur depuis le SDK 2.0, `FileControl/`) reçoit un paramètre
   `DeleteRequested` (`EventCallback<FileViewDeleteRequestedEventArgs>`). Quand
   l'hôte le fournit, la touche Suppr, Maj+Suppr et le menu contextuel lui
   confient la suppression (`Items`, `Permanent`) au lieu de supprimer eux-mêmes ;
@@ -172,7 +172,7 @@ Sans argument, `trash` affiche l'aide sur la sortie d'erreur et renvoie 1.
   sélection multiple. Après une restauration, l'explorateur rafraîchit FileView.
 - **Dépôt sur la corbeille** (phase 4, `rebuild/4-file-explorer`) : glisser des
   éléments sur l'entrée « Trash » du panneau Places ou sur la vue Corbeille les
-  envoie à la corbeille (`FileTransfer.MoveToTrashAsync`). Voir
+  envoie à la corbeille (`FileTransfer.MoveToTrashAsync`, aujourd'hui `HackFileOperations.MoveToTrashAsync`). Voir
   [`file-explorer.md`](file-explorer.md).
 
 Correctif au passage : `Shared/HackerOs.AppSdk.FileView/_Imports.razor` importe
@@ -195,7 +195,7 @@ Couper, copier, coller et glisser-déposer vers la corbeille restent en phase 4
 - `Tests/HackerOs.Commands.Wave5.Tests/RmCommandTests.cs` : `rm` (corbeille,
   `--permanent`, `-r`, `-f`, option inconnue, `/proc`, conflit de révision) et
   `trash` (put, list, restore par chemin et par nom, rm, empty, aide).
-- `Tests/HackerOs.AppSdk.FileView.Tests/FileViewTests.cs` : `DeleteRequested`
+- `Tests/HackerOs.Apps.FileExplorer.FileControl.Tests/FileViewTests.cs` : `DeleteRequested`
   reçoit les éléments et le drapeau `Permanent`.
 - `Tests/HackerOs.Ecosystem.Tests` : 41 apps intégrées, 29 commandes (45 et 33 depuis `3-shell-commands`).
 - Doubles de test : `FakeAppLoggingGateway` (nouveau) dans

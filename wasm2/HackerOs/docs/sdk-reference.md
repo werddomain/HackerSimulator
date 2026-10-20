@@ -26,13 +26,13 @@ Conventions de l'API :
 ## Bibliothèques
 
 Toutes sont publiées en paquets NuGet locaux du même nom, à la version de
-`build/Versions.props` (`1.2.0` depuis la fin de la série `exec`, ADR 0132 §2 ; `1.1.0` pour la série v3.1, ADR 0117 §5 ; `1.0.0` au gel du SDK, ADR 0114) ; un autre
+`build/Versions.props` (`2.0.0` depuis la fin de la série du bureau, ADR 0149 et 0161 ; `1.2.0` à la fin de la série `exec`, ADR 0132 §2 ; `1.1.0` pour la série v3.1, ADR 0117 §5 ; `1.0.0` au gel du SDK, ADR 0114) ; un autre
 dépôt les consomme comme le décrit [`building-on-hackeros.md`](building-on-hackeros.md).
 La promesse de compatibilité SemVer couvre les bibliothèques de cette page et
 `HackerOs.Theming.Blazor`, pas la plateforme (ADR 0114 §2).
 
 Cette page présente les API qu'une app utilise au quotidien ; elle n'est pas
-exhaustive. La liste complète et exacte de la surface publique 1.2 est le
+exhaustive. La liste complète et exacte de la surface publique 2.0 est le
 fichier `PublicAPI.Shipped.txt` de chaque projet (environ 940 types au gel de la 1.0),
 vérifié au build par l'analyseur d'API publique : un ajout va dans
 `PublicAPI.Unshipped.txt`, un retrait exige une ligne `*REMOVED*` (ADR 0114).
@@ -42,8 +42,7 @@ vérifié au build par l'analyseur d'API publique : un ajout va dans
 | `Shared/HackerOs.App.Abstractions` | `HackerOs.App.Abstractions` | Définir une app (`AppDefinition`, capacités, manifeste). |
 | `Shared/HackerOs.Simulation.Abstractions` | `HackerOs.Simulation.Abstractions.*` | Types de données du système simulé (chemins, passerelles, journaux, notifications, processus). |
 | `Shared/HackerOs.AppSdk` | `HackerOs.AppSdk`, `.IO`, `.Settings`, `.Keyring`, `.Apps`, `.Net`, `.Clipboard`, `.Diagnostics`, `.ServiceProcess`, `.Shell`, `.Administration`, `.Threading` (SDK 1.2) | Façades `Hack*`, contexte d'exécution, commandes et services. |
-| `Shared/HackerOs.AppSdk.Blazor` | `HackerOs.AppSdk.Blazor`, `.Charts`, `.Interop`, `.Settings` | Apps fenêtrées, dialogues, graphiques. |
-| `Shared/HackerOs.AppSdk.FileView` | `HackerOs.AppSdk.FileView` | Vue de fichiers réutilisable. |
+| `Shared/HackerOs.AppSdk.Blazor` | `HackerOs.AppSdk.Blazor`, `.Charts`, `.Interop`, `.Settings`, `.Files`, `.ContextMenus`, `.Components` | Apps fenêtrées, dialogues, graphiques, contrôle de fichiers et menu contextuel de l'OS (SDK 2.0). |
 | `Shared/HackerOs.AppSdk.Terminal` | `HackerOs.AppSdk.Terminal` | Terminal xterm.js. |
 | `Shared/HackerOs.AppSdk.Web` | `HackerOs.AppSdk.Web.Hosting`, `.Http`, `.Routing`, `.Mvc`, `.Views`, `.Antiforgery`, `.Sessions`, `.Diagnostics`, `.Data`, `.Logging` | Sites internes ASP.Hack façon ASP.NET Core MVC ([guide ASP.Hack](asp-hack-developer-guide.md), [`asp-hack-mvc.md`](asp-hack-mvc.md)). |
 | `Shared/HackerOs.AppSdk.Web.Blazor` | `HackerOs.AppSdk.Web.Blazor.Sites` | Sites Blazor interactifs dessinés dans le navigateur ([`blazor-sites.md`](blazor-sites.md)). |
@@ -65,7 +64,7 @@ vérifié au build par l'analyseur d'API publique : un ajout va dans
 | `AppSettingsSchemaManifest(SchemaVersion, Fields)`, `AppSettingFieldManifest(Key, ValueType, DefaultValue, Scope, Sensitivity, AllowedValues, Group)` | Schéma des paramètres ; `AppSettingValueType` : `String`, `Integer`, `Boolean`, `Enum`. |
 | `AppResourceProfileManifest` | Poids CPU, mémoire, disque et réseau simulés (`None` par défaut). |
 | `AppDefinitionMapper.ToManifest(definition)` | Définition → `AppManifest` (utile dans les tests). |
-| `HackerOsSdk` | `Version` (version du SDK chargé, par exemple `1.2.0`), `SemanticVersion`, `IsCompatible(range)` (ADR 0098 §3). `AppDefinition.SdkCompatibility` déclare une plage ; par défaut, la version contre laquelle l'app est compilée est le minimum. |
+| `HackerOsSdk` | `Version` (version du SDK chargé, par exemple `2.0.0`), `SemanticVersion`, `IsCompatible(range)` (ADR 0098 §3). `AppDefinition.SdkCompatibility` déclare une plage ; par défaut, la version contre laquelle l'app est compilée est le minimum. |
 | `AppManifest` | Manifeste validé, lu par l'OS ; `AppContext.Manifest` à l'exécution. `OomScoreAdj` (champ `oomScoreAdj`, SDK 1.2, ADR 0126 §4) : valeur de `AppDefinition.OomScoreAdjust`. |
 | `AppCapabilities` | Catalogue des capacités (voir ci-dessous) ; `Describe`, `IsDangerous`, `GetRisk`, `IsKnown`, `RequiresWindowKind`, `All`. |
 | `VirtualPath` | Chemin absolu canonique (`Parse`, `Value`). |
@@ -135,7 +134,7 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `Environment` | Derrière `HackEnvironment`. |
 | `Culture`, `FormatCulture` | Langue des textes (`en` ou `fr`, depuis `LC_ALL`/`LC_MESSAGES`/`LANG` du processus) et culture des formats (`fr-CA`, depuis `LC_TIME`) ; membres par défaut relus à chaque appel (ADR 0104). `context.GetLocalizer<Strings>()` donne un `IStringLocalizer<Strings>` lié à cette langue ([`localization.md`](localization.md)). |
 | `Network`, `Drives`, `Clipboard`, `ShellHost`, `Services` | Derrière les façades du même domaine. |
-| `CrossOriginIsolation` | État de l'isolation cross-origin (`IAppCrossOriginIsolationGateway.GetStatusAsync`, ADR 0146, après la 1.2.0) ; derrière `HackCrossOriginIsolation`, aucune capacité. Membre par défaut : `NotSupportedException`. |
+| `CrossOriginIsolation` | État de l'isolation cross-origin (`IAppCrossOriginIsolationGateway.GetStatusAsync`, ADR 0146, SDK 2.0) ; derrière `HackCrossOriginIsolation`, aucune capacité. Membre par défaut : `NotSupportedException`. |
 | `Console` | Derrière `HackConsole` (ADR 0064). |
 | `SystemSettings`, `PermissionAdministration`, `ServerConnection`, `SystemPower`, `StorageDiagnostics`, `SystemBackup` | Derrière les façades d'administration. |
 | `WebDatabase` | Base IndexedDB `hackweb.<appId>` d'une app `Web` (`IAppWebDatabaseGateway`, ADR 0088) ; derrière `HackWebDb` du SDK web. Une autre app reçoit `UnauthorizedAccessException`. |
@@ -167,11 +166,12 @@ paramètre de `RunCoreAsync` pour un service, `context.App` pour une commande).
 | `HackWriteOptions` | `ExpectedRevision` (concurrence optimiste), `CreateMode` | [`hack-file-api.md`](hack-file-api.md) |
 | `HackFileSystemWatcher` | `Created`, `Changed`, `Deleted`, `Renamed`, `Error`, `Filter`, `IncludeSubdirectories`, `StartAsync` | [`hack-file-api.md`](hack-file-api.md) |
 | `HackTrash` | `MoveToTrashAsync`, `GetItemsAsync`, `RestoreAsync`, `DeleteAsync`, `EmptyAsync`, `TrashDirectory` | [`trash.md`](trash.md) |
+| `HackFileOperations` | `CopyAsync`, `MoveAsync(…, resolveConflict)`, `TransferAsync`, `ImportAsync` (`HackHostFile` : fichiers de l'hôte), `MoveToTrashAsync`, `GetCopyName`, `GetName` → `HackFileTransferResult` (`Completed`, `Skipped`, `Failures`, `Cancelled`, `DescribeFailures`) ; règles de Nautilus (`nom (copy).ext`, « Remplacer / Garder les deux / Ignorer » par `HackFileConflictResolver`), un dossier jamais copié en lui-même, une erreur n'arrête pas les autres ; avec les droits de l'app ; SDK 2.0 (ADR 0161 §2). Une fenêtre pose la question de conflit par `Dialogs.AsFileConflictResolver(AppContext)` | [`file-explorer.md`](file-explorer.md) |
 | `HackDesktopLayout`, `HackDesktopCell`, `HackDesktopOptions`, `HackDesktopItems`, `HackDesktopEntry`, `HackDesktopSettings` (`.Files`) | Grille du bureau en fonctions pures (`Order`, `Arrange`, `Move`, `CellAtPoint`, `GridSize`), raccourcis `.desktop` (`TryParse`, `Format`, `CreateShortcutAsync`), `~/.config/hackeros/desktop.config` (`ReadAsync`, `SaveOptionsAsync`, `SavePositionsAsync`) ; SDK 2.0 (ADR 0160) | [`desktop.md`](desktop.md) |
 | `HackTextContent` | `TryDecode`, `TryReadAsync` (texte ou binaire, comme `file`) | [`text-editor.md`](text-editor.md) |
 | `HackRecoveryDraft` | `Open(name)`, `SaveAsync`, `TryReadAsync`, `TakeAsync`, `DeleteAsync` : brouillon de travail non enregistré dans `~/.local/state/<appId>/recovery/` (ADR 0069) | [`app-sdk.md`](app-sdk.md#arrêt-propre-et-points-darrêt-adr-0069) |
 | `HackDriveInfo` | `GetDrivesAsync` : taille et espace libre (comme `df`) | [`system-metrics.md`](system-metrics.md) |
-| `HackCrossOriginIsolation` (`.Diagnostics`) | `GetStatusAsync` → `HackCrossOriginIsolationStatus` (`IsIsolated`, `Reason`, `Setting`, `EmbedderPolicy`, `SharedPipes`, `SynchronousWorkerCalls`, `BrowserMemoryMeasurement`, `TimerResolution`) ; aucune capacité ; après la 1.2.0 (ADR 0146) | [`worker-processes.md`](worker-processes.md#isolation-cross-origin-adr-0131-adr-0143) |
+| `HackCrossOriginIsolation` (`.Diagnostics`) | `GetStatusAsync` → `HackCrossOriginIsolationStatus` (`IsIsolated`, `Reason`, `Setting`, `EmbedderPolicy`, `SharedPipes`, `SynchronousWorkerCalls`, `BrowserMemoryMeasurement`, `TimerResolution`) ; aucune capacité ; SDK 2.0 (ADR 0146) | [`worker-processes.md`](worker-processes.md#isolation-cross-origin-adr-0131-adr-0143) |
 | Exceptions | `HackIOException`, `HackFileNotFoundException`, `HackDirectoryNotFoundException`, `HackFileConflictException`, `HackUnauthorizedAccessException` | [`hack-file-api.md`](hack-file-api.md) |
 
 Capacités : selon le chemin (`filesystem.private.*`, `.user-home.*`,
@@ -454,19 +454,13 @@ Détails : [`blazor-sites.md`](blazor-sites.md).
 
 Détails : [`embedded-components.md`](embedded-components.md#hackfileview-et-ihackfileview).
 
-### Vue de fichiers (`HackerOs.AppSdk.FileView`)
+### Vue de fichiers (`HackerOs.AppSdk.FileView`) : retirée
 
-Retirée du SDK au 2.0 (ADR 0149) ; depuis `desk/3`, c'est l'implémentation
-interne du contrôle de l'explorateur. Une nouvelle app utilise `HackFileView`.
-
-| Type | Rôle |
-|---|---|
-| `FileView` | Liste de fichiers. Paramètres : `FileSystem`, `Watch`, `Intents`, `InitialDirectory`, `Mode` (`FileViewMode`), `FolderActivation`, `IconProvider`, `ContextMenuProviders`, `AllowMultiSelect`, `AllowDragDrop`, `Columns`, `Filter`, `CanPaste`, `CutPaths`, rappels `DeleteRequested`, `DropRequested`, `ClipboardRequested`. Méthodes `NavigateAsync`, `RefreshAsync`, `RevealAsync(path)` (ouvre le dossier parent, sélectionne l'élément et le fait défiler, ADR 0096 §1) ; propriétés `CurrentDirectory`, `Items`, `SelectedItem(s)` ; événements `Navigating`, `OnPathChange`, `Opening`, `Opened`, `Renaming`, `Renamed`, `Creating`, `Created`, `Deleting`, `Deleted`, `Moving`, `Moved`, `Copying`, `Copied`, `SelectionChanging`, `SelectionChanged`, `ContextMenuOpening` (les formes `-ing` sont annulables). |
-| `FileViewTree`, `FileViewBreadcrumb`, `FileViewDropZone`, `FileViewContextMenu` | Arbre de dossiers, fil d'Ariane, zone de dépôt, menu contextuel. |
-| `IFileViewContextMenuProvider`, `IShellIconProvider`, `ShellIcon` | Extensions : entrées de menu, icônes. |
-| `FileTransfer` | `CopyAsync`, `MoveAsync`, `TransferAsync`, `ImportAsync` (fichiers de l'hôte), `MoveToTrashAsync`, `GetCopyName` ; conflits de noms à la Nautilus. |
-
-Détails : [`file-explorer.md`](file-explorer.md).
+Le paquet `HackerOs.AppSdk.FileView` a quitté le SDK à la 2.0 (ADR 0149,
+ADR 0161) : son code est l'implémentation interne de l'explorateur de fichiers
+(`HackerOs.Apps.FileExplorer.FileControl`), qui fournit `HackFileView` aux
+autres apps. `FileTransfer` est devenu `HackFileOperations`. Le tableau de
+migration d'une app 1.x est dans [`sdk-packages.md`](sdk-packages.md#sdk-20).
 
 ### Terminal (`HackerOs.AppSdk.Terminal`)
 
@@ -524,4 +518,5 @@ paramètre `Tokens` appliqué par-dessus le thème de base.
 - [x] Titre de fenêtre : `WindowTitle`, `SetWindowTitleAsync`, `FormatWindowTitle`, `IAppWindowGateway` (`v3.1/3`, SDK 1.1, versé dans `PublicAPI.Shipped.txt` par `v3.1/4-sdk-1-1`).
 - [x] Tâches en arrière-plan : `HackBackground`, `HackBackgroundContext`, `IAppExecutionContext.Background`, `HackProcessKilledException.Reason`, analyseur `HOSBG` (`exec/5`, ADR 0128 et 0140).
 - [x] SDK 1.2 (ADR 0132) : `HackWireContextAttribute` (`exec/1`), limites de processus et `TooManyOpenFiles` (`exec/2`), `OomScoreAdjust`/`OomScoreAdj` et `OutOfMemory` (`exec/3`), `nice` (`exec/4`), versés dans `PublicAPI.Shipped.txt` par `exec/10-final`.
+- [x] SDK 2.0 (`desk/6-sdk-2`, ADR 0149, ADR 0161) : `HackerOs.AppSdk.FileView` retiré, `HackFileOperations`, contrôle de fichiers et menu contextuel de l'OS, versés dans `PublicAPI.Shipped.txt`.
 - [x] Relecture finale de la migration v3 (`v3/16-final`) : renvoi vers les fichiers `PublicAPI.Shipped.txt`, liste exhaustive de la surface 1.0.

@@ -31,7 +31,7 @@ App ──► HackClipboard ──► IAppClipboardGateway ──► AppClipboar
 | `IHostClipboardChannel`, `IHostClipboardSink` | `Shared/HackerOs.Simulation.Abstractions/Clipboard/` | Contrat entre le pont et la page. |
 | `BrowserHostClipboardChannel` | `Infrastructure/HackerOs.Infrastructure.Browser/Interop/` | Importe `hostClipboard.js` et relaie ses rappels. |
 | `hostClipboard.js` | `Infrastructure/HackerOs.Infrastructure.Browser/wwwroot/` | Écoute `paste` (capture, document), `copy` et `cut` (bulle, window) ; appelle `writeText`. |
-| `FileView.attachPasteTarget` | `Shared/HackerOs.AppSdk.FileView/FileView.razor.js` | Ctrl+V par l'événement `paste` ; fichiers de l'hôte importés comme un dépôt. |
+| `FileView.attachPasteTarget` | `Apps/System/HackerOs.Apps.FileExplorer/FileControl/FileView.razor.js` | Ctrl+V par l'événement `paste` ; fichiers de l'hôte importés comme un dépôt. |
 
 Le pont est enregistré par `AddHackerOsEcosystem` (portée par circuit, comme
 tout ce qui dépend d'`IJSRuntime`) et démarré par `App.razor` après le
@@ -120,7 +120,7 @@ la convention de l'ADR 0044.
   écriture vers l'hôte, liste de fichiers en chemins, collage sans écho,
   fichiers de l'hôte, copie native, chaque mode, verrou, changement à chaud,
   déconnexion, refus du navigateur, absence de session.
-- `Tests/HackerOs.AppSdk.FileView.Tests/FileViewDropAndClipboardTests.cs` :
+- `Tests/HackerOs.Apps.FileExplorer.FileControl.Tests/FileViewDropAndClipboardTests.cs` :
   Ctrl+V par l'événement `paste`, fichiers de l'hôte collés.
 
 ## Liste des tâches
