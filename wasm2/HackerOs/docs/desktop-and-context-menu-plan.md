@@ -58,6 +58,7 @@ ADR de la section 10 sont écrits avant le code de chaque chantier.
 | Q20 | Mobile | **Menu oui** (appui long), **icônes non** |
 | Q21 | Apps sur le bureau | Fichiers **`.desktop`** |
 | Q22 | Ce document | Dans `docs/`, par une PR vers `main` |
+| Q23 | Fournisseur du contrôle de fichiers (2026-10-20) | **Remplaçable** par une app tierce ; choix d'un administrateur dans Paramètres, l'explorateur par défaut ([ADR 0156](adr/0156-replaceable-file-control-provider.md)) |
 
 Détails retenus sans question (« défauts » du récapitulatif validé) : repli
 automatique des séparateurs (§6.2), contenu des menus par défaut (§7),
@@ -95,6 +96,9 @@ Explorateur de fichiers (app système)          Plateforme (shell)
 | `hackeros.file-dialogs` | dialogues Ouvrir avec, Propriétés, conflit de noms, et la vue de fichiers des dialogues Ouvrir / Enregistrer / Choisir un dossier | Explorateur |
 | `hackeros.context-menu` | `IHackContextMenu`, `HackContextMenu`, `Menus.Attach` | Plateforme |
 
+- **Fournisseur remplaçable.** Une app tierce peut fournir `hackeros.file-view`
+  et `hackeros.file-dialogs` à la place de l'explorateur, si un administrateur
+  la choisit dans Paramètres ([ADR 0156](adr/0156-replaceable-file-control-provider.md)).
 - **Droits.** Le rendu fourni tourne avec **les droits de l'app hôte** :
   le fournisseur reçoit les passerelles de l'hôte (`HostContext`), jamais les
   siennes, comme `FileView` aujourd'hui (ADR 0037 §1). Une app ne voit donc
