@@ -24,6 +24,7 @@ const HackerOs.AppSdk.Files.HackFileMenuItems.Refresh = "refresh" -> string!
 const HackerOs.AppSdk.Files.HackFileMenuItems.Rename = "rename" -> string!
 const HackerOs.AppSdk.Files.HackFileMenuItems.Sort = "sort" -> string!
 const HackerOs.AppSdk.Files.HackFileMenuItems.View = "view" -> string!
+const HackerOs.AppSdk.IO.HackFileOperations.MaxHostFileBytes = 268435456 -> long
 HackerOs.AppSdk.Administration.HackFileMenuEntries
 HackerOs.AppSdk.Administration.HackFileMenuEntryInfo
 HackerOs.AppSdk.Administration.HackFileMenuEntryInfo.AppId.get -> string!
@@ -140,6 +141,67 @@ HackerOs.AppSdk.Files.MenuSelection.Each = 1 -> HackerOs.AppSdk.Files.MenuSelect
 HackerOs.AppSdk.Files.MenuSelection.Single = 2 -> HackerOs.AppSdk.Files.MenuSelection
 HackerOs.AppSdk.IAppExecutionContext.CrossOriginIsolation.get -> HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway!
 HackerOs.AppSdk.IAppExecutionContext.FileMenuEntryAdministration.get -> HackerOs.AppSdk.Administration.IAppFileMenuEntryAdministrationGateway!
+HackerOs.AppSdk.IO.HackFileConflictChoice
+HackerOs.AppSdk.IO.HackFileConflictChoice.KeepBoth = 1 -> HackerOs.AppSdk.IO.HackFileConflictChoice
+HackerOs.AppSdk.IO.HackFileConflictChoice.Replace = 0 -> HackerOs.AppSdk.IO.HackFileConflictChoice
+HackerOs.AppSdk.IO.HackFileConflictChoice.Skip = 2 -> HackerOs.AppSdk.IO.HackFileConflictChoice
+HackerOs.AppSdk.IO.HackFileConflictResolution
+HackerOs.AppSdk.IO.HackFileConflictResolution.ApplyToAll.get -> bool
+HackerOs.AppSdk.IO.HackFileConflictResolution.ApplyToAll.init -> void
+HackerOs.AppSdk.IO.HackFileConflictResolution.Choice.get -> HackerOs.AppSdk.IO.HackFileConflictChoice
+HackerOs.AppSdk.IO.HackFileConflictResolution.Choice.init -> void
+HackerOs.AppSdk.IO.HackFileConflictResolution.HackFileConflictResolution(HackerOs.AppSdk.IO.HackFileConflictChoice Choice, bool ApplyToAll = false) -> void
+HackerOs.AppSdk.IO.HackFileConflictResolver
+HackerOs.AppSdk.IO.HackFileOperations
+HackerOs.AppSdk.IO.HackFileTransferConflict
+HackerOs.AppSdk.IO.HackFileTransferConflict.DestinationIsDirectory.get -> bool
+HackerOs.AppSdk.IO.HackFileTransferConflict.DestinationIsDirectory.init -> void
+HackerOs.AppSdk.IO.HackFileTransferConflict.DestinationPath.get -> string!
+HackerOs.AppSdk.IO.HackFileTransferConflict.DestinationPath.init -> void
+HackerOs.AppSdk.IO.HackFileTransferConflict.HackFileTransferConflict(string! SourcePath, string! DestinationPath, bool SourceIsDirectory, bool DestinationIsDirectory) -> void
+HackerOs.AppSdk.IO.HackFileTransferConflict.Name.get -> string!
+HackerOs.AppSdk.IO.HackFileTransferConflict.SourceIsDirectory.get -> bool
+HackerOs.AppSdk.IO.HackFileTransferConflict.SourceIsDirectory.init -> void
+HackerOs.AppSdk.IO.HackFileTransferConflict.SourcePath.get -> string!
+HackerOs.AppSdk.IO.HackFileTransferConflict.SourcePath.init -> void
+HackerOs.AppSdk.IO.HackFileTransferFailure
+HackerOs.AppSdk.IO.HackFileTransferFailure.HackFileTransferFailure(string! Path, string! Reason) -> void
+HackerOs.AppSdk.IO.HackFileTransferFailure.Path.get -> string!
+HackerOs.AppSdk.IO.HackFileTransferFailure.Path.init -> void
+HackerOs.AppSdk.IO.HackFileTransferFailure.Reason.get -> string!
+HackerOs.AppSdk.IO.HackFileTransferFailure.Reason.init -> void
+HackerOs.AppSdk.IO.HackFileTransferItemResult
+HackerOs.AppSdk.IO.HackFileTransferItemResult.DestinationPath.get -> string!
+HackerOs.AppSdk.IO.HackFileTransferItemResult.DestinationPath.init -> void
+HackerOs.AppSdk.IO.HackFileTransferItemResult.HackFileTransferItemResult(string! SourcePath, string! DestinationPath) -> void
+HackerOs.AppSdk.IO.HackFileTransferItemResult.SourcePath.get -> string!
+HackerOs.AppSdk.IO.HackFileTransferItemResult.SourcePath.init -> void
+HackerOs.AppSdk.IO.HackFileTransferMode
+HackerOs.AppSdk.IO.HackFileTransferMode.Copy = 0 -> HackerOs.AppSdk.IO.HackFileTransferMode
+HackerOs.AppSdk.IO.HackFileTransferMode.Move = 1 -> HackerOs.AppSdk.IO.HackFileTransferMode
+HackerOs.AppSdk.IO.HackFileTransferResult
+HackerOs.AppSdk.IO.HackFileTransferResult.Cancelled.get -> bool
+HackerOs.AppSdk.IO.HackFileTransferResult.Cancelled.init -> void
+HackerOs.AppSdk.IO.HackFileTransferResult.Completed.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.IO.HackFileTransferItemResult!>!
+HackerOs.AppSdk.IO.HackFileTransferResult.Completed.init -> void
+HackerOs.AppSdk.IO.HackFileTransferResult.DescribeFailures(string! verb) -> string?
+HackerOs.AppSdk.IO.HackFileTransferResult.DescribeFailures(string! verb, HackerOs.AppSdk.IAppExecutionContext? context) -> string?
+HackerOs.AppSdk.IO.HackFileTransferResult.Failures.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.IO.HackFileTransferFailure!>!
+HackerOs.AppSdk.IO.HackFileTransferResult.Failures.init -> void
+HackerOs.AppSdk.IO.HackFileTransferResult.HackFileTransferResult(System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.IO.HackFileTransferItemResult!>! Completed, System.Collections.Generic.IReadOnlyList<string!>! Skipped, System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.IO.HackFileTransferFailure!>! Failures, bool Cancelled = false) -> void
+HackerOs.AppSdk.IO.HackFileTransferResult.Skipped.get -> System.Collections.Generic.IReadOnlyList<string!>!
+HackerOs.AppSdk.IO.HackFileTransferResult.Skipped.init -> void
+HackerOs.AppSdk.IO.HackFileTransferResult.Succeeded.get -> bool
+HackerOs.AppSdk.IO.HackHostFile
+HackerOs.AppSdk.IO.HackHostFile.ContentType.get -> string?
+HackerOs.AppSdk.IO.HackHostFile.ContentType.init -> void
+HackerOs.AppSdk.IO.HackHostFile.HackHostFile(string! Name, long Size, string? ContentType, System.Func<long, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.IO.Stream!>!>! OpenReadStreamAsync) -> void
+HackerOs.AppSdk.IO.HackHostFile.Name.get -> string!
+HackerOs.AppSdk.IO.HackHostFile.Name.init -> void
+HackerOs.AppSdk.IO.HackHostFile.OpenReadStreamAsync.get -> System.Func<long, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.IO.Stream!>!>!
+HackerOs.AppSdk.IO.HackHostFile.OpenReadStreamAsync.init -> void
+HackerOs.AppSdk.IO.HackHostFile.Size.get -> long
+HackerOs.AppSdk.IO.HackHostFile.Size.init -> void
 override HackerOs.AppSdk.Files.HackDesktopCell.ToString() -> string!
 static HackerOs.AppSdk.Administration.HackFileMenuEntries.GetEntriesAsync(HackerOs.AppSdk.IAppExecutionContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackFileMenuEntryInfo!>!>!
 static HackerOs.AppSdk.Administration.HackFileMenuEntries.GetEntriesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Administration.HackFileMenuEntryInfo!>!>!
@@ -223,6 +285,13 @@ static HackerOs.AppSdk.Files.HackDesktopSettings.WithOptions(string? content, Ha
 static HackerOs.AppSdk.Files.HackDesktopSettings.WithPositions(string? content, System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.AppSdk.Files.HackDesktopCell>! positions) -> string!
 static HackerOs.AppSdk.Files.HackFileMenuIntent.ReadPaths(string? payloadJson) -> System.Collections.Generic.IReadOnlyList<string!>!
 static HackerOs.AppSdk.Files.HackFileMenuIntent.ReadScope(string? payloadJson) -> HackerOs.AppSdk.Files.FileMenuScope
+static HackerOs.AppSdk.IO.HackFileOperations.CopyAsync(System.Collections.Generic.IReadOnlyList<string!>! sources, string! destinationDirectory, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.IO.HackFileTransferResult!>!
+static HackerOs.AppSdk.IO.HackFileOperations.GetCopyName(string! name, bool isDirectory, System.Func<string!, bool>! isTaken) -> string!
+static HackerOs.AppSdk.IO.HackFileOperations.GetName(string! path) -> string!
+static HackerOs.AppSdk.IO.HackFileOperations.ImportAsync(System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.IO.HackHostFile!>! files, string! destinationDirectory, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.IO.HackFileTransferResult!>!
+static HackerOs.AppSdk.IO.HackFileOperations.MoveAsync(System.Collections.Generic.IReadOnlyList<string!>! sources, string! destinationDirectory, HackerOs.AppSdk.IO.HackFileConflictResolver? resolveConflict, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.IO.HackFileTransferResult!>!
+static HackerOs.AppSdk.IO.HackFileOperations.MoveToTrashAsync(System.Collections.Generic.IReadOnlyList<string!>! sources, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.IO.HackFileTransferResult!>!
+static HackerOs.AppSdk.IO.HackFileOperations.TransferAsync(System.Collections.Generic.IReadOnlyList<string!>! sources, string! destinationDirectory, HackerOs.AppSdk.IO.HackFileTransferMode mode, HackerOs.AppSdk.IO.HackFileConflictResolver? resolveConflict, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.AppSdk.IO.HackFileTransferResult!>!
 static HackerOs.AppSdk.UnsupportedAdministrationGateways.ComponentProviders.get -> HackerOs.AppSdk.Administration.IAppComponentProviderAdministrationGateway!
 static HackerOs.AppSdk.UnsupportedAdministrationGateways.FileMenuEntries.get -> HackerOs.AppSdk.Administration.IAppFileMenuEntryAdministrationGateway!
 HackerOs.AppSdk.Apps.HackAppIcons

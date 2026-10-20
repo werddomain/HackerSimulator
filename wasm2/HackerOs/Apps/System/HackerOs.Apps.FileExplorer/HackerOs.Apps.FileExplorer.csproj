@@ -21,12 +21,12 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Shared\HackerOs.App.Abstractions\HackerOs.App.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Shared\HackerOs.AppSdk.Blazor\HackerOs.AppSdk.Blazor.csproj" />
-    <ProjectReference Include="..\..\..\Shared\HackerOs.AppSdk.FileView\HackerOs.AppSdk.FileView.csproj" />
     <ProjectReference Include="..\..\..\Shared\HackerOs.AppSdk.Icons\HackerOs.AppSdk.Icons.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="HackerOs.Apps.FileExplorer.Tests" />
+    <InternalsVisibleTo Include="HackerOs.Apps.FileExplorer.FileControl.Tests" />
   </ItemGroup>
 
 </Project>

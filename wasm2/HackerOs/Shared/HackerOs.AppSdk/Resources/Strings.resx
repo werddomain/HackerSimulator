@@ -63,4 +63,61 @@
   <data name="Site.RootRefused" xml:space="preserve">
     <value>'{0}' cannot be a site root ('/' and '..' are refused)</value>
   </data>
+  <data name="Transfer.Error.AppNotAllowed" xml:space="preserve">
+    <value>this app is not allowed to write there</value>
+  </data>
+  <data name="Transfer.Error.CannotOpen" xml:space="preserve">
+    <value>cannot open '{0}': {1}</value>
+  </data>
+  <data name="Transfer.Error.CopyIntoItself" xml:space="preserve">
+    <value>cannot copy a folder into itself</value>
+  </data>
+  <data name="Transfer.Error.InvalidName" xml:space="preserve">
+    <value>invalid file name</value>
+  </data>
+  <data name="Transfer.Error.MoveIntoItself" xml:space="preserve">
+    <value>cannot move a folder into itself</value>
+  </data>
+  <data name="Transfer.Error.NameTaken" xml:space="preserve">
+    <value>the name is already taken</value>
+  </data>
+  <data name="Transfer.Error.NoLongerExists" xml:space="preserve">
+    <value>no longer exists</value>
+  </data>
+  <data name="Transfer.Error.PermissionDenied" xml:space="preserve">
+    <value>permission denied</value>
+  </data>
+  <data name="Transfer.Error.Protected" xml:space="preserve">
+    <value>protected system entry</value>
+  </data>
+  <data name="Transfer.Error.ReadOnly" xml:space="preserve">
+    <value>read-only file system</value>
+  </data>
+  <data name="Transfer.Error.Stopped" xml:space="preserve">
+    <value>stopped before this item</value>
+  </data>
+  <data name="Transfer.Error.TooLarge" xml:space="preserve">
+    <value>larger than {0} MiB</value>
+  </data>
+  <data name="Transfer.Failure.Item" xml:space="preserve">
+    <value>'{0}': {1}</value>
+  </data>
+  <data name="Transfer.Failure.Many" xml:space="preserve">
+    <value>Could not {0} {1} items: {2}.</value>
+  </data>
+  <data name="Transfer.Failure.One" xml:space="preserve">
+    <value>Could not {0} {1}.</value>
+  </data>
+  <data name="Transfer.Verb.Copy" xml:space="preserve">
+    <value>copy</value>
+  </data>
+  <data name="Transfer.Verb.Move" xml:space="preserve">
+    <value>move</value>
+  </data>
+  <data name="Transfer.Verb.Trash" xml:space="preserve">
+    <value>move to the trash</value>
+  </data>
+  <data name="Transfer.Verb.Upload" xml:space="preserve">
+    <value>upload</value>
+  </data>
 </root>

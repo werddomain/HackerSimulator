@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Breadcrumb.Label" xml:space="preserve">
+    <value>Chemin</value>
+  </data>
+  <data name="Column.Modified" xml:space="preserve">
+    <value>Modifié</value>
+  </data>
+  <data name="Column.Name" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="Column.Size" xml:space="preserve">
+    <value>Taille</value>
+  </data>
+  <data name="Column.Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Menu.Copy" xml:space="preserve">
+    <value>Copier</value>
+  </data>
+  <data name="Menu.Cut" xml:space="preserve">
+    <value>Couper</value>
+  </data>
+  <data name="Menu.Delete" xml:space="preserve">
+    <value>Supprimer</value>
+  </data>
+  <data name="Menu.DeletePermanently" xml:space="preserve">
+    <value>Supprimer définitivement</value>
+  </data>
+  <data name="Menu.Label" xml:space="preserve">
+    <value>Menu contextuel des fichiers</value>
+  </data>
+  <data name="Menu.NewFolder" xml:space="preserve">
+    <value>Nouveau dossier</value>
+  </data>
+  <data name="Menu.NewFolder.DefaultName" xml:space="preserve">
+    <value>Nouveau dossier</value>
+  </data>
+  <data name="Menu.Open" xml:space="preserve">
+    <value>Ouvrir</value>
+  </data>
+  <data name="Menu.Paste" xml:space="preserve">
+    <value>Coller</value>
+  </data>
+  <data name="Menu.PasteInto" xml:space="preserve">
+    <value>Coller dans le dossier</value>
+  </data>
+  <data name="Menu.Refresh" xml:space="preserve">
+    <value>Actualiser</value>
+  </data>
+  <data name="Menu.Rename" xml:space="preserve">
+    <value>Renommer</value>
+  </data>
+  <data name="Size.Bytes" xml:space="preserve">
+    <value>{0:0.#} o</value>
+  </data>
+  <data name="Size.Gigabytes" xml:space="preserve">
+    <value>{0:0.#} Go</value>
+  </data>
+  <data name="Size.Kilobytes" xml:space="preserve">
+    <value>{0:0.#} Ko</value>
+  </data>
+  <data name="Size.Megabytes" xml:space="preserve">
+    <value>{0:0.#} Mo</value>
+  </data>
+  <data name="Type.Extension" xml:space="preserve">
+    <value>Fichier {0}</value>
+  </data>
+  <data name="Type.File" xml:space="preserve">
+    <value>Fichier</value>
+  </data>
+  <data name="Type.Folder" xml:space="preserve">
+    <value>Dossier</value>
+  </data>
+</root>

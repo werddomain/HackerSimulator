@@ -176,6 +176,7 @@ HackerOs.AppSdk.Blazor.Files.HackFileMenuOpeningEventArgs.HackFileMenuOpeningEve
 HackerOs.AppSdk.Blazor.Files.HackFileMenuOpeningEventArgs.Items.get -> System.Collections.Generic.IReadOnlyList<HackerOs.AppSdk.Blazor.Files.HackFileViewItem!>!
 HackerOs.AppSdk.Blazor.Files.HackFileMenuOpeningEventArgs.Menu.get -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenuDefinition!
 HackerOs.AppSdk.Blazor.Files.HackFileMenuOpeningEventArgs.Scope.get -> HackerOs.AppSdk.Files.FileMenuScope
+HackerOs.AppSdk.Blazor.Files.HackFileOperationDialogs
 HackerOs.AppSdk.Blazor.Files.HackFileView
 HackerOs.AppSdk.Blazor.Files.HackFileView.AllowMultiSelect.get -> bool
 HackerOs.AppSdk.Blazor.Files.HackFileView.AllowMultiSelect.set -> void
@@ -304,6 +305,7 @@ HackerOs.AppSdk.Blazor.IDialogService.ShowFilePropertiesAsync(HackerOs.AppSdk.IA
 HackerOs.AppSdk.Blazor.WindowAppBase.Menus.get -> HackerOs.AppSdk.Blazor.ContextMenus.HackMenus!
 override HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder! builder) -> void
 override HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.OnParametersSet() -> void
+static HackerOs.AppSdk.Blazor.Files.HackFileOperationDialogs.AsFileConflictResolver(this HackerOs.AppSdk.Blazor.IDialogService! dialogs, HackerOs.AppSdk.IAppExecutionContext! owner, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> HackerOs.AppSdk.IO.HackFileConflictResolver!
 static HackerOs.AppSdk.Blazor.Files.RegisterFileContextMenuContext.ToScopes(HackerOs.AppSdk.Files.FileMenuScope scope) -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.DefaultUnavailable.get -> Microsoft.AspNetCore.Components.RenderFragment<string!>?
 virtual HackerOs.AppSdk.Blazor.Components.HackContractComponent<TController>.OnControllerChangedAsync(TController? controller) -> System.Threading.Tasks.Task!

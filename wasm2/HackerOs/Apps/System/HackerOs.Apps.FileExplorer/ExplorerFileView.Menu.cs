@@ -3,7 +3,7 @@ using HackerOs.AppSdk.Apps;
 using HackerOs.AppSdk.Blazor.ContextMenus;
 using HackerOs.AppSdk.Blazor.Files;
 using HackerOs.AppSdk.Clipboard;
-using HackerOs.AppSdk.FileView;
+using HackerOs.Apps.FileExplorer.FileControl;
 using HackerOs.AppSdk.Files;
 using HackerOs.Simulation.Abstractions.Gateways;
 using Microsoft.AspNetCore.Components;
