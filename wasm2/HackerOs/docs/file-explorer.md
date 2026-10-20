@@ -68,6 +68,14 @@ application… » ; plusieurs éléments : ni Renommer ni Ouvrir avec, Propriét
 désactivé. Un hôte retire des fonctions par `Features` et ajuste le menu par
 `ContextMenuOpening`. Détails : [ADR 0155](adr/0155-file-control-implementation-adjustments.md).
 
+Depuis `desk/3b` ([ADR 0157](adr/0157-file-dialogs-show-the-file-control.md)),
+les dialogues Ouvrir, Enregistrer et Choisir un dossier de l'OS montrent aussi
+ce contrôle (`FileDialogBrowser` de la plateforme, avec les droits de l'app
+qui demande) : Ouvrir sans `Features`, Enregistrer et Choisir un dossier avec
+Nouveau dossier et Renommer. Un fichier activé y est pris par le dialogue
+(`Opening` mis à `Handled`), pas ouvert dans son app. Sans fournisseur, la
+plateforme reprend sa liste `VirtualFolderBrowser`.
+
 ## Architecture
 
 Depuis `desk/3`, ce schéma est celui du fournisseur `ExplorerFileView`, que la
@@ -307,4 +315,4 @@ l'app est traduit par `Resources/AppManifest.fr.resx`.
 - [x] Dialogues fournis (`ExplorerFileDialogs`) par `IDialogService` et le proxy de la plateforme ; dialogues MudBlazor retirés.
 - [x] Fenêtre de l'explorateur sur `HackFileView` ; « UnZip Here… » et « Publish as a web site… » par `ContextMenuOpening`.
 - [x] Éditeur de code sur `HackFileView` ([`code-editor.md`](code-editor.md)).
-- [ ] Vue des dialogues Ouvrir / Enregistrer : chantier `desk/3b` (ADR 0155 §6).
+- [x] Vue des dialogues Ouvrir / Enregistrer : chantier `desk/3b` ([ADR 0157](adr/0157-file-dialogs-show-the-file-control.md)).

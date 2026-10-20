@@ -16,7 +16,15 @@ public abstract record FileDialogPresentation(
     Guid AppInstanceId,
     ProcessId ProcessId,
     string UserId,
-    IAppFileSystemGateway FileSystem);
+    IAppFileSystemGateway FileSystem)
+{
+    /// <summary>
+    /// Gets the requesting app's context: the dialog shows the OS file control with that app's rights
+    /// (ADR 0157). <see langword="null"/> (a presentation built by hand) shows the platform's browser
+    /// over <see cref="FileSystem"/>.
+    /// </summary>
+    public IAppExecutionContext? Context { get; init; }
+}
 
 /// <summary>Describes an active file-open request.</summary>
 public sealed record OpenFileDialogPresentation(
@@ -122,7 +130,7 @@ public sealed class FileDialogCoordinator : IFileDialogService, IDisposable
         Guid id = Guid.NewGuid();
         return Enqueue<OpenFileDialogResult>(
             new OpenFileDialogPresentation(
-                id, context.Manifest.Id, context.InstanceId, context.ProcessId, context.UserId, context.FileSystem, request),
+                id, context.Manifest.Id, context.InstanceId, context.ProcessId, context.UserId, context.FileSystem, request) { Context = context },
             static () => new OpenFileDialogResult(FileDialogStatus.Cancelled, []),
             cancellationToken);
     }
@@ -138,7 +146,7 @@ public sealed class FileDialogCoordinator : IFileDialogService, IDisposable
         Guid id = Guid.NewGuid();
         return Enqueue<SaveFileDialogResult>(
             new SaveFileDialogPresentation(
-                id, context.Manifest.Id, context.InstanceId, context.ProcessId, context.UserId, context.FileSystem, request),
+                id, context.Manifest.Id, context.InstanceId, context.ProcessId, context.UserId, context.FileSystem, request) { Context = context },
             static () => new SaveFileDialogResult(FileDialogStatus.Cancelled, null),
             cancellationToken);
     }
@@ -154,7 +162,7 @@ public sealed class FileDialogCoordinator : IFileDialogService, IDisposable
         Guid id = Guid.NewGuid();
         return Enqueue<SelectFolderDialogResult>(
             new SelectFolderDialogPresentation(
-                id, context.Manifest.Id, context.InstanceId, context.ProcessId, context.UserId, context.FileSystem, request),
+                id, context.Manifest.Id, context.InstanceId, context.ProcessId, context.UserId, context.FileSystem, request) { Context = context },
             static () => new SelectFolderDialogResult(FileDialogStatus.Cancelled, null),
             cancellationToken);
     }

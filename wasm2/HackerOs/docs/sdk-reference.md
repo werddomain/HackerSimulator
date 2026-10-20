@@ -406,7 +406,7 @@ Guide : [`asp-hack-site-data.md`](asp-hack-site-data.md).
 | `TextInputDialogRequest` → `TextInputDialogResult` | `Title`, `Content`, `DefaultValue`, `Placeholder` ; résultat `Status` (`TextInputStatus`) et `Value` |
 | `AppChooserDialogRequest` → `AppChooserDialogResult` | Sélecteur « Ouvrir avec » (ADR 0096) : `Title`, `Content`, `Candidates` (`AppChooserOption(AppId, Name, Description)`), `OfferAlwaysUse` ; résultat `Status` (`AppChooserStatus`), `AppId`, `AlwaysUse` |
 | `OpenWithDialogRequest`, `FilePropertiesDialogRequest`, `FileConflictDialogRequest` (`.Files`) | Dialogues fournis par l'explorateur (`hackeros.file-dialogs`, ADR 0155 §5) : « Ouvrir avec » (`CandidateAppIds` ; résultat `Status`, `AppId`, `AlwaysUse`), propriétés (résultat `Closed`), conflit de noms (`OfferApplyToAll` ; résultat `Replace`/`KeepBoth`/`Skip` et `ApplyToAll`). Sans fournisseur : `Unavailable` (ou `Skip`). |
-| `IDialogService`, `IFileDialogService` | Services injectés dans `WindowAppBase` (`Dialogs`, `FileDialogs`) ; `CredentialPromptAsync`, `ChooseAppAsync`, `OpenWithAsync`, `ShowFilePropertiesAsync` et `ResolveFileConflictAsync` en plus |
+| `IDialogService`, `IFileDialogService` | Services injectés dans `WindowAppBase` (`Dialogs`, `FileDialogs`) ; `CredentialPromptAsync`, `ChooseAppAsync`, `OpenWithAsync`, `ShowFilePropertiesAsync` et `ResolveFileConflictAsync` en plus. Les dialogues Ouvrir / Enregistrer / Choisir un dossier montrent le contrôle de fichiers de l'OS (`hackeros.file-view`) avec les droits de l'app, ou la liste de la plateforme sans fournisseur (ADR 0157) |
 
 `FileDialogStatus.Selected` indique un choix ; tout autre statut est une
 annulation.

@@ -128,3 +128,33 @@ HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.Presentation.set -> void
 HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.ProvidedFileDialog() -> void
 override HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.OnInitialized() -> void
 ~override HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.AllowDirectorySelection.get -> bool
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.AllowDirectorySelection.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.AllowFileSelection.get -> bool
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.AllowFileSelection.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.AllowMultipleSelection.get -> bool
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.AllowMultipleSelection.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.Context.get -> HackerOs.AppSdk.IAppExecutionContext?
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.Context.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.DirectoryChanged.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.App.Abstractions.VirtualPath>
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.DirectoryChanged.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.Dispose() -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.Features.get -> HackerOs.AppSdk.Blazor.Files.HackFileViewFeatures
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.Features.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileActivated.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.App.Abstractions.VirtualPath>
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileActivated.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileDialogBrowser() -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileFilter.get -> System.Func<string!, string?, bool>?
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileFilter.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileSystem.get -> HackerOs.Simulation.Abstractions.Gateways.IAppFileSystemGateway!
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.FileSystem.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.InitialDirectory.get -> HackerOs.App.Abstractions.VirtualPath
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.InitialDirectory.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.RefreshAsync() -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.RefreshFilter() -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.RevealAsync(HackerOs.App.Abstractions.VirtualPath path) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.SelectionChanged.get -> Microsoft.AspNetCore.Components.EventCallback<System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.VirtualPath>!>
+HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.SelectionChanged.set -> void
+HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.Context.get -> HackerOs.AppSdk.IAppExecutionContext?
+HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.Context.init -> void
