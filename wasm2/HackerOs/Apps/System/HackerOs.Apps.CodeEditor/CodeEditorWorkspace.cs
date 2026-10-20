@@ -45,11 +45,21 @@ public sealed class CodeEditorWorkspace
     private readonly IAppFileSystemGateway _fileSystem;
 
     /// <summary>Creates the workspace of <paramref name="root"/>, read and written through <paramref name="fileSystem"/>.</summary>
-    public CodeEditorWorkspace(VirtualPath root, IAppFileSystemGateway fileSystem)
+    /// <param name="root">The open folder.</param>
+    /// <param name="fileSystem">The gateway the folder is read and written with.</param>
+    /// <param name="selectedResource">
+    /// The grant of the folder dialog that picked <paramref name="root"/>, handed to the explorer's
+    /// tree (the OS file control) so it lists the folder with the same grant; <see langword="null"/> otherwise.
+    /// </param>
+    public CodeEditorWorkspace(VirtualPath root, IAppFileSystemGateway fileSystem, FileSystemSelectedResourceHandle? selectedResource = null)
     {
         Root = root;
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+        SelectedResource = selectedResource;
     }
+
+    /// <summary>Gets the grant of the folder dialog that picked the folder, or <see langword="null"/>.</summary>
+    public FileSystemSelectedResourceHandle? SelectedResource { get; }
 
     /// <summary>Gets the open folder.</summary>
     public VirtualPath Root { get; }

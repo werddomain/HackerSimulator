@@ -1,4 +1,5 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.Components;
 
 namespace HackerOs.Apps.FileExplorer;
 
@@ -33,6 +34,17 @@ public sealed class FileExplorerApp : AppDefinition
 
     /// <inheritdoc />
     public override IReadOnlyList<FileHandler> FileHandlers => [new("inode/directory", [], ["open"])];
+
+    /// <summary>
+    /// The OS file control and its dialogs (ADR 0148, ADR 0155): every app shows the explorer's
+    /// <c>HackFileView</c> and opens its "Open with", properties and conflict dialogs; the explorer
+    /// shows them itself.
+    /// </summary>
+    public override IReadOnlyList<AppComponent> Components =>
+    [
+        new(HackComponentContracts.FileView, typeof(ExplorerFileView)),
+        new(HackComponentContracts.FileDialogs, typeof(ExplorerFileDialogs))
+    ];
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

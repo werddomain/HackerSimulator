@@ -104,7 +104,27 @@ HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.OpenAsync(object? item
 HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Opening.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuOpeningEventArgs!>
 HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.Opening.set -> void
 HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu.PlatformContextMenu() -> void
+HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.CompleteProvided(System.Guid requestId, object? result) -> bool
+HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.OpenWithAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.Files.OpenWithDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.Files.OpenWithDialogResult!>
+HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.ResolveFileConflictAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.Files.FileConflictDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.Files.FileConflictDialogResult!>
+HackerOs.Platform.Blazor.Dialogs.DialogCoordinator.ShowFilePropertiesAsync(HackerOs.AppSdk.IAppExecutionContext! context, HackerOs.AppSdk.Blazor.Files.FilePropertiesDialogRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Blazor.Files.FilePropertiesDialogResult!>
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Context.get -> HackerOs.AppSdk.IAppExecutionContext!
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Context.init -> void
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Dialog.get -> string!
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Dialog.init -> void
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.ProvidedFileDialogPresentation(System.Guid Id, string! AppId, System.Guid AppInstanceId, HackerOs.Simulation.Abstractions.Processes.ProcessId ProcessId, string! UserId, string! Dialog, object! Request, HackerOs.AppSdk.IAppExecutionContext! Context) -> void
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Request.get -> object!
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation.Request.init -> void
 static HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout.Arrange(System.Collections.Generic.IEnumerable<HackerOs.AppSdk.Blazor.ContextMenus.HackMenuGroupDefinition!>! groups) -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel?
 static HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout.FindByLetter(HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! level, int from, char letter) -> int
 static HackerOs.Platform.Blazor.ContextMenus.ContextMenuLayout.NextSelectable(HackerOs.Platform.Blazor.ContextMenus.ContextMenuLevel! level, int from, int direction) -> int
 static readonly HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow.Separator -> HackerOs.Platform.Blazor.ContextMenus.ContextMenuRow!
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.Coordinator.get -> HackerOs.Platform.Blazor.Dialogs.DialogCoordinator!
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.Coordinator.set -> void
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.Presentation.get -> HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialogPresentation!
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.Presentation.set -> void
+HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.ProvidedFileDialog() -> void
+override HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.OnInitialized() -> void
+~override HackerOs.Platform.Blazor.Dialogs.ProvidedFileDialog.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

@@ -11,8 +11,9 @@
      data-drop-target
      tabindex="-1"
      @ref="_rootElement"
+     @attributes="MenuAttributesFor(null)"
      @oncontextmenu="OnBackgroundContextMenuAsync"
-     @oncontextmenu:preventDefault="true"
+     @oncontextmenu:preventDefault="UsesOwnMenu"
      @onkeydown="OnRootKeyDownAsync"
      @ondragover:preventDefault="AllowDragDrop"
      @ondrop="OnBackgroundDropAsync">
@@ -29,5 +30,8 @@
         <FileViewTree Owner="this" />
     }
 
-    <FileViewContextMenu @ref="_contextMenu" Owner="this" />
+    @if (UsesOwnMenu)
+    {
+        <FileViewContextMenu @ref="_contextMenu" Owner="this" />
+    }
 </div>

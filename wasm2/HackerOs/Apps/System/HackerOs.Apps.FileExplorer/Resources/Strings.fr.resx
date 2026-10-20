@@ -393,4 +393,52 @@
   <data name="Error.RememberFailed" xml:space="preserve">
     <value>L'app n'a pas été enregistrée comme app par défaut des fichiers {0}.</value>
   </data>
+  <data name="Menu.Open" xml:space="preserve">
+    <value>Ouvrir</value>
+  </data>
+  <data name="Menu.OpenWith" xml:space="preserve">
+    <value>Ouvrir avec</value>
+  </data>
+  <data name="Menu.OpenWithOther" xml:space="preserve">
+    <value>Choisir une autre application…</value>
+  </data>
+  <data name="Menu.Cut" xml:space="preserve">
+    <value>Couper</value>
+  </data>
+  <data name="Menu.Copy" xml:space="preserve">
+    <value>Copier</value>
+  </data>
+  <data name="Menu.Paste" xml:space="preserve">
+    <value>Coller</value>
+  </data>
+  <data name="Menu.PasteInto" xml:space="preserve">
+    <value>Coller dans le dossier</value>
+  </data>
+  <data name="Menu.Rename" xml:space="preserve">
+    <value>Renommer</value>
+  </data>
+  <data name="Menu.Delete" xml:space="preserve">
+    <value>Mettre à la corbeille</value>
+  </data>
+  <data name="Menu.DeletePermanently" xml:space="preserve">
+    <value>Supprimer définitivement</value>
+  </data>
+  <data name="Menu.NewFolder" xml:space="preserve">
+    <value>Nouveau dossier</value>
+  </data>
+  <data name="Menu.Refresh" xml:space="preserve">
+    <value>Actualiser</value>
+  </data>
+  <data name="Menu.Properties" xml:space="preserve">
+    <value>Propriétés</value>
+  </data>
+  <data name="Error.DialogsUnavailable" xml:space="preserve">
+    <value>Les dialogues de fichiers ne peuvent pas être affichés ici.</value>
+  </data>
+  <data name="Dialog.Loading" xml:space="preserve">
+    <value>Chargement…</value>
+  </data>
+  <data name="Dialog.UnknownDialog" xml:space="preserve">
+    <value>Ce dialogue de fichiers n'existe pas : {0}.</value>
+  </data>
 </root>

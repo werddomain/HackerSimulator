@@ -116,11 +116,7 @@ public partial class FileViewIcons : IAsyncDisposable
 
     internal Task OnTileDoubleClickAsync(FileViewItem item) => Owner.ActivateItemAsync(item);
 
-    internal Task OnTileContextMenuAsync(FileViewItem item, MouseEventArgs args)
-    {
-        item.Select();
-        return Owner.OpenItemContextMenuAsync(args, item);
-    }
+    internal Task OnTileContextMenuAsync(FileViewItem item, MouseEventArgs args) => Owner.OnItemContextMenuAsync(args, item);
 
     internal Task OnTileKeyDownAsync(FileViewItem item, KeyboardEventArgs args) => args.Key switch
     {

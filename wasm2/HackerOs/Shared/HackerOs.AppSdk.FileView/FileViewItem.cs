@@ -81,6 +81,11 @@ public sealed class FileViewItem
     public void Rename()
     {
         FileView owner = RequireOwner();
+        if (!owner.CanRenameItems)
+        {
+            return;
+        }
+
         IsRenaming = true;
         owner.NotifyItemRenamingStateChanged(this);
     }

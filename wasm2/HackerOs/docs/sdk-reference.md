@@ -284,7 +284,7 @@ les lit ici. Voir [`accessibility.md`](accessibility.md).
 
 | Type | Rôle | Document |
 |---|---|---|
-| `HackComponentContracts` | Noms des contrats : `Terminal` (`hackeros.terminal`) ; réservés à l'OS (ADR 0148) : `FileView` (`hackeros.file-view`), `FileDialogs` (`hackeros.file-dialogs`), `ContextMenu` (`hackeros.context-menu`). | [`embedded-components.md`](embedded-components.md) |
+| `HackComponentContracts` | Noms des contrats : `Terminal` (`hackeros.terminal`) ; réservés à l'OS (ADR 0148 ; l'ADR 0156 ouvre les deux premiers à une app tierce choisie par un administrateur) : `FileView` (`hackeros.file-view`), `FileDialogs` (`hackeros.file-dialogs`), `ContextMenu` (`hackeros.context-menu`). | [`embedded-components.md`](embedded-components.md) |
 | `IHackTerminal`, `HackTerminalOptions`, `HackTerminalCommandResult`, `HackTerminalOutputEventArgs` | Piloter un terminal embarqué : `RunCommandAsync`, `SetWorkingDirectoryAsync`, `SendInputAsync`, `ReadOutput`, `ClearAsync`, `FocusAsync`, `WorkingDirectory`, `Title`, `IsRunning`, `IsBusy`, `OutputReceived`, `CommandCompleted`, `StateChanged`, `Exited`. | [`embedded-components.md`](embedded-components.md) |
 
 ### Shell (`HackerOs.AppSdk.Shell` et `HackerOs.AppSdk`)
@@ -405,7 +405,8 @@ Guide : [`asp-hack-site-data.md`](asp-hack-site-data.md).
 | `MessageBoxDialogRequest` → `MessageBoxDialogResult` | `Title`, `Content`, `DialogType` (`MessageBoxType`) ; résultat `MessageBoxResult` |
 | `TextInputDialogRequest` → `TextInputDialogResult` | `Title`, `Content`, `DefaultValue`, `Placeholder` ; résultat `Status` (`TextInputStatus`) et `Value` |
 | `AppChooserDialogRequest` → `AppChooserDialogResult` | Sélecteur « Ouvrir avec » (ADR 0096) : `Title`, `Content`, `Candidates` (`AppChooserOption(AppId, Name, Description)`), `OfferAlwaysUse` ; résultat `Status` (`AppChooserStatus`), `AppId`, `AlwaysUse` |
-| `IDialogService`, `IFileDialogService` | Services injectés dans `WindowAppBase` (`Dialogs`, `FileDialogs`) ; `CredentialPromptAsync` et `ChooseAppAsync` en plus |
+| `OpenWithDialogRequest`, `FilePropertiesDialogRequest`, `FileConflictDialogRequest` (`.Files`) | Dialogues fournis par l'explorateur (`hackeros.file-dialogs`, ADR 0155 §5) : « Ouvrir avec » (`CandidateAppIds` ; résultat `Status`, `AppId`, `AlwaysUse`), propriétés (résultat `Closed`), conflit de noms (`OfferApplyToAll` ; résultat `Replace`/`KeepBoth`/`Skip` et `ApplyToAll`). Sans fournisseur : `Unavailable` (ou `Skip`). |
+| `IDialogService`, `IFileDialogService` | Services injectés dans `WindowAppBase` (`Dialogs`, `FileDialogs`) ; `CredentialPromptAsync`, `ChooseAppAsync`, `OpenWithAsync`, `ShowFilePropertiesAsync` et `ResolveFileConflictAsync` en plus |
 
 `FileDialogStatus.Selected` indique un choix ; tout autre statut est une
 annulation.
@@ -436,7 +437,21 @@ annulation.
 
 Détails : [`blazor-sites.md`](blazor-sites.md).
 
+### Contrôle de fichiers de l'OS (`HackerOs.AppSdk.Blazor.Files`, ADR 0148, ADR 0155)
+
+| Type | Rôle |
+|---|---|
+| `HackFileView` | Composant typé du contrat `hackeros.file-view`, fourni par l'explorateur. Paramètres : `InitialDirectory`, `Mode` (`HackFileViewMode` : `Details`, `Icons`, `Tree`), `ModeChanged`, `Features` (`HackFileViewFeatures`), `AllowMultiSelect`, `Filter`, `SelectedResource`, rappels `Opening` (`Handled`), `Navigated`, `SelectionChanged`, `Renamed`, `Deleted`, `ContextMenuOpening`, `ErrorOccurred`. |
+| `IHackFileView` | Contrôleur : `CurrentDirectory`, `Items`, `SelectedItems` (`HackFileViewItem`), `CanPaste`, `IsBusy`, `StateChanged`, `NavigateAsync`, `RefreshAsync`, `RevealAsync`, `ClearSelection`, `RefreshFilter`, `CanExecute`/`ExecuteAsync(commande)`, `WhenIdleAsync`. |
+| `HackFileMenuOpeningEventArgs` | `Scope`, `Items`, `Directory`, `Menu` (`HackMenuDefinition`), `Cancel`. |
+| `FileMenuScope`, `HackFileMenuItems` (`HackerOs.AppSdk.Files`) | Portées (`File`, `Directory`, `Background`, `Desktop`) et identifiants des entrées (`open`, `open-with`, `open-with-other`, `open-with:<appId>`, `cut`, `copy`, `paste`, `paste-into`, `rename`, `delete`, `delete-permanently`, `new-folder`, `refresh`, `properties`…). |
+
+Détails : [`embedded-components.md`](embedded-components.md#hackfileview-et-ihackfileview).
+
 ### Vue de fichiers (`HackerOs.AppSdk.FileView`)
+
+Retirée du SDK au 2.0 (ADR 0149) ; depuis `desk/3`, c'est l'implémentation
+interne du contrôle de l'explorateur. Une nouvelle app utilise `HackFileView`.
 
 | Type | Rôle |
 |---|---|

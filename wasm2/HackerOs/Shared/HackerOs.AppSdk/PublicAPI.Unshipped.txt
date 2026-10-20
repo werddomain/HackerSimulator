@@ -1,4 +1,21 @@
 #nullable enable
+const HackerOs.AppSdk.Files.HackFileMenuItems.Background = "background" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.Copy = "copy" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.Cut = "cut" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.Delete = "delete" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.DeletePermanently = "delete-permanently" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.NewFolder = "new-folder" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.Open = "open" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.OpenWith = "open-with" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.OpenWithAppPrefix = "open-with:" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.OpenWithOther = "open-with-other" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.Paste = "paste" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.PasteInto = "paste-into" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.Properties = "properties" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.Refresh = "refresh" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.Rename = "rename" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.Sort = "sort" -> string!
+const HackerOs.AppSdk.Files.HackFileMenuItems.View = "view" -> string!
 HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolation
 HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason
 HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason.Browser = 4 -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationReason
@@ -13,6 +30,13 @@ HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting.Off = 2 -> HackerOs.
 HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting.On = 1 -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationSetting
 HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway
 HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway.GetStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus!>
+HackerOs.AppSdk.Files.FileMenuScope
+HackerOs.AppSdk.Files.FileMenuScope.Background = 4 -> HackerOs.AppSdk.Files.FileMenuScope
+HackerOs.AppSdk.Files.FileMenuScope.Desktop = 8 -> HackerOs.AppSdk.Files.FileMenuScope
+HackerOs.AppSdk.Files.FileMenuScope.Directory = 2 -> HackerOs.AppSdk.Files.FileMenuScope
+HackerOs.AppSdk.Files.FileMenuScope.File = 1 -> HackerOs.AppSdk.Files.FileMenuScope
+HackerOs.AppSdk.Files.FileMenuScope.None = 0 -> HackerOs.AppSdk.Files.FileMenuScope
+HackerOs.AppSdk.Files.HackFileMenuItems
 HackerOs.AppSdk.IAppExecutionContext.CrossOriginIsolation.get -> HackerOs.AppSdk.Diagnostics.IAppCrossOriginIsolationGateway!
 static HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolation.GetStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus!>
 HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus

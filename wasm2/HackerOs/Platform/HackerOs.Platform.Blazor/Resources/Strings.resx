@@ -630,4 +630,13 @@
   <data name="WindowMode.ResizeHint" xml:space="preserve">
     <value>Arrows: resize · Ctrl: 1 px · Enter: keep · Esc: cancel</value>
   </data>
+  <data name="Dialog.Properties" xml:space="preserve">
+    <value>Properties</value>
+  </data>
+  <data name="Dialog.FileConflict" xml:space="preserve">
+    <value>Name already taken</value>
+  </data>
+  <data name="Dialog.FileDialogsUnavailable" xml:space="preserve">
+    <value>The file dialogs of the OS are unavailable.</value>
+  </data>
 </root>

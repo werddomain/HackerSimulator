@@ -175,7 +175,7 @@ son processus.
 | Commande (`TerminalAppBase.ExecuteAsync`), service (`ServiceAppBase`) | l'OS, autour de l'appel ; le frame suit les continuations, minuteries et `Task.Run` |
 | Fenêtre (`WindowAppBase`) | paramètres, cycle de vie, événements, après-rendu |
 | Composant enfant | `HackComponentBase` (ou `HackEmbeddableComponent`), contexte reçu en cascade de `WindowAppRenderer` |
-| Dialogue MudBlazor (rendu hors de la fenêtre) | `FileExplorerDialogBase` : la fenêtre passe son contexte en paramètre `OwnerAppContext` |
+| Dialogue MudBlazor (rendu hors de la fenêtre) | le composant du dialogue reçoit le contexte de la fenêtre en paramètre (l'ancien `FileExplorerDialogBase` et son `OwnerAppContext`) ; depuis `desk/3` (ADR 0155), les dialogues de l'explorateur sont des dialogues fournis rendus par la plateforme dans une fenêtre modale qui donne le contexte de l'app appelante en cascade (`ProvidedFileDialog`) |
 | Méthode `[JSInvokable]` | la méthode elle-même, en première instruction : `using IDisposable scope = HackExecutionContext.Enter(AppContext);` |
 
 Le rendu du balisage et la libération des composants restent hors frame : c'est
@@ -190,7 +190,8 @@ Migration faite dans ce chantier :
   `InstalledAppsPanel` (Settings, qui ne prennent plus `AppContext` en
   paramètre mais le reçoivent en cascade) ;
 - vers `FileExplorerDialogBase` : `FileConflictDialog`, `OpenWithDialog`,
-  `FilePropertiesDialog` ;
+  `FilePropertiesDialog` (retirés depuis par `desk/3`, remplacés par
+  `ExplorerFileDialogs`, ADR 0155) ;
 - frame ouvert en première instruction : `SystemMonitorWindow.SetWindowVisible`
   et les quatre rappels JavaScript de `CodeEditorWindow`.
 

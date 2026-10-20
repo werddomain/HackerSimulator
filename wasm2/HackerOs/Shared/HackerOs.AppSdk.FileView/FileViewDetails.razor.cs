@@ -113,8 +113,7 @@ public partial class FileViewDetails
     private async Task OnRowContextMenuAsync(FileViewItem item, MouseEventArgs args)
     {
         await CommitPendingRenameElsewhereAsync(item);
-        item.Select();
-        await Owner.OpenItemContextMenuAsync(args, item);
+        await Owner.OnItemContextMenuAsync(args, item);
     }
 
     /// <summary>

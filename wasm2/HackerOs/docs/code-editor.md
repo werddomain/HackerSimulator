@@ -14,7 +14,7 @@ est archivée dans [`old/code-editor.md`](old/code-editor.md).
 | Domaine | Ce que l'utilisateur fait |
 | --- | --- |
 | Dossier | File › Open Folder… (ou le bouton de l'explorateur vide) ; l'arbre du dossier s'affiche dans la barre latérale ; File › Close Folder. |
-| Explorateur | Un clic montre un fichier sans quitter l'arbre (flèches, Suppr, F2 restent à l'arbre) ; double-clic ou Entrée l'ouvre et donne le focus à l'éditeur. Boutons « New File… », « New Folder… », « Refresh » ; le nom se tape en place dans le dossier sélectionné. Menu contextuel : Open, Rename, Delete (corbeille), Delete permanently (avec confirmation), New File…, New Folder…, Find in Folder…, Open in Integrated Terminal. Glisser-déposer, couper/copier sont ceux de `FileView`. |
+| Explorateur | Un clic montre un fichier sans quitter l'arbre (flèches, Suppr, F2 restent à l'arbre) ; double-clic ou Entrée l'ouvre et donne le focus à l'éditeur. Boutons « New File… », « New Folder… », « Refresh » ; le nom se tape en place dans le dossier sélectionné. L'arbre est le contrôle de fichiers de l'OS (`HackFileView` en mode arbre, fourni par l'explorateur, ADR 0155) : son menu est celui de l'OS (Ouvrir, Ouvrir avec, Couper, Copier, Coller dans le dossier, Renommer, Mettre à la corbeille, Supprimer définitivement, Propriétés), auquel l'éditeur ajoute New File…, New Folder…, Find in Folder… et Open in Integrated Terminal par `ContextMenuOpening`. Glisser-déposer, presse-papiers, corbeille et erreurs (vers la barre d'état) sont ceux du contrôle, avec la poignée du dossier choisi (`SelectedResource`). |
 | Onglets | Plusieurs fichiers ouverts, chacun avec son historique d'annulation, sa sélection et son défilement. Point « ● » sur un onglet modifié, croix au survol ; clic du milieu pour fermer ; nom du dossier ajouté quand deux onglets ont le même nom. Ctrl+Tab et Ctrl+Maj+Tab changent d'onglet. |
 | Recherche | Ctrl+Maj+F ou l'icône loupe : recherche dans tous les fichiers du dossier, pendant la frappe. Options casse (Aa), mot entier (ab), expression régulière (.*), « files to include » et « files to exclude » (`*.cs`, `src/**`). Résultats groupés par fichier, repliables ; un clic ouvre le fichier et sélectionne l'occurrence. Le texte sélectionné dans l'éditeur sert de recherche initiale. |
 | Ouverture rapide | Ctrl+P : liste les fichiers du dossier, filtrés en sous-suite floue (`edwin` trouve `EditorWindow.razor`), flèches et Entrée. Sans dossier ouvert, Ctrl+P ouvre la boîte « Open File ». |
@@ -37,7 +37,7 @@ IntelliSense entre fichiers, contrôle de source, débogueur, extensions.
 | `CodeEditorSession`, `CodeEditorDocument` | Onglets et contenu en C# ; `RelocatePaths` suit un renommage de fichier ou de dossier. |
 | `CodeEditorWorkspace` | Dossier ouvert : liste des fichiers (exclusions `.git`, `.svn`, `.hg`, `node_modules`, `bin`, `obj` ; au plus 5 000), création de fichiers et de dossiers, chemins relatifs. |
 | `CodeEditorSearch.cs` | `CodeEditorTextSearch` (ligne par ligne, 1 000 occurrences par fichier, aperçu coupé autour de l'occurrence), `CodeEditorGlob`, `CodeEditorWorkspaceSearch` (5 000 occurrences au total, fichiers de plus de 1 Mio ignorés), `CodeEditorQuickOpen` (classement flou). |
-| `CodeEditorExplorer`, `CodeEditorSearchView`, `CodeEditorQuickOpenPalette`, `CodeEditorCursorStatus` | Vues de la barre latérale, boîte Ctrl+P et position du curseur, chacune avec son CSS collocé. |
+| `CodeEditorExplorer`, `CodeEditorSearchView`, `CodeEditorQuickOpenPalette`, `CodeEditorCursorStatus` | Vues de la barre latérale, boîte Ctrl+P et position du curseur, chacune avec son CSS collocé. Depuis `desk/3`, `CodeEditorExplorer` affiche `HackFileView` (plus de référence à `HackerOs.AppSdk.FileView`) : `Opening` ouvre un fichier dans un onglet (`Handled`), `SelectionChanged` le montre, `Renamed` fait suivre les onglets. |
 
 Le contenu de chaque fichier appartient à `CodeEditorDocument` (C#). Monaco
 garde un modèle par onglet pour l'historique et la position ; quand un onglet
@@ -177,3 +177,14 @@ Les deux points encore ouverts dans l'ancien suivi (P4-W3-002, P4-W3-007) ont
 - Reste vrai : la preuve de bout en bout dans une sortie publiée, hors ligne
   et chargée à la demande n'est pas automatisée (les tests E2E tournent sur
   l'hôte de développement).
+
+Contrôle de fichiers de l'OS (`desk/3-file-control`, ADR 0155) :
+
+- [x] Arbre de l'explorateur latéral sur `HackFileView` (mode arbre, sélection
+  simple, poignée du dossier choisi par `SelectedResource`).
+- [x] Entrées de l'éditeur ajoutées au menu de l'OS par `ContextMenuOpening`
+  (fond : New File…/New Folder… à la place de « Nouveau dossier » ; dossier :
+  les mêmes, Find in Folder…, Open in Integrated Terminal).
+- [x] Suppression propre à l'éditeur retirée (celle du contrôle), textes
+  `Delete.*` et `Dialog.Delete.*` retirés, erreurs du contrôle vers la barre
+  d'état.

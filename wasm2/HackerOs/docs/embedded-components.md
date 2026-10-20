@@ -57,7 +57,8 @@ instance est transmise au composant. Le contrôleur reste valable tant que
 
 Pour un contrat de l'OS, le SDK donne un composant typé que l'app utilise
 comme n'importe quel composant Blazor. Il dérive de
-`HackContractComponent<TController>` et recopie ses paramètres par nom :
+`HackContractComponent<TController>` et recopie ses paramètres par nom
+(forme réduite ; le vrai `HackFileView` est décrit plus bas) :
 
 ```csharp
 public sealed class HackFileView : HackContractComponent<IHackFileView>
@@ -106,7 +107,7 @@ en affichant le contrôle d'une autre.
 | Contrat | Fournisseur admis | Refus |
 | --- | --- | --- |
 | `hackeros.terminal` | toute app fenêtrée | — |
-| `hackeros.file-view`, `hackeros.file-dialogs` | apps système | `HOSAPP0025` au build de l'hôte ; à l'exécution, inscription écartée et `catalog.component.reserved` dans `/var/log/syslog` |
+| `hackeros.file-view`, `hackeros.file-dialogs` | apps système (aujourd'hui) ; l'ADR 0156 les ouvre à toute app fenêtrée, choisie par un administrateur, dans un chantier suivant | `HOSAPP0025` au build de l'hôte ; à l'exécution, inscription écartée et `catalog.component.reserved` dans `/var/log/syslog` |
 | `hackeros.context-menu` | plateforme | `manifest.component.contract.platform` (`HOSAPP0009` au build de l'app) |
 
 - **Indisponible.** Un contrat réservé sans fournisseur qui se charge est une
@@ -119,9 +120,36 @@ en affichant le contrôle d'une autre.
 | Contrat | Contrôleur | Options | Fournisseur |
 | --- | --- | --- | --- |
 | `hackeros.terminal` (`HackComponentContracts.Terminal`) | `IHackTerminal` | `HackTerminalOptions` (`WorkingDirectory`, `ShowBanner`, `FocusOnStart`) | Terminal (`TerminalEmbed`) |
-| `hackeros.file-view` (`HackComponentContracts.FileView`) | `IHackFileView` (chantier 3 du plan) | — | Explorateur de fichiers |
-| `hackeros.file-dialogs` (`HackComponentContracts.FileDialogs`) | dialogues de fichiers (chantier 3) | — | Explorateur de fichiers |
+| `hackeros.file-view` (`HackComponentContracts.FileView`) | `IHackFileView`, composant `HackFileView` (ADR 0155) | paramètres de `HackFileView` | Explorateur de fichiers (`ExplorerFileView`) |
+| `hackeros.file-dialogs` (`HackComponentContracts.FileDialogs`) | aucun : ouverts par `IDialogService.OpenWithAsync`, `ShowFilePropertiesAsync`, `ResolveFileConflictAsync` (`HackFileDialogs`, ADR 0155 §5) | paramètres `Dialog`, `Request`, `Completed` | Explorateur de fichiers (`ExplorerFileDialogs`) |
 | `hackeros.context-menu` (`HackComponentContracts.ContextMenu`) | `IHackContextMenu`, composant `HackContextMenu` ([`context-menu.md`](context-menu.md)) | — | Plateforme (`PlatformContextMenu`, qui inscrit le menu ; `ContextMenuOverlay` le dessine, ADR 0154) |
+
+### `HackFileView` et `IHackFileView`
+
+```razor
+<HackFileView InitialDirectory="@home"
+              Mode="HackFileViewMode.Icons"
+              Features="HackFileViewFeatures.All & ~HackFileViewFeatures.Delete"
+              Opening="OnOpening"
+              ContextMenuOpening="OnMenu"
+              ControllerChanged="files => _files = files" />
+```
+
+| Paramètre | Rôle |
+| --- | --- |
+| `InitialDirectory`, `Mode`/`ModeChanged`, `AllowMultiSelect`, `Filter` | Dossier, disposition (`Details`, `Icons`, `Tree`), sélection, filtre (rappeler `RefreshFilter`). |
+| `Features` | Ce que le contrôle fait seul (`Clipboard`, `Delete`, `Rename`, `CreateFolder`, `DragDrop`, `OpenWith`, `Properties`) ; une fonction retirée disparaît du menu et sa touche ne fait rien. |
+| `SelectedResource` | Poignée d'un dossier choisi dans le dialogue de l'OS : le contrôle liste avec elle. |
+| `Opening` | Avant l'ouverture d'un élément ; `Handled = true` laisse l'hôte l'ouvrir lui-même. |
+| `Navigated`, `SelectionChanged`, `Renamed`, `Deleted`, `ErrorOccurred` | Ce qui s'est passé ; sans `ErrorOccurred`, les erreurs deviennent des notifications. |
+| `ContextMenuOpening` | Après la construction du menu du plan §7 : `Scope`, `Items`, `Directory`, `Menu` (trouver, cacher, désactiver, ajouter un groupe), `Cancel`. |
+
+`IHackFileView` : `CurrentDirectory`, `Items`, `SelectedItems`, `CanPaste`,
+`IsBusy`, `StateChanged`, `NavigateAsync`, `RefreshAsync`, `RevealAsync`,
+`ClearSelection`, `RefreshFilter`, `WhenIdleAsync`, et
+`CanExecute`/`ExecuteAsync(commande)` dont les commandes sont les
+identifiants de `HackFileMenuItems` (`open`, `cut`, `paste`, `rename`,
+`delete`, `properties`…). Tout s'exécute avec les droits de l'hôte.
 
 ### `IHackTerminal`
 
@@ -170,3 +198,6 @@ Le shell est un enfant du processus de l'hôte : l'hôte doit demander
   `catalog.component.reserved`, `manifest.component.contract.platform`),
   `HackPlatformComponent`, `component.unavailable` au journal ; tests du
   validateur, du catalogue, de l'agrégation, du registre et du composant typé.
+- [x] Chantier 3 du plan du bureau (ADR 0155) : `HackFileView`, `IHackFileView`
+  et les dialogues fournis, `ExplorerFileView` et `ExplorerFileDialogs`
+  inscrits par l'explorateur ; test de la transmission de tous les paramètres.

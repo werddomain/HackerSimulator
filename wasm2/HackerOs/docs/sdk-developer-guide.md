@@ -359,7 +359,9 @@ phase 5, c'est vrai même s'il n'appelle pas `Hack*` : le temps du code exécut�
 hors contexte est compté au compositeur, pas à l'app (ADR 0067), et un test
 (`AmbientFrameSourceTests`) le vérifie pour les apps de `Apps/`. Un dialogue
 MudBlazor, rendu hors de la fenêtre, reçoit le contexte de la fenêtre en
-paramètre (voir `FileExplorerDialogBase`). Une méthode `[JSInvokable]` ou un
+paramètre et l'adopte avant le cycle de vie de `HackComponentBase` (comme le
+faisait `FileExplorerDialogBase`, retiré par l'ADR 0155 : les dialogues de
+fichiers de l'OS passent maintenant par `IDialogService`). Une méthode `[JSInvokable]` ou un
 rappel de minuterie .NET (hors `AppContext.Clock`) ouvre le contexte lui-même,
 dès sa première instruction :
 
