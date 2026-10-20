@@ -435,4 +435,34 @@
   <data name="Dialog.UnknownDialog" xml:space="preserve">
     <value>Ce dialogue de fichiers n'existe pas : {0}.</value>
   </data>
+  <data name="Desktop.Home" xml:space="preserve">
+    <value>Dossier perso</value>
+  </data>
+  <data name="Desktop.Trash" xml:space="preserve">
+    <value>Corbeille</value>
+  </data>
+  <data name="Desktop.Grid" xml:space="preserve">
+    <value>Bureau</value>
+  </data>
+  <data name="Menu.EmptyTrash" xml:space="preserve">
+    <value>Vider la corbeille</value>
+  </data>
+  <data name="Dialog.EmptyTrash.Title" xml:space="preserve">
+    <value>Vider la corbeille ?</value>
+  </data>
+  <data name="Dialog.EmptyTrash.Content" xml:space="preserve">
+    <value>Tous les éléments de la corbeille seront supprimés définitivement.</value>
+  </data>
+  <data name="Error.EmptyTrash" xml:space="preserve">
+    <value>La corbeille n'a pas pu être vidée : {0}</value>
+  </data>
+  <data name="Error.AppMissing" xml:space="preserve">
+    <value>Ce raccourci ouvre {0}, qui n'est pas installé.</value>
+  </data>
+  <data name="Error.Shortcut" xml:space="preserve">
+    <value>Le raccourci vers {0} n'a pas pu être créé : {1}</value>
+  </data>
+  <data name="Error.TrashMove" xml:space="preserve">
+    <value>Impossible de mettre {0} à la corbeille : {1}</value>
+  </data>
 </root>

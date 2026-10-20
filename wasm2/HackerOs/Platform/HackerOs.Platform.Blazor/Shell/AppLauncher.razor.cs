@@ -394,29 +394,9 @@ public partial class AppLauncher : ComponentBase, IDisposable
         return text.ResourceNotFound ? titled : text.Value;
     }
 
-    private static string GetAppIconName(AppManifest app)
-    {
-        if (string.Equals(app.Id, FileExplorerAppId, StringComparison.Ordinal))
-        {
-            return "folder";
-        }
-
-        if (string.Equals(app.Id, SettingsAppId, StringComparison.Ordinal))
-        {
-            return "settings";
-        }
-
-        return app.Presentation.Category.ToLowerInvariant() switch
-        {
-            "developer" => "code-2",
-            "games" => "gamepad-2",
-            "graphics" => "image",
-            "internet" => "globe-2",
-            "system" => "monitor-cog",
-            "utilities" => "wrench",
-            _ => "app-window"
-        };
-    }
+    /// <summary>The app's icon, the same everywhere the shell draws it (ADR 0160 §6).</summary>
+    private static string GetAppIconName(AppManifest app) =>
+        HackerOs.AppSdk.Apps.HackAppIcons.LucideName(app.Id, app.Presentation.Category);
 
     /// <inheritdoc />
     public void Dispose()

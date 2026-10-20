@@ -13,7 +13,14 @@ public enum HackFileViewMode
     Icons = 1,
 
     /// <summary>A tree of folders and files that expands in place.</summary>
-    Tree = 2
+    Tree = 2,
+
+    /// <summary>
+    /// The desktop grid (ADR 0152 §2, ADR 0160 §2): each icon on a cell of its own, kept where the user
+    /// put it (<see cref="HackFileView.DesktopPositions"/>), with the Home and Trash system icons; a
+    /// folder opens in a new explorer window. Transparent: the theme's wallpaper shows through.
+    /// </summary>
+    Desktop = 3
 }
 
 /// <summary>

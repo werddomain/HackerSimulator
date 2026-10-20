@@ -45,6 +45,18 @@ public sealed class FileViewItem
     /// </summary>
     public ShellIconDescriptor? IconOverride { get; set; }
 
+    /// <summary>
+    /// Gets or sets the name shown in place of <see cref="FileName"/>: the app's name of a <c>.desktop</c>
+    /// shortcut (ADR 0160 §6). Set by the File Explorer's decoration of the items.
+    /// </summary>
+    internal string? DisplayName { get; set; }
+
+    /// <summary>Gets or sets whether the item is drawn greyed: a shortcut to an app that is not installed (ADR 0152 §5).</summary>
+    internal bool IsDimmed { get; set; }
+
+    /// <summary>Gets the text under the icon: <see cref="DisplayName"/> when set, else the file name.</summary>
+    internal string Label => DisplayName ?? FileName;
+
     /// <summary>Gets whether this item is currently selected.</summary>
     public bool IsSelected { get; internal set; }
 

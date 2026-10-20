@@ -46,7 +46,7 @@ public sealed partial class ExplorerFileView
     /// <summary>Opens a file with its default app (ADR 0039, 0121), or asks which app when several can.</summary>
     private async Task OpenFileAsync(FileViewItem item)
     {
-        if (await RaiseOpeningAsync(item))
+        if (await RaiseOpeningAsync(item) || await TryLaunchShortcutAsync(item))
         {
             return;
         }
@@ -265,6 +265,7 @@ public sealed partial class ExplorerFileView
             await ReportErrorAsync(L["Error.Delete", string.Join("; ", failures)]);
         }
 
+        await RefreshTrashStateAsync();
         if (removed.Count > 0 && Deleted.HasDelegate)
         {
             await Deleted.InvokeAsync(new HackFileViewDeletedEventArgs(removed, permanent));
@@ -373,16 +374,23 @@ public sealed partial class ExplorerFileView
 
     // ---- Drag and drop (ADR 0058 section 1) ----------------------------------------------------------
 
+    /// <summary>Every drop the view hands over, into the folder it was dropped on (<see cref="TransferDropAsync"/>).</summary>
+    private Task OnDropRequestedAsync(FileViewDropRequestedEventArgs e) =>
+        e.Destination is { } destination ? TransferDropAsync(e, destination) : Task.CompletedTask;
+
     /// <summary>
-    /// Every drop the view hands over: HackerOS entries are moved (copied with Ctrl), with the conflict
-    /// dialog; files from the host system are imported. One summary covers both.
+    /// A drop into <paramref name="destination"/>: HackerOS entries are moved (copied with Ctrl), with the
+    /// conflict dialog; files from the host system are imported; apps from the Start menu become
+    /// <c>.desktop</c> shortcuts (ADR 0160 §6). One summary covers the transfers.
     /// </summary>
-    private async Task OnDropRequestedAsync(FileViewDropRequestedEventArgs e)
+    private async Task TransferDropAsync(FileViewDropRequestedEventArgs e, VirtualPath destination)
     {
-        if (e.Destination is not { } destination || !Has(HackFileViewFeatures.DragDrop) && e.Entries.Count > 0)
+        if (!Has(HackFileViewFeatures.DragDrop) && e.Entries.Count > 0)
         {
             return;
         }
+
+        await CreateShortcutsAsync(e.AppIds, destination);
 
         List<FileTransferItemResult> completed = [];
         List<string> skipped = [];

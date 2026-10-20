@@ -1,1 +1,12 @@
 #nullable enable
+HackerOs.AppSdk.FileView.Events.FileViewDropRequestedEventArgs.AppIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+HackerOs.AppSdk.FileView.Events.FileViewDropRequestedEventArgs.AppIds.init -> void
+HackerOs.AppSdk.FileView.FileViewDesktop
+HackerOs.AppSdk.FileView.FileViewDesktop.DisposeAsync() -> System.Threading.Tasks.ValueTask
+HackerOs.AppSdk.FileView.FileViewDesktop.FileViewDesktop() -> void
+HackerOs.AppSdk.FileView.FileViewDesktop.Owner.get -> HackerOs.AppSdk.FileView.FileView!
+HackerOs.AppSdk.FileView.FileViewDesktop.Owner.set -> void
+HackerOs.AppSdk.FileView.FileViewMode.Desktop = 3 -> HackerOs.AppSdk.FileView.FileViewMode
+override HackerOs.AppSdk.FileView.FileViewDesktop.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override HackerOs.AppSdk.FileView.FileViewDesktop.OnParametersSet() -> void
+~override HackerOs.AppSdk.FileView.FileViewDesktop.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

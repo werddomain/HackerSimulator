@@ -183,6 +183,12 @@ HackerOs.AppSdk.Blazor.Files.HackFileView.ContextMenuOpening.get -> Microsoft.As
 HackerOs.AppSdk.Blazor.Files.HackFileView.ContextMenuOpening.set -> void
 HackerOs.AppSdk.Blazor.Files.HackFileView.Deleted.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.AppSdk.Blazor.Files.HackFileViewDeletedEventArgs!>
 HackerOs.AppSdk.Blazor.Files.HackFileView.Deleted.set -> void
+HackerOs.AppSdk.Blazor.Files.HackFileView.DesktopOptions.get -> HackerOs.AppSdk.Files.HackDesktopOptions?
+HackerOs.AppSdk.Blazor.Files.HackFileView.DesktopOptions.set -> void
+HackerOs.AppSdk.Blazor.Files.HackFileView.DesktopPositions.get -> System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.AppSdk.Files.HackDesktopCell>?
+HackerOs.AppSdk.Blazor.Files.HackFileView.DesktopPositions.set -> void
+HackerOs.AppSdk.Blazor.Files.HackFileView.DesktopPositionsChanged.get -> Microsoft.AspNetCore.Components.EventCallback<System.Collections.Generic.IReadOnlyDictionary<string!, HackerOs.AppSdk.Files.HackDesktopCell>!>
+HackerOs.AppSdk.Blazor.Files.HackFileView.DesktopPositionsChanged.set -> void
 HackerOs.AppSdk.Blazor.Files.HackFileView.ErrorOccurred.get -> Microsoft.AspNetCore.Components.EventCallback<string!>
 HackerOs.AppSdk.Blazor.Files.HackFileView.ErrorOccurred.set -> void
 HackerOs.AppSdk.Blazor.Files.HackFileView.Features.get -> HackerOs.AppSdk.Blazor.Files.HackFileViewFeatures
@@ -237,6 +243,7 @@ HackerOs.AppSdk.Blazor.Files.HackFileViewItem.Path.init -> void
 HackerOs.AppSdk.Blazor.Files.HackFileViewItem.Size.get -> long
 HackerOs.AppSdk.Blazor.Files.HackFileViewItem.Size.init -> void
 HackerOs.AppSdk.Blazor.Files.HackFileViewMode
+HackerOs.AppSdk.Blazor.Files.HackFileViewMode.Desktop = 3 -> HackerOs.AppSdk.Blazor.Files.HackFileViewMode
 HackerOs.AppSdk.Blazor.Files.HackFileViewMode.Details = 0 -> HackerOs.AppSdk.Blazor.Files.HackFileViewMode
 HackerOs.AppSdk.Blazor.Files.HackFileViewMode.Icons = 1 -> HackerOs.AppSdk.Blazor.Files.HackFileViewMode
 HackerOs.AppSdk.Blazor.Files.HackFileViewMode.Tree = 2 -> HackerOs.AppSdk.Blazor.Files.HackFileViewMode

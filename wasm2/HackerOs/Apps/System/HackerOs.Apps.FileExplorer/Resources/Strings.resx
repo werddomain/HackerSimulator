@@ -435,4 +435,34 @@
   <data name="Dialog.UnknownDialog" xml:space="preserve">
     <value>This file dialog does not exist: {0}.</value>
   </data>
+  <data name="Desktop.Home" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Desktop.Trash" xml:space="preserve">
+    <value>Trash</value>
+  </data>
+  <data name="Desktop.Grid" xml:space="preserve">
+    <value>Desktop</value>
+  </data>
+  <data name="Menu.EmptyTrash" xml:space="preserve">
+    <value>Empty Trash</value>
+  </data>
+  <data name="Dialog.EmptyTrash.Title" xml:space="preserve">
+    <value>Empty the trash?</value>
+  </data>
+  <data name="Dialog.EmptyTrash.Content" xml:space="preserve">
+    <value>Every item in the trash will be deleted permanently.</value>
+  </data>
+  <data name="Error.EmptyTrash" xml:space="preserve">
+    <value>The trash could not be emptied: {0}</value>
+  </data>
+  <data name="Error.AppMissing" xml:space="preserve">
+    <value>This shortcut opens {0}, which is not installed.</value>
+  </data>
+  <data name="Error.Shortcut" xml:space="preserve">
+    <value>The shortcut to {0} could not be created: {1}</value>
+  </data>
+  <data name="Error.TrashMove" xml:space="preserve">
+    <value>Could not move {0} to the trash: {1}</value>
+  </data>
 </root>

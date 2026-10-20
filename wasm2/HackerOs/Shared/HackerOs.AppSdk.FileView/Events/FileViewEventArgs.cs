@@ -262,8 +262,14 @@ public sealed class FileViewDropRequestedEventArgs(
     /// <summary>Gets whether Ctrl was held: copy instead of move.</summary>
     public bool Copy { get; } = copy;
 
+    /// <summary>
+    /// Gets the apps dragged from the Start menu (ADR 0160 §6): the host creates a <c>.desktop</c>
+    /// shortcut to each in <see cref="Destination"/>.
+    /// </summary>
+    public IReadOnlyList<string> AppIds { get; init; } = [];
+
     /// <summary>Gets whether the drop carries nothing usable.</summary>
-    public bool IsEmpty => Entries.Count == 0 && HostFiles.Count == 0;
+    public bool IsEmpty => Entries.Count == 0 && HostFiles.Count == 0 && AppIds.Count == 0;
 
     /// <summary>Key under which <c>FileView.razor.js</c> keeps the host File objects until the drop is handled.</summary>
     internal int HostFileToken { get; init; }

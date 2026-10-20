@@ -25,6 +25,15 @@ public partial class FileView : IAsyncDisposable
     /// <summary>The custom <c>DataTransfer</c> MIME type <c>FileView.razor.js</c> reads/writes drag payloads under.</summary>
     internal const string DragMimeType = "application/vnd.hackeros.file-drag+json";
 
+    /// <summary>
+    /// The <c>DataTransfer</c> type of an app dragged from the Start menu (ADR 0160 §6), <c>{"appId":"…"}</c>:
+    /// dropped on a folder, it becomes a <c>.desktop</c> shortcut there.
+    /// </summary>
+    internal const string AppDragMimeType = "application/vnd.hackeros.app+json";
+
+    /// <summary>The MIME type of a drag of desktop icons on their own desktop (ADR 0160 §3): their position keys.</summary>
+    internal const string DesktopItemMimeType = "application/vnd.hackeros.desktop-item+json";
+
     private readonly List<FileViewItem> _items = [];
     private readonly HashSet<FileViewItem> _selection = [];
     private bool _initialized;
@@ -194,6 +203,9 @@ public partial class FileView : IAsyncDisposable
 
     /// <summary>Gets the directory currently displayed.</summary>
     public VirtualPath CurrentDirectory { get; private set; }
+
+    /// <summary>Gets whether the current directory has been read once: before that, <see cref="Items"/> is empty only because nothing is loaded.</summary>
+    internal bool IsLoaded => _lastSnapshot is not null;
 
     /// <summary>Gets the current directory's items.</summary>
     public IReadOnlyList<FileViewItem> Items { get; private set; } = [];
@@ -436,6 +448,8 @@ public partial class FileView : IAsyncDisposable
             }
 
             item.IsCut = CutPaths is not null && CutPaths.Contains(item.FullPath.Value);
+            // ADR 0160 §6: the explorer shows a shortcut with its app's name and icon.
+            MenuBinding?.Decorate?.Invoke(item);
 
             if (selectedNames.Contains(item.FileName))
             {
@@ -814,6 +828,29 @@ public partial class FileView : IAsyncDisposable
     }
 
     /// <summary>
+    /// Starts a drag from the desktop (ADR 0160 §3): the files of <paramref name="items"/> as any drag of
+    /// the view, so another window can receive them, plus <paramref name="desktopJson"/>, the keys of the
+    /// icons moved, so the desktop knows the drag is its own. Both are written in one call, while the
+    /// browser's <c>dragstart</c> is still being dispatched.
+    /// </summary>
+    internal async Task StartDesktopDragAsync(IReadOnlyList<FileViewItem> items, string desktopJson)
+    {
+        if (!AllowDragDrop)
+        {
+            return;
+        }
+
+        Dictionary<string, string> data = new(StringComparer.Ordinal) { [DesktopItemMimeType] = desktopJson };
+        if (BuildDragPayloadJson(items) is { } json)
+        {
+            data[DragMimeType] = json;
+        }
+
+        IJSObjectReference module = await EnsureJsModuleAsync();
+        await module.InvokeAsync<bool>("setDragDataMany", data);
+    }
+
+    /// <summary>
     /// Completes a drop onto a directory item (drag-drop, <c>FV-006</c>): ignored for non-directory
     /// targets (the drop then reaches the background, i.e. the current directory). See
     /// <see cref="DropOntoAsync"/>.
@@ -835,11 +872,18 @@ public partial class FileView : IAsyncDisposable
     internal async Task DropOntoAsync(VirtualPath destination, DragEventArgs args)
     {
         FileViewDropRequestedEventArgs? drop = await ReadDropAsync(destination, args);
-        if (drop is null)
+        if (drop is not null)
         {
-            return;
+            await CompleteDropAsync(destination, drop);
         }
+    }
 
+    /// <summary>
+    /// The second half of <see cref="DropOntoAsync"/>, for a drop already read with <see cref="ReadDropAsync"/>
+    /// (the desktop reads it first to place the new icons under the pointer, ADR 0160 §3).
+    /// </summary>
+    internal async Task CompleteDropAsync(VirtualPath destination, FileViewDropRequestedEventArgs drop)
+    {
         try
         {
             if (DropRequested.HasDelegate)
@@ -894,7 +938,8 @@ public partial class FileView : IAsyncDisposable
 
         bool internalDrag = types.Contains(DragMimeType);
         bool hostFiles = types.Contains("Files");
-        if (!internalDrag && !hostFiles)
+        bool appDrag = types.Contains(AppDragMimeType);
+        if (!internalDrag && !hostFiles && !appDrag)
         {
             return null;
         }
@@ -931,8 +976,9 @@ public partial class FileView : IAsyncDisposable
             }
         }
 
+        IReadOnlyList<string> appIds = appDrag ? ReadAppIds(await module.InvokeAsync<string?>("getDragData", AppDragMimeType)) : [];
         (IReadOnlyList<FileTransferHostFile> files, int token) = hostFiles ? await TakeHostFilesAsync(module) : ([], 0);
-        FileViewDropRequestedEventArgs drop = new(destination, entries, files, args.CtrlKey) { HostFileToken = token };
+        FileViewDropRequestedEventArgs drop = new(destination, entries, files, args.CtrlKey) { HostFileToken = token, AppIds = appIds };
         if (drop.IsEmpty)
         {
             await ReleaseHostFilesAsync(drop);
@@ -940,6 +986,42 @@ public partial class FileView : IAsyncDisposable
         }
 
         return drop;
+    }
+
+    /// <summary>Reads the app ids of an app drag, <c>{"appId":"…"}</c> or <c>{"appIds":[…]}</c>; nothing for anything else.</summary>
+    /// <param name="json">The payload of <see cref="AppDragMimeType"/>.</param>
+    internal static IReadOnlyList<string> ReadAppIds(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return [];
+            }
+
+            List<string> ids = [];
+            if (document.RootElement.TryGetProperty("appId", out JsonElement single) && single.ValueKind == JsonValueKind.String)
+            {
+                ids.Add(single.GetString()!);
+            }
+
+            if (document.RootElement.TryGetProperty("appIds", out JsonElement many) && many.ValueKind == JsonValueKind.Array)
+            {
+                ids.AddRange(many.EnumerateArray().Where(static id => id.ValueKind == JsonValueKind.String).Select(static id => id.GetString()!));
+            }
+
+            return [.. ids.Where(static id => id.Length > 0).Distinct(StringComparer.Ordinal)];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
     }
 
     /// <summary>

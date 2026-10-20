@@ -266,6 +266,8 @@
         // adds --select=<path> (RevealFileIntent, ADR 0096 section 1).
         (VirtualPath? folder, VirtualPath? select) = ParseLaunchArguments(LaunchArguments);
         _pendingReveal = select;
+        // The desktop's Trash icon (ADR 0160 §5) starts the explorer on its trash view, like Nautilus's trash:///.
+        _showTrash = LaunchArguments.Contains(TrashArgument, StringComparer.Ordinal);
         // "Extract here" from a file menu (ADR 0151 §8): open the first archive's folder, extract once ready.
         if (LaunchIntent is { IntentId: FileExplorerMenuEntries.ExtractHereIntent } intent)
         {
@@ -405,6 +407,9 @@
     }
 
     private const string SelectPrefix = "--select=";
+
+    /// <summary>The argument that opens the trash view instead of a folder (ADR 0160 §5).</summary>
+    internal const string TrashArgument = "trash:///";
 
     private static VirtualPath ParentOf(VirtualPath path)
     {
