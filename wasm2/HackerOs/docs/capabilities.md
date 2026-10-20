@@ -29,7 +29,7 @@ classement.
 | `filesystem.private.*`, `filesystem.user-selected.*`, `filesystem.user-home.*` | normale |
 | `filesystem.system.read`, `filesystem.system.write` | **dangereuse** (Diagnostic lit l'isolation par `HackCrossOriginIsolation`, sans capacité, et ne la déclare plus, ADR 0146) |
 | `apps.launch` | normale |
-| `apps.manage` | **dangereuse** (exigée par `HackAppManagement`, ADR 0056 §3 ; déclarée par Paramètres) |
+| `apps.manage` | **dangereuse** (exigée par `HackAppManagement`, ADR 0056 §3, et `HackComponentProviders`, ADR 0156 ; déclarée par Paramètres) |
 | `dialogs.file-open`, `dialogs.file-save`, `dialogs.folder-select` | normale |
 | `file-associations.read` | normale |
 | `file-associations.write` | **dangereuse** |

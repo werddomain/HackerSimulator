@@ -70,11 +70,14 @@ public sealed class AppCatalog
     /// Gets the providers of each embeddable component contract (ADR 0063, ADR 0148 §3), read from
     /// the manifests when the catalog is built, as Windows reads its registry at boot: the OS knows
     /// every provider before any of their assemblies is loaded. Each list is in the order the
-    /// providers are tried: system apps first, then by app id. A registration ADR 0148 §3.3 refuses
-    /// (a reserved contract declared by an app that is not a system app) is left out, with one
-    /// <c>catalog.component.reserved</c> warning in <see cref="Warnings"/>.
+    /// providers are tried: system apps first, then by app id. Any window app may register any
+    /// contract but the platform's own (ADR 0156 §1, which replaced the system-app reservation of
+    /// ADR 0148 §3.3).
     /// </summary>
-    /// <remarks>Installed state is not applied here: the component host skips disabled apps when it resolves.</remarks>
+    /// <remarks>
+    /// Installed state and the administrator's choice of provider (<c>/etc/hackeros/components.config</c>,
+    /// ADR 0156 §2) are not applied here: the component host applies both when it resolves.
+    /// </remarks>
     public IReadOnlyDictionary<string, IReadOnlyList<AppComponentProvider>> ComponentProviders { get; }
 
     /// <summary>Gets the providers of <paramref name="contract"/> in the order they are tried (see <see cref="ComponentProviders"/>).</summary>
@@ -88,8 +91,7 @@ public sealed class AppCatalog
 
     /// <summary>
     /// Gets the problems that did not stop the catalog, in deterministic order: one
-    /// <c>catalog.command.duplicate</c> per command name lost by an app, then one
-    /// <c>catalog.component.reserved</c> per refused component registration. The boot writes them, with
+    /// <c>catalog.command.duplicate</c> per command name lost by an app. The boot writes them, with
     /// <see cref="Rejected"/>, to <c>/var/log/syslog</c>.
     /// </summary>
     public IReadOnlyList<AppCatalogError> Warnings { get; }
@@ -256,7 +258,7 @@ public sealed class AppCatalog
         List<AppCatalogError> warnings = [];
         IReadOnlyDictionary<string, string> commandOwners = AssignCommands(byId, activationOrder, systemIds, warnings);
         IReadOnlyDictionary<string, IReadOnlyList<AppComponentProvider>> componentProviders =
-            RegisterComponents(byId, systemIds, warnings);
+            RegisterComponents(byId, systemIds);
         return new AppCatalogBuildResult(
             new AppCatalog(
                 readOnlyManifests,
@@ -310,16 +312,12 @@ public sealed class AppCatalog
     }
 
     /// <summary>
-    /// ADR 0148 §3: builds the component registry from the manifests. A registration of a contract
-    /// reserved to system apps by another app is dropped with a <c>catalog.component.reserved</c>
-    /// warning (the host build already refuses it among its own apps with <c>HOSAPP0025</c>; this
-    /// covers apps that reach the catalog another way). Platform-only contracts never get here:
-    /// manifest validation refuses them.
+    /// ADR 0148 §3: builds the component registry from the manifests, system apps first, then by
+    /// app id. Platform-only contracts never get here: manifest validation refuses them.
     /// </summary>
     private static IReadOnlyDictionary<string, IReadOnlyList<AppComponentProvider>> RegisterComponents(
         IReadOnlyDictionary<string, AppManifest> manifests,
-        IReadOnlySet<string> systemIds,
-        List<AppCatalogError> warnings)
+        IReadOnlySet<string> systemIds)
     {
         Dictionary<string, List<AppComponentProvider>> providers = new(StringComparer.Ordinal);
         IEnumerable<AppManifest> precedence = manifests.Values
@@ -327,19 +325,8 @@ public sealed class AppCatalog
             .ThenBy(manifest => manifest.Id, StringComparer.Ordinal);
         foreach (AppManifest manifest in precedence)
         {
-            bool isSystemApp = systemIds.Contains(manifest.Id);
             foreach (AppComponentManifest component in manifest.Components ?? [])
             {
-                if (!isSystemApp
-                    && AppComponentContracts.GetProviderScope(component.Contract) == AppComponentProviderScope.SystemApps)
-                {
-                    warnings.Add(new AppCatalogError(
-                        "catalog.component.reserved",
-                        manifest.Id,
-                        $"Component '{component.Contract}' of '{manifest.Id}' is not registered: only a system app may provide it (ADR 0148)."));
-                    continue;
-                }
-
                 if (!providers.TryGetValue(component.Contract, out List<AppComponentProvider>? list))
                 {
                     providers[component.Contract] = list = [];

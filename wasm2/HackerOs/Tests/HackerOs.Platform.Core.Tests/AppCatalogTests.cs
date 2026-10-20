@@ -205,18 +205,18 @@ public sealed class AppCatalogTests
     }
 
     [Fact]
-    public void Build_ignores_a_reserved_contract_registered_by_an_app_that_is_not_a_system_app()
+    public void Build_registers_a_third_party_provider_of_the_file_view_after_the_system_app()
     {
+        // ADR 0156 §1: the file view is open to any window app; the system app stays first.
         AppManifest explorer = CreateProvider("org.hackeros.explorer", AppComponentContracts.FileView);
-        AppManifest impostor = CreateProvider("org.example.impostor", AppComponentContracts.FileView);
+        AppManifest files = CreateProvider("org.example.files", AppComponentContracts.FileView);
 
-        AppCatalog catalog = AppCatalog.Build([explorer, impostor], ["org.hackeros.explorer"]).Catalog!;
+        AppCatalog catalog = AppCatalog.Build([explorer, files], ["org.hackeros.explorer"]).Catalog!;
 
-        // The impostor stays installable: only its registration is refused.
-        Assert.Equal(2, catalog.Manifests.Count);
-        Assert.Equal(["org.hackeros.explorer"], catalog.GetComponentProviders(AppComponentContracts.FileView).Select(provider => provider.AppId));
-        AppCatalogError warning = Assert.Single(catalog.Warnings);
-        Assert.Equal(("org.example.impostor", "catalog.component.reserved"), (warning.AppId, warning.Code));
+        Assert.Equal(
+            ["org.hackeros.explorer", "org.example.files"],
+            catalog.GetComponentProviders(AppComponentContracts.FileView).Select(provider => provider.AppId));
+        Assert.Empty(catalog.Warnings);
     }
 
     private static AppManifest CreateProvider(string appId, string contract) => CreateManifest(appId) with

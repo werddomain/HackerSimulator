@@ -4,6 +4,7 @@ using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Blazor.Components;
 using HackerOs.Platform.Blazor.Components;
 using HackerOs.Platform.Core;
+using HackerOs.Platform.Core.ComponentProviders;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Lifecycle;
 
@@ -103,19 +104,104 @@ public sealed class HackComponentHostTests
     }
 
     [Fact]
-    public async Task A_reserved_contract_is_never_given_to_an_app_that_is_not_a_system_app()
+    public async Task Without_a_choice_the_system_app_provides_the_file_view_before_a_third_party_one()
     {
-        AppManifest impostor = CreateManifest("org.example.impostor", typeof(TestEmbed), AppComponentContracts.FileView);
+        // ADR 0156 §1-2: the file view is open to any window app, the explorer stays the default.
+        AppManifest files = CreateManifest("org.example.files", typeof(TestEmbed), AppComponentContracts.FileView);
+        AppManifest explorer = CreateManifest("org.hackeros.explorer", typeof(TestEmbed), AppComponentContracts.FileView);
+        HackComponentHost host = CreateHost([files, explorer], systemAppIds: ["org.hackeros.explorer"]);
+
+        HackComponentResolution resolution = await host.ResolveAsync(AppComponentContracts.FileView);
+
+        Assert.Equal("org.hackeros.explorer", resolution.ProviderAppId);
+        Assert.Equal(["org.hackeros.explorer", "org.example.files"], host.GetProviders(AppComponentContracts.FileView).Select(provider => provider.AppId));
+    }
+
+    [Fact]
+    public async Task The_provider_an_administrator_chose_is_tried_first()
+    {
+        AppManifest files = CreateManifest("org.example.files", typeof(TestEmbed), AppComponentContracts.FileView);
+        AppManifest explorer = CreateManifest("org.hackeros.explorer", typeof(TestEmbed), AppComponentContracts.FileView);
+        var warnings = new List<string>();
+        HackComponentHost host = CreateHost(
+            [files, explorer], systemAppIds: ["org.hackeros.explorer"], selection: new FakeSelection(AppComponentContracts.FileView, "org.example.files"), warnings: warnings);
+
+        HackComponentResolution resolution = await host.ResolveAsync(AppComponentContracts.FileView);
+
+        Assert.Equal("org.example.files", resolution.ProviderAppId);
+        Assert.Empty(warnings);
+    }
+
+    [Fact]
+    public async Task A_chosen_provider_that_does_not_load_falls_back_to_the_explorer_with_one_warning()
+    {
+        AppManifest files = CreateManifest("org.example.files", typeof(TestEmbed), AppComponentContracts.FileView);
+        AppManifest explorer = CreateManifest("org.hackeros.explorer", typeof(TestEmbed), AppComponentContracts.FileView);
+        var warnings = new List<string>();
         var errors = new List<string>();
-        HackComponentHost host = CreateHost([impostor], errors: errors);
+        HackComponentHost host = CreateHost(
+            [files, explorer],
+            systemAppIds: ["org.hackeros.explorer"],
+            unavailable: ["org.example.files"],
+            errors: errors,
+            selection: new FakeSelection(AppComponentContracts.FileView, "org.example.files"),
+            warnings: warnings);
+
+        HackComponentResolution first = await host.ResolveAsync(AppComponentContracts.FileView);
+        HackComponentResolution second = await host.ResolveAsync(AppComponentContracts.FileView);
+
+        Assert.Equal("org.hackeros.explorer", first.ProviderAppId);
+        Assert.Equal("org.hackeros.explorer", second.ProviderAppId);
+        // ADR 0156 §4: written once, as a warning; component.unavailable stays for "no provider at all".
+        string warning = Assert.Single(warnings);
+        Assert.StartsWith("component.fallback:", warning, StringComparison.Ordinal);
+        Assert.Contains("org.example.files", warning, StringComparison.Ordinal);
+        Assert.Contains("asset missing", warning, StringComparison.Ordinal);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public async Task A_chosen_provider_disabled_for_the_user_falls_back_with_a_warning()
+    {
+        AppManifest files = CreateManifest("org.example.files", typeof(TestEmbed), AppComponentContracts.FileView);
+        AppManifest explorer = CreateManifest("org.hackeros.explorer", typeof(TestEmbed), AppComponentContracts.FileView);
+        var warnings = new List<string>();
+        HackComponentHost host = CreateHost(
+            [files, explorer],
+            disabled: ["org.example.files"],
+            systemAppIds: ["org.hackeros.explorer"],
+            selection: new FakeSelection(AppComponentContracts.FileView, "org.example.files"),
+            warnings: warnings);
+
+        HackComponentResolution resolution = await host.ResolveAsync(AppComponentContracts.FileView);
+
+        Assert.Equal("org.hackeros.explorer", resolution.ProviderAppId);
+        Assert.Contains("disabled or uninstalled", Assert.Single(warnings), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_choice_never_applies_to_an_open_contract()
+    {
+        AppManifest alpha = CreateManifest("org.hackeros.alpha", typeof(TestEmbed));
+        AppManifest beta = CreateManifest("org.hackeros.beta", typeof(TestEmbed));
+        HackComponentHost host = CreateHost([alpha, beta], selection: new FakeSelection(Contract, "org.hackeros.beta"));
+
+        HackComponentResolution resolution = await host.ResolveAsync(Contract);
+
+        Assert.Equal("org.hackeros.alpha", resolution.ProviderAppId);
+    }
+
+    [Fact]
+    public async Task No_working_file_view_at_all_is_written_as_an_error()
+    {
+        AppManifest files = CreateManifest("org.example.files", typeof(NotEmbeddable), AppComponentContracts.FileView);
+        var errors = new List<string>();
+        HackComponentHost host = CreateHost([files], errors: errors);
 
         HackComponentResolution resolution = await host.ResolveAsync(AppComponentContracts.FileView);
 
         Assert.False(resolution.IsResolved);
-        Assert.Empty(host.GetProviders(AppComponentContracts.FileView));
-        // ADR 0148 §5: the OS's own control missing is a fault, written to the system log.
-        string error = Assert.Single(errors);
-        Assert.Contains(AppComponentContracts.FileView, error, StringComparison.Ordinal);
+        Assert.Contains("component.unavailable", Assert.Single(errors), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -150,7 +236,9 @@ public sealed class HackComponentHostTests
         IReadOnlyList<string>? unavailable = null,
         List<string>? loads = null,
         IReadOnlyList<HackPlatformComponent>? platform = null,
-        List<string>? errors = null)
+        List<string>? errors = null,
+        IComponentProviderSelection? selection = null,
+        List<string>? warnings = null)
     {
         AppCatalog catalog = Assert.IsType<AppCatalog>(AppCatalog.Build(manifests, systemAppIds ?? []).Catalog);
         var enablement = new AppEnablementRegistry(catalog);
@@ -166,7 +254,18 @@ public sealed class HackComponentHostTests
             AppManifest manifest = catalog.Manifests[appId];
             Assembly assembly = typeof(TestEmbed).Assembly;
             return Task.FromResult<(AppDescriptor?, string?)>((new AppDescriptor(manifest, typeof(TestWindow), assembly), null));
-        }, platform, errors is null ? null : errors.Add);
+        }, platform, errors is null ? null : errors.Add)
+        {
+            Selection = selection,
+            ReportWarning = warnings is null ? null : warnings.Add
+        };
+    }
+
+    /// <summary>A components.config with one line.</summary>
+    private sealed class FakeSelection(string contract, string appId) : IComponentProviderSelection
+    {
+        public ValueTask<string?> GetSelectedProviderAsync(string requested, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(requested == contract ? appId : null);
     }
 
     private static AppManifest CreateManifest(string id, Type componentType, string contract = Contract) => new()

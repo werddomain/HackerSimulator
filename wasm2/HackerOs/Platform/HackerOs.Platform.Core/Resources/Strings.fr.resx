@@ -21,6 +21,24 @@
   <data name="Admin.Backup" xml:space="preserve">
     <value>Sauvegarder cette machine (tous les comptes, fichiers et réglages) sur l'ordinateur hôte</value>
   </data>
+  <data name="Admin.ComponentProvider.Default" xml:space="preserve">
+    <value>Rendre à l'explorateur de fichiers le rôle de fournisseur de {0} pour toute la machine</value>
+  </data>
+  <data name="Admin.ComponentProvider.Set" xml:space="preserve">
+    <value>Faire de « {0} » ({1}) le fournisseur de {2} pour toute la machine</value>
+  </data>
+  <data name="Capability.hackeros.file-dialogs.Risk" xml:space="preserve">
+    <value>Le code de cette app s'exécutera dans toutes les applications qui ouvrent ou enregistrent des fichiers, avec leurs droits.</value>
+  </data>
+  <data name="Capability.hackeros.file-dialogs.Title" xml:space="preserve">
+    <value>Fournir les dialogues de fichiers de l'OS</value>
+  </data>
+  <data name="Capability.hackeros.file-view.Risk" xml:space="preserve">
+    <value>Le code de cette app s'exécutera dans toutes les applications qui affichent des fichiers, avec leurs droits.</value>
+  </data>
+  <data name="Capability.hackeros.file-view.Title" xml:space="preserve">
+    <value>Fournir le contrôle de fichiers de l'OS</value>
+  </data>
   <data name="Admin.Decision.Allow" xml:space="preserve">
     <value>Autoriser « {0} » ({1}) pour {2} sur cette machine</value>
   </data>

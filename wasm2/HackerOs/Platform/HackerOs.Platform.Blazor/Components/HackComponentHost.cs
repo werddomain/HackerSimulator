@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using HackerOs.App.Abstractions;
 using HackerOs.AppSdk.Blazor.Components;
 using HackerOs.Platform.Core;
+using HackerOs.Platform.Core.ComponentProviders;
 using HackerOs.Platform.Core.Discovery;
 using HackerOs.Platform.Core.Lifecycle;
 
@@ -53,6 +54,7 @@ public sealed class HackComponentHost : IHackComponentHost
     private readonly Func<string, CancellationToken, Task<(AppDescriptor? Descriptor, string? Error)>> _descriptors;
     private readonly Dictionary<string, HackPlatformComponent> _platform = new(StringComparer.Ordinal);
     private readonly Action<string>? _reportError;
+    private readonly HashSet<string> _reportedFallbacks = new(StringComparer.Ordinal);
 
     /// <summary>Initializes the registry over the host catalog, with no platform component and no system log.</summary>
     /// <param name="catalog">Build-known apps and their manifests.</param>
@@ -72,7 +74,7 @@ public sealed class HackComponentHost : IHackComponentHost
     /// <param name="descriptors">Gets an app's descriptor, lazy-loading its assembly (<c>AppLifecycleOrchestrator.EnsureDescriptorAsync</c>).</param>
     /// <param name="platformComponents">The components the platform provides itself (ADR 0148 §3.2); tried before any app.</param>
     /// <param name="reportError">
-    /// Writes a line to the system log (<c>/var/log/syslog</c>): a reserved contract with no
+    /// Writes a line to the system log (<c>/var/log/syslog</c>): an OS contract with no
     /// working provider is an error of the OS, never a normal state (ADR 0148 §5).
     /// </param>
     public HackComponentHost(
@@ -96,9 +98,24 @@ public sealed class HackComponentHost : IHackComponentHost
     }
 
     /// <summary>
-    /// Lists the installed apps registering <paramref name="contract"/>, in the order they are
-    /// tried: system apps first (the OS's own provider), then by app id. Registrations the catalog
-    /// refused (ADR 0148 §3.3) are not listed; platform components are not apps and are not listed.
+    /// Gets the administrator's choice of provider (<c>/etc/hackeros/components.config</c>,
+    /// ADR 0156 §2), tried first for the contracts an administrator chooses; <see langword="null"/>
+    /// keeps the catalog order (the File Explorer first).
+    /// </summary>
+    public IComponentProviderSelection? Selection { get; init; }
+
+    /// <summary>
+    /// Gets the writer of warnings to the system log (<c>/var/log/syslog</c>, source
+    /// <c>components</c>): <c>component.fallback</c> when the chosen provider does not load and
+    /// another one takes over (ADR 0156 §4). <see langword="null"/> writes nothing.
+    /// </summary>
+    public Action<string>? ReportWarning { get; init; }
+
+    /// <summary>
+    /// Lists the installed apps registering <paramref name="contract"/>, in catalog order: system
+    /// apps first (the OS's own provider), then by app id. The administrator's choice, which
+    /// <see cref="ResolveAsync"/> tries first, is not applied here; platform components are not apps
+    /// and are not listed.
     /// </summary>
     /// <param name="contract">Contract name.</param>
     public IReadOnlyList<(string AppId, AppComponentManifest Component)> GetProviders(string contract) =>
@@ -117,7 +134,27 @@ public sealed class HackComponentHost : IHackComponentHost
             return HackComponentResolution.Resolved(contract, platform.ComponentType, HackComponentResolution.PlatformProviderId);
         }
 
-        IReadOnlyList<(string AppId, AppComponentManifest Component)> providers = GetProviders(contract);
+        List<(string AppId, AppComponentManifest Component)> providers = [.. GetProviders(contract)];
+        string? selected = await GetSelectedProviderAsync(contract, cancellationToken).ConfigureAwait(false);
+        string? selectedFailure = null;
+        if (selected is not null)
+        {
+            // ADR 0156 §2: the administrator's choice is tried first, the others stay fallbacks.
+            int index = providers.FindIndex(provider => provider.AppId == selected);
+            if (index > 0)
+            {
+                (string AppId, AppComponentManifest Component) chosen = providers[index];
+                providers.RemoveAt(index);
+                providers.Insert(0, chosen);
+            }
+            else if (index < 0)
+            {
+                selectedFailure = _catalog.GetComponentProviders(contract).Any(provider => provider.AppId == selected)
+                    ? $"'{selected}' is disabled or uninstalled for this user"
+                    : $"'{selected}' is not an installed provider of '{contract}'";
+            }
+        }
+
         if (providers.Count == 0)
         {
             return Report(HackComponentResolution.Unavailable(contract, $"No installed app provides '{contract}'."));
@@ -131,6 +168,11 @@ public sealed class HackComponentHost : IHackComponentHost
                 .ConfigureAwait(false);
             if (resolution.IsResolved)
             {
+                if (selected is not null && appId != selected)
+                {
+                    ReportFallback(contract, selected, selectedFailure ?? firstFailure?.Error, appId);
+                }
+
                 return resolution;
             }
 
@@ -140,9 +182,43 @@ public sealed class HackComponentHost : IHackComponentHost
         return Report(firstFailure!);
     }
 
+    /// <summary>Reads the administrator's choice; an unreadable file is the default, never a failure.</summary>
+    private async Task<string?> GetSelectedProviderAsync(string contract, CancellationToken cancellationToken)
+    {
+        if (Selection is null
+            || AppComponentContracts.GetProviderScope(contract) != AppComponentProviderScope.AdministratorSelected)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await Selection.GetSelectedProviderAsync(contract, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            ReportWarning?.Invoke($"component.selection: '{contract}': the choice of provider could not be read ({exception.Message}); using the default");
+            return null;
+        }
+    }
+
     /// <summary>
-    /// Writes an unavailable reserved contract to the system log (ADR 0148 §5): its providers are
-    /// the OS's own, so their absence is a fault to investigate. An open contract without a
+    /// Writes <c>component.fallback</c> (ADR 0156 §4) once per contract, chosen app and provider used,
+    /// for the life of this registry: every control shown would otherwise repeat the same line. The
+    /// line stays in the file, so the chosen app is used again as soon as it loads.
+    /// </summary>
+    private void ReportFallback(string contract, string selected, string? reason, string used)
+    {
+        if (ReportWarning is not null && _reportedFallbacks.Add($"{contract}|{selected}|{used}"))
+        {
+            ReportWarning($"component.fallback: '{contract}': the chosen provider '{selected}' did not load ({reason ?? "unknown reason"}); using '{used}'");
+        }
+    }
+
+    /// <summary>
+    /// Writes an unavailable OS contract to the system log (ADR 0148 §5, ADR 0156 §4): the file
+    /// view, the file dialogs and the context menu are the OS's own controls, so no working
+    /// provider at all is a fault to investigate. An open contract without a
     /// provider (no terminal installed, say) is a normal state and is only shown to the user.
     /// </summary>
     private HackComponentResolution Report(HackComponentResolution resolution)

@@ -453,37 +453,6 @@ public static partial class AppManifestValidator
         }
     }
 
-    /// <summary>
-    /// Checks the contracts ADR 0148 §3.3 reserves to system apps (<see cref="AppComponentProviderScope.SystemApps"/>):
-    /// an app the host did not declare a system app may not register them. The manifest alone cannot
-    /// say whether an app is a system app (only the host's <c>ProjectReference</c> does, ADR 0048), so
-    /// this check is separate from <see cref="Validate"/>: the host build runs it on each referenced
-    /// app (<c>HOSAPP0025</c>) and the catalog ignores the registrations it refuses.
-    /// </summary>
-    /// <param name="manifest">The manifest to check.</param>
-    /// <param name="isSystemApp">Whether the host declared the app a system app.</param>
-    /// <returns>One <c>manifest.component.contract.system</c> error per refused registration, in declaration order.</returns>
-    public static IReadOnlyList<ManifestValidationError> ValidateComponentProviders(AppManifest manifest, bool isSystemApp)
-    {
-        ArgumentNullException.ThrowIfNull(manifest);
-        if (isSystemApp || manifest.Components is not { Count: > 0 } components)
-        {
-            return [];
-        }
-
-        List<ManifestValidationError> errors = [];
-        foreach (AppComponentManifest component in components)
-        {
-            if (component.Contract is { } contract
-                && AppComponentContracts.GetProviderScope(contract) == AppComponentProviderScope.SystemApps)
-            {
-                AddError(errors, "manifest.component.contract.system", "components.contract", $"Component contract '{contract}' is reserved to system apps (IsSystemApp=\"true\" on the host's ProjectReference).");
-            }
-        }
-
-        return errors;
-    }
-
     private static void ValidateAssets(IReadOnlyList<AssetManifest> assets, List<ManifestValidationError> errors)
     {
         ValidateUniqueValues(assets.Select(asset => asset.Path), "assets.path", errors);

@@ -98,20 +98,44 @@ en affichant le contrôle d'une autre.
   `GetComponentProviders(contract)`) : apps système d'abord, puis par
   identifiant. `HackComponentHost` saute les apps désinstallées et charge
   l'assemblage du fournisseur au premier usage.
+- **Choix de l'administrateur** (ADR 0156, ADR 0158). Pour
+  `hackeros.file-view` et `hackeros.file-dialogs`, `HackComponentHost` lit
+  `/etc/hackeros/components.config` (`IComponentProviderSelection`, relu à
+  chaque résolution) et essaie d'abord l'app choisie ; les autres restent des
+  replis, l'explorateur en premier. Si l'app choisie est désactivée pour
+  l'utilisateur ou ne se charge pas, le suivant prend le relais et
+  `component.fallback` est écrit en avertissement dans `/var/log/syslog`
+  (source `components`), une fois par session. Sans ligne, l'explorateur
+  s'applique.
+
+  ```ini
+  [providers]
+  hackeros.file-view=com.example.files
+  hackeros.file-dialogs=com.example.files
+  ```
+
+  Le choix se fait dans Paramètres ▸ Composants de l'OS
+  (`HackComponentProviders`, capacité `apps.manage`) : une app non système
+  passe par la fenêtre d'approbation des capacités dangereuses, avec la phrase
+  de risque « Le code de cette app s'exécutera dans toutes les applications
+  qui affichent des fichiers, avec leurs droits. » ; une app système ou le
+  retour à l'explorateur demandent seulement un administrateur. Chaque
+  décision va dans `/var/log/auth.log` (`component.provider`). Une app
+  désinstallée pour la machine perd sa ligne.
 - **Plateforme.** La plateforme inscrit ses propres fournisseurs dans le
   conteneur de services (`services.AddSingleton(new HackPlatformComponent(contrat, typeof(Composant)))`) ;
   ils passent avant toute app, sans chargement, et leur `ProviderAppId` vaut
   `HackComponentResolution.PlatformProviderId` (`"platform"`).
-- **Contrats réservés** (`AppComponentContracts.GetProviderScope`) :
+- **Qui peut fournir** (`AppComponentContracts.GetProviderScope`) :
 
 | Contrat | Fournisseur admis | Refus |
 | --- | --- | --- |
 | `hackeros.terminal` | toute app fenêtrée | — |
-| `hackeros.file-view`, `hackeros.file-dialogs` | apps système (aujourd'hui) ; l'ADR 0156 les ouvre à toute app fenêtrée, choisie par un administrateur, dans un chantier suivant | `HOSAPP0025` au build de l'hôte ; à l'exécution, inscription écartée et `catalog.component.reserved` dans `/var/log/syslog` |
+| `hackeros.file-view`, `hackeros.file-dialogs` | toute app fenêtrée (`AdministratorSelected`) ; l'administrateur choisit celle en service, l'explorateur par défaut (ADR 0156) | — (`HOSAPP0025` est retiré, ADR 0158 §1) |
 | `hackeros.context-menu` | plateforme | `manifest.component.contract.platform` (`HOSAPP0009` au build de l'app) |
 
-- **Indisponible.** Un contrat réservé sans fournisseur qui se charge est une
-  erreur de l'OS : `component.unavailable` est écrit dans `/var/log/syslog`
+- **Indisponible.** Un contrat de l'OS (fichiers ou menu) sans aucun
+  fournisseur qui se charge est une erreur de l'OS : `component.unavailable` est écrit dans `/var/log/syslog`
   (source `components`). Un contrat ouvert sans fournisseur est seulement
   montré à l'utilisateur (`Unavailable`).
 
@@ -172,11 +196,13 @@ Le shell est un enfant du processus de l'hôte : l'hôte doit demander
 | --- | --- | --- |
 | `AppComponent`, `AppComponentManifest`, `AppManifest.Components` | `HackerOs.App.Abstractions` | Déclaration et manifeste (`components`, omis si vide). |
 | `HackComponentContracts`, `IHackTerminal`, `HackTerminalOptions`, `HackTerminalCommandResult` | `HackerOs.AppSdk` (`.Components`) | Contrats. |
-| `AppComponentContracts`, `AppComponentProviderScope`, `AppManifestValidator.ValidateComponentProviders` | `HackerOs.App.Abstractions` | Contrats réservés et qui peut les fournir (ADR 0148 §3.3). |
+| `AppComponentContracts`, `AppComponentProviderScope` | `HackerOs.App.Abstractions` | Contrats connus de l'OS et qui peut les fournir (ADR 0148 §3.3, ADR 0156). |
 | `IHackComponentHost`, `HackComponentResolution`, `HackEmbeddableComponent`, `HackEmbeddedComponent<T>`, `HackContractComponent<T>` | `HackerOs.AppSdk.Blazor` (`.Components`) | Côté Blazor du SDK. |
 | `AppCatalog.ComponentProviders`, `AppComponentProvider` | `HackerOs.Platform.Core` | Registre des fournisseurs lu au démarrage. |
-| `HackComponentHost`, `HackPlatformComponent` | `HackerOs.Platform.Blazor` (`.Components`) | Fournisseurs de la plateforme d'abord, puis le premier fournisseur installé qui se charge (`AppLifecycleOrchestrator.EnsureDescriptorAsync`), vérifie le type, écrit au journal un contrat réservé indisponible. |
-| `BuiltInApplicationsAggregator.FindReservedComponentContracts` | `HackerOs.Tools.ManifestGenerator` | `HOSAPP0025` au build de l'hôte. |
+| `HackComponentHost`, `HackPlatformComponent` | `HackerOs.Platform.Blazor` (`.Components`) | Fournisseurs de la plateforme d'abord, puis le choix de l'administrateur (`Selection`), puis le premier fournisseur installé qui se charge (`AppLifecycleOrchestrator.EnsureDescriptorAsync`) ; vérifie le type, écrit `component.fallback` (`ReportWarning`) et `component.unavailable`. |
+| `ComponentProviderService`, `ComponentProvidersDocument`, `IComponentProviderSelection` | `HackerOs.Platform.Core` (`.ComponentProviders`) | `/etc/hackeros/components.config` : lecture, approbation, écriture, audit, retrait à la désinstallation (ADR 0156, ADR 0158). |
+| `HackComponentProviders`, `IAppComponentProviderAdministrationGateway`, `HackComponentContractInfo`, `HackComponentProviderInfo` | `HackerOs.AppSdk` (`.Administration`) | Choix du fournisseur pour Paramètres (`apps.manage`). |
+| `OsComponentsPanel` | `HackerOs.Apps.Settings` | Onglet « Composants de l'OS ». |
 | `TerminalEmbed` | `HackerOs.Apps.Terminal` | Fournisseur de `hackeros.terminal`. |
 
 ## Tâches
@@ -198,6 +224,14 @@ Le shell est un enfant du processus de l'hôte : l'hôte doit demander
   `catalog.component.reserved`, `manifest.component.contract.platform`),
   `HackPlatformComponent`, `component.unavailable` au journal ; tests du
   validateur, du catalogue, de l'agrégation, du registre et du composant typé.
+- [x] Chantier 3c du plan du bureau (ADR 0156, ADR 0158) : contrats du
+  fichier ouverts à toute app fenêtrée (`HOSAPP0025` retiré),
+  `/etc/hackeros/components.config`, choix de l'administrateur essayé en
+  premier, repli `component.fallback`, `HackComponentProviders` et onglet
+  « Composants de l'OS » avec la fenêtre d'approbation, `component.provider`
+  dans `auth.log`, ligne retirée à la désinstallation pour la machine ; tests
+  du service, de la passerelle, du registre, du catalogue, du validateur et de
+  l'agrégation.
 - [x] Chantier 3 du plan du bureau (ADR 0155) : `HackFileView`, `IHackFileView`
   et les dialogues fournis, `ExplorerFileView` et `ExplorerFileDialogs`
   inscrits par l'explorateur ; test de la transmission de tous les paramètres.

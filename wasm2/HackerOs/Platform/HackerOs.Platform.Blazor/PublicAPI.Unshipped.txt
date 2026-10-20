@@ -158,3 +158,7 @@ HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.SelectionChanged.get -> Micro
 HackerOs.Platform.Blazor.Dialogs.FileDialogBrowser.SelectionChanged.set -> void
 HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.Context.get -> HackerOs.AppSdk.IAppExecutionContext?
 HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.Context.init -> void
+HackerOs.Platform.Blazor.Components.HackComponentHost.ReportWarning.get -> System.Action<string!>?
+HackerOs.Platform.Blazor.Components.HackComponentHost.ReportWarning.init -> void
+HackerOs.Platform.Blazor.Components.HackComponentHost.Selection.get -> HackerOs.Platform.Core.ComponentProviders.IComponentProviderSelection?
+HackerOs.Platform.Blazor.Components.HackComponentHost.Selection.init -> void

@@ -315,6 +315,60 @@
   <data name="Backup.Size.MiB" xml:space="preserve">
     <value>{0} Mio</value>
   </data>
+  <data name="Components.AlsoFor" xml:space="preserve">
+    <value>L'utiliser aussi pour : {0}</value>
+  </data>
+  <data name="Components.Apply" xml:space="preserve">
+    <value>Appliquer</value>
+  </data>
+  <data name="Components.Confirm.Default" xml:space="preserve">
+    <value>Revenir à l'explorateur de fichiers pour : {0}.</value>
+  </data>
+  <data name="Components.Confirm.Set" xml:space="preserve">
+    <value>Utiliser « {0} » pour : {1}, sur toute la machine.</value>
+  </data>
+  <data name="Components.Default" xml:space="preserve">
+    <value>Par défaut</value>
+  </data>
+  <data name="Components.Description" xml:space="preserve">
+    <value>Choisissez l'app qui affiche les fichiers et les dialogues de fichiers dans toutes les applications, pour toute la machine. Le choix est écrit dans {0} et demande un administrateur.</value>
+  </data>
+  <data name="Components.Error.CannotSave" xml:space="preserve">
+    <value>Le choix n'a pas pu être enregistré : {0}</value>
+  </data>
+  <data name="Components.FileDialogs.Description" xml:space="preserve">
+    <value>Ouvrir, Enregistrer, Choisir un dossier, Ouvrir avec, Propriétés et conflits de noms.</value>
+  </data>
+  <data name="Components.FileDialogs.Title" xml:space="preserve">
+    <value>Dialogues de fichiers</value>
+  </data>
+  <data name="Components.FileView.Description" xml:space="preserve">
+    <value>La liste de fichiers du bureau, de l'explorateur, de l'éditeur de code et de toute app qui affiche des fichiers.</value>
+  </data>
+  <data name="Components.FileView.Title" xml:space="preserve">
+    <value>Contrôle de fichiers</value>
+  </data>
+  <data name="Components.NotInstalled" xml:space="preserve">
+    <value>Non installée</value>
+  </data>
+  <data name="Components.ResetToDefault" xml:space="preserve">
+    <value>Revenir à l'explorateur de fichiers</value>
+  </data>
+  <data name="Components.Risk" xml:space="preserve">
+    <value>Cette app n'est pas une app système : son code s'exécutera dans toutes les applications qui affichent des fichiers, avec leurs droits. L'OS demandera l'approbation d'un administrateur.</value>
+  </data>
+  <data name="Components.Saved" xml:space="preserve">
+    <value>« {0} » est maintenant utilisée. Le choix s'applique au prochain contrôle ou dialogue affiché.</value>
+  </data>
+  <data name="Components.Saved.Default" xml:space="preserve">
+    <value>L'explorateur de fichiers est de nouveau utilisé.</value>
+  </data>
+  <data name="Components.SelectedMissing" xml:space="preserve">
+    <value>L'app choisie « {0} » n'est pas installée pour vous : l'explorateur de fichiers la remplace.</value>
+  </data>
+  <data name="Components.Unavailable" xml:space="preserve">
+    <value>Les composants de l'OS ne sont pas disponibles sur cet hôte.</value>
+  </data>
   <data name="Common.Cancel" xml:space="preserve">
     <value>Annuler</value>
   </data>
@@ -833,6 +887,9 @@
   </data>
   <data name="Tab.FileAssociations" xml:space="preserve">
     <value>Associations de fichiers</value>
+  </data>
+  <data name="Tab.OsComponents" xml:space="preserve">
+    <value>Composants de l'OS</value>
   </data>
   <data name="Tab.InstalledApps" xml:space="preserve">
     <value>Applications installées</value>

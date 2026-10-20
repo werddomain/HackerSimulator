@@ -19,7 +19,7 @@ Core ni Infrastructure.Browser.
 
 | Couche | Fichiers |
 |---|---|
-| SDK (contrats, façades) | `Shared/HackerOs.AppSdk/Administration/` (`HackPermissionAdministration`, `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics` et leurs contrats), `Shared/HackerOs.AppSdk/Settings/IAppSystemSettingsGateway.cs`, `SettingsDocumentStores.cs` |
+| SDK (contrats, façades) | `Shared/HackerOs.AppSdk/Administration/` (`HackPermissionAdministration`, `HackComponentProviders`, `HackServerConnection`, `HackSystem`, `HackStorageDiagnostics` et leurs contrats), `Shared/HackerOs.AppSdk/Settings/IAppSystemSettingsGateway.cs`, `SettingsDocumentStores.cs` |
 | Platform Core (passerelles) | `Platform/HackerOs.Platform.Core/Administration/` : `AppSystemSettingsGateway`, `AppPermissionAdministrationGateway`, `AppServerConnectionGateway`, `AppSystemPowerGateway`, `AppStorageDiagnosticsGateway`, `AppSystemBackupGateway`, `AppUserAccountsGateway`, `AdministratorGate`, `SystemAdministrationGatewayServices` |
 | Platform Core (services) | `Power/SystemPowerService.cs` (séquence d'arrêt, `RestartAfterAsync`), `Backup/SystemBackupService.cs`, `Sessions/LocalPasswordService.cs` (ADR 0120), `Settings/OsSettingsDocumentRegistry.cs`, `Policy/AppPermissionAdministration.cs` (`ApplyMachineDecisionAsync`, `ApplyPolicyAsync`) |
 | Hôte Ecosystem | `Administration/BrowserSystemPowerDevice.cs` (`location.reload`, suppression de la base IndexedDB), `Administration/BrowserSystemBackupDevice.cs` (export, téléchargement, sélecteur de l'hôte), `Administration/IndexedDbStorageInspector.cs` (adaptateur de `IndexedDbInspectorService`) |

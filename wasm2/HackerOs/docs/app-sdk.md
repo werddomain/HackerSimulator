@@ -473,6 +473,9 @@ HackStorageSnapshot snapshot = await HackStorageDiagnostics.GetSnapshotAsync();
   `ui-platform-preference`, `security`, `policy`), sans capacité ; les droits
   des fichiers décident. `HackSettingsDocument.SetManyAsync` écrit plusieurs
   clés en une seule modification (une seule approbation pour `/etc`).
+- `HackComponentProviders` (`apps.manage`, ADR 0156) : l'app qui fournit le
+  contrôle de fichiers et ses dialogues pour toute la machine ; une app non
+  système passe par la fenêtre d'approbation de l'OS.
 - `HackPermissionAdministration` (`permissions.manage`), `HackServerConnection`
   (`server.connection.manage`), `HackSystem` (`system.power`),
   `HackStorageDiagnostics` (`system.storage.inspect`) : capacités dangereuses.

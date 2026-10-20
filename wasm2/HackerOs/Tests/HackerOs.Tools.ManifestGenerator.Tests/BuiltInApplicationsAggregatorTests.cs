@@ -83,8 +83,9 @@ public sealed class BuiltInApplicationsAggregatorTests : IDisposable
     }
 
     [Fact]
-    public void A_reserved_component_contract_is_refused_for_a_non_system_app_with_HOSAPP0025()
+    public void A_non_system_app_may_register_the_file_view_and_the_file_dialogs()
     {
+        // ADR 0156 §1: both contracts are open to any window app; HOSAPP0025 is retired.
         AppManifest manifest = new()
         {
             Id = "org.example.files",
@@ -100,16 +101,17 @@ public sealed class BuiltInApplicationsAggregatorTests : IDisposable
             Components =
             [
                 new AppComponentManifest(AppComponentContracts.FileView, "Example.Files", "Example.Files.View"),
-                new AppComponentManifest("hackeros.terminal", "Example.Files", "Example.Files.Terminal")
+                new AppComponentManifest(AppComponentContracts.FileDialogs, "Example.Files", "Example.Files.Dialogs")
             ]
         };
 
-        GeneratorDiagnostic diagnostic = Assert.Single(
-            BuiltInApplicationsAggregator.FindReservedComponentContracts([new BuiltInApplication(false, manifest)]));
-        Assert.Equal("HOSAPP0025", diagnostic.Code);
-        Assert.Equal("org.example.files", diagnostic.Subject);
-        Assert.Contains(AppComponentContracts.FileView, diagnostic.Message, StringComparison.Ordinal);
-        Assert.Empty(BuiltInApplicationsAggregator.FindReservedComponentContracts([new BuiltInApplication(true, manifest)]));
+        string path = Path.Combine(_directory, "files.json");
+        File.WriteAllText(path, AppManifestJsonSerializer.SerializeCanonical(manifest));
+
+        AggregationResult result = BuiltInApplicationsAggregator.Aggregate([new(path, IsSystemApp: false)]);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Contains(AppComponentContracts.FileDialogs, result.Json, StringComparison.Ordinal);
     }
 
     [Fact]

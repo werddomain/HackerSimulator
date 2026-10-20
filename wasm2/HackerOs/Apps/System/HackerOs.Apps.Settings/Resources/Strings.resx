@@ -315,6 +315,60 @@
   <data name="Backup.Size.MiB" xml:space="preserve">
     <value>{0} MiB</value>
   </data>
+  <data name="Components.AlsoFor" xml:space="preserve">
+    <value>Also use it for: {0}</value>
+  </data>
+  <data name="Components.Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Components.Confirm.Default" xml:space="preserve">
+    <value>Go back to the File Explorer for: {0}.</value>
+  </data>
+  <data name="Components.Confirm.Set" xml:space="preserve">
+    <value>Use “{0}” for: {1}, for the whole machine.</value>
+  </data>
+  <data name="Components.Default" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="Components.Description" xml:space="preserve">
+    <value>Choose which app shows files and file dialogs in every app, for the whole machine. The choice is written to {0} and needs an administrator.</value>
+  </data>
+  <data name="Components.Error.CannotSave" xml:space="preserve">
+    <value>The choice could not be saved: {0}</value>
+  </data>
+  <data name="Components.FileDialogs.Description" xml:space="preserve">
+    <value>Open, Save, Choose a folder, Open with, Properties and name conflicts.</value>
+  </data>
+  <data name="Components.FileDialogs.Title" xml:space="preserve">
+    <value>File dialogs</value>
+  </data>
+  <data name="Components.FileView.Description" xml:space="preserve">
+    <value>The file list of the desktop, the File Explorer, the code editor and every app that shows files.</value>
+  </data>
+  <data name="Components.FileView.Title" xml:space="preserve">
+    <value>File view</value>
+  </data>
+  <data name="Components.NotInstalled" xml:space="preserve">
+    <value>Not installed</value>
+  </data>
+  <data name="Components.ResetToDefault" xml:space="preserve">
+    <value>Back to the File Explorer</value>
+  </data>
+  <data name="Components.Risk" xml:space="preserve">
+    <value>This app is not a system app: its code will run inside every app that shows files, with that app's rights. The OS will ask an administrator to approve.</value>
+  </data>
+  <data name="Components.Saved" xml:space="preserve">
+    <value>“{0}” is now used. It applies to the next file view or dialog shown.</value>
+  </data>
+  <data name="Components.Saved.Default" xml:space="preserve">
+    <value>The File Explorer is used again.</value>
+  </data>
+  <data name="Components.SelectedMissing" xml:space="preserve">
+    <value>The chosen app '{0}' is not installed for you: the File Explorer is used instead.</value>
+  </data>
+  <data name="Components.Unavailable" xml:space="preserve">
+    <value>OS components are not available on this host.</value>
+  </data>
   <data name="Common.Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
@@ -833,6 +887,9 @@
   </data>
   <data name="Tab.FileAssociations" xml:space="preserve">
     <value>File Associations</value>
+  </data>
+  <data name="Tab.OsComponents" xml:space="preserve">
+    <value>OS components</value>
   </data>
   <data name="Tab.InstalledApps" xml:space="preserve">
     <value>Installed Apps</value>

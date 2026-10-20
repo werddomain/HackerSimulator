@@ -1,1 +1,3 @@
 #nullable enable
+HackerOs.Apps.Settings.OsComponentsPanel
+HackerOs.Apps.Settings.OsComponentsPanel.OsComponentsPanel() -> void

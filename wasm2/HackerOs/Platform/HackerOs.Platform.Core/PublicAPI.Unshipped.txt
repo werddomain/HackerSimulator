@@ -13,3 +13,56 @@ HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway
 HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway.AppCrossOriginIsolationGateway(System.Func<HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus?>! status) -> void
 HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway.GetStatusAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus!>
 static HackerOs.Platform.Core.Isolation.AppCrossOriginIsolationGateway.ToSdk(HackerOs.Platform.Core.Isolation.CrossOriginIsolationStatus! status) -> HackerOs.AppSdk.Diagnostics.HackCrossOriginIsolationStatus!
+HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.ApprovalPrompt.get -> System.Func<HackerOs.Platform.Core.Policy.IDangerousCapabilityApprovalPrompt!>?
+HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.ApprovalPrompt.init -> void
+HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.ComponentProviders.get -> System.Func<HackerOs.Platform.Core.ComponentProviders.ComponentProviderService!>?
+HackerOs.Platform.Core.Administration.SystemAdministrationGatewayServices.ComponentProviders.init -> void
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderCandidate
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderCandidate.AppId.get -> string!
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderCandidate.AppId.init -> void
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderCandidate.ComponentProviderCandidate(string! AppId, string! Name, bool IsSystemApp, bool IsInstalled) -> void
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderCandidate.IsInstalled.get -> bool
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderCandidate.IsInstalled.init -> void
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderCandidate.IsSystemApp.get -> bool
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderCandidate.IsSystemApp.init -> void
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderCandidate.Name.get -> string!
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderCandidate.Name.init -> void
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderChangeOutcome
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderChangeOutcome.Applied = 0 -> HackerOs.Platform.Core.ComponentProviders.ComponentProviderChangeOutcome
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderChangeOutcome.Dismissed = 2 -> HackerOs.Platform.Core.ComponentProviders.ComponentProviderChangeOutcome
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderChangeOutcome.Refused = 1 -> HackerOs.Platform.Core.ComponentProviders.ComponentProviderChangeOutcome
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderChangeOutcome.Unavailable = 3 -> HackerOs.Platform.Core.ComponentProviders.ComponentProviderChangeOutcome
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderOverview
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderOverview.ComponentProviderOverview(string! Contract, string? SelectedAppId, string? DefaultAppId, System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.ComponentProviders.ComponentProviderCandidate!>! Providers) -> void
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderOverview.Contract.get -> string!
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderOverview.Contract.init -> void
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderOverview.DefaultAppId.get -> string?
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderOverview.DefaultAppId.init -> void
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderOverview.Providers.get -> System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.ComponentProviders.ComponentProviderCandidate!>!
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderOverview.Providers.init -> void
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderOverview.SelectedAppId.get -> string?
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderOverview.SelectedAppId.init -> void
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderService
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderService.ApplyAsync(System.Collections.Generic.IReadOnlyList<string!>! contracts, string? appId, string! administratorLogin, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal! requestedBy, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderService.ApproveAsync(System.Collections.Generic.IReadOnlyList<string!>! contracts, string! appId, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal! requestedBy, HackerOs.Platform.Core.Policy.IDangerousCapabilityApprovalPrompt? prompt, System.Globalization.CultureInfo? language, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<HackerOs.Platform.Core.ComponentProviders.ComponentProviderChangeOutcome>!
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderService.ComponentProviderService(HackerOs.Platform.Core.AppCatalog! catalog, HackerOs.Platform.Core.Lifecycle.IAppEnablementRegistry! enablement, HackerOs.Platform.Core.Settings.IOsSettingsService! settings, HackerOs.App.Abstractions.Policy.IAdminElevationVerifier! verifier, HackerOs.Simulation.Abstractions.Diagnostics.IAuditLog! auditLog, System.Action<string!>? reportInformation = null, System.Func<System.DateTimeOffset>? clock = null) -> void
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderService.GetAppName(string! appId) -> string!
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderService.GetOverviewAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<HackerOs.Platform.Core.ComponentProviders.ComponentProviderOverview!>!>!
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderService.GetSelectedProviderAsync(string! contract, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string?>
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderService.RemoveUninstalledAsync(System.Func<string!, bool>! isUninstalledForMachine, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderService.RequiresApproval(string? appId) -> bool
+HackerOs.Platform.Core.ComponentProviders.ComponentProviderService.ValidateChoice(System.Collections.Generic.IReadOnlyList<string!>! contracts, string? appId) -> void
+HackerOs.Platform.Core.ComponentProviders.ComponentProvidersDocument
+HackerOs.Platform.Core.ComponentProviders.IComponentProviderSelection
+HackerOs.Platform.Core.ComponentProviders.IComponentProviderSelection.GetSelectedProviderAsync(string! contract, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<string?>
+const HackerOs.Platform.Core.ComponentProviders.ComponentProviderService.AuditAction = "component.provider" -> string!
+const HackerOs.Platform.Core.ComponentProviders.ComponentProvidersDocument.FileName = "components.config" -> string!
+const HackerOs.Platform.Core.ComponentProviders.ComponentProvidersDocument.ProvidersGroup = "providers" -> string!
+const HackerOs.Platform.Core.ComponentProviders.ComponentProvidersDocument.SystemPath = "/etc/hackeros/components.config" -> string!
+static HackerOs.Platform.Core.ComponentProviders.ComponentProviderService.Contracts.get -> System.Collections.Generic.IReadOnlyList<string!>!
+static HackerOs.Platform.Core.ComponentProviders.ComponentProviderService.Describe(string! contract, System.Globalization.CultureInfo? language) -> HackerOs.App.Abstractions.CapabilityDescription!
+static HackerOs.Platform.Core.ComponentProviders.ComponentProvidersDocument.Edit(string? content, string! contract, string? appId) -> string?
+static HackerOs.Platform.Core.ComponentProviders.ComponentProvidersDocument.File.get -> HackerOs.Platform.Core.Settings.OsSettingsFile!
+static HackerOs.Platform.Core.ComponentProviders.ComponentProvidersDocument.Header.get -> string!
+static HackerOs.Platform.Core.ComponentProviders.ComponentProvidersDocument.IsChosenByAdministrator(string! contract) -> bool
+static HackerOs.Platform.Core.ComponentProviders.ComponentProvidersDocument.Parse(string? content) -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
