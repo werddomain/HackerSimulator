@@ -343,6 +343,18 @@ Tous les autres changements du SDK sont des ajouts :
 | `HackerOs.App.Abstractions` | `AppManifest.ContextMenus`, `AppContextMenuEntryManifest` et ses titres et icônes, `AppContextMenus`, `AppComponentContracts`, `AppComponentProviderScope`, capacité `shell.context-menu` | ADR 0151, 0153, 0156 |
 | `HackerOs.Simulation.Abstractions` | `IAppEventGateway.PublishAsync` | ADR 0145 |
 
+### Ajouts depuis la 2.0.0 (prochaine mineure)
+
+Ces ajouts du chantier `exec/5` (arrivés par `main` après la coupe de la 2.0)
+sont dans `PublicAPI.Unshipped.txt` ; ils partiront avec la prochaine
+publication (2.1.0, mineure d'après SemVer puisque ce sont des ajouts).
+`HackerOsVersion` reste `2.0.0` d'ici là.
+
+| Bibliothèque | Ajout | Décision |
+|---|---|---|
+| `HackerOs.Simulation.Abstractions` | `ProcessStartRequest.ParentExitGracePeriod` : délai d'un enfant après la fin de son parent (demande d'arrêt, puis mise à mort) | ADR 0147 |
+| `HackerOs.Platform.Core` | `BackgroundJobService.ParentExitGracePeriod` (5 s) | ADR 0147 |
+
 ### App de compatibilité
 
 `Tests/fixtures/sdk-compat/packages` garde une app par version publiée qui en

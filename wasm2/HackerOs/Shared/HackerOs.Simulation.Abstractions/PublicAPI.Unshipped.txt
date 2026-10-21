@@ -1,1 +1,3 @@
 #nullable enable
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ParentExitGracePeriod.get -> System.TimeSpan?
+HackerOs.Simulation.Abstractions.Processes.ProcessStartRequest.ParentExitGracePeriod.init -> void
