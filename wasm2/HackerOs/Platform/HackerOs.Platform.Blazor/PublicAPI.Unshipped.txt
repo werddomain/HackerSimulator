@@ -190,3 +190,16 @@ virtual HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.EqualityContract
 virtual HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.Equals(HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation? other) -> bool
 virtual HackerOs.Platform.Blazor.Dialogs.FileDialogPresentation.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual HackerOs.Platform.Blazor.Sites.HackWebSiteHost.StartRenderer.Invoke(string! appId, HackerOs.Simulation.Abstractions.Sessions.AuthenticatedPrincipal! principal, HackerOs.Simulation.Abstractions.Processes.ProcessId parentPid, System.Collections.Generic.IReadOnlyList<string!>! arguments, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<HackerOs.Platform.Core.Lifecycle.AppLaunchResult!>!
+HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoaderRegistry.BuildKnownAssemblyLoaderRegistry(System.Collections.Generic.IEnumerable<string!>! knownAssemblies, HackerOs.Platform.Blazor.LazyLoading.IBuildKnownAssemblyTransport! transport, HackerOs.Platform.Blazor.LazyLoading.HostBuildUpdateMonitor! buildMonitor) -> void
+HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadStatus.HostBuildChanged = 5 -> HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadStatus
+HackerOs.Platform.Blazor.LazyLoading.HostBuildIdentity
+HackerOs.Platform.Blazor.LazyLoading.HostBuildUpdateMonitor
+HackerOs.Platform.Blazor.LazyLoading.HostBuildUpdateMonitor.CheckAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+HackerOs.Platform.Blazor.LazyLoading.HostBuildUpdateMonitor.HostBuildUpdateMonitor(HackerOs.Platform.Blazor.LazyLoading.IHostBuildProbe! probe) -> void
+HackerOs.Platform.Blazor.LazyLoading.HostBuildUpdateMonitor.IsUpdatePending.get -> bool
+HackerOs.Platform.Blazor.LazyLoading.HostBuildUpdateMonitor.UpdatePending -> System.Action?
+HackerOs.Platform.Blazor.LazyLoading.IHostBuildProbe
+HackerOs.Platform.Blazor.LazyLoading.IHostBuildProbe.GetRunningBuildAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<string?>
+HackerOs.Platform.Blazor.LazyLoading.IHostBuildProbe.GetServedBuildAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<string?>
+static HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome.HostBuildChanged(string! name) -> HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome!
+static HackerOs.Platform.Blazor.LazyLoading.HostBuildIdentity.FromMarkup(string? markup) -> string?
