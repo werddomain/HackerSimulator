@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <!-- ADR 0104: IStringLocalizer, the contract HackStringLocalizer implements. -->
-    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.13" />
   </ItemGroup>
 
   <ItemGroup>
