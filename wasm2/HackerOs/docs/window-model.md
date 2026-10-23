@@ -73,6 +73,31 @@ déjà eu lieu et continue.
 
 ## 2. Tailles déclarées (ADR 0095 §2)
 
+### Gestes au pointeur (ADR 0163)
+
+Les attributs `data-window-x/y/width/height` utilisent la culture invariante,
+même quand le bureau est en français. Le déplacement donne le focus au début,
+projette une translation CSS locale pendant le geste et transmet un seul delta
+final à C# au relâchement. Le runtime applique alors ses contraintes ; la position
+n'est jamais enregistrée sur disque (ADR 0122). Le redimensionnement garde les
+contraintes C# en direct, avec un échantillon en cours et le plus récent en attente
+au lieu d'une file par mouvement. La capture perdue ou annulée termine le geste
+sur le dernier delta valide ; retirer le composant libère les écouteurs et la capture.
+
+Cette projection temporaire amende l'ADR 0009 sans déplacer l'état du runtime
+en JavaScript : voir l'[ADR 0163](adr/0163-window-pointer-preview-and-invariant-coordinates.md).
+
+Au relâchement, l'aperçu vise une destination absolue et sa translation soustrait
+la position CSS courante du cadre. Ainsi, un rendu de la nouvelle position avant
+le retour de l'interop ne peut pas additionner deux fois le déplacement.
+`ReportGestureCompletedAsync("move")`, appelé après le retour de la commande,
+projette la position C# courante (contraintes comprises) et retire l'aperçu dans
+une même tâche JavaScript (`completeWindowMove`). Cela couvre aussi un retour
+interop précédant la projection `WindowHost.OnAfterRenderAsync`, sans image à
+l'ancienne position. Aucun mouvement supplémentaire ni écriture disque n'est émis.
+
+### Déclaration par l'app
+
 ```csharp
 public override WindowOptions? Window => new()
 {
@@ -264,6 +289,13 @@ les récents du bureau mobile et le nom accessible du cadre (`aria-labelledby`).
 
 ## Tests
 
+- `WindowPointerGestureTests` (UI.E2E) : module de pointeur et projection du cadre
+  réels dans Chromium ; échantillonnage des positions sur plusieurs images avec
+  projection avant/après le retour interop, avec ou sans correction des contraintes,
+  déplacements successifs, capture perdue, retrait du composant, erreur interop et
+  redimensionnement ralenti. `WindowGeometryRestoreTests` vérifie aussi chaque
+  image au relâchement pendant deux déplacements dans l'OS complet.
+
 - `WindowAppBaseWindowEventsTests` (SDK Blazor) : ordre des crochets, erreur journalisée,
   surfaces détachées.
 - `WindowAppEventDispatcherTests`, `WindowKeyboardCommandsTests`, `WindowLaunchCoordinatorTests`
@@ -282,6 +314,9 @@ les récents du bureau mobile et le nom accessible du cadre (`aria-labelledby`).
   fenêtre active dans un onglet Chromium.
 
 ## Liste des tâches
+
+- [x] Corriger le double déplacement au relâchement et la transition avant/après projection.
+- [x] Couvrir les images intermédiaires dans Chromium et dans le scénario OS de restauration.
 
 - [x] Crochets de fenêtre dans `WindowAppBase` et contrats du SDK (`HackWindowState`, `HackWindowSize`).
 - [x] Faits du runtime : lot publié, fin de redimensionnement, correction de la réduction en arrière-plan.

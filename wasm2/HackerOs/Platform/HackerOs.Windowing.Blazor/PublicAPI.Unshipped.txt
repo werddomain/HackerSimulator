@@ -1,4 +1,5 @@
 #nullable enable
+HackerOs.Windowing.Blazor.WindowChrome.ReportGestureStartedAsync() -> System.Threading.Tasks.Task!
 HackerOs.Windowing.Blazor.WindowMenuRequest.<Clone>$() -> HackerOs.Windowing.Blazor.WindowMenuRequest!
 HackerOs.Windowing.Blazor.WindowMenuRequest.Deconstruct(out HackerOs.Windowing.Abstractions.WindowId WindowId, out double? ClientX, out double? ClientY) -> void
 HackerOs.Windowing.Blazor.WindowMenuRequest.Equals(HackerOs.Windowing.Blazor.WindowMenuRequest? other) -> bool

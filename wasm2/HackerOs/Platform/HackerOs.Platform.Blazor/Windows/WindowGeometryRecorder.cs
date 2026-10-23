@@ -17,8 +17,9 @@ namespace HackerOs.Platform.Blazor.Windows;
 /// authentication agent and other OS windows are never tracked.
 /// </para>
 /// <para>
-/// A drag produces one move per pointer event; writing each would hammer the virtual disk. Changes are
-/// therefore grouped per app and written after <see cref="DefaultDebounce"/> of quiet. Closing a
+/// Resize samples can arrive throughout a gesture; writing each would hammer the virtual disk.
+/// Size changes are grouped per app and written after <see cref="DefaultDebounce"/> of quiet. A move
+/// alone is never persisted (ADR 0122). Closing a
 /// window writes at once, since the window will produce no further fact.
 /// </para>
 /// <para>

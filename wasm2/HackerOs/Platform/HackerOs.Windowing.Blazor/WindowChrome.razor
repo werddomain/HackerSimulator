@@ -198,9 +198,13 @@
         await _module.InvokeVoidAsync("attachWindowGestures", _interactionLayer, _selfReference);
     }
 
+    /// <summary>Focuses the window at pointer-down, before any gesture updates.</summary>
+    [JSInvokable]
+    public Task ReportGestureStartedAsync() => OnFocus.InvokeAsync(Window.Id);
+
     /// <summary>
-    /// Ends a pointer resize: the runtime then reports one completed resize (ADR 0095 §1) instead
-    /// of one per pointer move.
+    /// Ends a pointer gesture. Moves project the current authoritative position and remove the
+    /// browser preview atomically; resizes report one completed resize (ADR 0095 §1).
     /// </summary>
     [JSInvokable]
     public async Task ReportGestureCompletedAsync(string mode)
@@ -208,6 +212,12 @@
         if (string.Equals(mode, "resize", StringComparison.Ordinal))
         {
             await OnGesture.InvokeAsync(new CompleteWindowResizeCommand(Window.Id));
+        }
+        else if (string.Equals(mode, "move", StringComparison.Ordinal) && _module is not null)
+        {
+            // This separate callback follows the move command and its parameter render. Its
+            // snapshot includes C# constraints, even if WindowHost's JS projection is still pending.
+            await _module.InvokeVoidAsync("completeWindowMove", _interactionLayer, Window.Bounds.X, Window.Bounds.Y);
         }
     }
 
@@ -223,7 +233,12 @@
         double originWidth,
         double originHeight)
     {
-        if (Window.VisualState != WindowVisualState.Normal)
+        // JS serializes NaN/Infinity as null, which cannot reach this method's double parameters.
+        // Also reject non-finite values from direct callers before they can corrupt runtime state.
+        if (Window.VisualState != WindowVisualState.Normal
+            || !double.IsFinite(deltaX) || !double.IsFinite(deltaY)
+            || !double.IsFinite(originX) || !double.IsFinite(originY)
+            || !double.IsFinite(originWidth) || !double.IsFinite(originHeight))
         {
             return;
         }

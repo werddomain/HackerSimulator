@@ -43,11 +43,14 @@ public sealed class WindowGeometryRestoreTests(ITestOutputHelper output)
             (double x, double y, double width, double height) opened = await BoundsAsync(window);
             output.WriteLine($"[test] opened at {opened}.");
 
-            // Drag the title bar 120 px right and 60 px down, then the bottom-right corner 80 px out.
+            // Fractional coordinates followed by another drag protect the second-gesture regression.
             ILocator title = window.Locator("header.window-chrome h2");
             LocatorBoundingBoxResult titleBox = (await title.BoundingBoxAsync())!;
-            await DragAsync(page, titleBox.X + 10, titleBox.Y + (titleBox.Height / 2), 120, 60);
-            await Assertions.Expect(window).ToHaveAttributeAsync("data-window-x", Format(opened.x + 120));
+            await DragAsync(page, titleBox.X + 10, titleBox.Y + (titleBox.Height / 2), 120.5, 60.25, verifyReleaseFrames: true);
+            await Assertions.Expect(window).ToHaveAttributeAsync("data-window-x", Format(opened.x + 120.5));
+            titleBox = (await title.BoundingBoxAsync())!;
+            await DragAsync(page, titleBox.X + 10, titleBox.Y + (titleBox.Height / 2), 10.5, 10.25, verifyReleaseFrames: true);
+            await Assertions.Expect(window).ToHaveAttributeAsync("data-window-x", Format(opened.x + 131));
 
             LocatorBoundingBoxResult cornerBox = (await window.Locator(".resize-handle.resize-bottom-right").BoundingBoxAsync())!;
             await DragAsync(page, cornerBox.X + (cornerBox.Width / 2), cornerBox.Y + (cornerBox.Height / 2), 80, 40);
@@ -87,12 +90,44 @@ public sealed class WindowGeometryRestoreTests(ITestOutputHelper output)
         }
     }
 
-    private static async Task DragAsync(IPage page, double fromX, double fromY, double deltaX, double deltaY)
+    private static async Task DragAsync(IPage page, double fromX, double fromY, double deltaX, double deltaY, bool verifyReleaseFrames = false)
     {
         await page.Mouse.MoveAsync((float)fromX, (float)fromY);
         await page.Mouse.DownAsync();
         await page.Mouse.MoveAsync((float)(fromX + deltaX), (float)(fromY + deltaY), new MouseMoveOptions { Steps = 8 });
+        if (verifyReleaseFrames)
+        {
+            // Capture every browser frame across the real C# callback and OnAfterRender projection.
+            await page.EvaluateAsync("""
+                async () => {
+                    await new Promise(requestAnimationFrame);
+                    const host = document.querySelector('article.window-host');
+                    const initial = host.getBoundingClientRect();
+                    window.releaseFrames = { expected: [initial.x, initial.y], samples: [], running: true };
+                    const sample = () => {
+                        const rect = host.getBoundingClientRect();
+                        releaseFrames.samples.push([rect.x, rect.y]);
+                        if (releaseFrames.running) requestAnimationFrame(sample);
+                    };
+                    requestAnimationFrame(sample);
+                }
+                """);
+        }
         await page.Mouse.UpAsync();
+        if (verifyReleaseFrames)
+        {
+            await page.WaitForFunctionAsync("document.querySelector('article.window-host').style.getPropertyValue('--window-drag-translation') === ''");
+            float[][] frames = await page.EvaluateAsync<float[][]>("""
+                async () => {
+                    await new Promise(requestAnimationFrame);
+                    await new Promise(requestAnimationFrame);
+                    releaseFrames.running = false;
+                    return [releaseFrames.expected, ...releaseFrames.samples];
+                }
+                """);
+            Assert.True(frames.Length > 1);
+            Assert.All(frames, position => Assert.Equal(frames[0], position));
+        }
     }
 
     private static async Task<(double X, double Y, double Width, double Height)> BoundsAsync(ILocator window) => (

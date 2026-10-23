@@ -5,6 +5,8 @@
     width: var(--window-width, 20rem);
     height: var(--window-height, 15rem);
     z-index: var(--window-z, 0);
+    /* Browser-only drag preview; C# commits and constrains the position on release (ADR 0163). */
+    translate: var(--window-drag-translation, none);
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     min-width: 20rem;

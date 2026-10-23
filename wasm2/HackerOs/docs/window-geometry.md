@@ -56,9 +56,10 @@ Les trois services sont `Scoped`, comme `WindowRuntime`
   restaurer, changement de zone de travail). Un déplacement seul n'écrit rien. Le
   recorder relit l'état du runtime après chaque lot plutôt que chaque fait, pour
   enregistrer les bornes réellement appliquées.
-- Regroupement : un glisser produit un redimensionnement par mouvement du
-  pointeur ; les changements d'une même app sont écrits une fois, 500 ms après
-  le dernier.
+- Regroupement : le redimensionnement transmet des échantillons regroupés par
+  image, avec un seul appel interop en cours (ADR 0163) ; les changements d'une
+  même app sont écrits une fois, 500 ms après le dernier. Un déplacement ne
+  transmet sa position finale qu'au relâchement et n'écrit toujours rien sur disque.
 - Fermeture : écriture immédiate de la dernière taille connue.
 - Les écritures d'une même app passent l'une après l'autre ; ouvrir une fenêtre
   lance tout de suite l'écriture qui attendait encore et attend la fin des

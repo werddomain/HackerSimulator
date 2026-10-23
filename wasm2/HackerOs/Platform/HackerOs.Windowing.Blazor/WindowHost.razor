@@ -14,12 +14,12 @@
          inert="@(IsInteractionBlocked ? true : null)"
          aria-busy="@(Window.IsResponding ? null : "true")"
          data-window-id="@Window.Id"
-         data-window-x="@Window.Bounds.X"
-         data-window-y="@Window.Bounds.Y"
-         data-window-width="@Window.Bounds.Width"
-         data-window-height="@Window.Bounds.Height"
+         data-window-x="@Window.Bounds.X.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+         data-window-y="@Window.Bounds.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+         data-window-width="@Window.Bounds.Width.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+         data-window-height="@Window.Bounds.Height.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+         data-window-state="@Window.VisualState"
          data-window-z="@Window.ZOrder"
-         style="position: absolute; top: @(Window.Bounds.Y)px; left: @(Window.Bounds.X)px; width: @(Window.Bounds.Width)px; height: @(Window.Bounds.Height)px; z-index: @Window.ZOrder; --window-x: @(Window.Bounds.X)px; --window-y: @(Window.Bounds.Y)px; --window-width: @(Window.Bounds.Width)px; --window-height: @(Window.Bounds.Height)px; --window-z: @Window.ZOrder;"
          hidden="@(Window.VisualState == WindowVisualState.Minimized ? true : null)"
          @onpointerdown="FocusAsync">
     @if (ShowChrome)
