@@ -18,7 +18,7 @@ public sealed class EcosystemHostState
     /// <summary>Gets the fatal correlation ID shown to the user.</summary>
     public Guid? FatalCorrelationId { get; private set; }
 
-    /// <summary>Gets whether a PWA release is waiting for explicit activation.</summary>
+    /// <summary>Gets whether a newer release waits for a restart: a PWA update, or a build the origin replaced under the page (ADR 0162).</summary>
     public bool UpdateAvailable { get; private set; }
 
     /// <summary>Returns the host to its non-ready initialization surface.</summary>
@@ -62,7 +62,7 @@ public sealed class EcosystemHostState
         View = EcosystemHostView.Fatal;
     }
 
-    /// <summary>Updates the non-blocking PWA update indicator.</summary>
+    /// <summary>Updates the non-blocking update indicator.</summary>
     public void SetUpdateAvailable(bool available) => UpdateAvailable = available;
 }
 

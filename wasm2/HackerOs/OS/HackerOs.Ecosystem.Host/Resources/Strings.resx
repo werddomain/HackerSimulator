@@ -96,6 +96,9 @@
   <data name="Setup.Title" xml:space="preserve">
     <value>Create administrator</value>
   </data>
+  <data name="Update.Detail" xml:space="preserve">
+    <value>Open apps will close.</value>
+  </data>
   <data name="Update.Ready" xml:space="preserve">
     <value>A HackerOS update is ready.</value>
   </data>

@@ -26,6 +26,8 @@
 @inject HackerOs.Platform.Core.Clipboard.HostClipboardBridge HostClipboard
 @inject HackerOs.Platform.Core.Globalization.SessionLocaleService SessionLocale
 @inject IStringLocalizer<Strings> L
+@using Microsoft.Extensions.DependencyInjection
+@inject IServiceProvider Services
 
 <ThemeScope ThemeId="@ActiveTheme.BaseThemeId"
             Tokens="@ActiveTheme.UserTheme?.Tokens"
@@ -42,8 +44,8 @@
     @if (State.UpdateAvailable)
     {
         <aside class="update-notice" role="status">
-            <span>@L["Update.Ready"]</span>
-            <button type="button" disabled>@L["Update.Restart"]</button>
+            <span>@L["Update.Ready"] @L["Update.Detail"]</span>
+            <button type="button" disabled="@IsRestartingForUpdate" @onclick="RestartForUpdateAsync">@L["Update.Restart"]</button>
         </aside>
     }
 
@@ -207,6 +209,10 @@
     private string LoginPassword { get; set; } = string.Empty;
     private string? FormError { get; set; }
     private bool IsSubmitting { get; set; }
+    private bool IsRestartingForUpdate { get; set; }
+
+    // ADR 0162: only the browser host registers it (a server prerender of this component has none).
+    private HackerOs.Platform.Blazor.LazyLoading.HostBuildUpdateMonitor? BuildMonitor { get; set; }
 
     private ThemePlatform ActiveThemePlatform =>
         PlatformPreference.Current.ActivePlatform == WellKnownAppPlatforms.Mobile
@@ -245,6 +251,12 @@
         // ADR 0104: this component outlives every session; its sign-in screens follow the system
         // language at boot and after a sign-out, and the user's language once signed in.
         SessionLocale.Changed += OnSessionLocaleChanged;
+        BuildMonitor = Services.GetService<HackerOs.Platform.Blazor.LazyLoading.HostBuildUpdateMonitor>();
+        if (BuildMonitor is not null)
+        {
+            BuildMonitor.UpdatePending += OnBuildUpdatePending;
+            State.SetUpdateAvailable(BuildMonitor.IsUpdatePending);
+        }
 
         // Boot creates/reconciles canonical settings documents. Preferences are then loaded before
         // a user can reach a desktop, so the saved theme never depends on opening Settings first.
@@ -257,6 +269,29 @@
 
     private void OnSessionLocaleChanged() => InvokeAsync(StateHasChanged);
 
+    private void OnBuildUpdatePending() => InvokeAsync(() =>
+    {
+        State.SetUpdateAvailable(true);
+        StateHasChanged();
+    });
+
+    /// <summary>
+    /// ADR 0162: the OS files were replaced under the running page. Restart like after a system
+    /// update: flush the logs, end the session (apps close), then reload the new build.
+    /// </summary>
+    private async Task RestartForUpdateAsync()
+    {
+        IsRestartingForUpdate = true;
+        if (Services.GetService<HackerOs.Platform.Core.Power.SystemPowerService>() is { } power)
+        {
+            await power.RestartAfterAsync(static () => Task.CompletedTask);
+        }
+        else if (Services.GetService<HackerOs.Platform.Core.Power.ISystemPowerDevice>() is { } device)
+        {
+            await device.RestartAsync();
+        }
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {
@@ -265,6 +300,10 @@
         UserThemes.Changed -= OnThemePreferenceChanged;
         Accessibility.Changed -= OnThemePreferenceChanged;
         SessionLocale.Changed -= OnSessionLocaleChanged;
+        if (BuildMonitor is not null)
+        {
+            BuildMonitor.UpdatePending -= OnBuildUpdatePending;
+        }
     }
 
     private async Task InitializeAsync()
