@@ -15,9 +15,11 @@ public sealed class AppCatalog
         IReadOnlySet<string> systemAppIds,
         IReadOnlyList<AppCatalogRejection> rejected,
         IReadOnlyDictionary<string, string> commandOwners,
+        IReadOnlyDictionary<string, IReadOnlyList<AppComponentProvider>> componentProviders,
         IReadOnlyList<AppCatalogError> warnings)
     {
         CommandOwners = commandOwners;
+        ComponentProviders = componentProviders;
         Warnings = warnings;
         Manifests = manifests;
         ActivationOrder = activationOrder;
@@ -65,7 +67,30 @@ public sealed class AppCatalog
     public IReadOnlyDictionary<string, string> CommandOwners { get; }
 
     /// <summary>
-    /// Gets the problems that did not stop the catalog, in deterministic order: today one
+    /// Gets the providers of each embeddable component contract (ADR 0063, ADR 0148 §3), read from
+    /// the manifests when the catalog is built, as Windows reads its registry at boot: the OS knows
+    /// every provider before any of their assemblies is loaded. Each list is in the order the
+    /// providers are tried: system apps first, then by app id. Any window app may register any
+    /// contract but the platform's own (ADR 0156 §1, which replaced the system-app reservation of
+    /// ADR 0148 §3.3).
+    /// </summary>
+    /// <remarks>
+    /// Installed state and the administrator's choice of provider (<c>/etc/hackeros/components.config</c>,
+    /// ADR 0156 §2) are not applied here: the component host applies both when it resolves.
+    /// </remarks>
+    public IReadOnlyDictionary<string, IReadOnlyList<AppComponentProvider>> ComponentProviders { get; }
+
+    /// <summary>Gets the providers of <paramref name="contract"/> in the order they are tried (see <see cref="ComponentProviders"/>).</summary>
+    /// <param name="contract">Contract name (ordinal comparison).</param>
+    /// <returns>The providers, empty when no app registers the contract.</returns>
+    public IReadOnlyList<AppComponentProvider> GetComponentProviders(string contract)
+    {
+        ArgumentNullException.ThrowIfNull(contract);
+        return ComponentProviders.TryGetValue(contract, out IReadOnlyList<AppComponentProvider>? providers) ? providers : [];
+    }
+
+    /// <summary>
+    /// Gets the problems that did not stop the catalog, in deterministic order: one
     /// <c>catalog.command.duplicate</c> per command name lost by an app. The boot writes them, with
     /// <see cref="Rejected"/>, to <c>/var/log/syslog</c>.
     /// </summary>
@@ -232,6 +257,8 @@ public sealed class AppCatalog
             new(new Dictionary<string, AppManifest>(byId, StringComparer.Ordinal));
         List<AppCatalogError> warnings = [];
         IReadOnlyDictionary<string, string> commandOwners = AssignCommands(byId, activationOrder, systemIds, warnings);
+        IReadOnlyDictionary<string, IReadOnlyList<AppComponentProvider>> componentProviders =
+            RegisterComponents(byId, systemIds);
         return new AppCatalogBuildResult(
             new AppCatalog(
                 readOnlyManifests,
@@ -239,6 +266,7 @@ public sealed class AppCatalog
                 systemIds.ToFrozenSet(StringComparer.Ordinal),
                 rejected,
                 commandOwners,
+                componentProviders,
                 warnings),
             []);
     }
@@ -281,6 +309,37 @@ public sealed class AppCatalog
         }
 
         return new ReadOnlyDictionary<string, string>(owners);
+    }
+
+    /// <summary>
+    /// ADR 0148 §3: builds the component registry from the manifests, system apps first, then by
+    /// app id. Platform-only contracts never get here: manifest validation refuses them.
+    /// </summary>
+    private static IReadOnlyDictionary<string, IReadOnlyList<AppComponentProvider>> RegisterComponents(
+        IReadOnlyDictionary<string, AppManifest> manifests,
+        IReadOnlySet<string> systemIds)
+    {
+        Dictionary<string, List<AppComponentProvider>> providers = new(StringComparer.Ordinal);
+        IEnumerable<AppManifest> precedence = manifests.Values
+            .OrderBy(manifest => systemIds.Contains(manifest.Id) ? 0 : 1)
+            .ThenBy(manifest => manifest.Id, StringComparer.Ordinal);
+        foreach (AppManifest manifest in precedence)
+        {
+            foreach (AppComponentManifest component in manifest.Components ?? [])
+            {
+                if (!providers.TryGetValue(component.Contract, out List<AppComponentProvider>? list))
+                {
+                    providers[component.Contract] = list = [];
+                }
+
+                list.Add(new AppComponentProvider(manifest.Id, component));
+            }
+        }
+
+        return providers.ToFrozenDictionary(
+            entry => entry.Key,
+            entry => (IReadOnlyList<AppComponentProvider>)entry.Value.AsReadOnly(),
+            StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -476,6 +535,11 @@ public sealed class AppCatalog
 /// <param name="AppId">App associated with the error, when available.</param>
 /// <param name="Message">Human-readable diagnostic.</param>
 public sealed record AppCatalogError(string Code, string AppId, string Message);
+
+/// <summary>One app's registration of an embeddable component (ADR 0063), as kept by <see cref="AppCatalog.ComponentProviders"/>.</summary>
+/// <param name="AppId">The providing app.</param>
+/// <param name="Component">The registration from its manifest.</param>
+public sealed record AppComponentProvider(string AppId, AppComponentManifest Component);
 
 /// <summary>
 /// An app the host shipped but the catalog refuses to load (ADR 0098 §3); see <see cref="AppCatalog.Rejected"/>.

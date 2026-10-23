@@ -35,7 +35,8 @@
 <div class="desktop-shell" @onkeydown="HandleShellKeyDown">
     <div class="desktop-workspace">
         <DesktopArea Windows="WindowRuntime.Windows"
-                     BackgroundContent="BackgroundContent"
+                     BackgroundContent="EffectiveBackgroundContent"
+                     BackgroundInteractive="UsesDesktopSurface"
                      OnFocus="HandleFocus"
                      OnMinimize="HandleMinimize"
                      OnToggleMaximize="HandleToggleMaximize"
@@ -69,7 +70,7 @@
 
     @if (_launcher.IsOpen)
     {
-        <AppLauncher OnClose="CloseLauncher" OnAppSelected="HandleAppSelected" />
+        <AppLauncher OnClose="CloseLauncher" OnAppSelected="HandleAppSelected" OnSendToDesktop="SendToDesktopCallback" />
     }
 
     @if (!string.IsNullOrEmpty(_launchError))
@@ -109,6 +110,9 @@
 
     @* ADR 0095 §3: window switcher, keyboard move/resize and window menu. *@
     <WindowManagerOverlays Commands="KeyboardCommands" />
+
+    @* ADR 0150 §6: the OS context menu, above every window. *@
+    <HackerOs.Platform.Blazor.ContextMenus.ContextMenuOverlay />
 
     @* ADR 0049: secure-desktop approval, above every window and the taskbar. *@
     @* ADR 0101: synchronization conflicts and the session's periodic sync. *@
@@ -160,6 +164,44 @@
     /// </summary>
     [Parameter]
     public RenderFragment? BackgroundContent { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the shell draws the desktop app (ADR 0160 §1) when no
+    /// <see cref="BackgroundContent"/> is supplied: the icons of <c>~/Desktop</c>, Home and Trash.
+    /// <see langword="true"/> by default; a host may turn it off for a bare desktop.
+    /// </summary>
+    [Parameter]
+    public bool ShowDesktopIcons { get; set; } = true;
+
+    private DesktopSurfaceHost? _desktopSurface;
+
+    private bool UsesDesktopSurface => BackgroundContent is null && ShowDesktopIcons;
+
+    private RenderFragment? EffectiveBackgroundContent => BackgroundContent ?? (ShowDesktopIcons ? DesktopSurfaceFragment : null);
+
+    private RenderFragment DesktopSurfaceFragment => builder =>
+    {
+        builder.OpenComponent<DesktopSurfaceHost>(0);
+        builder.AddComponentReferenceCapture(1, component => _desktopSurface = (DesktopSurfaceHost)component);
+        builder.CloseComponent();
+    };
+
+    /// <summary>"Send to ▸ Desktop" is offered while the desktop app runs.</summary>
+    private EventCallback<AppManifest> SendToDesktopCallback => _desktopSurface?.ProcessId is not null
+        ? EventCallback.Factory.Create<AppManifest>(this, SendToDesktopAsync)
+        : default;
+
+    /// <summary>Hands the app to the running desktop, which writes its shortcut in <c>~/Desktop</c> (ADR 0160 §6).</summary>
+    private async Task SendToDesktopAsync(AppManifest manifest)
+    {
+        _launcher.Close();
+        if (_desktopSurface is { } surface && !await surface.CreateShortcutAsync(manifest.Id))
+        {
+            _launchError = L["Shell.LaunchFailed"];
+        }
+
+        StateHasChanged();
+    }
 
     /// <summary>
     /// Shows the E2E-only "Test Demo" fixture-seeding control. Must only ever be set

@@ -28,7 +28,7 @@ ADR de la section 10 sont écrits avant le code de chaque chantier.
 | Entrées ajoutées | « UnZip Here » et « Publish as a web site… », codées dans l'explorateur | `ZipFileContextMenuProvider`, `PublishSiteContextMenuProvider` |
 | « Ouvrir avec » | Boîte de l'explorateur (barre d'outils), « Toujours utiliser » | `OpenWithDialog`, ADR 0121 |
 | Composants intégrables | Contrat `hackeros.terminal` fourni par l'app Terminal, affiché par `HackEmbeddedComponent<T>` | ADR 0063, [`embedded-components.md`](embedded-components.md) |
-| Dialogues de l'OS | Contrats `IDialogService`/`IFileDialogService` dans le SDK, mis en œuvre par la plateforme (`VirtualFolderBrowser` pour Ouvrir/Enregistrer) | `HackerOs.AppSdk.Blazor`, `Platform.Blazor/Dialogs` |
+| Dialogues de l'OS | Contrats `IDialogService`/`IFileDialogService` dans le SDK, mis en œuvre par la plateforme (`VirtualFolderBrowser` pour Ouvrir/Enregistrer ; depuis `desk/3b`, le contrôle `hackeros.file-view`, ADR 0157) | `HackerOs.AppSdk.Blazor`, `Platform.Blazor/Dialogs` |
 | Bureau | `~/Desktop` créé pour chaque utilisateur ; emplacement `DesktopArea.BackgroundContent` prévu mais vide | `FileSystemSeeder`, `DesktopArea.razor` |
 | Intents | Intents définis par les apps, `IntentReceived` pour une instance ouverte | ADR 0096, [`app-intents.md`](app-intents.md) |
 
@@ -58,6 +58,7 @@ ADR de la section 10 sont écrits avant le code de chaque chantier.
 | Q20 | Mobile | **Menu oui** (appui long), **icônes non** |
 | Q21 | Apps sur le bureau | Fichiers **`.desktop`** |
 | Q22 | Ce document | Dans `docs/`, par une PR vers `main` |
+| Q23 | Fournisseur du contrôle de fichiers (2026-10-20) | **Remplaçable** par une app tierce ; choix d'un administrateur dans Paramètres, l'explorateur par défaut ([ADR 0156](adr/0156-replaceable-file-control-provider.md)) |
 
 Détails retenus sans question (« défauts » du récapitulatif validé) : repli
 automatique des séparateurs (§6.2), contenu des menus par défaut (§7),
@@ -92,9 +93,12 @@ Explorateur de fichiers (app système)          Plateforme (shell)
 | Contrat | Contrôleur et composant du SDK | Fournisseur |
 |---|---|---|
 | `hackeros.file-view` | `IHackFileView`, `HackFileView` | Explorateur |
-| `hackeros.file-dialogs` | dialogues Ouvrir avec, Propriétés, conflit de noms, et la vue de fichiers des dialogues Ouvrir / Enregistrer / Choisir un dossier | Explorateur |
+| `hackeros.file-dialogs` | dialogues Ouvrir avec, Propriétés, conflit de noms, et la vue de fichiers des dialogues Ouvrir / Enregistrer / Choisir un dossier (finalement le contrôle `hackeros.file-view` dans le dialogue de la plateforme, [ADR 0157](adr/0157-file-dialogs-show-the-file-control.md)) | Explorateur |
 | `hackeros.context-menu` | `IHackContextMenu`, `HackContextMenu`, `Menus.Attach` | Plateforme |
 
+- **Fournisseur remplaçable.** Une app tierce peut fournir `hackeros.file-view`
+  et `hackeros.file-dialogs` à la place de l'explorateur, si un administrateur
+  la choisit dans Paramètres ([ADR 0156](adr/0156-replaceable-file-control-provider.md)).
 - **Droits.** Le rendu fourni tourne avec **les droits de l'app hôte** :
   le fournisseur reçoit les passerelles de l'hôte (`HostContext`), jamais les
   siennes, comme `FileView` aujourd'hui (ADR 0037 §1). Une app ne voit donc
@@ -104,6 +108,11 @@ Explorateur de fichiers (app système)          Plateforme (shell)
   la plateforme étant système, ce cas reste une erreur.
 
 ## 5. Le bureau
+
+> Mis en œuvre par le chantier 5 : voir [`desktop.md`](desktop.md) et
+> l'[ADR 0160](adr/0160-desktop-implementation-adjustments.md) (le bureau est
+> l'app système `org.hackeros.desktop`, `desktop.config` est un fichier de
+> l'utilisateur seulement).
 
 - `DesktopShell` remplit `DesktopArea.BackgroundContent` avec `HackFileView`
   en **mode Bureau** sur `~/Desktop`, avec les droits de la session.
@@ -278,6 +287,10 @@ public sealed class SuperApp : AppDefinition
   entrées. Paramètres ▸ Applications liste les entrées de chaque app et
   permet de les masquer, dans `~/.config/hackeros/context-menus.config`
   (`[hidden]` `<appId>.<name>=true`).
+  *Mis en œuvre (ADR 0159) : la méthode tourne au build pour toutes les apps
+  (il n'y a pas d'installation de paquet à l'exécution), les titres viennent
+  de `Resources/AppManifest.resx`, et le réglage est l'onglet Paramètres ▸
+  Menus des fichiers.*
 - Le générateur vérifie : `name` unique, `parent` existant dans la même app
   et sans intent, profondeur ≤ 3, `after`/`afterGroup` qui visent un
   identifiant connu de l'OS ou de la même app, `target` valide.
@@ -334,6 +347,8 @@ public sealed class SuperApp : AppDefinition
 
 ## 10. ADR à écrire
 
+Écrits par le chantier 0 (branche `desk/0-adrs`, vers `desk/base`).
+
 | ADR | Sujet |
 |---|---|
 | 0148 | Le SDK ne porte que des contrats ; les contrôles et dialogues partagés sont fournis par l'OS à l'exécution (complète l'ADR 0063, remplace l'ADR 0037 §1 et §8) |
@@ -362,5 +377,49 @@ documentation et l'index [`README.md`](README.md).
 - [x] Débattre de l'idée avec Benoit (Q1 à Q22).
 - [x] Valider le récapitulatif.
 - [x] Écrire ce plan.
-- [ ] Chantier 0 : ADR 0148 à 0152.
-- [ ] Chantiers 1 à 6.
+- [x] Chantier 0 : ADR 0148 à 0152 ([0148](adr/0148-sdk-contracts-and-os-provided-controls.md), [0149](adr/0149-sdk-2-0-file-view-removal.md), [0150](adr/0150-os-context-menu.md), [0151](adr/0151-app-registered-file-menu-entries.md), [0152](adr/0152-desktop-icons.md)).
+- [x] Chantier 1 : hôte de contrats générique (`HackContractComponent<T>`, registre dans `AppCatalog`, contrats réservés et `HOSAPP0025`, fournisseurs de la plateforme, erreur au journal ; [ADR 0153](adr/0153-contract-host-implementation-adjustments.md), [`embedded-components.md`](embedded-components.md)).
+- [x] Chantier 2 : menu contextuel de l'OS (`HackContextMenu`, `Menus.Attach`/`Define`/`OpenAsync`, fournisseur de la plateforme, rendu natif multi-niveaux et feuille mobile, script du clic droit, de l'appui long, de la Touche Menu et de Maj+F10, clavier et ARIA ; [ADR 0154](adr/0154-context-menu-implementation-adjustments.md), [`context-menu.md`](context-menu.md)).
+- [x] Chantier 3 : contrôle de fichiers fourni par l'explorateur (`HackFileView`, `IHackFileView`, `ExplorerFileView` lié au menu de l'OS, menus du §7 avec « Ouvrir avec » en sous-menu, dialogues fournis par `IDialogService`, explorateur et éditeur de code migrés ; [ADR 0155](adr/0155-file-control-implementation-adjustments.md), [`file-explorer.md`](file-explorer.md)). La vue des dialogues Ouvrir / Enregistrer est le chantier `desk/3b`, séparé (choix de Benoit, ADR 0155 §6).
+- [x] Chantier 3b : les dialogues Ouvrir / Enregistrer / Choisir un dossier montrent le contrôle `hackeros.file-view` avec les droits de l'app qui demande (`FileDialogBrowser`, repli sur `VirtualFolderBrowser` sans fournisseur ; [ADR 0157](adr/0157-file-dialogs-show-the-file-control.md)).
+- [x] Chantier 3c : fournisseur du contrôle de fichiers remplaçable (contrats ouverts à toute app fenêtrée, `HOSAPP0025` retiré, `/etc/hackeros/components.config`, choix de l'administrateur après approbation, repli `component.fallback`, onglet « Composants de l'OS » ; [ADR 0156](adr/0156-replaceable-file-control-provider.md), [ADR 0158](adr/0158-replaceable-file-provider-implementation-adjustments.md)).
+- [x] Chantier 4 : entrées inscrites par les apps (`[RegisterFileContextMenu]` exécutée au build pour toutes les apps, `contextMenus` du manifeste, `/etc/hackeros/context-menus.d` aligné au démarrage, filtres, placement, lancement par intent ou arguments, capacité `shell.context-menu`, `HOSAPP0026` à `HOSAPP0028`, Paramètres ▸ Menus des fichiers et `HackFileMenuEntries`, « Extraire ici » et « Publier comme site web… » inscrits ; [ADR 0159](adr/0159-app-menu-entries-implementation-adjustments.md), [`context-menu.md`](context-menu.md#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4)).
+- [x] Chantier 5 : bureau (app système `org.hackeros.desktop` rendue par la coquille sous les fenêtres, mode Bureau du contrôle de fichiers, grille `HackDesktopLayout`, `~/.config/hackeros/desktop.config` par `HackDesktopSettings`, Dossier perso et Corbeille, raccourcis `.desktop` par glisser depuis le menu Démarrer et « Envoyer vers ▸ Bureau », menus Affichage et Trier par, Paramètres ▸ Bureau ; [ADR 0160](adr/0160-desktop-implementation-adjustments.md), [`desktop.md`](desktop.md)).
+- [x] Chantier 6 : SDK 2.0 (`HackerOs.AppSdk.FileView` retiré, son code dans l'explorateur sous `FileControl/`, règles de copie `HackFileOperations` dans le SDK, `PublicAPI` publié, version `2.0.0`, apps 1.x refusées au catalogue et au build de l'hôte, fixture `Contoso.Sdk2Compat.2.0.0`, migration dans [`sdk-packages.md`](sdk-packages.md#sdk-20) ; [ADR 0161](adr/0161-sdk-2-0-implementation-adjustments.md)) et vérification finale (§13).
+
+## 13. Vérification finale
+
+Faite le 2026-10-20 sur la branche `desk/6-sdk-2` (série complète : `desk/base`
+avec les chantiers 0 à 5 et le 6), dans un conteneur Linux, .NET 10.
+
+| Vérification | Résultat |
+|---|---|
+| `dotnet build HackerOs.sln` (Debug) | réussi, 0 avertissement, 0 erreur |
+| Tests unitaires et d'intégration (41 projets `Tests/*.Tests` hors E2E) | 3 968 réussis, 0 échec |
+| `build/publish-trimmed.sh` et `HackerOs.TrimmedPublish.E2E.Tests` | `RESULT: PASS` ; 136 fichiers `.wasm`, 27,7 Mio, 8,3 Mio en Brotli |
+| `build/verify-hosts.sh` (Ecosystem et ses variantes, hôte de test, serveur) | `RESULT: PASS`, les 13 lignes |
+| `HackerOs.E2E.Tests` | 18 réussis |
+| `HackerOs.UI.E2E.Tests` | 28 réussis |
+| `HackerOs.Templates.E2E.Tests` (dont un hôte qui refuse les apps 1.x par `HOSAPP0021` et lance l'app 2.0) | 6 réussis |
+| `HackerOs.Pwa.E2E.Tests` | 6 réussis |
+
+Aucun test n'a été désactivé ni ignoré. Les échecs connus d'avant la série
+(PWA sans IPv6, tests instables listés dans
+[`building-and-testing.md`](building-and-testing.md)) ne se sont pas montrés
+pendant ce passage.
+
+Ce que la série livre :
+
+- un SDK fait de contrats : `HackFileView`, les dialogues de fichiers et le menu
+  contextuel sont rendus par l'OS à l'exécution (ADR 0148, 0153) ;
+- le menu contextuel de l'OS (`Menus.Attach`, multi-niveaux, clavier, appui
+  long ; ADR 0150, 0154) ;
+- le contrôle de fichiers fourni par l'explorateur, montré aussi dans les
+  dialogues Ouvrir / Enregistrer, et remplaçable par l'administrateur
+  (ADR 0155, 0156, 0157, 0158) ;
+- les entrées de menu inscrites par les apps (`[RegisterFileContextMenu]`,
+  ADR 0151, 0159) ;
+- le bureau sur `~/Desktop` (ADR 0152, 0160) ;
+- le SDK 2.0.0, qui retire la `FileView` publique et refuse les apps 1.x
+  (ADR 0149, 0161).
+

@@ -1,5 +1,6 @@
 @namespace HackerOs.Platform.Blazor.Dialogs
 @using HackerOs.App.Abstractions
+@using HackerOs.AppSdk.Blazor.Files
 @using HackerOs.Simulation.Abstractions.FileSystem
 @using Microsoft.AspNetCore.Components.Web
 @using MudBlazor
@@ -12,13 +13,15 @@
         <h2 id="@_titleId">@(Presentation.Request.Title ?? L["FileDialog.SelectFolder"])</h2>
     </header>
 
-    <VirtualFolderBrowser @ref="_browser"
-                          FileSystem="@Presentation.FileSystem"
-                          InitialDirectory="@EffectiveInitialDirectory"
-                          AllowFileSelection="false"
-                          AllowDirectorySelection="true"
-                          DirectoryChanged="DirectoryChanged"
-                          SelectionChanged="SelectionChanged" />
+    <FileDialogBrowser @ref="_browser"
+                       Context="@Presentation.Context"
+                       FileSystem="@Presentation.FileSystem"
+                       InitialDirectory="@EffectiveInitialDirectory"
+                       AllowFileSelection="false"
+                       AllowDirectorySelection="true"
+                       Features="@(Presentation.Request.AllowCreateFolder ? HackFileViewFeatures.CreateFolder | HackFileViewFeatures.Rename : HackFileViewFeatures.None)"
+                       DirectoryChanged="DirectoryChanged"
+                       SelectionChanged="SelectionChanged" />
 
     @if (Presentation.Request.AllowCreateFolder)
     {
@@ -50,10 +53,9 @@
     public FileDialogCoordinator Coordinator { get; set; } = null!;
 
     private readonly string _titleId = $"folder-select-title-{Guid.NewGuid():N}";
-    private VirtualFolderBrowser? _browser;
+    private FileDialogBrowser? _browser;
     private VirtualPath _currentDirectory = VirtualPath.Parse("/");
     private VirtualPath? _selectedChild;
-    private long _currentRevision;
     private string _newFolderName = string.Empty;
     private string? _error;
     private bool _creating;
@@ -80,10 +82,9 @@
         _currentDirectory = EffectiveInitialDirectory;
     }
 
-    private void DirectoryChanged(FileSystemDirectorySnapshot snapshot)
+    private void DirectoryChanged(VirtualPath directory)
     {
-        _currentDirectory = snapshot.Path;
-        _currentRevision = snapshot.Revision;
+        _currentDirectory = directory;
         _selectedChild = null;
     }
 
@@ -97,16 +98,20 @@
         catch (FormatException exception) { _error = exception.Message; return; }
 
         _creating = true;
+        // No parent revision: the folder shown may be the OS file control's, which does not expose
+        // one; a name already taken still fails (AlreadyExists) and is reported below.
+        VirtualPath created = Combine(_currentDirectory, name.Value);
         FileSystemMutationResult result = await Presentation.FileSystem.CreateAsync(new FileSystemCreateRequest(
-            Combine(_currentDirectory, name.Value),
+            created,
             FileSystemEntryKind.Directory,
             FileSystemPermissions.FromMode(0x01ED),
-            _currentRevision));
+            expectedParentRevision: null));
         _creating = false;
         if (result.Succeeded)
         {
             _newFolderName = string.Empty;
-            await _browser!.RefreshAsync();
+            // The new folder is shown selected, ready to be chosen.
+            await _browser!.RevealAsync(created);
         }
         else
         {

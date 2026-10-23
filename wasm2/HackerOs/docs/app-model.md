@@ -33,7 +33,8 @@ Valeurs par défaut des membres facultatifs :
 | `LaunchVisibility` | `Visible` |
 | `Icons`, `Capabilities`, `FileHandlers`, `Dependencies`, `Intents`, `DeclaredTopicPermissions`, `Localizations`, `Assets` | liste vide |
 | `Terminal`, `MobileEntryPoint`, `Settings` | `null` |
-| `Components` | liste vide ; `components` est alors omis du manifeste (ADR 0063, [`embedded-components.md`](embedded-components.md)) |
+| `[RegisterFileContextMenu]` | aucune méthode ; `contextMenus` est alors omis du manifeste. Une méthode statique de la classe elle-même, exécutée deux fois au build, inscrit les entrées de l'app dans les menus des fichiers (ADR 0151, ADR 0159, [`context-menu.md`](context-menu.md#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4)) ; titres dans `Resources/AppManifest.resx` |
+| `Components` | liste vide ; `components` est alors omis du manifeste (ADR 0063, [`embedded-components.md`](embedded-components.md)) ; `hackeros.context-menu` est refusé (plateforme) ; `hackeros.file-view` et `hackeros.file-dialogs` sont ouverts à toute app fenêtrée, un administrateur choisit celle en service (ADR 0156, ADR 0158) |
 | `SingleInstancePerUser`, `AutoStart`, `SupportsBack` | `false` |
 | `ServiceStartup` | `null` (= `Login`) ; `serviceStartup` est alors omis du manifeste. `Boot` ne vaut que pour une app système de genre `Service` (ADR 0097 §4, ADR 0107) |
 | `OomScoreAdjust` | `null` (hérite ; `-500` pour un service système) ; `oomScoreAdj` est alors omis du manifeste. Négatif seulement pour une app système (`HOSAPP0024`, ADR 0126 §4, ADR 0142, [`oom-killer.md`](oom-killer.md)) |
@@ -69,7 +70,7 @@ public sealed class TextEditorApp : AppDefinition
 - `sdkCompatibility` (ADR 0098 §3) : par défaut, `minimumVersion` est la version
   du SDK contre laquelle l'app a été compilée. Le générateur la lit dans
   l'`AssemblyInformationalVersion` de la `HackerOs.App.Abstractions.dll`
-  référencée par l'app (par exemple `1.2.0`, voir
+  référencée par l'app (par exemple `2.0.0`, voir
   [`sdk-packages.md`](sdk-packages.md)) et la passe à
   `ToManifest(definition, sdkMinimumVersion)` ; `ToManifest(definition)` prend
   `HackerOsSdk.Version`, la version du SDK chargé. Une app qui veut une plage
@@ -237,6 +238,7 @@ avec le nom complet de la classe en cause : `App.csproj : error HOSAPP0005: [Ns.
 | `HOSAPP0022` | Agrégation : nom de commande ou alias déclaré par deux apps de l'hôte (comparaison sans casse), ou nom que le shell exécute lui-même (`ShellInterpreter.ReservedNames`) (ADR 0098 §4). |
 | `HOSAPP0023` | Génération : ressource déclarée dans `Assets` absente de `wwwroot/` du projet ; son SHA-256 ne peut pas être calculé (ADR 0098 §5). |
 | `HOSAPP0024` | Agrégation : app non système qui déclare `OomScoreAdjust` négatif (ADR 0126 §4, ADR 0142 §6, [`oom-killer.md`](oom-killer.md)). |
+| `HOSAPP0025` | Retiré, jamais réutilisé : refusait à une app non système `hackeros.file-view` et `hackeros.file-dialogs` (ADR 0153 §4), que l'ADR 0156 ouvre à toute app fenêtrée (ADR 0158 §1). |
 | `HOSAPP0030` | Frontière du SDK : `ProjectReference` interdite dans un projet d'app (ADR 0055 §2, numéro fixé par l'ADR 0059). Émis par la cible `ValidateHackerOsSdkBoundary`. Voir [`app-sdk.md`](app-sdk.md). |
 | `HOSAPP0031` | Frontière du SDK : service injecté qui n'est ni un type du SDK, ni MudBlazor, ni `IJSRuntime` (ADR 0055 §3, ADR 0059). Voir [`app-sdk.md`](app-sdk.md). |
 | `HOSAPP0040` | Traductions du manifeste (ADR 0104 §4) : `Resources/AppManifest.<culture>.resx` illisible, nom de culture invalide, clé autre que `Name`, `Description`, `Terminal.Usage` (préfixées de l'id dans un projet à plusieurs apps), `Terminal.Usage` pour une app qui n'est pas une commande, ou fichier `localization/` référencé illisible à l'agrégation. Voir [`localization.md`](localization.md). |

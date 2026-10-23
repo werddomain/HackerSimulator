@@ -1,6 +1,7 @@
 using HackerOs.AppSdk;
 using HackerOs.AppSdk.Apps;
 using HackerOs.AppSdk.Blazor;
+using HackerOs.AppSdk.Files;
 using HackerOs.AppSdk.IO;
 using HackerOs.AppSdk.Net.Hosting;
 using HackerOs.App.Abstractions;
@@ -89,11 +90,32 @@ public partial class WebServerManagerWindow
     protected override async Task OnAppInitializedAsync()
     {
         await RefreshAsync();
-        if (LaunchFile is { } folder)
+        if (PublishedFolder(LaunchIntent) is { } published)
+        {
+            await StartNewAsync(published);
+        }
+        else if (LaunchFile is { } folder)
         {
             await StartNewAsync(folder.Value);
         }
     }
+
+    /// <summary>"Publish as a web site" chosen again while the window is open (single instance): a new site for that folder.</summary>
+    /// <param name="intent">The intent the OS handed.</param>
+    protected override async Task OnIntentReceivedAsync(AppIntentDelivery intent)
+    {
+        if (PublishedFolder(intent) is { } folder)
+        {
+            await StartNewAsync(folder);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>The folder of a "Publish as a web site" intent (ADR 0151 §8), or <see langword="null"/>.</summary>
+    internal static string? PublishedFolder(AppIntentDelivery? intent) =>
+        intent is { IntentId: WebServerManagerApp.PublishSiteIntent }
+            ? HackFileMenuIntent.ReadPaths(intent.PayloadJson).FirstOrDefault()
+            : null;
 
     /// <summary>Reads everything again, keeping the selection.</summary>
     private async Task RefreshAsync()

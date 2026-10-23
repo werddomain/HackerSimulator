@@ -92,27 +92,39 @@ public sealed class TemplateBuildTests(TemplateWorkspace workspace)
     }
 
     /// <summary>
-    /// ADR 0098 §8, ADR 0114, ADR 0132 §1: the host template with the app packages compiled against
-    /// SDK 1.0.0 and 1.1.0 (<c>Tests/fixtures/sdk-compat</c>) boots, and the old window apps and
-    /// commands run on the current SDK: file writes and reads, arguments, standard output, and for
-    /// 1.1.0 the window title and the password rule it added.
+    /// ADR 0098 §3 and §8, ADR 0114, ADR 0149 §5, ADR 0161 §3: the app packages of
+    /// <c>Tests/fixtures/sdk-compat</c> in a host made by the template. A host that references the
+    /// apps compiled against SDK 1.0.0 and 1.1.0 does not build (<c>HOSAPP0021</c>, another major:
+    /// they must be rebuilt). With the app compiled against SDK 2.0.0 instead, the host boots, the
+    /// window shows the OS file control in a third-party app and the command copies a file with the
+    /// SDK 2.0 copy rules.
     /// </summary>
     [Fact]
-    public async Task A_host_runs_app_packages_compiled_against_SDK_1_0_0_and_1_1_0()
+    public async Task A_host_runs_SDK_2_app_packages_and_refuses_SDK_1_x_packages()
     {
-        string root = Path.Combine(workspace.Root, "sdk1-scenario");
+        string root = Path.Combine(workspace.Root, "sdk-compat-scenario");
         Directory.CreateDirectory(root);
         await workspace.RunCheckedAsync(root, "new", "hackeros-host", "-n", "Contoso.Os", "-o", "Host");
         string host = Path.Combine(root, "Host");
+
         await workspace.RunCheckedAsync(host, "add", "package", "Contoso.Sdk1Compat", "--version", "1.0.0");
         await workspace.RunCheckedAsync(host, "add", "package", "Contoso.Sdk11Compat", "--version", "1.1.0");
+        (int exitCode, string output) = await workspace.RunAsync(host, "build");
+        Assert.NotEqual(0, exitCode);
+        foreach (string appId in new[] { "com.contoso.sdk1-window", "com.contoso.sdk1-command", "com.contoso.sdk11-window", "com.contoso.sdk11-command" })
+        {
+            Assert.Contains($"error HOSAPP0021: [{appId}]", output, StringComparison.Ordinal);
+        }
+
+        await workspace.RunCheckedAsync(host, "remove", "package", "Contoso.Sdk1Compat");
+        await workspace.RunCheckedAsync(host, "remove", "package", "Contoso.Sdk11Compat");
+        await workspace.RunCheckedAsync(host, "add", "package", "Contoso.Sdk2Compat", "--version", "2.0.0");
         await workspace.RunCheckedAsync(host, "build");
 
         string aggregated = File.ReadAllText(Path.Combine(host, "obj", "Debug", "net10.0", "BuiltInApplications.json"));
-        Assert.Contains("\"com.contoso.sdk1-window\"", aggregated, StringComparison.Ordinal);
-        Assert.Contains("\"com.contoso.sdk1-command\"", aggregated, StringComparison.Ordinal);
-        Assert.Contains("\"com.contoso.sdk11-window\"", aggregated, StringComparison.Ordinal);
-        Assert.Contains("\"com.contoso.sdk11-command\"", aggregated, StringComparison.Ordinal);
+        Assert.Contains("\"com.contoso.sdk2-window\"", aggregated, StringComparison.Ordinal);
+        Assert.Contains("\"com.contoso.sdk2-command\"", aggregated, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"com.contoso.sdk1-window\"", aggregated, StringComparison.Ordinal);
 
         int port = FreePort();
         using System.Diagnostics.Process server = workspace.Start(host, "run", "--no-build", "--urls", $"http://127.0.0.1:{port}");
@@ -133,33 +145,20 @@ public sealed class TemplateBuildTests(TemplateWorkspace workspace)
             await inputs.Nth(3).FillAsync("matrix123");
             await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Create local profile" }).ClickAsync();
 
-            // The window app of SDK 1.0.0, lazy-loaded from its package.
+            // The window app of SDK 2.0.0, lazy-loaded from its package, shows the OS file control
+            // (HackFileView, provided by the File Explorer).
             await page.GetByText("Applications", new PageGetByTextOptions { Exact = true }).ClickAsync(new LocatorClickOptions { Timeout = 60_000 });
-            await page.GetByText("SDK 1.0 Window", new PageGetByTextOptions { Exact = true }).First.ClickAsync();
-            await page.GetByText("Compiled against SDK").WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
-            await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Save note" }).ClickAsync();
-            await page.GetByText("Read back: saved by SDK 1.0").WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
+            await page.GetByText("SDK 2.0 Window", new PageGetByTextOptions { Exact = true }).First.ClickAsync();
+            await page.GetByText("Compiled against SDK 2.0.0").WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
+            await page.Locator(".compat-files table.file-view-details").WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
 
-            // The window app of SDK 1.1.0 names its window (SetWindowTitleAsync, ADR 0117).
-            await page.GetByText("Applications", new PageGetByTextOptions { Exact = true }).ClickAsync();
-            await page.GetByText("SDK 1.1 Window", new PageGetByTextOptions { Exact = true }).First.ClickAsync();
-            await page.GetByText("note.txt — SDK 1.1 Window").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
-            ILocator sdk11Window = page.Locator(".compat-window", new PageLocatorOptions { HasText = "SDK 1.1 Window" });
-            await sdk11Window.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Save note" }).ClickAsync();
-            await page.GetByText("Read back: saved by SDK 1.1").WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
-            await page.GetByText("sdk11-window.txt — SDK 1.1 Window").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
-
-            // Its command, run from the Terminal.
+            // Its command, run from the Terminal, copies a file with HackFileOperations.
             await page.GetByText("Applications", new PageGetByTextOptions { Exact = true }).ClickAsync();
             await page.GetByText("Terminal", new PageGetByTextOptions { Exact = true }).First.ClickAsync();
             await page.GetByText("Type 'help'").WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
-            await page.Keyboard.TypeAsync("sdk1-compat still binds");
+            await page.Keyboard.TypeAsync("sdk2-compat still binds");
             await page.Keyboard.PressAsync("Enter");
-            await page.GetByText($"sdk1-compat: still binds (compiled against 1.0.0, running on {workspace.Version})")
-                .WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
-            await page.Keyboard.TypeAsync("sdk11-compat still binds");
-            await page.Keyboard.PressAsync("Enter");
-            await page.GetByText($"sdk11-compat: still binds [valid password] (compiled against 1.1.0, running on {workspace.Version})")
+            await page.GetByText($"sdk2-compat: still binds [sdk2-compat (copy).txt] (compiled against 2.0.0, running on {workspace.Version})")
                 .WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
         }
         finally

@@ -1,9 +1,8 @@
 using HackerOs.App.Abstractions;
-using HackerOs.AppSdk.FileView;
-using HackerOs.AppSdk.FileView.ContextMenu;
-using HackerOs.AppSdk.FileView.Events;
+using HackerOs.AppSdk.Blazor.ContextMenus;
+using HackerOs.AppSdk.Blazor.Files;
+using HackerOs.AppSdk.Files;
 using HackerOs.AppSdk.Icons;
-using HackerOs.AppSdk.FileView.Icons;
 using HackerOs.Simulation.Abstractions.FileSystem;
 using HackerOs.Simulation.Abstractions.Gateways;
 using Microsoft.AspNetCore.Components;
@@ -13,7 +12,7 @@ using Microsoft.Extensions.Localization;
 
 namespace HackerOs.Apps.CodeEditor;
 
-/// <summary>Code-behind of the Explorer view: selection, inline creation, context menu entries, rename tracking.</summary>
+/// <summary>Code-behind of the Explorer view: selection, inline creation, file menu entries, rename tracking.</summary>
 public partial class CodeEditorExplorer
 {
     private IStringLocalizer<Strings>? _localizer;
@@ -21,7 +20,7 @@ public partial class CodeEditorExplorer
     /// <summary>The Code Editor's texts in its own process's language (ADR 0104).</summary>
     private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
 
-    private FileView? _fileView;
+    private IHackFileView? _files;
     private ElementReference _createInput;
     private CreationKind? _creating;
     private string _createName = string.Empty;
@@ -29,8 +28,6 @@ public partial class CodeEditorExplorer
     private string? _createError;
     private bool _focusCreateInput;
     private bool _committing;
-    private FileView? _subscribedView;
-    private IReadOnlyList<IFileViewContextMenuProvider> _menuProviders = [];
 
     private enum CreationKind
     {
@@ -41,14 +38,6 @@ public partial class CodeEditorExplorer
     /// <summary>Gets or sets the open folder, or null when none is open.</summary>
     [Parameter]
     public CodeEditorWorkspace? Workspace { get; set; }
-
-    /// <summary>Gets or sets the watch gateway, so the tree follows changes made elsewhere (terminal, other apps).</summary>
-    [Parameter]
-    public IAppFileSystemWatchGateway? Watch { get; set; }
-
-    /// <summary>Gets or sets the owning app's id, for FileView's drag-and-drop envelope.</summary>
-    [Parameter]
-    public string? OwnerAppId { get; set; }
 
     /// <summary>Gets or sets the callback that opens a file in a tab and focuses it (double click, Enter, after creating it).</summary>
     [Parameter]
@@ -77,9 +66,9 @@ public partial class CodeEditorExplorer
     [Parameter]
     public EventCallback<(VirtualPath OldPath, VirtualPath NewPath)> OnRenamed { get; set; }
 
-    /// <summary>Gets or sets the delete handler (Delete key, menu): the window moves the items to the trash.</summary>
+    /// <summary>Gets or sets the callback receiving the tree's errors (a delete or a copy that failed), for the status bar.</summary>
     [Parameter]
-    public EventCallback<FileViewDeleteRequestedEventArgs> OnDeleteRequested { get; set; }
+    public EventCallback<string> OnError { get; set; }
 
     /// <summary>Starts creating a file in the selected folder (the window's "New File" command when a folder is open).</summary>
     public void BeginNewFile() => BeginCreate(CreationKind.File, null);
@@ -87,56 +76,15 @@ public partial class CodeEditorExplorer
     /// <summary>Re-reads the tree from the file system.</summary>
     public async Task RefreshAsync()
     {
-        if (_fileView is not null)
+        if (_files is not null)
         {
-            await _fileView.RefreshAsync();
+            await _files.RefreshAsync();
         }
-    }
-
-    /// <inheritdoc />
-    protected override void OnInitialized()
-    {
-        _menuProviders =
-        [
-            new MenuProvider(FileViewContextMenuScope.Background, (context, items) =>
-            {
-                // Replaces FileView's "New Folder" (it creates "New Folder" then renames) with
-                // VS Code's pair, the name typed first.
-                items.Remove("new-folder");
-                items.Add(Item("explorer-new-file", L["Explorer.NewFile.Title"], "file-plus", () => BeginCreateAsync(CreationKind.File, Workspace?.Root)));
-                items.Add(Item("explorer-new-folder", L["Explorer.NewFolder.Title"], "folder-plus", () => BeginCreateAsync(CreationKind.Folder, Workspace?.Root)));
-            }),
-            new MenuProvider(FileViewContextMenuScope.Directory, (context, items) =>
-            {
-                if (context.Item is not { } folder)
-                {
-                    return;
-                }
-
-                items.Add(Item("explorer-new-file", L["Explorer.NewFile.Title"], "file-plus", () => BeginCreateAsync(CreationKind.File, folder.FullPath), separator: true));
-                items.Add(Item("explorer-new-folder", L["Explorer.NewFolder.Title"], "folder-plus", () => BeginCreateAsync(CreationKind.Folder, folder.FullPath)));
-                items.Add(Item("explorer-find-in-folder", L["Explorer.FindInFolder"], "search", () => OnFindInFolder.InvokeAsync(folder.FullPath)));
-                items.Add(Item("explorer-open-in-terminal", L["Explorer.OpenInTerminal"], "terminal", () => OnOpenInTerminal.InvokeAsync(folder.FullPath)));
-            })
-        ];
     }
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!ReferenceEquals(_subscribedView, _fileView))
-        {
-            Unsubscribe();
-            if (_fileView is not null)
-            {
-                _fileView.SelectionChanged += OnSelectionChanged;
-                _fileView.Opened += OnOpened;
-                _fileView.Renamed += OnRenamedItem;
-            }
-
-            _subscribedView = _fileView;
-        }
-
         if (_focusCreateInput && _creating is not null)
         {
             _focusCreateInput = false;
@@ -151,34 +99,61 @@ public partial class CodeEditorExplorer
         }
     }
 
-    /// <summary>VS Code opens a file on a single click; folders just expand.</summary>
-    private void OnSelectionChanged(object? sender, FileViewSelectionChangedEventArgs e)
-    {
-        if (e.Selection is [{ IsDirectory: false } file])
-        {
-            _ = InvokeAsync(() => OnPreviewFile.InvokeAsync(file.FullPath));
-        }
-    }
+    private void OnControllerChanged(IHackFileView? files) => _files = files;
 
-    private void OnOpened(object? sender, FileViewOpenedEventArgs e)
+    /// <summary>VS Code previews a file on a single click; folders just expand.</summary>
+    private Task OnSelectionChanged(IReadOnlyList<HackFileViewItem> selection) =>
+        selection is [{ IsDirectory: false } file] ? OnPreviewFile.InvokeAsync(VirtualPath.Parse(file.Path)) : Task.CompletedTask;
+
+    /// <summary>A file activated (double click, Enter) opens in a tab, not in its default app.</summary>
+    private async Task OnOpening(HackFileViewOpeningEventArgs e)
     {
         if (!e.Item.IsDirectory)
         {
-            _ = InvokeAsync(() => OnOpenFile.InvokeAsync(e.Item.FullPath));
+            e.Handled = true;
+            await OnOpenFile.InvokeAsync(VirtualPath.Parse(e.Item.Path));
         }
     }
 
-    private void OnRenamedItem(object? sender, FileViewRenamedEventArgs e)
+    private Task OnRenamedItem(HackFileViewRenamedEventArgs e) =>
+        OnRenamed.InvokeAsync((VirtualPath.Parse(e.OldPath), VirtualPath.Parse(e.NewPath)));
+
+    /// <summary>
+    /// The tree's file menus (plan §7) with VS Code's entries: on the background, "New File" and
+    /// "New Folder" with the name typed first replace the control's "New folder"; on a folder, the same
+    /// pair, "Find in Folder..." and "Open in Integrated Terminal".
+    /// </summary>
+    private void OnContextMenuOpening(HackFileMenuOpeningEventArgs e)
     {
-        VirtualPath newPath = e.Item.FullPath;
-        VirtualPath oldPath = CodeEditorWorkspace.Combine(CodeEditorWorkspace.ParentOf(newPath), e.PreviousName);
-        _ = InvokeAsync(() => OnRenamed.InvokeAsync((oldPath, newPath)));
+        switch (e.Scope)
+        {
+            case FileMenuScope.Background:
+                e.Menu.Hide(HackFileMenuItems.NewFolder);
+                AddGroup(e.Menu,
+                    Item("explorer-new-file", L["Explorer.NewFile.Title"], "file-plus", () => BeginCreateAsync(CreationKind.File, Workspace?.Root)),
+                    Item("explorer-new-folder", L["Explorer.NewFolder.Title"], "folder-plus", () => BeginCreateAsync(CreationKind.Folder, Workspace?.Root)));
+                break;
+            case FileMenuScope.Directory when e.Items is [{ } folder]:
+                VirtualPath path = VirtualPath.Parse(folder.Path);
+                AddGroup(e.Menu,
+                    Item("explorer-new-file", L["Explorer.NewFile.Title"], "file-plus", () => BeginCreateAsync(CreationKind.File, path)),
+                    Item("explorer-new-folder", L["Explorer.NewFolder.Title"], "folder-plus", () => BeginCreateAsync(CreationKind.Folder, path)),
+                    Item("explorer-find-in-folder", L["Explorer.FindInFolder"], "search", () => OnFindInFolder.InvokeAsync(path)),
+                    Item("explorer-open-in-terminal", L["Explorer.OpenInTerminal"], "terminal", () => OnOpenInTerminal.InvokeAsync(path)));
+                break;
+        }
     }
 
-    private async Task OnTreeDeleteRequestedAsync(FileViewDeleteRequestedEventArgs e)
+    /// <summary>Adds the editor's entries as one group, right after the control's first group.</summary>
+    private static void AddGroup(HackMenuDefinition menu, params HackMenuItemDefinition[] items)
     {
-        await OnDeleteRequested.InvokeAsync(e);
-        await RefreshAsync();
+        HackMenuGroupDefinition group = new();
+        foreach (HackMenuItemDefinition item in items)
+        {
+            group.Items.Add(item);
+        }
+
+        menu.Groups.Insert(Math.Min(1, menu.Groups.Count), group);
     }
 
     private Task BeginCreateAsync(CreationKind kind, VirtualPath? directory)
@@ -200,9 +175,10 @@ public partial class CodeEditorExplorer
         }
 
         VirtualPath target = directory ?? Workspace.Root;
-        if (directory is null && _fileView?.SelectedItem is { } selected && Workspace.Contains(selected.FullPath))
+        if (directory is null && _files?.SelectedItems is [{ } selected] && Workspace.Contains(VirtualPath.Parse(selected.Path)))
         {
-            target = selected.IsDirectory ? selected.FullPath : CodeEditorWorkspace.ParentOf(selected.FullPath);
+            VirtualPath selectedPath = VirtualPath.Parse(selected.Path);
+            target = selected.IsDirectory ? selectedPath : CodeEditorWorkspace.ParentOf(selectedPath);
         }
 
         _creating = kind;
@@ -293,32 +269,11 @@ public partial class CodeEditorExplorer
         _createError = null;
     }
 
-    private static FileViewMenuItem Item(string id, string label, string icon, Func<Task> onActivate, bool separator = false) =>
-        new(id, label, ShellIconDescriptor.Vector(IconLibrary.Lucide, icon), onActivate, IsSeparatorBefore: separator);
-
-    private void Unsubscribe()
-    {
-        if (_subscribedView is not null)
+    /// <summary>One entry of the editor's own, run in the editor's context (the component that owns it).</summary>
+    private HackMenuItemDefinition Item(string id, string label, string icon, Func<Task> onActivate) =>
+        new(id, label)
         {
-            _subscribedView.SelectionChanged -= OnSelectionChanged;
-            _subscribedView.Opened -= OnOpened;
-            _subscribedView.Renamed -= OnRenamedItem;
-            _subscribedView = null;
-        }
-    }
-
-    /// <inheritdoc />
-    public void Dispose() => Unsubscribe();
-
-    /// <summary>A context-menu customization given as a delegate.</summary>
-    private sealed class MenuProvider(
-        FileViewContextMenuScope scope,
-        Action<FileViewContextMenuContext, FileViewMenuItemCollection> customize) : IFileViewContextMenuProvider
-    {
-        public FileViewContextMenuScope Scope => scope;
-
-        public bool Matches(FileViewItem item) => true;
-
-        public void Customize(FileViewContextMenuContext context, FileViewMenuItemCollection items) => customize(context, items);
-    }
+            Icon = HackIcons.Vector(IconLibrary.Lucide, icon),
+            OnClick = EventCallback.Factory.Create<object?>(this, _ => onActivate())
+        };
 }

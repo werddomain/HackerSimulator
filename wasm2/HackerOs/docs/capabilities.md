@@ -29,7 +29,7 @@ classement.
 | `filesystem.private.*`, `filesystem.user-selected.*`, `filesystem.user-home.*` | normale |
 | `filesystem.system.read`, `filesystem.system.write` | **dangereuse** (Diagnostic lit l'isolation par `HackCrossOriginIsolation`, sans capacité, et ne la déclare plus, ADR 0146) |
 | `apps.launch` | normale |
-| `apps.manage` | **dangereuse** (exigée par `HackAppManagement`, ADR 0056 §3 ; déclarée par Paramètres) |
+| `apps.manage` | **dangereuse** (exigée par `HackAppManagement`, ADR 0056 §3, et `HackComponentProviders`, ADR 0156 ; déclarée par Paramètres) |
 | `dialogs.file-open`, `dialogs.file-save`, `dialogs.folder-select` | normale |
 | `file-associations.read` | normale |
 | `file-associations.write` | **dangereuse** |
@@ -41,6 +41,7 @@ classement.
 | `network.listen` | normale (écouter un port qui n'est pas une URL de son manifeste, [`listening-ports-and-dns.md`](listening-ports-and-dns.md)) |
 | `network.listen.privileged` | **dangereuse** (écouter un port sous 1024, comme `CAP_NET_BIND_SERVICE`) |
 | `shell.control` | normale (ADR 0051 : n'agit que sur le shell de l'utilisateur qui a tapé la commande, voir [`shell-commands.md`](shell-commands.md)) |
+| `shell.context-menu` | normale (ADR 0151 §6 : ajouter des entrées aux menus des fichiers ; sans elle, le générateur produit `HOSAPP0027` et l'OS ignore les entrées, voir [`context-menu.md`](context-menu.md#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4)) |
 | `permissions.manage` | **dangereuse** (`HackPermissionAdministration`, ADR 0056 §9 ; déclarée par Paramètres) |
 | `server.connection.manage` | **dangereuse** (`HackServerConnection`, ADR 0056 §10 ; déclarée par Paramètres) |
 | `system.power` | **dangereuse** (`HackSystem` : redémarrage, réinitialisation, ADR 0056 §11 ; déclarée par Paramètres) |

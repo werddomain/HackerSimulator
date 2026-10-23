@@ -147,6 +147,12 @@
   <data name="Common.Yes" xml:space="preserve">
     <value>Oui</value>
   </data>
+  <data name="ContextMenu.Back" xml:space="preserve">
+    <value>Retour</value>
+  </data>
+  <data name="ContextMenu.Label" xml:space="preserve">
+    <value>Menu contextuel</value>
+  </data>
   <data name="Credential.Authorize" xml:space="preserve">
     <value>Autoriser</value>
   </data>
@@ -236,6 +242,18 @@
   </data>
   <data name="FileDialog.Title" xml:space="preserve">
     <value>Sélecteur de fichiers</value>
+  </data>
+  <data name="FileDialog.Up" xml:space="preserve">
+    <value>Dossier parent</value>
+  </data>
+  <data name="FileDialog.View" xml:space="preserve">
+    <value>Affichage</value>
+  </data>
+  <data name="FileDialog.ViewDetails" xml:space="preserve">
+    <value>Détails</value>
+  </data>
+  <data name="FileDialog.ViewIcons" xml:space="preserve">
+    <value>Icônes</value>
   </data>
   <data name="FolderBrowser.CurrentFolder" xml:space="preserve">
     <value>Dossier courant</value>
@@ -623,5 +641,23 @@
   </data>
   <data name="WindowMode.ResizeHint" xml:space="preserve">
     <value>Flèches : redimensionner · Ctrl : 1 px · Entrée : valider · Échap : annuler</value>
+  </data>
+  <data name="Dialog.Properties" xml:space="preserve">
+    <value>Propriétés</value>
+  </data>
+  <data name="Dialog.FileConflict" xml:space="preserve">
+    <value>Nom déjà utilisé</value>
+  </data>
+  <data name="Dialog.FileDialogsUnavailable" xml:space="preserve">
+    <value>Les boîtes de dialogue de fichiers de l’OS sont indisponibles.</value>
+  </data>
+  <data name="Launcher.Menu.Open" xml:space="preserve">
+    <value>Ouvrir</value>
+  </data>
+  <data name="Launcher.Menu.SendTo" xml:space="preserve">
+    <value>Envoyer vers</value>
+  </data>
+  <data name="Launcher.Menu.Desktop" xml:space="preserve">
+    <value>Bureau (créer un raccourci)</value>
   </data>
 </root>

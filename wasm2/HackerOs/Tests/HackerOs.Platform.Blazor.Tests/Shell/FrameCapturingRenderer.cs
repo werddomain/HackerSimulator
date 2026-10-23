@@ -8,7 +8,7 @@ namespace HackerOs.Platform.Blazor.Tests.Shell;
 /// <summary>
 /// Minimal <see cref="Renderer"/> that attaches a component to a real <see cref="RenderHandle"/> (so
 /// lifecycle methods behave exactly as in production) and exposes the resulting render tree frames — no
-/// bUnit in this solution; this mirrors <c>Tests/HackerOs.AppSdk.FileView.Tests/TestComponentRenderer.cs</c>,
+/// bUnit in this solution; this mirrors <c>Tests/HackerOs.Apps.FileExplorer.FileControl.Tests/TestComponentRenderer.cs</c>,
 /// extended to capture frames (rather than discard them) since `INT-013` needs to assert DOM element order,
 /// not just C# backing state.
 /// </summary>

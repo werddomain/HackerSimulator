@@ -15,9 +15,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MudBlazor" Version="9.7.0" />
+    <PackageReference Include="MudBlazor" Version="9.11.0" />
     <!-- HTML parser of the page loader (ADR 0075 §2, questionnaire 7). Browser app only. -->
-    <PackageReference Include="AngleSharp" Version="1.8.3" />
+    <PackageReference Include="AngleSharp" Version="1.8.5" />
   </ItemGroup>
 
   <ItemGroup>

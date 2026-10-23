@@ -38,4 +38,22 @@ public sealed record SystemAdministrationGatewayServices(
     /// constructor of SDK 1.0 unchanged.
     /// </summary>
     public Func<LocalPasswordService>? Passwords { get; init; }
+
+    /// <summary>
+    /// Gets the service behind <c>HackComponentProviders</c> (ADR 0156); <see langword="null"/> leaves
+    /// the gateway unsupported.
+    /// </summary>
+    public Func<ComponentProviders.ComponentProviderService>? ComponentProviders { get; init; }
+
+    /// <summary>
+    /// Gets the service behind <c>HackFileMenuEntries</c> (ADR 0159 §8); <see langword="null"/> leaves
+    /// the gateway unsupported.
+    /// </summary>
+    public Func<ContextMenus.FileContextMenuAdministration>? FileMenuEntries { get; init; }
+
+    /// <summary>
+    /// Gets the approval window of the dangerous capabilities (ADR 0049), which a third-party
+    /// component provider goes through (ADR 0156 §3); <see langword="null"/> refuses such a choice.
+    /// </summary>
+    public Func<IDangerousCapabilityApprovalPrompt>? ApprovalPrompt { get; init; }
 }

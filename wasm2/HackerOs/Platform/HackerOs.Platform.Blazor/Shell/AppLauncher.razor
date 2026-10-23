@@ -1,6 +1,6 @@
 @using HackerOs.AppSdk.Icons
 
-<div class="launcher-overlay" @onclick="CloseAsync">
+<div class="launcher-overlay" @ref="_overlayElement" @onclick="CloseAsync">
     <section class="launcher-popover"
              role="dialog"
              aria-label="@L["Launcher.Title"]"
@@ -49,6 +49,7 @@
                                         <button type="button"
                                                 class="app-launch-button"
                                                 aria-label="@L["Launcher.LaunchApp", app.Name]"
+                                                @attributes="AppMenuAttributes(app)"
                                                 @onclick="() => LaunchAppAsync(app)">
                                             <span class="app-icon-shell" aria-hidden="true">
                                                 <HackerIcon Library="IconLibrary.Lucide" Name="@GetAppIconName(app)" Size="20" Title="" />
@@ -149,6 +150,7 @@
                                             <button type="button"
                                                     class="app-launch-button"
                                                     aria-label="@L["Launcher.LaunchApp", app.Name]"
+                                                    @attributes="AppMenuAttributes(app)"
                                                     @onclick="() => LaunchAppAsync(app)">
                                                 <span class="app-icon-shell" aria-hidden="true">
                                                     <HackerIcon Library="IconLibrary.Lucide" Name="@GetAppIconName(app)" Size="20" Title="" />

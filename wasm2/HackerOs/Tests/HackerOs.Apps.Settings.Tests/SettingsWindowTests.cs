@@ -42,6 +42,16 @@ public sealed class SettingsAppArgumentTests
     }
 
     [Fact]
+    public void A_page_argument_opens_appearance_or_desktop_and_ignores_unknown_pages()
+    {
+        Assert.Equal(0, SettingsWindow.ReadPageArgument(["--page=appearance"]));
+        Assert.Equal(1, SettingsWindow.ReadPageArgument(["--page=Desktop"]));
+        Assert.Equal(1, SettingsWindow.ReadPageArgument(["--page=desktop", "--page=nowhere"]));
+        Assert.Null(SettingsWindow.ReadPageArgument(["--page=nowhere"]));
+        Assert.Null(SettingsWindow.ReadPageArgument([]));
+    }
+
+    [Fact]
     public void Settings_can_start_and_stop_services_from_an_app_page()
     {
         AppManifest manifest = AppDefinitionMapper.ToManifest(new SettingsApp());

@@ -15,6 +15,9 @@
   <data name="Description" xml:space="preserve">
     <value>Gestionnaire graphique de fichiers virtuels et navigateur de dossiers</value>
   </data>
+  <data name="Menu.ExtractHere" xml:space="preserve">
+    <value>Extraire ici</value>
+  </data>
   <data name="Name" xml:space="preserve">
     <value>Explorateur de fichiers</value>
   </data>

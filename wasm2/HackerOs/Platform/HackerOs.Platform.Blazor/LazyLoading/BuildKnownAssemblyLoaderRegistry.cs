@@ -9,6 +9,7 @@ public sealed class BuildKnownAssemblyLoaderRegistry
 {
     private readonly IReadOnlySet<string> _knownAssemblies;
     private readonly IBuildKnownAssemblyTransport _transport;
+    private readonly HostBuildUpdateMonitor? _buildMonitor;
     private readonly ConcurrentDictionary<string, Lazy<Task<BuildKnownAssemblyLoadOutcome>>> _loads = new(StringComparer.Ordinal);
 
     /// <summary>Creates the registry for the lazy-loadable assemblies the build declared.</summary>
@@ -19,6 +20,22 @@ public sealed class BuildKnownAssemblyLoaderRegistry
         ArgumentNullException.ThrowIfNull(knownAssemblies);
         _knownAssemblies = new HashSet<string>(knownAssemblies, StringComparer.Ordinal);
         _transport = transport ?? throw new ArgumentNullException(nameof(transport));
+    }
+
+    /// <summary>
+    /// Creates the registry and, when a load fails, asks <paramref name="buildMonitor"/> whether the
+    /// OS was updated under the page (ADR 0162): the asset of the running build is then gone.
+    /// </summary>
+    /// <param name="knownAssemblies">The file names the build published as lazy assets; any other name is refused.</param>
+    /// <param name="transport">The browser transport that actually fetches and loads the assemblies.</param>
+    /// <param name="buildMonitor">Compares the running build with the one the origin serves now.</param>
+    public BuildKnownAssemblyLoaderRegistry(
+        IEnumerable<string> knownAssemblies,
+        IBuildKnownAssemblyTransport transport,
+        HostBuildUpdateMonitor buildMonitor)
+        : this(knownAssemblies, transport)
+    {
+        _buildMonitor = buildMonitor ?? throw new ArgumentNullException(nameof(buildMonitor));
     }
 
     /// <summary>Loads one declared optional assembly at most once for the host lifetime.</summary>
@@ -56,7 +73,13 @@ public sealed class BuildKnownAssemblyLoaderRegistry
                 : BuildKnownAssemblyLoadOutcome.Loaded(assemblyName, assembly);
         }
         catch (OperationCanceledException) { return BuildKnownAssemblyLoadOutcome.Cancelled(assemblyName); }
-        catch (Exception exception) { return BuildKnownAssemblyLoadOutcome.Failed(assemblyName, exception.Message); }
+        catch (Exception exception)
+        {
+            // A rebuild or a deployment replaced the fingerprinted assets of the running build.
+            return _buildMonitor is not null && await _buildMonitor.CheckAsync(CancellationToken.None).ConfigureAwait(false)
+                ? BuildKnownAssemblyLoadOutcome.HostBuildChanged(assemblyName)
+                : BuildKnownAssemblyLoadOutcome.Failed(assemblyName, exception.Message);
+        }
     }
 }
 
@@ -96,6 +119,14 @@ public sealed record BuildKnownAssemblyLoadOutcome(string AssemblyName, BuildKno
     /// <param name="detail">The exception message, kept for diagnostics.</param>
     /// <returns>A <see cref="BuildKnownAssemblyLoadStatus.Failed"/> outcome.</returns>
     public static BuildKnownAssemblyLoadOutcome Failed(string name, string detail) => new(name, BuildKnownAssemblyLoadStatus.Failed, null, detail);
+    /// <summary>The asset failed to load because the origin now serves another build (ADR 0162).</summary>
+    /// <param name="name">The requested assembly file name.</param>
+    /// <returns>A <see cref="BuildKnownAssemblyLoadStatus.HostBuildChanged"/> outcome.</returns>
+    public static BuildKnownAssemblyLoadOutcome HostBuildChanged(string name) => new(
+        name,
+        BuildKnownAssemblyLoadStatus.HostBuildChanged,
+        null,
+        "HackerOS was updated while it was running: restart it to open this app.");
 }
 
 /// <summary>Why a <see cref="BuildKnownAssemblyLoaderRegistry.LoadAsync"/> request succeeded or not.</summary>
@@ -115,4 +146,7 @@ public enum BuildKnownAssemblyLoadStatus
 
     /// <summary>The transport threw; <see cref="BuildKnownAssemblyLoadOutcome.Detail"/> holds the message.</summary>
     Failed,
+
+    /// <summary>The transport threw and the origin serves another build than the running one (ADR 0162): a restart loads it.</summary>
+    HostBuildChanged,
 }

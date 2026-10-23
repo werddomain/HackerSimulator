@@ -83,6 +83,38 @@ public sealed class BuiltInApplicationsAggregatorTests : IDisposable
     }
 
     [Fact]
+    public void A_non_system_app_may_register_the_file_view_and_the_file_dialogs()
+    {
+        // ADR 0156 §1: both contracts are open to any window app; HOSAPP0025 is retired.
+        AppManifest manifest = new()
+        {
+            Id = "org.example.files",
+            Name = "Files",
+            Version = "1.0.0",
+            PublisherId = "org.example",
+            Description = "Registers the file view.",
+            Kind = AppKind.Window,
+            EntryPoint = new AppEntryPointManifest("Example.Files", "Example.Files.Window"),
+            SdkCompatibility = new AppSdkCompatibilityManifest(HackerOsSdk.Version),
+            Presentation = new PresentationManifest("files", AppLaunchVisibility.Visible, []),
+            Resources = AppResourceProfileManifest.None,
+            Components =
+            [
+                new AppComponentManifest(AppComponentContracts.FileView, "Example.Files", "Example.Files.View"),
+                new AppComponentManifest(AppComponentContracts.FileDialogs, "Example.Files", "Example.Files.Dialogs")
+            ]
+        };
+
+        string path = Path.Combine(_directory, "files.json");
+        File.WriteAllText(path, AppManifestJsonSerializer.SerializeCanonical(manifest));
+
+        AggregationResult result = BuiltInApplicationsAggregator.Aggregate([new(path, IsSystemApp: false)]);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Contains(AppComponentContracts.FileDialogs, result.Json, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Command_named_like_a_shell_builtin_fails_with_HOSAPP0022()
     {
         AggregationResult result = BuiltInApplicationsAggregator.Aggregate(

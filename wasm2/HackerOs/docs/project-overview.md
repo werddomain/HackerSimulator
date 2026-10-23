@@ -67,8 +67,7 @@ plateforme et ne référencent jamais `Platform.*` ni `Infrastructure.*`
 | Projet | Contenu |
 |---|---|
 | `HackerOs.AppSdk` | Façades `Hack*` (fichiers, environnement, paramètres, réseau, processus, presse-papiers, administration…), `IAppExecutionContext`, classes de base `TerminalAppBase`, `ServiceAppBase` et `WebServerAppBase`. |
-| `HackerOs.AppSdk.Blazor` | `WindowAppBase`, `HackComponentBase`, dialogues (fichiers, message, saisie), graphiques `HackLineChart`, téléchargement et presse-papiers du navigateur. |
-| `HackerOs.AppSdk.FileView` | Vue de fichiers réutilisable (`FileView`, arbre, fil d'Ariane, menus, transferts). |
+| `HackerOs.AppSdk.Blazor` | `WindowAppBase`, `HackComponentBase`, dialogues (fichiers, message, saisie, « Ouvrir avec », propriétés, conflit de noms), graphiques `HackLineChart`, téléchargement et presse-papiers du navigateur ; contrats fournis par l'OS à l'exécution (`HackContractComponent<T>`, `HackFileView`), menu contextuel de l'OS (`Menus.Attach`) et `[RegisterFileContextMenu]` (SDK 2.0). |
 | `HackerOs.AppSdk.Icons` | Bibliothèques d'icônes et composant `HackerIcon`. |
 | `HackerOs.AppSdk.Terminal` | Émulateur de terminal xterm.js (`TerminalPanel`, `TerminalTabs`). |
 | `HackerOs.AppSdk.Web` | ASP.Hack : sites internes façon ASP.NET Core MVC (pipeline, routage, contrôleurs, session ; [`asp-hack-mvc.md`](asp-hack-mvc.md)). |
@@ -103,7 +102,7 @@ navigateur est ici.
 
 | Dossier | Contenu |
 |---|---|
-| `Apps/System/` | Les 14 apps fenêtrées de base : Terminal, File Explorer, Text Editor, Code Editor, Settings, System Monitor (gestionnaire de tâches), Error Log Viewer, Diagnostic, Browser, Calculator, HackPaint ([`hack-paint.md`](hack-paint.md)), Theme Editor ([`theme-editor.md`](theme-editor.md)), Icon Viewer, Web Server Manager (avec le service `hackwebd`, [`static-sites.md`](static-sites.md)). |
+| `Apps/System/` | Les 15 apps fenêtrées de base : Bureau (surface cachée rendue par la coquille sous les fenêtres, [`desktop.md`](desktop.md)), Terminal, File Explorer, Text Editor, Code Editor, Settings, System Monitor (gestionnaire de tâches), Error Log Viewer, Diagnostic, Browser, Calculator, HackPaint ([`hack-paint.md`](hack-paint.md)), Theme Editor ([`theme-editor.md`](theme-editor.md)), Icon Viewer, Web Server Manager (avec le service `hackwebd`, [`static-sites.md`](static-sites.md)). |
 | `Apps/Commands/HackerOs.Commands` | Les 70 commandes du shell dans un seul projet (`ls`, `cat`, `cd`, `cp`, `mv`, `rm`, `grep`, `nano`, `sudo`, `ping`, `curl`, `nmap`, et depuis l'ADR 0064 `sort`, `cut`, `zip`, `top`, `htop`, `systemctl`, `ip`, `test`, `read`… : [`linux-commands.md`](linux-commands.md)), une classe `[AppManifest]` par commande (ADR 0051) ; elles tournent dans le pool de Web Workers sauf les 16 qui touchent le shell, l'écran ou le sélecteur de fichiers du navigateur (ADR 0070). |
 | `Apps/Samples/` | Apps d'exemple, une par genre (fenêtre, commande, service, plateforme, site Blazor, site ASP.Hack complet) ; elles ne sont pas installées dans l'hôte, sauf les deux sites `HackerOs.Samples.BlazorSite` (`http://blazor-sample.hack/`, ADR 0084) et `HackerOs.Samples.Intranet` (`http://intranet.hack/`, ADR 0087, [guide ASP.Hack](asp-hack-developer-guide.md)), apps cachées installées pour que le navigateur puisse les servir. |
 
@@ -209,7 +208,7 @@ Documents : [`hack-file-api.md`](hack-file-api.md),
 | Pas de CSS ni de JavaScript en ligne dans un `.razor` (ADR 0007) | cible `ValidateHackerOsRazorAssets`, `Directory.Build.targets` | [`AGENTS.md`](../../../AGENTS.md) |
 | Chaque projet sous `Apps/` a une classe `[AppManifest]` valide ; `manifest.json` est régénéré (`HOSAPP0001`…) | `build/HackerOs.Apps.targets` | [`app-model.md`](app-model.md) |
 | Une app n'utilise que le SDK (`HOSAPP0030`, `HOSAPP0031`, `HOSSDK0001`) | `build/HackerOs.Apps.targets` et générateur | [`app-sdk.md`](app-sdk.md) |
-| La surface publique du SDK 1.0 ne change pas sans trace : `PublicAPI.Shipped.txt`/`Unshipped.txt` (RS0016, RS0017), app compilée contre 1.0.0 toujours admise (ADR 0114) | analyseur d'API publique, `Tests/HackerOs.SdkCompatibility.Tests` | [`sdk-packages.md`](sdk-packages.md) |
+| La surface publique du SDK ne change pas sans trace : `PublicAPI.Shipped.txt`/`Unshipped.txt` (RS0016, RS0017) ; une app compilée contre la majeure courante (2.0.0) est admise, une app 1.x refusée (ADR 0114, ADR 0149) | analyseur d'API publique, `Tests/HackerOs.SdkCompatibility.Tests` | [`sdk-packages.md`](sdk-packages.md) |
 
 ## Organisation du travail
 
@@ -230,14 +229,17 @@ Documents : [`hack-file-api.md`](hack-file-api.md),
   demande de Benoit, `exec/base` (qui contient toutes les autres séries) a été
   fusionnée dans `main` : `main` porte désormais tout le travail.
 - État : la migration wasm v3 est terminée, le SDK a été gelé en 1.0.0
-  (ADR 0114), publié en 1.1.0 par la série v3.1 (ADR 0117 §5) puis en 1.2.0
-  à la fin de la série `exec` (ADR 0132 §2,
-  [`sdk-packages.md`](sdk-packages.md#sdk-12)) ; le bilan de la migration est dans
+  (ADR 0114), publié en 1.1.0 par la série v3.1 (ADR 0117 §5), en 1.2.0
+  à la fin de la série `exec` (ADR 0132 §2) puis en **2.0.0** à la fin de la
+  série du bureau et du menu contextuel (`desk/base` : contrôle de fichiers
+  fourni par l'explorateur, menu contextuel de l'OS, entrées des apps, icônes
+  du bureau ; ADR 0149, 0161, [`sdk-packages.md`](sdk-packages.md#sdk-20),
+  bilan dans [`desktop-and-context-menu-plan.md`](desktop-and-context-menu-plan.md#13-vérification-finale)) ; le bilan de la migration est dans
   [`wasm-v3-final-status.md`](wasm-v3-final-status.md), celui de la série `exec`
   (limites, OOM killer, priorités, tâches de fond, hôte Server en WebAssembly,
   isolation cross-origin) dans
   [`execution-followups-plan.md`](execution-followups-plan.md#11-vérification-finale). Un autre dépôt peut se construire sur
-  le SDK 1.x ([`building-on-hackeros.md`](building-on-hackeros.md)).
+  le SDK 2.x ([`building-on-hackeros.md`](building-on-hackeros.md)).
 
 ## Tâches de ce document
 
@@ -248,3 +250,4 @@ Documents : [`hack-file-api.md`](hack-file-api.md),
 - [x] Lister les règles vérifiées au build.
 - [x] Relecture finale de la migration v3 (`v3/16-final`) : branches d'intégration et état du projet.
 - [x] Relecture finale de la série `exec` (`exec/10-final`) : SDK 1.2, branches d'intégration.
+- [x] Relecture finale de la série du bureau (`desk/6-sdk-2`) : SDK 2.0, `FileView` hors du SDK, règle de compatibilité.

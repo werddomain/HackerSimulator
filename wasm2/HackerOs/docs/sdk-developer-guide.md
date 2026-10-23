@@ -44,7 +44,7 @@ frontière du SDK.
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.13" />
   </ItemGroup>
 
   <ItemGroup>
@@ -74,7 +74,7 @@ produit dans `artifacts/local-nupkg`, un `nuget.config` (modèle
 projet :
 
 ```bash
-dotnet new install <HackerOS>/artifacts/local-nupkg/HackerOs.Templates.1.2.0.nupkg
+dotnet new install <HackerOS>/artifacts/local-nupkg/HackerOs.Templates.2.0.0.nupkg
 dotnet new hackeros-window -n Contoso.Notes --appId com.contoso.notes
 dotnet new hackeros-host -n Contoso.Os          # un hôte qui lance tout l'OS
 ```
@@ -359,7 +359,9 @@ phase 5, c'est vrai même s'il n'appelle pas `Hack*` : le temps du code exécut�
 hors contexte est compté au compositeur, pas à l'app (ADR 0067), et un test
 (`AmbientFrameSourceTests`) le vérifie pour les apps de `Apps/`. Un dialogue
 MudBlazor, rendu hors de la fenêtre, reçoit le contexte de la fenêtre en
-paramètre (voir `FileExplorerDialogBase`). Une méthode `[JSInvokable]` ou un
+paramètre et l'adopte avant le cycle de vie de `HackComponentBase` (comme le
+faisait `FileExplorerDialogBase`, retiré par l'ADR 0155 : les dialogues de
+fichiers de l'OS passent maintenant par `IDialogService`). Une méthode `[JSInvokable]` ou un
 rappel de minuterie .NET (hors `AppContext.Clock`) ouvre le contexte lui-même,
 dès sa première instruction :
 
@@ -572,7 +574,9 @@ build (`HOSAPP0031`). Les tâches courantes :
 | Besoin | API | Capacité |
 |---|---|---|
 | Lire, écrire, copier, déplacer des fichiers | `HackFile`, `HackDirectory`, `HackPath`, `HackFileInfo` | `filesystem.user-home.*` pour `~`, `filesystem.system.*` (dangereuses) ailleurs |
+| Copier ou déplacer comme l'explorateur (conflits de noms, « (copie) », annulation) | `HackFileOperations.CopyAsync`, `MoveAsync`, `ImportAsync` ; `IDialogService.AsFileConflictResolver(AppContext)` pose la question (SDK 2.0, ADR 0161 §2) | celles des fichiers |
 | Mettre à la corbeille | `HackTrash.MoveToTrashAsync` | celles du fichier |
+| Afficher des fichiers dans sa fenêtre (liste, icônes, arbre) | `<HackFileView>` (contrat `hackeros.file-view`, fourni par l'explorateur ou l'app choisie par l'administrateur, [`embedded-components.md`](embedded-components.md)) | celles du dossier |
 | Surveiller un dossier | `HackFileSystemWatcher` | celles du dossier |
 | Paramètres de l'app | `HackSettings.OpenAsync`, `GetAsync`, `SetAsync` | `filesystem.private.read` / `.write` |
 | Garder un mot de passe ou un jeton | `HackKeyring.SetAsync`, `GetAsync`, ou une clé `SecretReference` avec `HackSettingsDocument.SetSecretAsync` ([`sensitive-settings.md`](sensitive-settings.md)) | aucune pour ses propres entrées |
@@ -648,6 +652,18 @@ annulé et a 5 s pour finir avant d'être tuée (ADR 0147). Dans les tests de l'
 ligne avec la même sérialisation. Guide complet et exemple :
 [`background-jobs.md`](background-jobs.md) et la section « Background Task » de
 `Apps/Samples/HackerOs.Samples.WindowApp`.
+
+### Ajouter des entrées aux menus des fichiers
+
+Une app peut ajouter « Convertir en PNG », « Extraire ici »… aux menus des
+fichiers de tout l'OS (explorateur, dialogues de fichiers, bureau) : elle
+demande la capacité `shell.context-menu` et déclare dans sa classe
+`[AppManifest]` une méthode statique `[RegisterFileContextMenu]` qui appelle
+`context.Register(title, name, intent: …, types: […], after: HackFileMenuItems.Open)`.
+Le titre est une clé de `Resources/AppManifest.resx` (anglais, obligatoire) et
+de `Resources/AppManifest.fr.resx`. La méthode s'exécute au build ; au clic,
+l'app reçoit l'intent et lit les chemins par `HackFileMenuIntent.ReadPaths`.
+Guide complet : [`context-menu.md`](context-menu.md#entrées-des-apps-dans-les-menus-des-fichiers-chantier-4).
 
 ### Capacités dangereuses
 
@@ -782,3 +798,4 @@ façon : `ProjectReference` ou `PackageReference` (paquet d'app produit par
 - [x] Traduire son app : ressources, `GetLocalizer<T>`, `AppManifest.fr.resx` (`v3/12`, ADR 0104).
 - [x] Calculs lourds hors de la fenêtre avec `HackBackground` (`exec/5`, ADR 0128 et 0140).
 - [x] SDK 1.2 : `HackWireContext` d'un service en worker, `OomScoreAdjust`, limites de processus, `TooManyOpenFiles` (`exec/10-final`).
+- [x] SDK 2.0 : modèles 2.0.0, `HackFileView` et `HackFileOperations` dans la table des services (`desk/6-sdk-2`, ADR 0161) ; migration d'une app 1.x dans [`sdk-packages.md`](sdk-packages.md#sdk-20).

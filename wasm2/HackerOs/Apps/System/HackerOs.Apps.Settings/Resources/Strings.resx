@@ -315,6 +315,60 @@
   <data name="Backup.Size.MiB" xml:space="preserve">
     <value>{0} MiB</value>
   </data>
+  <data name="Components.AlsoFor" xml:space="preserve">
+    <value>Also use it for: {0}</value>
+  </data>
+  <data name="Components.Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Components.Confirm.Default" xml:space="preserve">
+    <value>Go back to the File Explorer for: {0}.</value>
+  </data>
+  <data name="Components.Confirm.Set" xml:space="preserve">
+    <value>Use “{0}” for: {1}, for the whole machine.</value>
+  </data>
+  <data name="Components.Default" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="Components.Description" xml:space="preserve">
+    <value>Choose which app shows files and file dialogs in every app, for the whole machine. The choice is written to {0} and needs an administrator.</value>
+  </data>
+  <data name="Components.Error.CannotSave" xml:space="preserve">
+    <value>The choice could not be saved: {0}</value>
+  </data>
+  <data name="Components.FileDialogs.Description" xml:space="preserve">
+    <value>Open, Save, Choose a folder, Open with, Properties and name conflicts.</value>
+  </data>
+  <data name="Components.FileDialogs.Title" xml:space="preserve">
+    <value>File dialogs</value>
+  </data>
+  <data name="Components.FileView.Description" xml:space="preserve">
+    <value>The file list of the desktop, the File Explorer, the code editor and every app that shows files.</value>
+  </data>
+  <data name="Components.FileView.Title" xml:space="preserve">
+    <value>File view</value>
+  </data>
+  <data name="Components.NotInstalled" xml:space="preserve">
+    <value>Not installed</value>
+  </data>
+  <data name="Components.ResetToDefault" xml:space="preserve">
+    <value>Back to the File Explorer</value>
+  </data>
+  <data name="Components.Risk" xml:space="preserve">
+    <value>This app is not a system app: its code will run inside every app that shows files, with that app's rights. The OS will ask an administrator to approve.</value>
+  </data>
+  <data name="Components.Saved" xml:space="preserve">
+    <value>“{0}” is now used. It applies to the next file view or dialog shown.</value>
+  </data>
+  <data name="Components.Saved.Default" xml:space="preserve">
+    <value>The File Explorer is used again.</value>
+  </data>
+  <data name="Components.SelectedMissing" xml:space="preserve">
+    <value>The chosen app '{0}' is not installed for you: the File Explorer is used instead.</value>
+  </data>
+  <data name="Components.Unavailable" xml:space="preserve">
+    <value>OS components are not available on this host.</value>
+  </data>
   <data name="Common.Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
@@ -834,6 +888,9 @@
   <data name="Tab.FileAssociations" xml:space="preserve">
     <value>File Associations</value>
   </data>
+  <data name="Tab.OsComponents" xml:space="preserve">
+    <value>OS components</value>
+  </data>
   <data name="Tab.InstalledApps" xml:space="preserve">
     <value>Installed Apps</value>
   </data>
@@ -1046,5 +1103,104 @@
   </data>
   <data name="Memory.Error.CannotSave" xml:space="preserve">
     <value>Cannot save {0}: {1}</value>
+  </data>
+  <data name="Tab.FileMenus" xml:space="preserve">
+    <value>File menus</value>
+  </data>
+  <data name="FileMenus.Unavailable" xml:space="preserve">
+    <value>File menu entries are not available on this host.</value>
+  </data>
+  <data name="FileMenus.Description" xml:space="preserve">
+    <value>Entries that apps add to the file menus (explorer, desktop, file dialogs). Uncheck an entry to hide it from your menus; the choice is saved in {0} and applies to the next menu opened.</value>
+  </data>
+  <data name="FileMenus.Empty" xml:space="preserve">
+    <value>No installed app adds entries to the file menus.</value>
+  </data>
+  <data name="FileMenus.HiddenByParent" xml:space="preserve">
+    <value>Hidden with its parent menu.</value>
+  </data>
+  <data name="FileMenus.Error.CannotSave" xml:space="preserve">
+    <value>The choice could not be saved: {0}</value>
+  </data>
+  <data name="FileMenus.Scope.File" xml:space="preserve">
+    <value>Files</value>
+  </data>
+  <data name="FileMenus.Scope.Directory" xml:space="preserve">
+    <value>Folders</value>
+  </data>
+  <data name="FileMenus.Scope.Background" xml:space="preserve">
+    <value>Empty space</value>
+  </data>
+  <data name="FileMenus.Scope.Desktop" xml:space="preserve">
+    <value>Desktop</value>
+  </data>
+  <data name="Tab.Desktop" xml:space="preserve">
+    <value>Desktop</value>
+  </data>
+  <data name="Desktop.Description" xml:space="preserve">
+    <value>The desktop shows the files of {0}. These options live in {1}; the desktop follows the file as soon as it changes.</value>
+  </data>
+  <data name="Desktop.IconSize.Title" xml:space="preserve">
+    <value>Icon size</value>
+  </data>
+  <data name="Desktop.IconSize.Small" xml:space="preserve">
+    <value>Small</value>
+  </data>
+  <data name="Desktop.IconSize.Medium" xml:space="preserve">
+    <value>Medium</value>
+  </data>
+  <data name="Desktop.IconSize.Large" xml:space="preserve">
+    <value>Large</value>
+  </data>
+  <data name="Desktop.Layout.Title" xml:space="preserve">
+    <value>Layout</value>
+  </data>
+  <data name="Desktop.Layout.Description" xml:space="preserve">
+    <value>Auto-arrange keeps the icons packed in columns; otherwise each icon stays where you drop it.</value>
+  </data>
+  <data name="Desktop.AutoArrange" xml:space="preserve">
+    <value>Auto-arrange icons</value>
+  </data>
+  <data name="Desktop.AlignToGrid" xml:space="preserve">
+    <value>Align icons to the grid</value>
+  </data>
+  <data name="Desktop.ShowHome" xml:space="preserve">
+    <value>Show the Home icon</value>
+  </data>
+  <data name="Desktop.ShowTrash" xml:space="preserve">
+    <value>Show the Trash icon</value>
+  </data>
+  <data name="Desktop.Sort.Title" xml:space="preserve">
+    <value>Sort</value>
+  </data>
+  <data name="Desktop.Sort.Description" xml:space="preserve">
+    <value>Sorting arranges the icons once in this order and forgets the positions you chose.</value>
+  </data>
+  <data name="Desktop.Sort.Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Desktop.Sort.Size" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="Desktop.Sort.Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Desktop.Sort.Date" xml:space="preserve">
+    <value>Date modified</value>
+  </data>
+  <data name="Desktop.ResetPositions" xml:space="preserve">
+    <value>Forget icon positions</value>
+  </data>
+  <data name="Desktop.Saved" xml:space="preserve">
+    <value>Saved. The desktop has been updated.</value>
+  </data>
+  <data name="Desktop.SaveFailed" xml:space="preserve">
+    <value>The desktop settings could not be saved: {0}</value>
+  </data>
+  <data name="Desktop.On" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="Desktop.Off" xml:space="preserve">
+    <value>Off</value>
   </data>
 </root>

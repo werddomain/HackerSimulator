@@ -1,45 +1,38 @@
 @using HackerOs.App.Abstractions
 @using HackerOs.AppSdk.Blazor
-@using HackerOs.AppSdk.FileView
-@using HackerOs.AppSdk.FileView.ContextMenu
-@using HackerOs.AppSdk.FileView.Events
+@using HackerOs.AppSdk.Blazor.ContextMenus
+@using HackerOs.AppSdk.Blazor.Files
+@using HackerOs.Apps.FileExplorer.FileControl
+@using HackerOs.Apps.FileExplorer.FileControl.Events
 @using HackerOs.AppSdk
-@using HackerOs.AppSdk.Apps
+@using HackerOs.AppSdk.Files
 @using HackerOs.Simulation.Abstractions.Gateways
 @using HackerOs.Simulation.Abstractions.Events
 @using HackerOs.Simulation.Abstractions.FileSystem
 @using HackerOs.AppSdk.Blazor.Interop
 @using HackerOs.AppSdk.Icons
 @using HackerOs.AppSdk.IO
-@using HackerOs.AppSdk.Clipboard
-@using HackerOs.AppSdk.FileView.Transfers
 @using HackerOs.Simulation.Abstractions.Notifications
 @using System.IO.Compression
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
-@using MudBlazor
 @inherits WindowAppBase
 @implements IAsyncDisposable
-@inject MudBlazor.IDialogService MudDialogService
 @inject IJSRuntime JSRuntime
 
 @*
-    Hosts FileView (Shared/HackerOs.AppSdk.FileView) for listing/selection/rename/drag-drop/context-menu —
-    this window keeps only the chrome FileView deliberately doesn't own: toolbar, address bar, search box,
-    view-mode toggle, the "Places" sidebar with the Trash view (TrashView, ADR 0052), and the
-    OpenWithDialog/FilePropertiesDialog modals (ADR 0037, INT-001/INT-002).
-    FileView exposes no public Create/Delete methods (only its own internal context-menu wires those), so
-    the toolbar's New Folder/New File/Delete/Compress/Extract actions call AppContext.FileSystem directly —
-    the same raw gateway calls FileView's own internal handlers make, just from this assembly instead of
-    that one — then refresh FileView. Deletion is the exception: FileView hands its Delete key, Shift+Delete
-    and menu entries to OnDeleteRequestedAsync, which moves the items to the trash (HackTrash) or, after a
-    confirmation, deletes them permanently (ADR 0052, section 5). Rename/Properties/Open With instead go through FileView's public
-    FileViewItem/SelectedItem surface directly, with zero duplicated logic.
-    Cut/copy/paste (ADR 0058, section 1) go through the session clipboard (HackClipboard, gnome-copied-files), so
-    another window can paste; FileView hands its Ctrl+X/C/V and menu entries to OnClipboardRequestedAsync and every
-    drop (folder, background, tree, breadcrumb, Places, Trash, host files) to OnDropRequestedAsync. Transfers run
-    through FileTransfer (Nautilus naming, Replace/Keep both/Skip window, per-item failure summary).
+    The File Explorer's window: the OS file control (HackFileView, contract hackeros.file-view) that this
+    same app provides to every app (ExplorerFileView, ADR 0148, ADR 0155), framed by the chrome the
+    control deliberately doesn't own: toolbar, address bar, search box, view-mode toggle, the "Places"
+    sidebar with the Trash view (TrashView, ADR 0052) and the status bar.
+    The control does by itself the listing, selection, rename in place, the trash and permanent deletion,
+    the session clipboard, drag and drop with the "Replace / Keep both / Skip" dialog, opening with the
+    default app or "Open with", and the file menus of the OS (plan §7); the toolbar runs its commands
+    (IHackFileView.ExecuteAsync), so a button and a menu entry do the same thing. The window keeps what
+    only the explorer does: New Folder/New File by name, upload, download, compress and extract, the
+    drop on the Trash place, and two entries of its own in the file menus ("UnZip Here…" on a .zip,
+    "Publish as a web site…" on a folder) until apps register theirs (chantier 4, ADR 0151).
 *@
 <div class="file-explorer-container">
     <!-- Navigation & Address Toolbar -->
@@ -126,30 +119,30 @@
         <button class="action-btn" @onclick="CreateFileAsync" title="@L["Toolbar.NewFile"]">
             <HackerIcon Library="IconLibrary.Lucide" Name="file-plus" Size="16" /> <span>@L["Toolbar.NewFile"]</span>
         </button>
-        <button class="action-btn" disabled="@(SelectedCount != 1)" @onclick="RenameSelected" title="@L["Toolbar.Rename"]">
+        <button class="action-btn" disabled="@(!CanRun(HackFileMenuItems.Rename))" @onclick="() => RunAsync(HackFileMenuItems.Rename)" title="@L["Toolbar.Rename"]">
             <HackerIcon Library="IconLibrary.Lucide" Name="pencil" Size="16" /> <span>@L["Toolbar.Rename"]</span>
         </button>
-        <button class="action-btn danger" disabled="@(SelectedCount == 0)" @onclick="DeleteSelectedAsync" title="@L["Toolbar.DeleteTooltip"]">
+        <button class="action-btn danger" disabled="@(!CanRun(HackFileMenuItems.Delete))" @onclick="() => RunAsync(HackFileMenuItems.Delete)" title="@L["Toolbar.DeleteTooltip"]">
             <HackerIcon Library="IconLibrary.Lucide" Name="trash-2" Size="16" /> <span>@L["Toolbar.Delete"]</span>
         </button>
         <span class="toolbar-divider"></span>
 
-        <button class="action-btn" disabled="@(SelectedCount == 0)" @onclick="CutSelectedAsync" title="@L["Toolbar.CutTooltip"]">
+        <button class="action-btn" disabled="@(!CanRun(HackFileMenuItems.Cut))" @onclick="() => RunAsync(HackFileMenuItems.Cut)" title="@L["Toolbar.CutTooltip"]">
             <HackerIcon Library="IconLibrary.Lucide" Name="scissors" Size="16" /> <span>@L["Toolbar.Cut"]</span>
         </button>
-        <button class="action-btn" disabled="@(SelectedCount == 0)" @onclick="CopySelectedAsync" title="@L["Toolbar.CopyTooltip"]">
+        <button class="action-btn" disabled="@(!CanRun(HackFileMenuItems.Copy))" @onclick="() => RunAsync(HackFileMenuItems.Copy)" title="@L["Toolbar.CopyTooltip"]">
             <HackerIcon Library="IconLibrary.Lucide" Name="copy" Size="16" /> <span>@L["Toolbar.Copy"]</span>
         </button>
-        <button class="action-btn" disabled="@(!_canPaste)" @onclick="PasteHereAsync" title="@L["Toolbar.PasteTooltip"]">
+        <button class="action-btn" disabled="@(!CanRun(HackFileMenuItems.Paste))" @onclick="() => RunAsync(HackFileMenuItems.Paste)" title="@L["Toolbar.PasteTooltip"]">
             <HackerIcon Library="IconLibrary.Lucide" Name="clipboard-paste" Size="16" /> <span>@L["Toolbar.Paste"]</span>
         </button>
 
         <span class="toolbar-divider"></span>
 
-        <button class="action-btn" disabled="@(SelectedCount != 1)" @onclick="ShowPropertiesAsync" title="@L["Toolbar.Properties"]">
+        <button class="action-btn" disabled="@(SelectedCount != 1)" @onclick="() => RunAsync(HackFileMenuItems.Properties)" title="@L["Toolbar.Properties"]">
             <HackerIcon Library="IconLibrary.Lucide" Name="info" Size="16" /> <span>@L["Toolbar.Properties"]</span>
         </button>
-        <button class="action-btn" disabled="@(SelectedCount != 1)" @onclick="OpenWithAsync" title="@L["Toolbar.OpenWith"]">
+        <button class="action-btn" disabled="@(!CanRun(HackFileMenuItems.OpenWithOther))" @onclick="() => RunAsync(HackFileMenuItems.OpenWithOther)" title="@L["Toolbar.OpenWith"]">
             <HackerIcon Library="IconLibrary.Lucide" Name="external-link" Size="16" /> <span>@L["Toolbar.OpenWith"]</span>
         </button>
 
@@ -174,32 +167,26 @@
     {
         <div class="error-state">@_errorMessage</div>
     }
-    else if (_fileView is not null && _fileView.Items.Count == 0)
+    else if (_files is not null && _files.Items.Count == 0)
     {
         <div class="empty-state">@L["Empty"]</div>
     }
 
-    <!-- Directory Content View -->
+    <!-- Directory Content View: the OS file control, provided by this same app -->
     <div class="explorer-content">
-        <FileView @ref="_fileView"
-                  FileSystem="AppContext.FileSystem"
-                  Watch="AppContext.Watch"
-                  Intents="AppContext.Intents"
-                  InitialDirectory="_initialDirectory"
-                  @bind-Mode="_state.ViewMode"
-                  Filter="_searchFilter"
-                  ContextMenuProviders="_contextMenuProviders"
-                  DeleteRequested="OnDeleteRequestedAsync"
-                  DropRequested="OnDropRequestedAsync"
-                  ClipboardRequested="OnClipboardRequestedAsync"
-                  CanPaste="_canPaste"
-                  CutPaths="_cutPaths"
-                  OwnerAppId="Manifest.Id" />
+        <HackFileView InitialDirectory="@_initialDirectory.Value"
+                      Mode="ToContractMode(_state.ViewMode)"
+                      ModeChanged="OnModeChanged"
+                      Filter="_searchFilter"
+                      Navigated="OnNavigated"
+                      SelectionChanged="OnSelectionChanged"
+                      ErrorOccurred="ReportError"
+                      ControllerChanged="OnControllerChangedAsync" />
     </div>
 
     <!-- Status Bar -->
     <div class="explorer-statusbar">
-        <span>@Strings.Plural(L, "Status.Items", _fileView?.Items.Count ?? 0)</span>
+        <span>@Strings.Plural(L, "Status.Items", _files?.Items.Count ?? 0)</span>
         @if (SelectedCount > 0)
         {
             <span> | @Strings.Plural(L, "Status.Selected", SelectedCount)</span>
@@ -213,42 +200,43 @@
 
 @code {
     private FileExplorerState _state = default!;
-    private FileView? _fileView;
+    private IHackFileView? _files;
     private VirtualPath _initialDirectory;
     private string _addressInput = string.Empty;
     private string? _errorMessage;
     private IDisposable? _eventSub;
     private BrowserFileDownloader? _downloader;
-    private Func<FileViewItem, bool> _searchFilter = default!;
-    private IReadOnlyList<IFileViewContextMenuProvider> _contextMenuProviders = [];
-    private bool _subscribedToFileView;
+    private Func<HackFileViewItem, bool> _searchFilter = default!;
     private bool _showTrash;
     private TrashView? _trashView;
     private VirtualPath _homeDirectory;
-    private bool _canPaste;
-    private IReadOnlyCollection<string> _cutPaths = [];
-    private bool _subscribedToClipboard;
 
     private IStringLocalizer<Strings>? _localizer;
 
     /// <summary>The File Explorer's texts in its own process's language (ADR 0104).</summary>
     private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
 
-    private int SelectedCount => _fileView?.SelectedItems.Count ?? 0;
+    /// <summary>
+    /// The control's own view, only for the chrome that needs its implementation (breadcrumb, drop zones
+    /// on the places). Everything else goes through <c>_files</c>, the contract: when an admin picks
+    /// another provider (ADR 0156), this is <see langword="null"/> and only those extras disappear.
+    /// </summary>
+    private FileView? _fileView => (_files as ExplorerFileView)?.View;
+
+    private int SelectedCount => _files?.SelectedItems.Count ?? 0;
 
     private bool CanExtractSelection =>
-        _fileView?.SelectedItem is { IsDirectory: false } item
-        && _fileView.SelectedItems.Count == 1
-        && item.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+        _files?.SelectedItems is [{ IsDirectory: false } item]
+        && item.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
 
     private string GetHomePath() => HackUser.Describe(AppContext).HomeDirectory;
 
-    /// <summary>Copies, moves, imports, trash moves and archive tasks in flight (ADR 0069).</summary>
+    /// <summary>Uploads, trash drops and archive tasks in flight (ADR 0069); the control tracks its own.</summary>
     private readonly HashSet<Task> _operations = [];
 
     /// <summary>
     /// Records a file operation so a stop request can wait for it: each item moves atomically and
-    /// <see cref="FileTransfer"/> stops between two when the process is asked to stop, so the window
+    /// <see cref="HackFileOperations"/> stops between two when the process is asked to stop, so the window
     /// closes after the current item, with nothing half-copied and the rest reported as not done.
     /// </summary>
     private async Task<T> TrackOperation<T>(Task<T> operation)
@@ -265,8 +253,9 @@
     }
 
     /// <inheritdoc />
+    /// <remarks>The window waits for its own operations and for the control's (pastes, drops, deletions).</remarks>
     protected override Task OnAppStopRequestedAsync(HackStopRequestedEventArgs e) =>
-        _operations.Count == 0 ? Task.CompletedTask : Task.WhenAll(_operations);
+        Task.WhenAll([.. _operations, _files?.WhenIdleAsync() ?? Task.CompletedTask]);
 
     protected override void OnAppInitialized()
     {
@@ -277,21 +266,29 @@
         // adds --select=<path> (RevealFileIntent, ADR 0096 section 1).
         (VirtualPath? folder, VirtualPath? select) = ParseLaunchArguments(LaunchArguments);
         _pendingReveal = select;
+        // The desktop's Trash icon (ADR 0160 §5) starts the explorer on its trash view, like Nautilus's trash:///.
+        _showTrash = LaunchArguments.Contains(TrashArgument, StringComparer.Ordinal);
+        // "Extract here" from a file menu (ADR 0151 §8): open the first archive's folder, extract once ready.
+        if (LaunchIntent is { IntentId: FileExplorerMenuEntries.ExtractHereIntent } intent)
+        {
+            _pendingExtracts = [.. HackFileMenuIntent.ReadPaths(intent.PayloadJson)
+                .Where(static path => path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))];
+            if (_pendingExtracts.Count > 0)
+            {
+                folder ??= ParentOf(VirtualPath.Parse(_pendingExtracts[0]));
+            }
+        }
+
         string startPath = (folder ?? _homeDirectory).Value;
         _state = new FileExplorerState(startPath);
         _initialDirectory = VirtualPath.Parse(startPath);
         _addressInput = startPath;
         _searchFilter = MatchesSearchQuery;
-        _contextMenuProviders =
-        [
-            new ZipFileContextMenuProvider(AppContext.FileSystem, () => _fileView, ReportError, L),
-            new PublishSiteContextMenuProvider(LaunchWithAsync, L)
-        ];
         _eventSub = AppContext.Events.Subscribe<AppDisabledEvent>(evt =>
         {
-            if (_fileView is not null)
+            if (_files is not null)
             {
-                InvokeAsync(() => _fileView.RefreshAsync());
+                InvokeAsync(() => _files.RefreshAsync());
             }
         });
     }
@@ -323,32 +320,50 @@
         // ADR 0117 §2: named after its folder before the window is first shown.
         await SetWindowTitleAsync(FolderWindowTitle);
         _downloader = new BrowserFileDownloader(JSRuntime);
-        // Another window (or app) may cut or copy at any time: follow the session clipboard.
-        AppContext.Clipboard.Changed += OnClipboardChanged;
-        _subscribedToClipboard = true;
-        await ReadClipboardStateAsync();
         await base.OnAppInitializedAsync();
     }
 
-    protected override void OnAppAfterRender(bool firstRender)
+    /// <summary>
+    /// The control is ready: the breadcrumb and the Places drop zones need its view, so render them now,
+    /// and select the <c>--select=</c> item when the folder is already listed.
+    /// </summary>
+    private async Task OnControllerChangedAsync(IHackFileView? files)
     {
-        base.OnAppAfterRender(firstRender);
-        if (firstRender && _fileView is not null && !_subscribedToFileView)
+        if (_files is not null)
         {
-            _subscribedToFileView = true;
-            _fileView.OnPathChange += OnFileViewPathChanged;
-            _fileView.Opened += OnFileViewItemOpened;
-            _fileView.SelectionChanged += OnFileViewSelectionChanged;
-            // The breadcrumb and the Places drop zones need the view instance: render them now.
-            StateHasChanged();
-            if (_pendingReveal is { } reveal && _fileView.CurrentDirectory == ParentOf(reveal))
+            _files.StateChanged -= OnFilesStateChanged;
+        }
+
+        _files = files;
+        if (_files is null)
+        {
+            return;
+        }
+
+        _files.StateChanged += OnFilesStateChanged;
+        StateHasChanged();
+        if (_pendingReveal is { } reveal && _files.CurrentDirectory == ParentOf(reveal).Value)
+        {
+            _pendingReveal = null;
+            await RevealAsync(reveal);
+        }
+
+        if (_pendingExtracts.Count > 0)
+        {
+            IReadOnlyList<string> archives = _pendingExtracts;
+            _pendingExtracts = [];
+            foreach (string archive in archives)
             {
-                // The view already listed the folder: select the item now rather than on OnPathChange.
-                _pendingReveal = null;
-                _ = InvokeAsync(() => RevealAsync(reveal));
+                await ExtractAsync(archive, archive[(archive.LastIndexOf('/') + 1)..]);
             }
         }
     }
+
+    /// <summary>Archives to extract once the control is ready ("Extract here", ADR 0151 §8).</summary>
+    private IReadOnlyList<string> _pendingExtracts = [];
+
+    /// <summary>The clipboard, the selection or the operations in flight changed: the toolbar follows.</summary>
+    private void OnFilesStateChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
 
     /// <summary>Item to select once the view lists its folder (<c>--select=</c>, ADR 0096 section 1).</summary>
     private VirtualPath? _pendingReveal;
@@ -393,6 +408,9 @@
 
     private const string SelectPrefix = "--select=";
 
+    /// <summary>The argument that opens the trash view instead of a folder (ADR 0160 §5).</summary>
+    internal const string TrashArgument = "trash:///";
+
     private static VirtualPath ParentOf(VirtualPath path)
     {
         int separator = path.Value.LastIndexOf('/');
@@ -401,14 +419,14 @@
 
     private async Task RevealAsync(VirtualPath path)
     {
-        if (_fileView is null)
+        if (_files is null)
         {
             return;
         }
 
         try
         {
-            if (!await _fileView.RevealAsync(path))
+            if (!await _files.RevealAsync(path.Value))
             {
                 ReportError(L["Error.NoLongerHere", path.Value]);
             }
@@ -419,14 +437,13 @@
         }
     }
 
-    private void OnFileViewSelectionChanged(object? sender, FileViewSelectionChangedEventArgs e) =>
-        _ = InvokeAsync(StateHasChanged);
+    private void OnSelectionChanged(IReadOnlyList<HackFileViewItem> selection) => StateHasChanged();
 
-    private bool MatchesSearchQuery(FileViewItem item) =>
+    private bool MatchesSearchQuery(HackFileViewItem item) =>
         string.IsNullOrWhiteSpace(_state.SearchQuery) ||
-        item.FileName.Contains(_state.SearchQuery, StringComparison.OrdinalIgnoreCase);
+        item.Name.Contains(_state.SearchQuery, StringComparison.OrdinalIgnoreCase);
 
-    private void OnSearchQueryChanged() => _fileView?.RefreshFilter();
+    private void OnSearchQueryChanged() => _files?.RefreshFilter();
 
     private void ReportError(string message)
     {
@@ -434,38 +451,29 @@
         _ = InvokeAsync(StateHasChanged);
     }
 
-    private void OnFileViewPathChanged(object? sender, FileViewPathChangedEventArgs e)
+    private async Task OnNavigated(string path)
     {
         _showTrash = false;
-        _state.NavigateTo(e.Path.Value);
+        _state.NavigateTo(path);
         _addressInput = _state.CurrentPath;
         _errorMessage = null;
-        _ = InvokeAsync(StateHasChanged);
-        if (_pendingReveal is { } reveal && e.Path == ParentOf(reveal))
+        if (_pendingReveal is { } reveal && path == ParentOf(reveal).Value)
         {
             _pendingReveal = null;
-            _ = InvokeAsync(() => RevealAsync(reveal));
-        }
-    }
-
-    private async void OnFileViewItemOpened(object? sender, FileViewOpenedEventArgs e)
-    {
-        if (!e.Item.IsDirectory)
-        {
-            await LaunchFileIntentAsync(e.Item.FullPath.Value);
+            await RevealAsync(reveal);
         }
     }
 
     private async Task NavigateFileViewAsync(string path)
     {
         _showTrash = false;
-        if (_fileView is null) return;
+        if (_files is null) return;
 
         try
         {
-            await _fileView.NavigateAsync(VirtualPath.Parse(path));
+            await _files.NavigateAsync(path);
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException or ArgumentException)
         {
             _errorMessage = ex.Message;
             StateHasChanged();
@@ -496,7 +504,7 @@
         return NavigateFileViewAsync(_state.CurrentPath);
     }
 
-    private Task RefreshAsync() => _fileView?.RefreshAsync() ?? Task.CompletedTask;
+    private Task RefreshAsync() => _files?.RefreshAsync() ?? Task.CompletedTask;
 
     private async Task HandleAddressKeyDownAsync(KeyboardEventArgs args)
     {
@@ -513,104 +521,28 @@
         StateHasChanged();
     }
 
-    private async Task LaunchFileIntentAsync(string fullPath)
+    private void OnModeChanged(HackFileViewMode mode) => _state.ViewMode = mode switch
     {
-        AppIntentOpenFileResult result;
-        try
-        {
-            result = await AppContext.Intents.OpenFileAsync(VirtualPath.Parse(fullPath));
-        }
-        catch (AppGatewayAccessDeniedException)
-        {
-            ReportError(L["Error.OpenDenied"]);
-            return;
-        }
+        HackFileViewMode.Icons => FileViewMode.Icons,
+        HackFileViewMode.Tree => FileViewMode.Tree,
+        _ => FileViewMode.Details
+    };
 
-        switch (result.Outcome)
-        {
-            case AppIntentOpenFileOutcome.Opened:
-                break;
-            case AppIntentOpenFileOutcome.ChooserRequired:
-                await ShowOpenWithChooserAsync(fullPath, result.CandidateAppIds ?? []);
-                break;
-            case AppIntentOpenFileOutcome.NoHandler:
-                ReportError(L["Error.NoHandler"]);
-                break;
-            default:
-                ReportError(L["Error.OpenFailed", result.ErrorCode ?? string.Empty]);
-                break;
-        }
-    }
-
-    private async Task ShowOpenWithChooserAsync(string fullPath, IReadOnlyList<string> candidateAppIds)
+    private static HackFileViewMode ToContractMode(FileViewMode mode) => mode switch
     {
-        IReadOnlyList<HackAppInfo> installed = await AppContext.Catalog.GetInstalledAsync(AppContext.CancellationToken);
-        IReadOnlyList<HackAppInfo> candidates = installed
-            .Where(app => candidateAppIds.Contains(app.Id, StringComparer.Ordinal))
-            .ToList();
+        FileViewMode.Icons => HackFileViewMode.Icons,
+        FileViewMode.Tree => HackFileViewMode.Tree,
+        _ => HackFileViewMode.Details
+    };
 
-        DialogParameters parameters = new()
-        {
-            { nameof(OpenWithDialog.OwnerAppContext), AppContext },
-            { nameof(OpenWithDialog.FilePath), fullPath },
-            { nameof(OpenWithDialog.AvailableApps), candidates },
-            { nameof(OpenWithDialog.Extension), ExtensionOf(fullPath) }
-        };
+    // ---- Toolbar: the control's commands (ADR 0155 §2) ----------------------------------------------
 
-        IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>(L["Dialog.OpenWith.Title"], parameters);
-        DialogResult? dialogResult = await dialog.Result;
+    private bool CanRun(string command) => _files?.CanExecute(command) ?? false;
 
-        if (dialogResult is not null && !dialogResult.Canceled && dialogResult.Data is OpenWithChoice choice)
-        {
-            await RememberChoiceAsync(choice, fullPath);
-            await LaunchWithAsync(choice.App.Id, fullPath);
-        }
-    }
-
-    /// <summary>
-    /// Writes the user's "Always use" choice as their default for the file's extension (ADR 0121,
-    /// section 4), like the "Always use for this file type" box of a desktop's "Open with".
-    /// </summary>
-    private async Task RememberChoiceAsync(OpenWithChoice choice, string fullPath)
+    private Task RunAsync(string command)
     {
-        if (!choice.AlwaysUse || ExtensionOf(fullPath) is not { } extension)
-        {
-            return;
-        }
-
-        HackDefaultHandlerStatus status;
-        try
-        {
-            status = await AppContext.Catalog.SetUserDefaultHandlerAsync(extension, "open", choice.App.Id, AppContext.CancellationToken);
-        }
-        catch (AppGatewayAccessDeniedException)
-        {
-            status = HackDefaultHandlerStatus.WriteFailed;
-        }
-
-        if (status != HackDefaultHandlerStatus.Changed)
-        {
-            ReportError(L["Error.RememberFailed", extension]);
-        }
-    }
-
-    /// <summary>The lowercase extension of a path (<c>.md</c>), or <see langword="null"/> when it has none.</summary>
-    private static string? ExtensionOf(string fullPath)
-    {
-        string extension = System.IO.Path.GetExtension(fullPath);
-        return extension.Length > 1 ? extension.ToLowerInvariant() : null;
-    }
-
-    private async Task LaunchWithAsync(string appId, string fullPath)
-    {
-        try
-        {
-            await AppContext.Intents.LaunchAsync(appId, [fullPath]);
-        }
-        catch (AppGatewayAccessDeniedException)
-        {
-            ReportError(L["Error.LaunchDenied"]);
-        }
+        _errorMessage = null;
+        return _files?.ExecuteAsync(command) ?? Task.CompletedTask;
     }
 
     private static VirtualPath CombineChild(VirtualPath parent, string name) =>
@@ -618,7 +550,7 @@
 
     private async Task CreateFolderAsync()
     {
-        if (_fileView is null) return;
+        if (_files is null) return;
 
         TextInputDialogResult result = await base.TextInput(
             title: L["Dialog.NewFolder.Title"],
@@ -629,7 +561,7 @@
         if (result.Status != TextInputStatus.Submitted || string.IsNullOrWhiteSpace(result.Value)) return;
 
         string folderName = result.Value.Trim();
-        VirtualPath fullPath = CombineChild(_fileView.CurrentDirectory, folderName);
+        VirtualPath fullPath = CombineChild(VirtualPath.Parse(_files.CurrentDirectory), folderName);
         FileSystemMutationResult creation = await AppContext.FileSystem.CreateAsync(
             new FileSystemCreateRequest(fullPath, FileSystemEntryKind.Directory, FileSystemPermissions.FromMode(0b111_101_101)),
             AppContext.CancellationToken);
@@ -637,7 +569,7 @@
         if (creation.Succeeded)
         {
             _errorMessage = null;
-            await _fileView.RefreshAsync();
+            await _files.RefreshAsync();
         }
         else
         {
@@ -649,7 +581,7 @@
 
     private async Task CreateFileAsync()
     {
-        if (_fileView is null) return;
+        if (_files is null) return;
 
         TextInputDialogResult result = await base.TextInput(
             title: L["Dialog.NewFile.Title"],
@@ -660,7 +592,7 @@
         if (result.Status != TextInputStatus.Submitted || string.IsNullOrWhiteSpace(result.Value)) return;
 
         string fileName = result.Value.Trim();
-        VirtualPath fullPath = CombineChild(_fileView.CurrentDirectory, fileName);
+        VirtualPath fullPath = CombineChild(VirtualPath.Parse(_files.CurrentDirectory), fileName);
         FileSystemMutationResult creation = await AppContext.FileSystem.CreateAsync(
             new FileSystemCreateRequest(fullPath, FileSystemEntryKind.File, FileSystemPermissions.FromMode(0b110_100_100)),
             AppContext.CancellationToken);
@@ -668,7 +600,7 @@
         if (creation.Succeeded)
         {
             _errorMessage = null;
-            await _fileView.RefreshAsync();
+            await _files.RefreshAsync();
         }
         else
         {
@@ -678,213 +610,14 @@
         }
     }
 
-    /// <summary>Uses FileView's own inline rename (label ↔ textbox swap) — no modal dialog, unlike every other action here.</summary>
-    private void RenameSelected() => _fileView?.SelectedItem?.Rename();
-
-    /// <summary>Toolbar "Delete": moves the selection to the trash, without confirmation (it is reversible).</summary>
-    private Task DeleteSelectedAsync() =>
-        _fileView is null || _fileView.SelectedItems.Count == 0
-            ? Task.CompletedTask
-            : DeleteItemsAsync(_fileView.SelectedItems.ToList(), permanent: false);
-
-    /// <summary>FileView's Delete key, Shift+Delete and context-menu entries (ADR 0052, section 5).</summary>
-    private Task OnDeleteRequestedAsync(FileViewDeleteRequestedEventArgs e) => DeleteItemsAsync(e.Items, e.Permanent);
-
-    /// <summary>
-    /// Moves <paramref name="items"/> to the trash, or — for Shift+Delete / "Delete permanently" and only
-    /// after a confirmation — deletes them for good. Runs as this app (ambient scope of the event handler),
-    /// so the usual file permissions and capabilities apply.
-    /// </summary>
-    private async Task DeleteItemsAsync(IReadOnlyList<FileViewItem> items, bool permanent)
-    {
-        if (_fileView is null || items.Count == 0) return;
-
-        if (permanent)
-        {
-            string question = items.Count == 1
-                ? L["Dialog.DeletePermanently.One", items[0].FileName]
-                : L["Dialog.DeletePermanently.Many", items.Count];
-            MessageBoxDialogResult answer = await base.MessageBox(L["Dialog.DeletePermanently.Title"], question, MessageBoxType.YesNo);
-            if (answer.Result != MessageBoxResult.Yes) return;
-        }
-
-        List<string> failures = [];
-        foreach (FileViewItem item in items)
-        {
-            try
-            {
-                if (!permanent)
-                {
-                    await HackTrash.MoveToTrashAsync(item.FullPath.Value, AppContext.CancellationToken);
-                }
-                else if (item.Metadata.Kind == FileSystemEntryKind.Directory)
-                {
-                    await HackDirectory.DeleteAsync(item.FullPath.Value, recursive: true, AppContext.CancellationToken);
-                }
-                else
-                {
-                    await HackFile.DeleteAsync(item.FullPath.Value, AppContext.CancellationToken);
-                }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                failures.Add(L["Error.ItemPermissionDenied", item.FileName]);
-            }
-            catch (IOException ex)
-            {
-                failures.Add(L["Error.Item", item.FileName, ex.Message]);
-            }
-        }
-
-        _errorMessage = failures.Count == 0 ? null : L["Error.Delete", string.Join("; ", failures)].Value;
-        _fileView.ClearSelect();
-        await _fileView.RefreshAsync();
-    }
-
-    // ---- Clipboard (ADR 0056 section 12, ADR 0058 section 1) ----------------------------------------
-
-    private Task CutSelectedAsync() => PutSelectionOnClipboardAsync(HackClipboardFileOperation.Cut);
-
-    private Task CopySelectedAsync() => PutSelectionOnClipboardAsync(HackClipboardFileOperation.Copy);
-
-    private Task PasteHereAsync() =>
-        _fileView is null ? Task.CompletedTask : PasteIntoAsync(_fileView.CurrentDirectory);
-
-    /// <summary>FileView's Ctrl+X/C/V and its Cut/Copy/Paste/Paste Into Folder menu entries.</summary>
-    private Task OnClipboardRequestedAsync(FileViewClipboardRequestedEventArgs e) => e.Action switch
-    {
-        FileViewClipboardAction.Cut => PutOnClipboardAsync(e.Items, HackClipboardFileOperation.Cut),
-        FileViewClipboardAction.Copy => PutOnClipboardAsync(e.Items, HackClipboardFileOperation.Copy),
-        _ => PasteIntoAsync(e.Destination)
-    };
-
-    private Task PutSelectionOnClipboardAsync(HackClipboardFileOperation operation) =>
-        _fileView is null ? Task.CompletedTask : PutOnClipboardAsync(_fileView.SelectedItems, operation);
-
-    /// <summary>Cut or copy: writes the paths to the session clipboard. Nothing moves before the paste.</summary>
-    private async Task PutOnClipboardAsync(IReadOnlyList<FileViewItem> items, HackClipboardFileOperation operation)
-    {
-        if (items.Count == 0) return;
-
-        try
-        {
-            await HackClipboard.SetFileDropListAsync(items.Select(item => item.FullPath.Value), operation, AppContext.CancellationToken);
-            _errorMessage = null;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            ReportError("You don't have permission to use the clipboard.");
-        }
-    }
-
-    /// <summary>
-    /// Paste: copies (or, for cut files, moves) the clipboard's files into <paramref name="destination"/>.
-    /// After a cut, the clipboard is emptied once every file was moved.
-    /// </summary>
-    private async Task PasteIntoAsync(VirtualPath destination)
-    {
-        HackClipboardFileList? list;
-        try
-        {
-            list = await HackClipboard.GetFileDropListAsync(AppContext.CancellationToken);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            ReportError("You don't have permission to use the clipboard.");
-            return;
-        }
-
-        if (list is null || list.Paths.Count == 0) return;
-
-        bool cut = list.Operation == HackClipboardFileOperation.Cut;
-        // Copies stay on the window's thread, not in a HackBackground task (ADR 0140): each item is an
-        // awaited OS call with a checkpoint between two (no long CPU stretch), and a name conflict asks
-        // the user in this window between two items, which a task in another process cannot do.
-        FileTransferResult result = await TrackOperation(FileTransfer.TransferAsync(
-            list.Paths,
-            destination.Value,
-            cut ? FileTransferMode.Move : FileTransferMode.Copy,
-            AskConflictAsync,
-            AppContext.CancellationToken));
-
-        if (cut && result.Succeeded)
-        {
-            await HackClipboard.ClearAsync(AppContext.CancellationToken);
-        }
-
-        ReportTransfer(result, cut ? TransferVerb.Move : TransferVerb.Copy);
-        await RefreshAfterTransferAsync();
-    }
-
-    private void OnClipboardChanged(object? sender, EventArgs e) =>
-        _ = InvokeAsync(async () =>
-        {
-            await ReadClipboardStateAsync();
-            StateHasChanged();
-        });
-
-    /// <summary>Reads whether there is something to paste and which items to dim as cut.</summary>
-    private async Task ReadClipboardStateAsync()
-    {
-        try
-        {
-            HackClipboardFileList? list = await AppContext.Clipboard.GetFileDropListAsync(AppContext.CancellationToken);
-            _canPaste = list is { Paths.Count: > 0 };
-            _cutPaths = list is { Operation: HackClipboardFileOperation.Cut }
-                ? new HashSet<string>(list.Paths, StringComparer.Ordinal)
-                : [];
-        }
-        catch (Exception exception) when (exception is AppGatewayAccessDeniedException or NotSupportedException)
-        {
-            _canPaste = false;
-            _cutPaths = [];
-        }
-    }
-
-    // ---- Drag and drop (ADR 0058 section 1) ---------------------------------------------------------
-
-    /// <summary>
-    /// Every drop FileView hands over: HackerOS entries are moved (copied with Ctrl), with the conflict
-    /// window; files from the host system are imported. One summary covers both.
-    /// </summary>
-    private async Task OnDropRequestedAsync(FileViewDropRequestedEventArgs e)
-    {
-        if (e.Destination is not { } destination) return;
-
-        List<FileTransferItemResult> completed = [];
-        List<string> skipped = [];
-        List<FileTransferFailure> failures = [];
-
-        if (e.Entries.Count > 0)
-        {
-            FileTransferResult moved = await TrackOperation(FileTransfer.TransferAsync(
-                e.Entries.Select(entry => entry.Path.Value).ToList(),
-                destination.Value,
-                e.Copy ? FileTransferMode.Copy : FileTransferMode.Move,
-                AskConflictAsync,
-                AppContext.CancellationToken));
-            completed.AddRange(moved.Completed);
-            skipped.AddRange(moved.Skipped);
-            failures.AddRange(moved.Failures);
-        }
-
-        if (e.HostFiles.Count > 0)
-        {
-            FileTransferResult imported = await TrackOperation(FileTransfer.ImportAsync(e.HostFiles, destination.Value, AppContext.CancellationToken));
-            completed.AddRange(imported.Completed);
-            failures.AddRange(imported.Failures);
-        }
-
-        ReportTransfer(new FileTransferResult(completed, skipped, failures), e.Copy || e.Entries.Count == 0 ? TransferVerb.Copy : TransferVerb.Move);
-        await RefreshAfterTransferAsync();
-    }
+    // ---- Trash place (ADR 0052) ----------------------------------------------------------------------
 
     /// <summary>A drop on the Trash place or view: moves the dragged entries to the trash (ADR 0052).</summary>
     private async Task OnTrashDropAsync(FileViewDropRequestedEventArgs e)
     {
         if (e.Entries.Count == 0) return;
 
-        FileTransferResult result = await TrackOperation(FileTransfer.MoveToTrashAsync(
+        HackFileTransferResult result = await TrackOperation(HackFileOperations.MoveToTrashAsync(
             e.Entries.Select(entry => entry.Path.Value).ToList(), AppContext.CancellationToken));
         ReportTransfer(result, TransferVerb.Trash);
         await RefreshAfterTransferAsync();
@@ -894,28 +627,13 @@
         }
     }
 
-    /// <summary>The "Replace / Keep both / Skip" window; closing it skips the item.</summary>
-    private async Task<FileConflictResolution> AskConflictAsync(FileTransferConflict conflict)
-    {
-        DialogParameters parameters = new()
-        {
-            { nameof(FileConflictDialog.OwnerAppContext), AppContext },
-            { nameof(FileConflictDialog.Conflict), conflict }
-        };
-        IDialogReference dialog = await MudDialogService.ShowAsync<FileConflictDialog>(L["Dialog.Conflict.Title"], parameters);
-        DialogResult? result = await dialog.Result;
-        return result is { Canceled: false, Data: FileConflictResolution resolution }
-            ? resolution
-            : new FileConflictResolution(FileConflictChoice.Skip);
-    }
-
     /// <summary>
     /// Shows the end-of-operation summary: the failures (with their reason) in the error banner and as a
     /// desktop notification; nothing when everything went through.
     /// </summary>
-    private void ReportTransfer(FileTransferResult result, TransferVerb verb)
+    private void ReportTransfer(HackFileTransferResult result, TransferVerb verb)
     {
-        string? summary = DescribeFailures(result, verb);
+        string? summary = ExplorerTransferReport.DescribeFailures(L, result, verb);
         _errorMessage = summary;
         if (summary is not null)
         {
@@ -932,39 +650,12 @@
         _ = InvokeAsync(StateHasChanged);
     }
 
-    /// <summary>What a transfer was doing, for its failure summary (<c>Transfer.&lt;verb&gt;.One/Many</c>).</summary>
-    private enum TransferVerb
-    {
-        Copy,
-        Move,
-        Trash,
-        Upload
-    }
-
-    /// <summary>
-    /// The failure summary of a transfer in the explorer's language, worded like
-    /// <see cref="FileTransferResult.DescribeFailures(string)"/>: <c>Could not copy 'a': reason.</c>, or the
-    /// count and the list when several items failed; <see langword="null"/> when nothing failed.
-    /// </summary>
-    private string? DescribeFailures(FileTransferResult result, TransferVerb verb)
-    {
-        if (result.Failures.Count == 0)
-        {
-            return null;
-        }
-
-        string items = string.Join("; ", result.Failures.Select(failure => L["Error.Item", FileTransfer.GetName(failure.Path), failure.Reason].Value));
-        return result.Failures.Count == 1
-            ? L[$"Transfer.{verb}.One", items]
-            : L[$"Transfer.{verb}.Many", result.Failures.Count, items];
-    }
-
     private async Task RefreshAfterTransferAsync()
     {
-        if (_fileView is null) return;
+        if (_files is null) return;
         try
         {
-            await _fileView.RefreshAsync();
+            await _files.RefreshAsync();
         }
         catch (InvalidOperationException)
         {
@@ -983,8 +674,10 @@
         }
     }
 
-    /// <summary>Restored elements may have landed in the folder FileView is showing.</summary>
-    private Task OnTrashRestoredAsync(IReadOnlyList<string> paths) => _fileView?.RefreshAsync() ?? Task.CompletedTask;
+    /// <summary>Restored elements may have landed in the folder the control is showing.</summary>
+    private Task OnTrashRestoredAsync(IReadOnlyList<string> paths) => _files?.RefreshAsync() ?? Task.CompletedTask;
+
+    // ---- Upload, download, archives -------------------------------------------------------------------
 
     /// <summary>
     /// Toolbar "Upload": imports host files into the current folder, like a drop of host files — a taken
@@ -992,18 +685,18 @@
     /// </summary>
     private async Task UploadFilesAsync(InputFileChangeEventArgs e)
     {
-        if (_fileView is null) return;
+        if (_files is null) return;
 
-        IReadOnlyList<FileTransferHostFile> files = e.GetMultipleFiles(maximumFileCount: 100)
-            .Select(file => new FileTransferHostFile(
+        IReadOnlyList<HackHostFile> files = e.GetMultipleFiles(maximumFileCount: 100)
+            .Select(file => new HackHostFile(
                 file.Name,
                 file.Size,
                 file.ContentType,
                 (maxBytes, cancellationToken) => Task.FromResult(file.OpenReadStream(maxBytes, cancellationToken))))
             .ToList();
-        FileTransferResult result = await TrackOperation(FileTransfer.ImportAsync(files, _fileView.CurrentDirectory.Value, AppContext.CancellationToken));
+        HackFileTransferResult result = await TrackOperation(HackFileOperations.ImportAsync(files, _files.CurrentDirectory, AppContext.CancellationToken));
         ReportTransfer(result, TransferVerb.Upload);
-        await _fileView.RefreshAsync();
+        await _files.RefreshAsync();
     }
 
     /// <remarks>
@@ -1013,20 +706,20 @@
     /// </remarks>
     private async Task DownloadSelectedAsync()
     {
-        if (_downloader is null || _fileView is null) return;
-        IReadOnlyList<FileViewItem> selected = _fileView.SelectedItems;
+        if (_downloader is null || _files is null) return;
+        IReadOnlyList<HackFileViewItem> selected = _files.SelectedItems;
 
         if (selected.Count == 1)
         {
-            FileViewItem item = selected[0];
+            HackFileViewItem item = selected[0];
             if (!item.IsDirectory)
             {
                 FileSystemResult<FileSystemContentReadHandle> result = await AppContext.FileSystem.ReadAsync(
-                    new FileSystemReadRequest(item.FullPath), AppContext.CancellationToken);
+                    new FileSystemReadRequest(VirtualPath.Parse(item.Path)), AppContext.CancellationToken);
                 if (result.Succeeded && result.Value is not null)
                 {
                     await using FileSystemContentReadHandle handle = result.Value;
-                    await _downloader.DownloadFileFromStreamAsync(item.FileName, handle.Content);
+                    await _downloader.DownloadFileFromStreamAsync(item.Name, handle.Content);
                 }
             }
             else
@@ -1034,10 +727,10 @@
                 using MemoryStream ms = new();
                 using (ZipArchive archive = new(ms, ZipArchiveMode.Create, true))
                 {
-                    await FileExplorerZipService.AddDirectoryToZipAsync(AppContext.FileSystem, archive, item.FullPath, item.FileName, AppContext.CancellationToken);
+                    await FileExplorerZipService.AddDirectoryToZipAsync(AppContext.FileSystem, archive, VirtualPath.Parse(item.Path), item.Name, AppContext.CancellationToken);
                 }
                 ms.Position = 0;
-                await _downloader.DownloadFileFromStreamAsync(item.FileName + ".zip", ms);
+                await _downloader.DownloadFileFromStreamAsync(item.Name + ".zip", ms);
             }
         }
         else if (selected.Count > 1)
@@ -1045,15 +738,15 @@
             using MemoryStream ms = new();
             using (ZipArchive archive = new(ms, ZipArchiveMode.Create, true))
             {
-                foreach (FileViewItem item in selected)
+                foreach (HackFileViewItem item in selected)
                 {
                     if (!item.IsDirectory)
                     {
-                        await FileExplorerZipService.AddFileToZipAsync(AppContext.FileSystem, archive, item.FullPath, item.FileName, AppContext.CancellationToken);
+                        await FileExplorerZipService.AddFileToZipAsync(AppContext.FileSystem, archive, VirtualPath.Parse(item.Path), item.Name, AppContext.CancellationToken);
                     }
                     else
                     {
-                        await FileExplorerZipService.AddDirectoryToZipAsync(AppContext.FileSystem, archive, item.FullPath, item.FileName, AppContext.CancellationToken);
+                        await FileExplorerZipService.AddDirectoryToZipAsync(AppContext.FileSystem, archive, VirtualPath.Parse(item.Path), item.Name, AppContext.CancellationToken);
                     }
                 }
             }
@@ -1064,10 +757,10 @@
 
     private async Task CompressSelectedAsync()
     {
-        if (_fileView is null || _fileView.SelectedItems.Count == 0) return;
-        IReadOnlyList<FileViewItem> selected = _fileView.SelectedItems;
+        if (_files is null || _files.SelectedItems.Count == 0) return;
+        IReadOnlyList<HackFileViewItem> selected = _files.SelectedItems;
 
-        string defaultName = selected.Count == 1 ? selected[0].FileName + ".zip" : "Archive.zip";
+        string defaultName = selected.Count == 1 ? selected[0].Name + ".zip" : "Archive.zip";
         TextInputDialogResult result = await base.TextInput(
             title: L["Dialog.Compress.Title"],
             content: L["Dialog.Compress.Prompt"],
@@ -1082,7 +775,7 @@
             archiveName += ".zip";
         }
 
-        VirtualPath destPath = CombineChild(_fileView.CurrentDirectory, archiveName);
+        VirtualPath destPath = CombineChild(VirtualPath.Parse(_files.CurrentDirectory), archiveName);
         FileSystemResult<FileSystemEntrySnapshot> destStat = await AppContext.FileSystem.StatAsync(
             new FileSystemStatRequest(destPath), AppContext.CancellationToken);
         if (destStat.Succeeded)
@@ -1093,7 +786,7 @@
 
         // ADR 0128/0140: deflating is CPU work; a child process of the explorer does it, off the window's thread.
         string? error = await TrackOperation(FileExplorerZipService.CompressInBackgroundAsync(
-            [.. selected.Select(item => new ZipSource(item.FullPath.Value, item.FileName, item.IsDirectory))],
+            [.. selected.Select(item => new ZipSource(item.Path, item.Name, item.IsDirectory))],
             destPath,
             L,
             AppContext.CancellationToken));
@@ -1104,20 +797,26 @@
         }
 
         _errorMessage = null;
-        _fileView.ClearSelect();
-        await _fileView.RefreshAsync();
+        _files.ClearSelection();
+        await _files.RefreshAsync();
     }
 
-    private async Task ExtractSelectedAsync()
-    {
-        if (_fileView is null || !CanExtractSelection) return;
+    private Task ExtractSelectedAsync() =>
+        CanExtractSelection ? ExtractAsync(_files!.SelectedItems[0].Path, _files.SelectedItems[0].Name) : Task.CompletedTask;
 
-        FileViewItem item = _fileView.SelectedItem!;
-        string folderName = item.FileName[..^".zip".Length];
-        VirtualPath destDir = CombineChild(_fileView.CurrentDirectory, folderName);
+    /// <summary>Extracts a <c>.zip</c> into a folder of its name next to it: the toolbar's Extract and the registered "Extract here".</summary>
+    private async Task ExtractAsync(string archivePath, string archiveName)
+    {
+        if (_files is null) return;
+
+        // A registered entry also accepts application/zip files without the extension: they get a ".d" folder.
+        string folderName = archiveName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && archiveName.Length > ".zip".Length
+            ? archiveName[..^".zip".Length]
+            : archiveName + ".d";
+        VirtualPath destDir = CombineChild(ParentOf(VirtualPath.Parse(archivePath)), folderName);
 
         // ADR 0128/0140: inflating and writing every entry happen in a child process of the explorer.
-        string? error = await TrackOperation(FileExplorerZipService.ExtractInBackgroundAsync(item.FullPath, destDir, L, AppContext.CancellationToken));
+        string? error = await TrackOperation(FileExplorerZipService.ExtractInBackgroundAsync(VirtualPath.Parse(archivePath), destDir, L, AppContext.CancellationToken));
         if (error is not null)
         {
             ReportError(error);
@@ -1125,69 +824,18 @@
         }
 
         _errorMessage = null;
-        _fileView.ClearSelect();
-        await _fileView.RefreshAsync();
-    }
-
-    private async Task ShowPropertiesAsync()
-    {
-        FileViewItem? item = _fileView?.SelectedItem;
-        if (item is null) return;
-
-        DialogParameters parameters = new()
-        {
-            { nameof(FilePropertiesDialog.OwnerAppContext), AppContext },
-            { nameof(FilePropertiesDialog.EntryName), item.FileName },
-            { nameof(FilePropertiesDialog.Path), item.FullPath.Value },
-            { nameof(FilePropertiesDialog.Metadata), item.Metadata }
-        };
-
-        await MudDialogService.ShowAsync<FilePropertiesDialog>(L["Dialog.Properties.Title"], parameters);
-    }
-
-    private async Task OpenWithAsync()
-    {
-        FileViewItem? item = _fileView?.SelectedItem;
-        if (item is null) return;
-
-        // Only installed apps are listed (ADR 0048): the catalog gateway hides uninstalled ones.
-        IReadOnlyList<HackAppInfo> windowApps = (await AppContext.Catalog.GetInstalledAsync(AppContext.CancellationToken))
-            .Where(app => app.Kind == AppKind.Window)
-            .ToList();
-
-        DialogParameters parameters = new()
-        {
-            { nameof(OpenWithDialog.OwnerAppContext), AppContext },
-            { nameof(OpenWithDialog.FilePath), item.FullPath.Value },
-            { nameof(OpenWithDialog.AvailableApps), windowApps },
-            { nameof(OpenWithDialog.Extension), item.IsDirectory ? null : ExtensionOf(item.FullPath.Value) }
-        };
-
-        IDialogReference dialog = await MudDialogService.ShowAsync<OpenWithDialog>(L["Dialog.OpenWith.Title"], parameters);
-        DialogResult? result = await dialog.Result;
-
-        if (result is not null && !result.Canceled && result.Data is OpenWithChoice choice)
-        {
-            await RememberChoiceAsync(choice, item.FullPath.Value);
-            await LaunchWithAsync(choice.App.Id, item.FullPath.Value);
-        }
+        _files.ClearSelection();
+        await _files.RefreshAsync();
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_fileView is not null)
+        if (_files is not null)
         {
-            _fileView.OnPathChange -= OnFileViewPathChanged;
-            _fileView.Opened -= OnFileViewItemOpened;
-            _fileView.SelectionChanged -= OnFileViewSelectionChanged;
+            _files.StateChanged -= OnFilesStateChanged;
         }
 
         _eventSub?.Dispose();
-        if (_subscribedToClipboard)
-        {
-            AppContext.Clipboard.Changed -= OnClipboardChanged;
-        }
-
         if (_downloader is not null)
         {
             await _downloader.DisposeAsync();

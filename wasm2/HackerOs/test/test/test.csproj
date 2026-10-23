@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.13" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -36,6 +36,7 @@
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.CodeEditor\HackerOs.Apps.CodeEditor.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.ErrorLogViewer\HackerOs.Apps.ErrorLogViewer.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.FileExplorer\HackerOs.Apps.FileExplorer.csproj" />
+    <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Desktop\HackerOs.Apps.Desktop.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.HackPaint\HackerOs.Apps.HackPaint.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.Settings\HackerOs.Apps.Settings.csproj" />
     <ProjectReference Include="..\..\Apps\System\HackerOs.Apps.SystemMonitor\HackerOs.Apps.SystemMonitor.csproj" />
@@ -53,6 +54,7 @@
     <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.CodeEditor.dll" />
     <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.ErrorLogViewer.dll" />
     <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.FileExplorer.dll" />
+    <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.Desktop.dll" />
     <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.HackPaint.dll" />
     <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.Settings.dll" />
     <BlazorWebAssemblyLazyLoad Include="HackerOs.Apps.SystemMonitor.dll" />

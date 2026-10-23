@@ -3,8 +3,6 @@ using HackerOs.AppSdk;
 using HackerOs.AppSdk.Accessibility;
 using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Components;
-using HackerOs.AppSdk.FileView;
-using HackerOs.AppSdk.FileView.Events;
 using HackerOs.AppSdk.Globalization;
 using HackerOs.AppSdk.IO;
 using HackerOs.Simulation.Abstractions.FileSystem;
@@ -624,7 +622,8 @@ public partial class CodeEditorWindow
 
         _workspace = new CodeEditorWorkspace(
             result.Resource.Path,
-            AppContext.FileSystem.WithSelectedHandle(result.Resource.Handle));
+            AppContext.FileSystem.WithSelectedHandle(result.Resource.Handle),
+            result.Resource.Handle);
         _sidebarVisible = true;
         _view = SideView.Explorer;
         ClearStatus();
@@ -725,64 +724,8 @@ public partial class CodeEditorWindow
         }
     }
 
-    /// <summary>
-    /// The explorer's Delete key and menu: moves the items to the trash, or, for "Delete
-    /// permanently" and only after a confirmation, deletes them for good. Open tabs of deleted
-    /// files stay open with their content, so nothing typed is lost; saving recreates the file.
-    /// </summary>
-    private async Task DeleteItemsAsync(FileViewDeleteRequestedEventArgs request)
-    {
-        IReadOnlyList<FileViewItem> items = request.Items;
-        if (items.Count == 0)
-        {
-            return;
-        }
-
-        if (request.Permanent)
-        {
-            string question = items.Count == 1
-                ? L["Dialog.Delete.One", items[0].FileName]
-                : L["Dialog.Delete.Many", items.Count];
-            MessageBoxDialogResult answer = await base.MessageBox(L["Dialog.Delete.Title"], question, MessageBoxType.YesNo);
-            if (answer.Result != MessageBoxResult.Yes)
-            {
-                return;
-            }
-        }
-
-        List<string> failures = [];
-        foreach (FileViewItem item in items)
-        {
-            try
-            {
-                if (!request.Permanent)
-                {
-                    await HackTrash.MoveToTrashAsync(item.FullPath.Value, AppContext.CancellationToken);
-                }
-                else if (item.Metadata.Kind == FileSystemEntryKind.Directory)
-                {
-                    await HackDirectory.DeleteAsync(item.FullPath.Value, recursive: true, AppContext.CancellationToken);
-                }
-                else
-                {
-                    await HackFile.DeleteAsync(item.FullPath.Value, AppContext.CancellationToken);
-                }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                failures.Add(L["Delete.PermissionDenied", item.FileName]);
-            }
-            catch (IOException ex)
-            {
-                failures.Add(L["Delete.Failure", item.FileName, ex.Message]);
-            }
-        }
-
-        if (failures.Count > 0)
-        {
-            SetStatus(L["Delete.Failed", string.Join("; ", failures)], isError: true);
-        }
-    }
+    /// <summary>The explorer tree's errors (a delete or a copy that failed) go to the status bar.</summary>
+    private void OnExplorerError(string message) => SetStatus(message, isError: true);
 
     // ---- View options -------------------------------------------------------------------------------
 

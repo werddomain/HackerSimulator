@@ -153,12 +153,6 @@
   <data name="Kind.SymbolicLink" xml:space="preserve">
     <value>Lien symbolique</value>
   </data>
-  <data name="Menu.PublishSite" xml:space="preserve">
-    <value>Publier comme site web…</value>
-  </data>
-  <data name="Menu.UnzipHere" xml:space="preserve">
-    <value>Extraire ici…</value>
-  </data>
   <data name="Nav.Back" xml:space="preserve">
     <value>Précédent</value>
   </data>
@@ -392,5 +386,83 @@
   </data>
   <data name="Error.RememberFailed" xml:space="preserve">
     <value>L'app n'a pas été enregistrée comme app par défaut des fichiers {0}.</value>
+  </data>
+  <data name="Menu.Open" xml:space="preserve">
+    <value>Ouvrir</value>
+  </data>
+  <data name="Menu.OpenWith" xml:space="preserve">
+    <value>Ouvrir avec</value>
+  </data>
+  <data name="Menu.OpenWithOther" xml:space="preserve">
+    <value>Choisir une autre application…</value>
+  </data>
+  <data name="Menu.Cut" xml:space="preserve">
+    <value>Couper</value>
+  </data>
+  <data name="Menu.Copy" xml:space="preserve">
+    <value>Copier</value>
+  </data>
+  <data name="Menu.Paste" xml:space="preserve">
+    <value>Coller</value>
+  </data>
+  <data name="Menu.PasteInto" xml:space="preserve">
+    <value>Coller dans le dossier</value>
+  </data>
+  <data name="Menu.Rename" xml:space="preserve">
+    <value>Renommer</value>
+  </data>
+  <data name="Menu.Delete" xml:space="preserve">
+    <value>Mettre à la corbeille</value>
+  </data>
+  <data name="Menu.DeletePermanently" xml:space="preserve">
+    <value>Supprimer définitivement</value>
+  </data>
+  <data name="Menu.NewFolder" xml:space="preserve">
+    <value>Nouveau dossier</value>
+  </data>
+  <data name="Menu.Refresh" xml:space="preserve">
+    <value>Actualiser</value>
+  </data>
+  <data name="Menu.Properties" xml:space="preserve">
+    <value>Propriétés</value>
+  </data>
+  <data name="Error.DialogsUnavailable" xml:space="preserve">
+    <value>Les dialogues de fichiers ne peuvent pas être affichés ici.</value>
+  </data>
+  <data name="Dialog.Loading" xml:space="preserve">
+    <value>Chargement…</value>
+  </data>
+  <data name="Dialog.UnknownDialog" xml:space="preserve">
+    <value>Ce dialogue de fichiers n'existe pas : {0}.</value>
+  </data>
+  <data name="Desktop.Home" xml:space="preserve">
+    <value>Dossier perso</value>
+  </data>
+  <data name="Desktop.Trash" xml:space="preserve">
+    <value>Corbeille</value>
+  </data>
+  <data name="Desktop.Grid" xml:space="preserve">
+    <value>Bureau</value>
+  </data>
+  <data name="Menu.EmptyTrash" xml:space="preserve">
+    <value>Vider la corbeille</value>
+  </data>
+  <data name="Dialog.EmptyTrash.Title" xml:space="preserve">
+    <value>Vider la corbeille ?</value>
+  </data>
+  <data name="Dialog.EmptyTrash.Content" xml:space="preserve">
+    <value>Tous les éléments de la corbeille seront supprimés définitivement.</value>
+  </data>
+  <data name="Error.EmptyTrash" xml:space="preserve">
+    <value>La corbeille n'a pas pu être vidée : {0}</value>
+  </data>
+  <data name="Error.AppMissing" xml:space="preserve">
+    <value>Ce raccourci ouvre {0}, qui n'est pas installé.</value>
+  </data>
+  <data name="Error.Shortcut" xml:space="preserve">
+    <value>Le raccourci vers {0} n'a pas pu être créé : {1}</value>
+  </data>
+  <data name="Error.TrashMove" xml:space="preserve">
+    <value>Impossible de mettre {0} à la corbeille : {1}</value>
   </data>
 </root>

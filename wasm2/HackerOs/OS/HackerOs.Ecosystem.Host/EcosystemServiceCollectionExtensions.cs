@@ -71,7 +71,6 @@ using HackerOs.AppSdk.Blazor;
 using HackerOs.AppSdk.Blazor.Components;
 using HackerOs.AppSdk.Blazor.Display;
 using Microsoft.JSInterop;
-using HackerOs.AppSdk.FileView.Icons;
 using HackerOs.AppSdk.Icons;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -735,6 +734,11 @@ public static class EcosystemServiceCollectionExtensions
                 OperatingSystem.IsBrowser() ? () => provider.GetRequiredService<SystemBackupService>() : null)
             {
                 Passwords = () => provider.GetRequiredService<LocalPasswordService>(),
+                // HackComponentProviders (ADR 0156): a third-party provider goes through the approval window.
+                ComponentProviders = () => provider.GetRequiredService<HackerOs.Platform.Core.ComponentProviders.ComponentProviderService>(),
+                ApprovalPrompt = () => provider.GetRequiredService<IDangerousCapabilityApprovalPrompt>(),
+                // HackFileMenuEntries (ADR 0159 §8): Settings lists and hides the registered entries.
+                FileMenuEntries = () => provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuAdministration>(),
             })
         {
             // HackBackground (ADR 0128): each task a child process, in a worker when the host has some.
@@ -808,18 +812,28 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISimulationClock>(),
             provider.GetRequiredService<AppCatalog>(),
             provider.GetService<ILogger<AppEnablementToFilesMigration>>()));
-        services.AddScoped<AppInstallationService>(provider => new AppInstallationService(
-            provider.GetRequiredService<AppCatalog>(),
-            provider.GetRequiredService<AppEnablementRegistry>(),
-            provider.GetRequiredService<AppLifecycleOrchestrator>(),
-            provider.GetRequiredService<IFileSystemService>(),
-            provider.GetRequiredService<ISessionService>(),
-            provider.GetRequiredService<ISimulationClock>(),
-            provider.GetRequiredService<ITopicMessageBus>(),
-            provider.GetRequiredService<IEventBus>(),
-            provider.GetService<ILogger<AppInstallationService>>(),
-            // ADR 0088 section 4: uninstalling a web app deletes its browser database.
-            provider.GetRequiredService<HackerOs.Platform.Core.WebData.IWebSiteDatabaseStore>()));
+        services.AddScoped<AppInstallationService>(provider =>
+        {
+            AppInstallationService installation = new(
+                provider.GetRequiredService<AppCatalog>(),
+                provider.GetRequiredService<AppEnablementRegistry>(),
+                provider.GetRequiredService<AppLifecycleOrchestrator>(),
+                provider.GetRequiredService<IFileSystemService>(),
+                provider.GetRequiredService<ISessionService>(),
+                provider.GetRequiredService<ISimulationClock>(),
+                provider.GetRequiredService<ITopicMessageBus>(),
+                provider.GetRequiredService<IEventBus>(),
+                provider.GetService<ILogger<AppInstallationService>>(),
+                // ADR 0088 section 4: uninstalling a web app deletes its browser database.
+                provider.GetRequiredService<HackerOs.Platform.Core.WebData.IWebSiteDatabaseStore>());
+            // ADR 0156 §4: an app uninstalled for the machine loses its line in components.config,
+            // whether Settings, the terminal or an edit of apps.config uninstalled it.
+            installation.Changed += (_, _) => _ = RemoveUninstalledComponentProvidersAsync(provider, installation);
+            // ADR 0151 §3: the first reload (at boot, StartAsync) writes and reads context-menus.d; an app
+            // uninstalled for the machine then loses its file, a reinstalled one gets it back.
+            installation.Changed += (_, _) => _ = SyncFileContextMenusAsync(provider);
+            return installation;
+        });
         services.AddScoped<IAppInstallationService>(provider => provider.GetRequiredService<AppInstallationService>());
         // ADR 0097 section 4: system services at the end of the boot, the user's at each login;
         // stopped at the logout and the shutdown. Resolved with EcosystemBootCoordinator, so it
@@ -876,15 +890,97 @@ public static class EcosystemServiceCollectionExtensions
             provider.GetRequiredService<ISessionService>(),
             provider.GetRequiredService<ISimulationClock>(),
             provider.GetRequiredService<HackerOs.Platform.Core.Globalization.SessionLocaleService>()));
+        // ADR 0150: the OS context menu. The platform provides the contract hackeros.context-menu
+        // itself; the service holds each window's menus and the one menu open in the OS.
+        services.AddScoped(provider => new HackerOs.Platform.Blazor.ContextMenus.ContextMenuService(
+            provider.GetService<ILogger<HackerOs.Platform.Blazor.ContextMenus.ContextMenuService>>(),
+            provider.GetRequiredService<HackerOs.Platform.Blazor.ContextMenus.IFileMenuEntrySource>()));
+        // ADR 0151, ADR 0159: the file menu entries apps register. The registry copies the manifests'
+        // entries to /etc/hackeros/context-menus.d at boot and after each install change, and reads the
+        // folder; the source adds them to every file menu, whichever app provides the file control.
+        services.AddScoped(provider => new HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry(
+            provider.GetRequiredService<AppCatalog>(),
+            ((OsSettingsService)provider.GetRequiredService<IOsSettingsService>()).CreateSystemGateway(),
+            appId => provider.GetRequiredService<AppInstallationService>().GetState(appId) == AppInstallationState.UninstalledForMachine,
+            provider.GetService<ILogger<HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry>>()));
+        services.AddScoped(provider => new HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences(
+            provider.GetRequiredService<IOsSettingsService>()));
+        services.AddScoped(provider => new HackerOs.Platform.Core.ContextMenus.FileContextMenuAdministration(
+            provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry>(),
+            provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences>(),
+            provider.GetRequiredService<AppCatalog>()));
+        services.AddScoped(provider => new HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher(
+            provider.GetRequiredService<AppCatalog>(),
+            provider.GetRequiredService<IAppEnablementRegistry>(),
+            provider.GetRequiredService<AppLifecycleOrchestrator>()));
+        services.AddScoped<HackerOs.Platform.Blazor.ContextMenus.IFileMenuEntrySource>(provider =>
+        {
+            HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher launcher =
+                provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuLauncher>();
+            HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences preferences =
+                provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuPreferences>();
+            ILogger? logger = provider.GetService<ILogger<HackerOs.Platform.Blazor.ContextMenus.FileMenuEntries>>();
+            return new HackerOs.Platform.Blazor.ContextMenus.FileMenuEntries(
+                provider.GetRequiredService<AppCatalog>(),
+                provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry>(),
+                launcher,
+                preferences.GetHiddenAsync,
+                () => provider.GetRequiredService<HackerOs.Platform.Core.Globalization.SessionLocaleService>().Culture,
+                async (appId, entry, scope, paths) =>
+                {
+                    if (provider.GetRequiredService<ISessionService>().CurrentPrincipal is not { } principal)
+                    {
+                        return;
+                    }
+
+                    foreach (AppLaunchResult result in await launcher.LaunchAsync(appId, entry, scope, paths, principal))
+                    {
+                        if (!result.IsSuccess)
+                        {
+                            logger?.LogWarning(
+                                "context-menu: the entry '{Name}' of {AppId} could not launch its app: {Status} {Code}",
+                                entry.Name, appId, result.Status, result.ErrorCode);
+                        }
+                    }
+                });
+        });
+        services.AddSingleton(new HackPlatformComponent(
+            HackerOs.AppSdk.Components.HackComponentContracts.ContextMenu,
+            typeof(HackerOs.Platform.Blazor.ContextMenus.PlatformContextMenu)));
+        // ADR 0156: /etc/hackeros/components.config, the administrator's choice of the app that
+        // provides the file view and the file dialogs, behind Settings > OS components.
+        services.AddScoped(provider =>
+        {
+            LogFileWriter? log = provider.GetService<LogFileWriter>();
+            return new HackerOs.Platform.Core.ComponentProviders.ComponentProviderService(
+                provider.GetRequiredService<AppCatalog>(),
+                provider.GetRequiredService<IAppEnablementRegistry>(),
+                provider.GetRequiredService<IOsSettingsService>(),
+                provider.GetRequiredService<IAdminElevationVerifier>(),
+                provider.GetRequiredService<IAuditLog>(),
+                log is null ? null : message => log.Write(LogFileTarget.Syslog, DiagnosticSeverity.Information, "components", message));
+        });
         // Embeddable components registered in manifests (ADR 0063): a window embeds another app's
-        // component by contract; the provider's assembly is loaded as a launch would load it.
+        // component by contract; the provider's assembly is loaded as a launch would load it. The
+        // administrator's choice is tried first for the file view and the file dialogs (ADR 0156).
         services.AddScoped<IHackComponentHost>(provider =>
         {
             AppLifecycleOrchestrator orchestrator = provider.GetRequiredService<AppLifecycleOrchestrator>();
+            LogFileWriter? log = provider.GetService<LogFileWriter>();
             return new HackComponentHost(
                 provider.GetRequiredService<AppCatalog>(),
                 provider.GetRequiredService<IAppEnablementRegistry>(),
-                orchestrator.EnsureDescriptorAsync);
+                orchestrator.EnsureDescriptorAsync,
+                platformComponents: provider.GetServices<HackPlatformComponent>(),
+                reportError: log is null
+                    ? null
+                    : message => log.Write(LogFileTarget.Syslog, DiagnosticSeverity.Error, "components", message))
+            {
+                Selection = provider.GetRequiredService<HackerOs.Platform.Core.ComponentProviders.ComponentProviderService>(),
+                ReportWarning = log is null
+                    ? null
+                    : message => log.Write(LogFileTarget.Syslog, DiagnosticSeverity.Warning, "components", message)
+            };
         });
         // Blazor sites (ADR 0084): the browser asks the OS to start a site's renderer process.
         services.AddScoped<IHackWebSiteHost>(provider =>
@@ -947,7 +1043,8 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<TestDemoFixtureSeeder>();
 
         services.AddSingleton<IIconCatalog, IconCatalog>();
-        services.AddSingleton<IShellIconProvider, DefaultShellIconProvider>();
+        // The file control draws its icons with its own DefaultShellIconProvider (ADR 0161 §1): the
+        // host no longer references its code, which loads with the File Explorer.
 
         // Depends on IJSRuntime through the browser probe — see this file's IJSRuntime scoping note.
         services.AddScoped<IPlatformEnvironmentProbe, BrowserPlatformEnvironmentProbe>();
@@ -980,6 +1077,49 @@ public static class EcosystemServiceCollectionExtensions
         services.AddScoped<PlatformShellSwitchCoordinator>();
 
         return services;
+    }
+
+    /// <summary>
+    /// ADR 0156 §4: removes from <c>/etc/hackeros/components.config</c> the choice of every app now
+    /// uninstalled for the machine. Runs after each change of the installed state; a failure is
+    /// written to the system log and never blocks the uninstall.
+    /// </summary>
+    private static async Task RemoveUninstalledComponentProvidersAsync(IServiceProvider provider, AppInstallationService installation)
+    {
+        try
+        {
+            await provider.GetRequiredService<HackerOs.Platform.Core.ComponentProviders.ComponentProviderService>()
+                .RemoveUninstalledAsync(appId => installation.GetState(appId) == AppInstallationState.UninstalledForMachine)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            provider.GetService<LogFileWriter>()?.Write(
+                LogFileTarget.Syslog,
+                DiagnosticSeverity.Warning,
+                "components",
+                $"component.provider.removed: components.config could not be updated after an uninstall: {exception.Message}");
+        }
+    }
+
+    /// <summary>
+    /// ADR 0151 §3.5: brings <c>/etc/hackeros/context-menus.d</c> in line with the installed apps after
+    /// each change of the installed state; a failure is written to the system log and never blocks it.
+    /// </summary>
+    private static async Task SyncFileContextMenusAsync(IServiceProvider provider)
+    {
+        try
+        {
+            await provider.GetRequiredService<HackerOs.Platform.Core.ContextMenus.FileContextMenuRegistry>().SyncAsync().ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            provider.GetService<LogFileWriter>()?.Write(
+                LogFileTarget.Syslog,
+                DiagnosticSeverity.Warning,
+                "context-menu",
+                $"context-menus.d could not be updated after an install change: {exception.Message}");
+        }
     }
 
     private static AppCatalog CreateEmptyCatalog()

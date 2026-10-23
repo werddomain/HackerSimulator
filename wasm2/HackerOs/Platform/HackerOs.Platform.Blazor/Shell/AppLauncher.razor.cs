@@ -89,6 +89,7 @@ public partial class AppLauncher : ComponentBase, IDisposable
     protected override async Task OnInitializedAsync()
     {
         _principal = SessionService.CurrentPrincipal;
+        InitializeMenus();
         // An uninstall or reinstall (ADR 0048) while the menu is open updates it in place.
         Enablement.Changed += OnEnablementChanged;
         if (_principal is not null)
@@ -110,6 +111,7 @@ public partial class AppLauncher : ComponentBase, IDisposable
             return;
         }
 
+        await AttachAppDragAsync();
         try
         {
             await _searchInputRef.FocusAsync();
@@ -394,29 +396,9 @@ public partial class AppLauncher : ComponentBase, IDisposable
         return text.ResourceNotFound ? titled : text.Value;
     }
 
-    private static string GetAppIconName(AppManifest app)
-    {
-        if (string.Equals(app.Id, FileExplorerAppId, StringComparison.Ordinal))
-        {
-            return "folder";
-        }
-
-        if (string.Equals(app.Id, SettingsAppId, StringComparison.Ordinal))
-        {
-            return "settings";
-        }
-
-        return app.Presentation.Category.ToLowerInvariant() switch
-        {
-            "developer" => "code-2",
-            "games" => "gamepad-2",
-            "graphics" => "image",
-            "internet" => "globe-2",
-            "system" => "monitor-cog",
-            "utilities" => "wrench",
-            _ => "app-window"
-        };
-    }
+    /// <summary>The app's icon, the same everywhere the shell draws it (ADR 0160 §6).</summary>
+    private static string GetAppIconName(AppManifest app) =>
+        HackerOs.AppSdk.Apps.HackAppIcons.LucideName(app.Id, app.Presentation.Category);
 
     /// <inheritdoc />
     public void Dispose()

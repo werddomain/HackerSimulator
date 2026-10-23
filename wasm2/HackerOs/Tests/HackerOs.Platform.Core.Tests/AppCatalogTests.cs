@@ -191,6 +191,39 @@ public sealed class AppCatalogTests
             catalog.Warnings.Select(warning => (warning.AppId, warning.Code)));
     }
 
+    [Fact]
+    public void Build_registers_component_providers_system_apps_first()
+    {
+        AppManifest alpha = CreateProvider("org.example.alpha", "hackeros.terminal");
+        AppManifest zeta = CreateProvider("org.hackeros.zeta", "hackeros.terminal");
+
+        AppCatalog catalog = AppCatalog.Build([alpha, zeta], ["org.hackeros.zeta"]).Catalog!;
+
+        Assert.Equal(["org.hackeros.zeta", "org.example.alpha"], catalog.GetComponentProviders("hackeros.terminal").Select(provider => provider.AppId));
+        Assert.Empty(catalog.GetComponentProviders("hackeros.unknown"));
+        Assert.Empty(catalog.Warnings);
+    }
+
+    [Fact]
+    public void Build_registers_a_third_party_provider_of_the_file_view_after_the_system_app()
+    {
+        // ADR 0156 §1: the file view is open to any window app; the system app stays first.
+        AppManifest explorer = CreateProvider("org.hackeros.explorer", AppComponentContracts.FileView);
+        AppManifest files = CreateProvider("org.example.files", AppComponentContracts.FileView);
+
+        AppCatalog catalog = AppCatalog.Build([explorer, files], ["org.hackeros.explorer"]).Catalog!;
+
+        Assert.Equal(
+            ["org.hackeros.explorer", "org.example.files"],
+            catalog.GetComponentProviders(AppComponentContracts.FileView).Select(provider => provider.AppId));
+        Assert.Empty(catalog.Warnings);
+    }
+
+    private static AppManifest CreateProvider(string appId, string contract) => CreateManifest(appId) with
+    {
+        Components = [new AppComponentManifest(contract, "HackerOs.TestApps", "TestApps.Embed")]
+    };
+
     private static AppManifest CreateCommand(string appId, string name, IReadOnlyList<string> aliases) => CreateManifest(appId) with
     {
         Kind = AppKind.Terminal,

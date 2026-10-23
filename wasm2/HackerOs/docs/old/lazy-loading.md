@@ -58,6 +58,12 @@ The registry returns `Missing`, `Cancelled`, and `Failed` outcomes without
 destabilizing the shell. The shell-level recoverable UI and offline cached-load
 browser matrix remain open audit items.
 
+Since ADR 0162, a load that fails because the origin now serves another build
+(rebuild or deployment under an open tab) returns
+`BuildKnownAssemblyLoadStatus.HostBuildChanged`; `HostBuildUpdateMonitor`
+then raises the host's "update ready" notice, whose button restarts the OS on
+the new build. See [`../adr/0162-restart-after-a-host-build-change.md`](../adr/0162-restart-after-a-host-build-change.md).
+
 ## Task Status
 
 - [x] Embed all ten first-party system manifests in the runnable host catalog.

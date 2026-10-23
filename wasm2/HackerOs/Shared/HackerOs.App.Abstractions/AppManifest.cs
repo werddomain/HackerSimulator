@@ -103,6 +103,13 @@ public sealed record AppManifest
     public IReadOnlyList<AppComponentManifest>? Components { get; init; }
 
     /// <summary>
+    /// Gets the entries this app adds to the file menus of the OS (ADR 0151, ADR 0159), in declaration
+    /// order, which is the order of entries sharing a place. <see langword="null"/> (omitted from
+    /// <c>manifest.json</c>) when the app registers none, so existing manifests keep their exact bytes.
+    /// </summary>
+    public IReadOnlyList<AppContextMenuEntryManifest>? ContextMenus { get; init; }
+
+    /// <summary>
     /// Gets whether the ecosystem focuses the existing running instance instead of starting a
     /// new one when this app is launched again for the same user. Only consulted for
     /// <see cref="AppKind.Window"/> apps; Terminal and Service launches always start independently.

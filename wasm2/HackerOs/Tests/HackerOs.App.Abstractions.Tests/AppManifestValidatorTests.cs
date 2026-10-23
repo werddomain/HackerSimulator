@@ -298,6 +298,32 @@ public sealed class AppManifestValidatorTests
     }
 
     [Fact]
+    public void Validate_rejects_an_app_registering_the_platform_context_menu()
+    {
+        AppManifest manifest = CreateValidManifest() with
+        {
+            Components = [new AppComponentManifest(AppComponentContracts.ContextMenu, "HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.Menu")]
+        };
+
+        Assert.Contains(AppManifestValidator.Validate(manifest).Errors, error => error.Code == "manifest.component.contract.platform");
+    }
+
+    [Theory]
+    [InlineData(AppComponentContracts.FileView)]
+    [InlineData(AppComponentContracts.FileDialogs)]
+    public void Validate_accepts_the_file_contracts_from_any_window_app(string contract)
+    {
+        // ADR 0156 §1: the file view and the file dialogs are open; an administrator picks the provider.
+        AppManifest manifest = CreateValidManifest() with
+        {
+            Components = [new AppComponentManifest(contract, "HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.Embed")]
+        };
+
+        Assert.True(AppManifestValidator.Validate(manifest).IsValid);
+        Assert.Equal(AppComponentProviderScope.AdministratorSelected, AppComponentContracts.GetProviderScope(contract));
+    }
+
+    [Fact]
     public void Validate_rejects_a_contract_registered_twice()
     {
         var component = new AppComponentManifest("hackeros.terminal", "HackerOs.Apps.TextEditor", "HackerOs.Apps.TextEditor.Embed");

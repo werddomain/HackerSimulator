@@ -10,8 +10,12 @@ HackerOs.Apps.Settings.AppPermissionsPanel
 HackerOs.Apps.Settings.AppPermissionsPanel.AppPermissionsPanel() -> void
 HackerOs.Apps.Settings.BackupPanel
 HackerOs.Apps.Settings.BackupPanel.BackupPanel() -> void
+HackerOs.Apps.Settings.DesktopPanel
+HackerOs.Apps.Settings.DesktopPanel.DesktopPanel() -> void
 HackerOs.Apps.Settings.FileAssociationsPanel
 HackerOs.Apps.Settings.FileAssociationsPanel.FileAssociationsPanel() -> void
+HackerOs.Apps.Settings.FileMenuEntriesPanel
+HackerOs.Apps.Settings.FileMenuEntriesPanel.FileMenuEntriesPanel() -> void
 HackerOs.Apps.Settings.InstalledAppsPanel
 HackerOs.Apps.Settings.InstalledAppsPanel.Dispose() -> void
 HackerOs.Apps.Settings.InstalledAppsPanel.InstalledAppsPanel() -> void
@@ -22,6 +26,8 @@ HackerOs.Apps.Settings.LanguagePanel.LanguagePanel() -> void
 HackerOs.Apps.Settings.MemoryPanel
 HackerOs.Apps.Settings.MemoryPanel.DisposeAsync() -> System.Threading.Tasks.ValueTask
 HackerOs.Apps.Settings.MemoryPanel.MemoryPanel() -> void
+HackerOs.Apps.Settings.OsComponentsPanel
+HackerOs.Apps.Settings.OsComponentsPanel.OsComponentsPanel() -> void
 HackerOs.Apps.Settings.ServerRelayPolicyPanel
 HackerOs.Apps.Settings.ServerRelayPolicyPanel.ServerRelayPolicyPanel() -> void
 HackerOs.Apps.Settings.SettingsApp

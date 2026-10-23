@@ -1,5 +1,6 @@
 @namespace HackerOs.Platform.Blazor.Dialogs
 @using HackerOs.App.Abstractions
+@using HackerOs.AppSdk.Blazor.Files
 @using HackerOs.Simulation.Abstractions.FileSystem
 @using Microsoft.AspNetCore.Components.Web
 @using MudBlazor
@@ -12,11 +13,13 @@
         <h2 id="@_titleId">@(Presentation.Request.Title ?? L["FileDialog.SaveFile"])</h2>
     </header>
 
-    <VirtualFolderBrowser FileSystem="@Presentation.FileSystem"
-                          InitialDirectory="@EffectiveInitialDirectory"
-                          AllowFileSelection="false"
-                          DirectoryChanged="DirectoryChanged"
-                          FileActivated="UseExistingName" />
+    <FileDialogBrowser Context="@Presentation.Context"
+                       FileSystem="@Presentation.FileSystem"
+                       InitialDirectory="@EffectiveInitialDirectory"
+                       AllowFileSelection="false"
+                       Features="HackFileViewFeatures.CreateFolder | HackFileViewFeatures.Rename"
+                       DirectoryChanged="DirectoryChanged"
+                       FileActivated="UseExistingName" />
 
     <label class="name-control">
         <span>@L["FileDialog.FileName"]</span>
@@ -81,7 +84,7 @@
         _directory = EffectiveInitialDirectory;
     }
 
-    private void DirectoryChanged(FileSystemDirectorySnapshot snapshot) => _directory = snapshot.Path;
+    private void DirectoryChanged(VirtualPath directory) => _directory = directory;
 
     private void ChangeName(ChangeEventArgs args)
     {
@@ -147,9 +150,9 @@
     private void RejectOverwrite() => _confirmPath = null;
 
     // Double-click/Enter on an existing file takes its name; Save then asks before replacing it.
-    private void UseExistingName(FileSystemDirectoryItem entry)
+    private void UseExistingName(VirtualPath path)
     {
-        _fileName = entry.Name.Value;
+        _fileName = path.Value[(path.Value.LastIndexOf('/') + 1)..];
         _error = null;
         _confirmPath = null;
     }

@@ -1,4 +1,7 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.Blazor.Files;
+using HackerOs.AppSdk.Files;
+using HackerOs.AppSdk.Icons;
 using HackerOs.Apps.WebServer.Manager;
 
 namespace HackerOs.Apps.WebServer;
@@ -11,8 +14,15 @@ namespace HackerOs.Apps.WebServer;
 [AppManifest]
 public sealed class WebServerManagerApp : AppDefinition
 {
-    /// <summary>The app id, which the File Explorer launches with a folder to publish.</summary>
+    /// <summary>The app id.</summary>
     public const string AppId = "org.hackeros.web-server-manager";
+
+    /// <summary>
+    /// The intent the OS hands for "Publish as a web site" on a folder (ADR 0151 §8), with
+    /// <c>{"paths":["/home/neo/www"],"scope":"Directory"}</c>. Launching the app with the folder as its
+    /// first argument (ADR 0077 §3) still works.
+    /// </summary>
+    public const string PublishSiteIntent = "org.hackeros.web-server-manager.publish-site.v1";
 
     /// <inheritdoc />
     public override string Id => AppId;
@@ -53,7 +63,30 @@ public sealed class WebServerManagerApp : AppDefinition
         AppCapabilities.AppsLaunch,
         AppCapabilities.ProcessList,
         AppCapabilities.NotificationsPost,
+        AppCapabilities.ShellContextMenu,
     ];
+
+    /// <inheritdoc />
+    public override IReadOnlyList<AppIntentDeclarationManifest> Intents => [new(PublishSiteIntent)];
+
+    /// <summary>
+    /// Registers "Publish as a web site" on one folder, in the file menus of every host (ADR 0151 §8):
+    /// the entry belongs to the app that does the work, no longer to the File Explorer. Run by the
+    /// manifest generator at build, never at run time.
+    /// </summary>
+    /// <param name="context">Records the entries.</param>
+    [RegisterFileContextMenu]
+    public static void RegisterFileContextMenu(RegisterFileContextMenuContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        context.Register(
+            title: "Menu.PublishSite",
+            name: "publish-site",
+            intent: PublishSiteIntent,
+            icon: HackIcons.Vector(IconLibrary.Lucide, "globe"),
+            scope: FileMenuScope.Directory,
+            selection: MenuSelection.Single);
+    }
 
     /// <inheritdoc />
     public override bool SingleInstancePerUser => true;

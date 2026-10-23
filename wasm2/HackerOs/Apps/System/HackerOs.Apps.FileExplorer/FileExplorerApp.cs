@@ -1,4 +1,8 @@
 using HackerOs.App.Abstractions;
+using HackerOs.AppSdk.Blazor.Files;
+using HackerOs.AppSdk.Components;
+using HackerOs.AppSdk.Files;
+using HackerOs.AppSdk.Icons;
 
 namespace HackerOs.Apps.FileExplorer;
 
@@ -29,10 +33,43 @@ public sealed class FileExplorerApp : AppDefinition
 
     /// <inheritdoc />
     public override IReadOnlyList<string> Capabilities =>
-        [AppCapabilities.AppsLaunch, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite, AppCapabilities.DialogFileOpen, AppCapabilities.DialogFileSave, AppCapabilities.DialogFolderSelect, AppCapabilities.ClipboardRead, AppCapabilities.ClipboardWrite, AppCapabilities.NotificationsPost, AppCapabilities.FileAssociationsRead];
+        [AppCapabilities.AppsLaunch, AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite, AppCapabilities.FileSystemSystemRead, AppCapabilities.FileSystemSystemWrite, AppCapabilities.DialogFileOpen, AppCapabilities.DialogFileSave, AppCapabilities.DialogFolderSelect, AppCapabilities.ClipboardRead, AppCapabilities.ClipboardWrite, AppCapabilities.NotificationsPost, AppCapabilities.FileAssociationsRead, AppCapabilities.ShellContextMenu];
+
+    /// <summary>"Extract here" (ADR 0151 §8): the OS hands the paths of the archives with this intent.</summary>
+    public override IReadOnlyList<AppIntentDeclarationManifest> Intents => [new(FileExplorerMenuEntries.ExtractHereIntent)];
 
     /// <inheritdoc />
     public override IReadOnlyList<FileHandler> FileHandlers => [new("inode/directory", [], ["open"])];
+
+    /// <summary>
+    /// The OS file control and its dialogs (ADR 0148, ADR 0155): every app shows the explorer's
+    /// <c>HackFileView</c> and opens its "Open with", properties and conflict dialogs; the explorer
+    /// shows them itself.
+    /// </summary>
+    public override IReadOnlyList<AppComponent> Components =>
+    [
+        new(HackComponentContracts.FileView, typeof(ExplorerFileView)),
+        new(HackComponentContracts.FileDialogs, typeof(ExplorerFileDialogs))
+    ];
+
+    /// <summary>
+    /// Registers "Extract here" on <c>.zip</c> files, right after "Open", in the file menus of every
+    /// host: the explorer, the desktop, the file dialogs and any app showing <c>HackFileView</c>
+    /// (ADR 0151 §8). Run by the manifest generator at build, never at run time.
+    /// </summary>
+    /// <param name="context">Records the entries.</param>
+    [RegisterFileContextMenu]
+    public static void RegisterFileContextMenu(RegisterFileContextMenuContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        context.Register(
+            title: FileExplorerMenuEntries.ExtractHereTitle,
+            name: FileExplorerMenuEntries.ExtractHere,
+            intent: FileExplorerMenuEntries.ExtractHereIntent,
+            icon: HackIcons.Vector(IconLibrary.Lucide, "package-open"),
+            types: [".zip", "application/zip"],
+            after: HackFileMenuItems.Open);
+    }
 
     /// <inheritdoc />
     public override AppResourceProfileManifest Resources => new(

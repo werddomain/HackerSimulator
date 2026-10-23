@@ -379,6 +379,18 @@ public sealed class AppExecutionContextFactory
             context.UserAccounts = administration.UserAccounts;
         }
 
+        if (administration.ComponentProviders is not null)
+        {
+            // ADR 0156: who provides the file view and the file dialogs, set like the backup gateway.
+            context.ComponentProviderAdministration = administration.ComponentProviders;
+        }
+
+        if (administration.FileMenuEntries is not null)
+        {
+            // ADR 0159 §8: the entries apps added to the file menus, set like the backup gateway.
+            context.FileMenuEntryAdministration = administration.FileMenuEntries;
+        }
+
         if (_shellHostProvider is not null)
         {
             // ADR 0056 section 7: the shell is a child process of this one, with this instance's
@@ -419,7 +431,7 @@ public sealed class AppExecutionContextFactory
     {
         if (_administration is null)
         {
-            return new AdministrationGateways(null, null, null, null, null, null, null);
+            return new AdministrationGateways(null, null, null, null, null, null, null, null, null);
         }
 
         AdministratorGate gate = new(_administration.AuthenticationAgent, manifest, principal, isRootElevated, language);
@@ -430,7 +442,9 @@ public sealed class AppExecutionContextFactory
             new AppSystemPowerGateway(_administration.Power, capabilities, gate),
             new AppStorageDiagnosticsGateway(_administration.Storage, capabilities, _webDatabases),
             new AppSystemBackupGateway(_administration.Backup, capabilities, gate),
-            new AppUserAccountsGateway(_administration.Passwords, capabilities, gate));
+            new AppUserAccountsGateway(_administration.Passwords, capabilities, gate),
+            new AppComponentProviderAdministrationGateway(_administration.ComponentProviders, _administration.ApprovalPrompt, capabilities, gate),
+            new AppFileMenuEntryAdministrationGateway(_administration.FileMenuEntries, capabilities, language));
     }
 
     private sealed record AdministrationGateways(
@@ -440,7 +454,9 @@ public sealed class AppExecutionContextFactory
         AppSystemPowerGateway? SystemPower,
         AppStorageDiagnosticsGateway? StorageDiagnostics,
         AppSystemBackupGateway? SystemBackup,
-        AppUserAccountsGateway? UserAccounts);
+        AppUserAccountsGateway? UserAccounts,
+        AppComponentProviderAdministrationGateway? ComponentProviders,
+        AppFileMenuEntryAdministrationGateway? FileMenuEntries);
 
     private sealed class UnsupportedIntentGateway : IAppIntentGateway
     {

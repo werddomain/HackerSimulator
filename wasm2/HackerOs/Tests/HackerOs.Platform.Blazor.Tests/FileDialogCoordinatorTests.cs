@@ -36,6 +36,8 @@ public sealed class FileDialogCoordinatorTests
 
         OpenFileDialogPresentation activeOpen = Assert.IsType<OpenFileDialogPresentation>(coordinator.ActiveRequest);
         Assert.Same(context.FileSystem, activeOpen.FileSystem);
+        // ADR 0157: the dialog shows the OS file control with the requesting app's rights.
+        Assert.Same(context, activeOpen.Context);
         queuedCancellation.Cancel();
         Assert.Same(activeOpen, coordinator.ActiveRequest);
         Assert.Equal(FileDialogStatus.Cancelled, (await save).Status);

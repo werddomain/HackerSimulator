@@ -35,6 +35,11 @@
 }
 
 .window-content {
+    /* Placed explicitly: auto-placed, the content went to an implicit third row as soon as a
+       window-attached layer (.window-overlay, grid-row 2) was rendered, leaving an empty band under
+       the title bar of the OS dialogs. A chromeless host just leaves the first row empty. */
+    grid-column: 1;
+    grid-row: 2;
     min-width: 0;
     min-height: 0;
     overflow: auto;

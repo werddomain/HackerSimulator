@@ -151,6 +151,11 @@
                 }
             </MudTabPanel>
 
+            @* ADR 0160 §8: icon size, layout and sort of the desktop (~/.config/hackeros/desktop.config). *@
+            <MudTabPanel Text="@L["Tab.Desktop"]" Icon="@Icons.Material.Filled.DesktopWindows">
+                <DesktopPanel />
+            </MudTabPanel>
+
             @* ADR 0105: high contrast, text size and "reduce animations" (which replaced the Appearance switch). *@
             <MudTabPanel Text="@L["Tab.Accessibility"]" Icon="@Icons.Material.Filled.Accessibility">
                 <AccessibilityPanel />
@@ -183,6 +188,14 @@
 
             <MudTabPanel Text="@L["Tab.InstalledApps"]" Icon="@Icons.Material.Filled.Apps">
                 <InstalledAppsPanel />
+            </MudTabPanel>
+
+            <MudTabPanel Text="@L["Tab.OsComponents"]" Icon="@Icons.Material.Filled.Widgets">
+                <OsComponentsPanel />
+            </MudTabPanel>
+
+            <MudTabPanel Text="@L["Tab.FileMenus"]" Icon="@Icons.Material.Filled.MenuOpen">
+                <FileMenuEntriesPanel />
             </MudTabPanel>
 
             <MudTabPanel Text="@L["Tab.ServerConnection"]" Icon="@Icons.Material.Filled.Cloud">

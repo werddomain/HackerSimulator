@@ -10,8 +10,8 @@ namespace HackerOs.Apps.FileExplorer;
 
 /// <summary>
 /// The one implementation of zip compress/extract against a virtual filesystem — shared between
-/// <c>FileExplorerWindow</c>'s toolbar (Compress/Extract) and <see cref="ZipFileContextMenuProvider"/>'s
-/// "UnZip Here…" context-menu item (<c>INT-003</c>), so there is exactly one unzip implementation, not two.
+/// <c>FileExplorerWindow</c>'s toolbar (Compress/Extract) and the "UnZip Here…" entry of its file menu,
+/// so there is exactly one unzip implementation, not two.
 /// </summary>
 internal static class FileExplorerZipService
 {
