@@ -38,11 +38,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.402" PrivateAssets="All" />
     <!-- EXT-WIN-014: tracks the public surface of each exported package across releases;
          additions/removals must be reflected in PublicAPI.Shipped.txt / PublicAPI.Unshipped.txt
          in the project's own directory, or the build fails (RS0016/RS0017). -->
-    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" PrivateAssets="All" />
     <None Include="$(MSBuildThisFileDirectory)..\..\..\LICENSE.md" Pack="true" PackagePath="" Visible="false" />
     <None Include="README.md" Pack="true" PackagePath="" Condition="Exists('README.md')" Visible="false" />
   </ItemGroup>

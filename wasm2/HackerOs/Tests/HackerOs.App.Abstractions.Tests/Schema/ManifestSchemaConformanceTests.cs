@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+using System.Text.Json;
 using Json.Schema;
 
 namespace HackerOs.App.Abstractions.Tests.Schema;
@@ -46,7 +46,7 @@ public sealed class ManifestSchemaConformanceTests
     [MemberData(nameof(ValidFixtureNames))]
     public void Schema_accepts_every_valid_fixture(string fixtureName)
     {
-        JsonNode? instance = LoadFixture(fixtureName);
+        JsonElement instance = LoadFixture(fixtureName);
 
         EvaluationResults result = Schema.Evaluate(instance, new EvaluationOptions
         {
@@ -60,7 +60,7 @@ public sealed class ManifestSchemaConformanceTests
     [MemberData(nameof(InvalidFixtureNames))]
     public void Schema_rejects_every_invalid_fixture(string fixtureName)
     {
-        JsonNode? instance = LoadFixture(fixtureName);
+        JsonElement instance = LoadFixture(fixtureName);
 
         EvaluationResults result = Schema.Evaluate(instance, new EvaluationOptions
         {
@@ -70,17 +70,19 @@ public sealed class ManifestSchemaConformanceTests
         Assert.False(result.IsValid, $"Expected fixture '{fixtureName}' to be rejected by the schema.");
     }
 
-    private static JsonNode? LoadFixture(string fixtureName)
+    private static JsonElement LoadFixture(string fixtureName)
     {
         string path = Path.Combine(FixturesDirectory.Value, fixtureName);
         string json = File.ReadAllText(path);
-        return JsonNode.Parse(json);
+        // JsonSchema.Net 8+ evaluates JsonElement instances; Clone() detaches it from the disposed document.
+        using JsonDocument document = JsonDocument.Parse(json);
+        return document.RootElement.Clone();
     }
 
     private static string DescribeFailure(string fixtureName, EvaluationResults result)
     {
-        IEnumerable<string> errors = result.Details
-            .Where(detail => detail.HasErrors)
+        IEnumerable<string> errors = (result.Details ?? [])
+            .Where(detail => detail.Errors is { Count: > 0 })
             .SelectMany(detail => detail.Errors!.Select(error => $"{detail.InstanceLocation}: {error.Value}"));
         return $"Fixture '{fixtureName}' failed schema validation: {string.Join("; ", errors)}";
     }

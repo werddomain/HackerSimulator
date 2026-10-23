@@ -204,3 +204,19 @@ or a `string?` property when the attribute must disappear in some states
 `aria-expanded`). This applies to `aria-checked`, `aria-selected`,
 `aria-pressed`, `aria-expanded`, `aria-invalid`, `aria-busy`,
 `aria-multiselectable`, and every other `true`/`false` ARIA state.
+
+## 9. An app that won't open after a rebuild is a stale page, not a broken build
+
+Lazy-loaded apps fetch `_framework/HackerOs.Apps.<Name>.<fingerprint>.wasm`
+with the fingerprint the page's `dotnet.js` knew at boot. Rebuild while a tab
+stays open (F5 in Visual Studio, hot reload, a deployment) and that file is
+gone or has another hash: the launch fails with
+`download '…/HackerOs.Apps.Settings.yesfevpgxl.wasm' failed 0 TypeError: Failed to fetch`
+(an SRI integrity error in the console). The build itself is fine.
+
+**Since ADR 0162** the OS notices it: the failed launch says "HackerOS was
+updated while it was running", and the "A HackerOS update is ready" notice
+restarts on the new build. **By hand:** stop the app, start it again, then
+Ctrl+F5 in the tab (or F12 ▸ Application ▸ Clear site data). With
+`dotnet run`, restart the server after rebuilding: a dev server left running
+serves a mix of both builds and the page fails at boot.

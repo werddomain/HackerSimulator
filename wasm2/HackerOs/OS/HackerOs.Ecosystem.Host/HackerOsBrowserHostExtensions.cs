@@ -77,9 +77,14 @@ public static partial class HackerOsBrowserHostExtensions
 
         builder.Services.AddSingleton<IEcosystemHostEnvironment, WebAssemblyEcosystemHostEnvironment>();
         builder.Services.AddSingleton<IBuildKnownAssemblyTransport, WebAssemblyLazyAssemblyTransport>();
+        // ADR 0162: an app asset that fails to load after a rebuild or a deployment means the OS
+        // was updated under the page; the host then offers a restart instead of a dead launch.
+        builder.Services.AddSingleton<IHostBuildProbe, BrowserHostBuildProbe>();
+        builder.Services.AddSingleton(provider => new HostBuildUpdateMonitor(provider.GetRequiredService<IHostBuildProbe>()));
         builder.Services.AddSingleton(provider => new BuildKnownAssemblyLoaderRegistry(
             apps.LazyAssemblyNames,
-            provider.GetRequiredService<IBuildKnownAssemblyTransport>()));
+            provider.GetRequiredService<IBuildKnownAssemblyTransport>(),
+            provider.GetRequiredService<HostBuildUpdateMonitor>()));
         builder.Services.AddSingleton(provider => new BuildKnownLazyAppDescriptorRegistry(
             apps.Catalog,
             provider.GetRequiredService<BuildKnownAssemblyLoaderRegistry>()));
