@@ -43,6 +43,10 @@ ligne interdits, manifestes régénérés, frontière du SDK) : voir
 Le workflow de vérification installe explicitement `ripgrep` avant le scan
 supplémentaire des sources Razor ; cet outil n'est pas garanti sur les runners
 GitHub Ubuntu.
+Ce scan exclut le document de démarrage de l'hôte et autorise uniquement les
+trois lignes existantes de références de scripts ASP.Hack, à leurs chemins
+exacts. Les autres lignes de ces vues et toutes les références de scripts
+des composants ordinaires restent contrôlées.
 
 Les constantes publiques des fixtures utilisent des échappements `\n` explicites :
 les chaînes brutes multilignes héritent des fins de ligne du checkout et produisent

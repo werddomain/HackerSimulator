@@ -61,13 +61,27 @@ jobs:
         working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
         shell: pwsh
         run: |
-          $matches = rg --pcre2 -n '<style|<script|\sstyle\s*=|(?<!@)\bon[a-z][a-z0-9_-]*\s*=' . -g '*.razor' -g '!Tests/RazorAssetValidation.Invalid/**'
-          if ($LASTEXITCODE -eq 0) {
-            $matches
+          # Only the bootstrap host is exempt. Allow these exact existing ASP.Hack
+          # script links, while still scanning every other line in those views.
+          $sourceMatches = rg --pcre2 -n '<style|<script|\sstyle\s*=|(?<!@)\bon[a-z][a-z0-9_-]*\s*=' . -g '*.razor' -g '!Tests/RazorAssetValidation.Invalid/**' -g '!test/test/Components/App.razor'
+          $scanExitCode = $LASTEXITCODE
+          if ($scanExitCode -gt 1) { throw 'Razor source scan failed.' }
+          $allowedScriptLines = @{
+            './Apps/Samples/HackerOs.Samples.Intranet/Views/Notes/Index.razor' = '<script src="@Url.Content("~/js/notes.js")"></script>'
+            './Tests/HackerOs.AppSdk.Web.Tests/Views/Pages/Index.razor' = '<script src="@Url.Content("~/js/notes.js")"></script>'
+            './Tests/HackerOs.AppSdk.Web.Tests/Views/Cshtml/FromRazor.razor' = '<HackSection Name="Scripts"><script src="/js/from-razor.js"></script></HackSection>'
+          }
+          $violations = @($sourceMatches | Where-Object {
+            $sourceMatch = [regex]::Match($_, '^(?<path>.*?\.razor):\d+:(?<markup>.*)$')
+            $sourcePath = $sourceMatch.Groups['path'].Value.Replace('\', '/')
+            -not ($sourceMatch.Success -and $allowedScriptLines.ContainsKey($sourcePath) -and
+              $allowedScriptLines[$sourcePath] -ceq $sourceMatch.Groups['markup'].Value.Trim())
+          })
+          if ($violations.Count -gt 0) {
+            $violations
             throw 'Forbidden inline Razor asset markup was found.'
           }
-          if ($LASTEXITCODE -eq 1) { exit 0 }
-          throw 'Razor source scan failed.'
+          exit 0
 
       - name: Install Playwright Chromium
         run: pwsh wasm2/HackerOs/Tests/HackerOs.E2E.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
