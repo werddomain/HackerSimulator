@@ -11,6 +11,12 @@ namespace HackerOs.Apps.Terminal;
 public sealed class TerminalApp : AppDefinition
 {
     /// <inheritdoc />
+    public override IReadOnlyList<string> Icons => ["icons/app.svg"];
+
+    /// <inheritdoc />
+    public override IReadOnlyList<AssetManifest> Assets =>
+        [new("icons/app.svg", AssetKind.Image, new string('0', 64), "app-icon")];
+    /// <inheritdoc />
     public override string Id => "org.hackeros.terminal";
 
     /// <inheritdoc />
@@ -21,6 +27,9 @@ public sealed class TerminalApp : AppDefinition
 
     /// <inheritdoc />
     public override Type EntryPoint => typeof(TerminalWindow);
+
+    /// <inheritdoc />
+    public override Type? MobileEntryPoint => typeof(TerminalWindow);
 
     /// <inheritdoc />
     public override string PublisherId => "pub.hackeros";

@@ -80,6 +80,7 @@
                     }
                     <button type="submit" disabled="@IsSubmitting">@L["Setup.Submit"]</button>
                 </form>
+                <ProjectInformation />
             </section>
             break;
         case EcosystemHostView.Login:
@@ -102,6 +103,7 @@
                     }
                     <button type="submit" disabled="@IsSubmitting">@L["Login.Submit"]</button>
                 </form>
+                <ProjectInformation />
             </section>
             break;
         case EcosystemHostView.LoginProgress:
@@ -129,6 +131,7 @@
                 {
                     <button type="button" @onclick="InitializeHostAsync">@L["Recovery.Retry"]</button>
                 }
+                <ProjectInformation ShowLegacyNotice="false" />
             </section>
             break;
             case EcosystemHostView.Fatal:
@@ -137,6 +140,7 @@
                     <h1 id="fatal-title">@L["Fatal.Title"]</h1>
                     <p>@L["Fatal.Recorded"]</p>
                     <code>@L["Correlation", State.FatalCorrelationId?.ToString() ?? string.Empty]</code>
+                    <ProjectInformation ShowLegacyNotice="false" />
                 </section>
                 break;
         }
@@ -151,6 +155,7 @@
                 {
                     <pre class="fatal-details">@exception.ToString()</pre>
                 }
+                <ProjectInformation ShowLegacyNotice="false" />
             </section>
         </ErrorContent>
     </HostErrorBoundary>

@@ -11,6 +11,7 @@
     {
         <HackFileView InitialDirectory="@_desktopDirectory"
                       Mode="HackFileViewMode.Desktop"
+                      Filter="IsVisibleDesktopItem"
                       DesktopOptions="_settings.Options"
                       DesktopPositions="_settings.Positions"
                       DesktopPositionsChanged="SavePositionsAsync"

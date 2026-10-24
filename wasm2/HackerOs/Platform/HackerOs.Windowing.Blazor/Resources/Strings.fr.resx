@@ -37,7 +37,7 @@
     <value>Menu de la fenêtre</value>
   </data>
   <data name="Chrome.WindowMenuHint" xml:space="preserve">
-    <value>Menu de la fenêtre (Alt+Espace, Alt+F3)</value>
+    <value>Clic droit pour le menu de la fenêtre (Alt+Espace, Alt+F3)</value>
   </data>
   <data name="Desktop.OpenWindows" xml:space="preserve">
     <value>Fenêtres ouvertes</value>

@@ -11,6 +11,23 @@ namespace HackerOs.Platform.Blazor.Tests;
 /// <summary>Verifies successful app processes are represented by desktop and taskbar windows.</summary>
 public sealed class WindowLaunchCoordinatorTests
 {
+    [Theory]
+    [InlineData("icons/app.svg", "_content/Test/icons/app.svg")]
+    [InlineData("icons/my icon.svg", "_content/Test/icons/my%20icon.svg")]
+    public async Task A_declared_icon_is_resolved_under_the_app_static_assets(string path, string expected)
+    {
+        WindowRuntime runtime = new(new WindowBounds(0, 0, 1280, 720));
+        WindowLaunchCoordinator coordinator = new(runtime);
+        AppManifest manifest = CreateManifest() with
+        {
+            Presentation = new PresentationManifest("test", AppLaunchVisibility.Visible, [path, "icons/large.svg"]),
+        };
+
+        await coordinator.PresentAsync(manifest, CreateProcess());
+
+        Assert.Equal(expected, Assert.Single(runtime.Windows).IconAssetPath);
+    }
+
     [Fact]
     public async Task Present_creates_window_for_successful_window_launch()
     {

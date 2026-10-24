@@ -23,3 +23,6 @@ static HackerOs.Apps.ErrorLogViewer.LogRow.operator !=(HackerOs.Apps.ErrorLogVie
 static HackerOs.Apps.ErrorLogViewer.LogRow.operator ==(HackerOs.Apps.ErrorLogViewer.LogRow? left, HackerOs.Apps.ErrorLogViewer.LogRow? right) -> bool
 static HackerOs.Apps.ErrorLogViewer.LogSource.operator !=(HackerOs.Apps.ErrorLogViewer.LogSource? left, HackerOs.Apps.ErrorLogViewer.LogSource? right) -> bool
 static HackerOs.Apps.ErrorLogViewer.LogSource.operator ==(HackerOs.Apps.ErrorLogViewer.LogSource? left, HackerOs.Apps.ErrorLogViewer.LogSource? right) -> bool
+override HackerOs.Apps.ErrorLogViewer.ErrorLogViewerApp.Icons.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Apps.ErrorLogViewer.ErrorLogViewerApp.Assets.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AssetManifest!>!
+override HackerOs.Apps.ErrorLogViewer.ErrorLogViewerApp.MobileEntryPoint.get -> System.Type?

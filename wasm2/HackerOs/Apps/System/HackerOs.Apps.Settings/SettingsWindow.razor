@@ -7,7 +7,7 @@
 @using MudBlazor
 @inherits WindowAppBase
 
-<div class="settings-window-container">
+<div class="settings-window-container" aria-busy="@(_isSavingAppearance || _savingMobile ? "true" : "false")">
     <header class="settings-header">
         <span class="settings-header-title">@L["Header.Title"]</span>
     </header>
@@ -51,7 +51,7 @@
                             <button type="button"
                                     class="@ThemeOptionClass(theme.Id, _appearanceSettings.DesktopThemeId)"
                                     aria-pressed="@(theme.Id == _appearanceSettings.DesktopThemeId ? "true" : "false")"
-                                    disabled="@IsBlocked(DesktopThemeKey)"
+                                    disabled="@(_appearance is null || _isSavingAppearance || IsBlocked(DesktopThemeKey))"
                                     @onclick="() => ChangeDesktopTheme(theme.Id)">
                                 <ThemePreview ThemeId="@theme.Id"
                                               AccentId="@_appearanceSettings.AccentId"
@@ -65,7 +65,7 @@
                                 <button type="button"
                                         class="@ThemeOptionClass(theme.Id, _appearanceSettings.DesktopThemeId)"
                                         aria-pressed="@(theme.Id == _appearanceSettings.DesktopThemeId ? "true" : "false")"
-                                        disabled="@IsBlocked(DesktopThemeKey)"
+                                        disabled="@(_appearance is null || _isSavingAppearance || IsBlocked(DesktopThemeKey))"
                                         @onclick="() => ChangeDesktopTheme(theme.Id)">
                                     <ThemePreview ThemeId="@ResolvedTheme.Resolve(theme.Id, ThemePlatform.Desktop, _userThemes.Themes).BaseThemeId"
                                                   Tokens="@theme.Tokens"
@@ -88,7 +88,7 @@
                             <button type="button"
                                     class="@ThemeOptionClass(theme.Id, _appearanceSettings.MobileThemeId)"
                                     aria-pressed="@(theme.Id == _appearanceSettings.MobileThemeId ? "true" : "false")"
-                                    disabled="@IsBlocked(MobileThemeKey)"
+                                    disabled="@(_appearance is null || _isSavingAppearance || IsBlocked(MobileThemeKey))"
                                     @onclick="() => ChangeMobileTheme(theme.Id)">
                                 <ThemePreview ThemeId="@theme.Id"
                                               AccentId="@_appearanceSettings.AccentId"
@@ -102,7 +102,7 @@
                                 <button type="button"
                                         class="@ThemeOptionClass(theme.Id, _appearanceSettings.MobileThemeId)"
                                         aria-pressed="@(theme.Id == _appearanceSettings.MobileThemeId ? "true" : "false")"
-                                        disabled="@IsBlocked(MobileThemeKey)"
+                                        disabled="@(_appearance is null || _isSavingAppearance || IsBlocked(MobileThemeKey))"
                                         @onclick="() => ChangeMobileTheme(theme.Id)">
                                     <ThemePreview ThemeId="@ResolvedTheme.Resolve(theme.Id, ThemePlatform.Mobile, _userThemes.Themes).BaseThemeId"
                                                   Tokens="@theme.Tokens"
@@ -140,7 +140,7 @@
                                 <button type="button"
                                         class="@AccentOptionClass(accentId)"
                                         aria-pressed="@(accentId == _appearanceSettings.AccentId ? "true" : "false")"
-                                        disabled="@IsBlocked(AccentKey)"
+                                        disabled="@(_appearance is null || _isSavingAppearance || IsBlocked(AccentKey))"
                                         @onclick="() => ChangeAccent(accentId)">
                                     <span class="accent-swatch" aria-hidden="true"></span>
                                     @accentId
@@ -149,6 +149,17 @@
                         </div>
                     </div>
                 }
+                <div class="setting-group">
+                    <h4>@L["Mobile.HelpersTitle"]</h4>
+                    <p class="setting-desc">@L["Mobile.HelpersDescription"]</p>
+                    <label for="mobile-mouse-helpers">
+                        <input id="mobile-mouse-helpers" type="checkbox" checked="@_mobileMouseHelpers"
+                               disabled="@(_savingMobile || _mobilePreferences is null || (_targetLayer == SettingLayer.User && _mobilePreferences.IsLocked("mouseHelpers")))"
+                               @onchange="ChangeMobileMouseHelpersAsync" />
+                        @L["Mobile.HelpersLabel"]
+                    </label>
+                    @if (_mobileMessage is not null) { <p class="setting-desc" role="status">@_mobileMessage</p> }
+                </div>
             </MudTabPanel>
 
             @* ADR 0160 §8: icon size, layout and sort of the desktop (~/.config/hackeros/desktop.config). *@
@@ -354,7 +365,8 @@
 
             <MudTabPanel Text="@L["Tab.About"]" Icon="@Icons.Material.Filled.Info">
                 <div class="system-info-box">
-                    <div class="info-line"><span>@L["About.OsVersion"]</span> <strong>HackerOS 1.0 (Blazor WASM v3)</strong></div>
+                    <div class="info-line"><span>@L["About.OsVersion"]</span> <strong>HackerOS @HackerOsSdk.Version</strong></div>
+                    <div class="info-line"><span>@L["About.Repository"]</span> <a href="https://github.com/Kazo-ca/HackerOs" target="_blank" rel="noopener noreferrer">https://github.com/Kazo-ca/HackerOs</a></div>
                     <div class="info-line"><span>@L["About.Runtime"]</span> <strong>.NET 10.0 WebAssembly</strong></div>
                     <div class="info-line"><span>@L["About.Architecture"]</span> <strong>@L["About.ArchitectureValue"]</strong></div>
                     <div class="info-line"><span>@L["About.UserId"]</span> <strong>@(AppContext?.UserId ?? "guest")</strong></div>

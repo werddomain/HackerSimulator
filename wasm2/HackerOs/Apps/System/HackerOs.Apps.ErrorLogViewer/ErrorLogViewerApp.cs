@@ -10,6 +10,12 @@ namespace HackerOs.Apps.ErrorLogViewer;
 public sealed class ErrorLogViewerApp : AppDefinition
 {
     /// <inheritdoc />
+    public override IReadOnlyList<string> Icons => ["icons/app.svg"];
+
+    /// <inheritdoc />
+    public override IReadOnlyList<AssetManifest> Assets =>
+        [new("icons/app.svg", AssetKind.Image, new string('0', 64), "app-icon")];
+    /// <inheritdoc />
     public override string Id => "org.hackeros.error-log-viewer";
 
     /// <inheritdoc />
@@ -20,6 +26,9 @@ public sealed class ErrorLogViewerApp : AppDefinition
 
     /// <inheritdoc />
     public override Type EntryPoint => typeof(ErrorLogViewerWindow);
+
+    /// <inheritdoc />
+    public override Type? MobileEntryPoint => typeof(ErrorLogViewerWindow);
 
     /// <inheritdoc />
     public override string PublisherId => "pub.hackeros";

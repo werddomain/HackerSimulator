@@ -10,6 +10,12 @@ namespace HackerOs.Apps.Browser;
 public sealed class BrowserApp : AppDefinition
 {
     /// <inheritdoc />
+    public override IReadOnlyList<string> Icons => ["icons/app.svg"];
+
+    /// <inheritdoc />
+    public override IReadOnlyList<AssetManifest> Assets =>
+        [new("icons/app.svg", AssetKind.Image, new string('0', 64), "app-icon")];
+    /// <inheritdoc />
     public override string Id => "org.hackeros.browser";
 
     /// <inheritdoc />
@@ -20,6 +26,9 @@ public sealed class BrowserApp : AppDefinition
 
     /// <inheritdoc />
     public override Type EntryPoint => typeof(BrowserWindow);
+
+    /// <inheritdoc />
+    public override Type? MobileEntryPoint => typeof(BrowserWindow);
 
     /// <inheritdoc />
     public override string PublisherId => "pub.hackeros";

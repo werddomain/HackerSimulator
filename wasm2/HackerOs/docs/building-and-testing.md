@@ -7,6 +7,9 @@ et exécuter les tests, y compris dans un conteneur Linux sans outils
 préinstallés. Pour la structure du code, voir
 [`project-overview.md`](project-overview.md).
 
+Pour publier ensemble WASM à la racine et legacy sous `/legacy/`, voir
+[le guide GitHub Pages](github-pages-deployment.md) (builds et caches indépendants).
+
 ## Prérequis
 
 - **SDK .NET 10** (`global.json` : `10.0.100`, `rollForward: latestFeature`).
@@ -20,6 +23,8 @@ préinstallés. Pour la structure du code, voir
 - **Node.js** seulement pour régénérer le bundle xterm.js
   ([`terminal-emulator.md`](terminal-emulator.md)) ou importer des icônes
   (`Tools/icon-import`). Le build .NET n'en a pas besoin.
+  La publication combinée du legacy utilise séparément Node 20 et npm ; voir
+  [GitHub Pages](github-pages-deployment.md).
 - **Playwright et Chromium** seulement pour les suites E2E.
 
 ## Compiler
@@ -290,7 +295,7 @@ dotnet test HackerOs.sln
 | `Tests/HackerOs.Tools.ManifestGenerator.Tests` | Builds MSBuild réels des projets `Tests/ManifestGenerator.Fixtures.*` : génération, agrégation, frontière du SDK. Plus lents. |
 | `Tests/HackerOs.E2E.Tests`, `HackerOs.UI.E2E.Tests`, `HackerOs.Pwa.E2E.Tests` | Playwright contre l'OS lancé dans Chromium. Pièges connus : [`old/common-pitfalls.md`](old/common-pitfalls.md) §4 à §6. |
 | `Tests/HackerOs.Templates.E2E.Tests` | Modèles `dotnet new` (ADR 0098 §6) : empaquette tout avec `build/pack-local.sh` (ou prend le flux de `HACKEROS_LOCAL_FEED`), génère et compile chaque modèle hors du dépôt avec un cache NuGet isolé, puis lance l'hôte généré dans Chromium avec une app fenêtrée et une commande générées, et un autre qui vérifie qu'un hôte référençant les apps compilées contre les SDK 1.0.0 et 1.1.0 ne se construit pas (`HOSAPP0021`), puis qu'avec l'app compilée contre le SDK 2.0.0 il démarre, montre `HackFileView` dans sa fenêtre et exécute sa commande (ADR 0114, ADR 0132 §1, ADR 0161 §3). |
-| `Tests/HackerOs.SdkCompatibility.Tests` | Apps compilées contre les SDK 1.0.0, 1.1.0 et 2.0.0, gardées dans `Tests/fixtures/sdk-compat` (ADR 0114 §4, ADR 0132 §1, ADR 0161 §3) : le catalogue refuse les apps 1.x (`catalog.sdk.incompatible`) et admet l'app 2.0 ; pour celle-ci, références, compilation JIT de chaque méthode et exécution de la commande contre le SDK courant (2.0.0). Sans navigateur, lancé par `dotnet test HackerOs.sln`. |
+| `Tests/HackerOs.SdkCompatibility.Tests` | Apps compilées contre les SDK 1.0.0, 1.1.0 et 2.0.0, gardées dans `Tests/fixtures/sdk-compat` (ADR 0114 §4, ADR 0132 §1, ADR 0161 §3) : le catalogue refuse les apps 1.x (`catalog.sdk.incompatible`) et admet l'app 2.0 ; pour celle-ci, références, compilation JIT de chaque méthode et exécution de la commande contre le SDK courant (2.0.3). Sans navigateur, lancé par `dotnet test HackerOs.sln`. |
 | `Tests/HackerOs.HostSmoke.Tests` | Démarrage d'un hôte déjà lancé, piloté par `build/verify-hosts.sh` (voir plus haut) ; « skipped » sans `HACKEROS_SMOKE_URL`. |
 
 Tester un seul projet ou un seul test :

@@ -247,3 +247,6 @@ static HackerOs.Apps.Browser.Storage.FormHistoryDocument.operator !=(HackerOs.Ap
 static HackerOs.Apps.Browser.Storage.FormHistoryDocument.operator ==(HackerOs.Apps.Browser.Storage.FormHistoryDocument? left, HackerOs.Apps.Browser.Storage.FormHistoryDocument? right) -> bool
 static HackerOs.Apps.Browser.Storage.FormHistoryEntry.operator !=(HackerOs.Apps.Browser.Storage.FormHistoryEntry? left, HackerOs.Apps.Browser.Storage.FormHistoryEntry? right) -> bool
 static HackerOs.Apps.Browser.Storage.FormHistoryEntry.operator ==(HackerOs.Apps.Browser.Storage.FormHistoryEntry? left, HackerOs.Apps.Browser.Storage.FormHistoryEntry? right) -> bool
+override HackerOs.Apps.Browser.BrowserApp.Icons.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Apps.Browser.BrowserApp.Assets.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AssetManifest!>!
+override HackerOs.Apps.Browser.BrowserApp.MobileEntryPoint.get -> System.Type?

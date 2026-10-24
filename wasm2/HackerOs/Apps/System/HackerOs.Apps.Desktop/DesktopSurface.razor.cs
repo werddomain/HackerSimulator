@@ -41,6 +41,9 @@ public partial class DesktopSurface : IAsyncDisposable
 
     private IStringLocalizer<Strings> L => _localizer ??= AppContext.GetLocalizer<Strings>();
 
+    // Dot directories hold desktop metadata, including the mobile layout, rather than visible icons.
+    private static bool IsVisibleDesktopItem(HackFileViewItem item) => !item.Name.StartsWith('.');
+
     /// <inheritdoc />
     /// <remarks>
     /// Reads the settings before the view is shown, so the first render places the icons where they

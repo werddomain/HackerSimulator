@@ -14,6 +14,12 @@ namespace HackerOs.Apps.FileExplorer;
 public sealed class FileExplorerApp : AppDefinition
 {
     /// <inheritdoc />
+    public override IReadOnlyList<string> Icons => ["icons/app.svg"];
+
+    /// <inheritdoc />
+    public override IReadOnlyList<AssetManifest> Assets =>
+        [new("icons/app.svg", AssetKind.Image, new string('0', 64), "app-icon")];
+    /// <inheritdoc />
     public override string Id => "org.hackeros.file-explorer";
 
     /// <inheritdoc />
@@ -24,6 +30,9 @@ public sealed class FileExplorerApp : AppDefinition
 
     /// <inheritdoc />
     public override Type EntryPoint => typeof(FileExplorerWindow);
+
+    /// <inheritdoc />
+    public override Type? MobileEntryPoint => typeof(FileExplorerWindow);
 
     /// <inheritdoc />
     public override string PublisherId => "pub.hackeros";

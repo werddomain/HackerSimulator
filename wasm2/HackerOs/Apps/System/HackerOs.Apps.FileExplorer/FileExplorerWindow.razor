@@ -64,6 +64,11 @@
         </div>
 
         <div class="view-toggle">
+            <button type="button" class="view-btn @(_showHiddenFilesAndFolders ? "active" : "")"
+                    aria-label="@L["View.ShowHidden"]" title="@L["View.ShowHidden"]"
+                    aria-pressed="@(_showHiddenFilesAndFolders ? "true" : "false")" @onclick="ToggleHiddenFiles">
+                <HackerIcon Library="IconLibrary.Lucide" Name="eye" Size="16" />
+            </button>
             <button class="view-btn @(_state.ViewMode == FileViewMode.Details ? "active" : "")" @onclick="() => SetViewMode(FileViewMode.Details)" title="@L["View.Details"]">
                 <HackerIcon Library="IconLibrary.Lucide" Name="list" Size="16" />
             </button>
@@ -208,6 +213,7 @@
     private BrowserFileDownloader? _downloader;
     private Func<HackFileViewItem, bool> _searchFilter = default!;
     private bool _showTrash;
+    private bool _showHiddenFilesAndFolders;
     private TrashView? _trashView;
     private VirtualPath _homeDirectory;
 
@@ -440,8 +446,16 @@
     private void OnSelectionChanged(IReadOnlyList<HackFileViewItem> selection) => StateHasChanged();
 
     private bool MatchesSearchQuery(HackFileViewItem item) =>
-        string.IsNullOrWhiteSpace(_state.SearchQuery) ||
-        item.Name.Contains(_state.SearchQuery, StringComparison.OrdinalIgnoreCase);
+        (_showHiddenFilesAndFolders || !item.Name.StartsWith('.')) &&
+        (string.IsNullOrWhiteSpace(_state.SearchQuery) ||
+        item.Name.Contains(_state.SearchQuery, StringComparison.OrdinalIgnoreCase));
+
+    // Reuse the provider's filter contract: toggling never reads or modifies the hidden files.
+    private void ToggleHiddenFiles()
+    {
+        _showHiddenFilesAndFolders = !_showHiddenFilesAndFolders;
+        _files?.RefreshFilter();
+    }
 
     private void OnSearchQueryChanged() => _files?.RefreshFilter();
 

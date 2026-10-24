@@ -176,6 +176,12 @@ en affichant le contrôle d'une autre.
 identifiants de `HackFileMenuItems` (`open`, `cut`, `paste`, `rename`,
 `delete`, `properties`…). Tout s'exécute avec les droits de l'hôte.
 
+Depuis l'ADR 0165, la fenêtre de l'explorateur combine sa recherche avec une
+commande **Afficher les fichiers et dossiers cachés**, désactivée par défaut :
+les noms commençant par un point sont masqués. Ce filtre s'applique aussi aux
+descendants déjà chargés de l'arbre et à leur navigation clavier. La configuration
+de l'accueil mobile est décrite dans [mobile-home-screen.md](mobile-home-screen.md).
+
 Un fournisseur du contrôle (l'explorateur, ou l'app tierce choisie par
 l'administrateur) **pose `HackMenuDefinition.FileMenu`** (`HackFileMenuContext` :
 portée, éléments, dossier affiché) sur chaque menu de fichiers qu'il ouvre :

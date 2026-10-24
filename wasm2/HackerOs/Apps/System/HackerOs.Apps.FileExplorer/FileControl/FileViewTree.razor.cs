@@ -58,9 +58,11 @@ public partial class FileViewTree
         return result;
     }
 
-    private static void Flatten(IReadOnlyList<FileViewTreeNodeState> nodes, List<FileViewTreeNodeState> result)
+    private void Flatten(IReadOnlyList<FileViewTreeNodeState> nodes, List<FileViewTreeNodeState> result)
     {
-        foreach (FileViewTreeNodeState node in nodes)
+        // Keep keyboard navigation aligned with the rendered tree, including cached descendants
+        // when the host toggles hidden files or changes its search filter.
+        foreach (FileViewTreeNodeState node in nodes.Where(node => Owner.Filter?.Invoke(node.Item) != false))
         {
             result.Add(node);
             if (node.Item.IsDirectory && node.IsExpanded && node.Children is not null)

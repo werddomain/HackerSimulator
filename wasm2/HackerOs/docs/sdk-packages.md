@@ -18,7 +18,7 @@ empreintes des ressources, ADR 0098 §3 à §5) sont décrites dans
 
 ## Version unique
 
-- `build/Versions.props` définit `HackerOsVersion` (aujourd'hui `2.0.0`, publiée par le chantier `desk/6-sdk-2`),
+- `build/Versions.props` définit `HackerOsVersion` (aujourd'hui `2.0.3`, publication Pages de l'ADR 0167),
   importé par `Directory.Build.props` : chaque projet de la solution porte ce
   `Version`.
 - Avant le gel : `0.9.0-preview.<n>`. Depuis le gel du SDK 1.0 (chantier

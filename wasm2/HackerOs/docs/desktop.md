@@ -6,6 +6,10 @@ Les décisions sont dans l'[ADR 0152](adr/0152-desktop-icons.md) et
 l'[ADR 0160](adr/0160-desktop-implementation-adjustments.md) ; ce document
 décrit le code livré.
 
+Depuis l'ADR 0166, le bureau masque les noms commençant par un point ;
+`~/Desktop/.mobile/layout.conf` contient la disposition mobile et ne crée
+aucune icône sur le bureau. L'explorateur peut révéler ce dossier caché.
+
 ## Objet
 
 Le fond du bureau montre les fichiers de `~/Desktop` en grille d'icônes, avec

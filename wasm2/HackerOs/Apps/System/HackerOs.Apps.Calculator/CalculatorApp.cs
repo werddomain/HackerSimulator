@@ -10,6 +10,12 @@ namespace HackerOs.Apps.Calculator;
 public sealed class CalculatorApp : AppDefinition
 {
     /// <inheritdoc />
+    public override IReadOnlyList<string> Icons => ["icons/app.svg"];
+
+    /// <inheritdoc />
+    public override IReadOnlyList<AssetManifest> Assets =>
+        [new("icons/app.svg", AssetKind.Image, new string('0', 64), "app-icon")];
+    /// <inheritdoc />
     public override string Id => "org.hackeros.calculator";
 
     /// <inheritdoc />
@@ -20,6 +26,9 @@ public sealed class CalculatorApp : AppDefinition
 
     /// <inheritdoc />
     public override Type EntryPoint => typeof(CalculatorWindow);
+
+    /// <inheritdoc />
+    public override Type? MobileEntryPoint => typeof(CalculatorWindow);
 
     /// <inheritdoc />
     public override string PublisherId => "pub.hackeros";

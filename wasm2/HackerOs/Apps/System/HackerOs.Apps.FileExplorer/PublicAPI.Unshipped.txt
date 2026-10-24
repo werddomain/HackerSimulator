@@ -46,3 +46,6 @@ static HackerOs.Apps.FileExplorer.FileControl.Icons.ShellIconDescriptor.operator
 static HackerOs.Apps.FileExplorer.FileControl.Icons.ShellIconDescriptor.operator ==(HackerOs.Apps.FileExplorer.FileControl.Icons.ShellIconDescriptor? left, HackerOs.Apps.FileExplorer.FileControl.Icons.ShellIconDescriptor? right) -> bool
 ~override HackerOs.Apps.FileExplorer.FileControl.Icons.FileViewIconRequest.Equals(object obj) -> bool
 ~override HackerOs.Apps.FileExplorer.FileControl.Icons.FileViewIconRequest.ToString() -> string
+override HackerOs.Apps.FileExplorer.FileExplorerApp.Icons.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Apps.FileExplorer.FileExplorerApp.Assets.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AssetManifest!>!
+override HackerOs.Apps.FileExplorer.FileExplorerApp.MobileEntryPoint.get -> System.Type?

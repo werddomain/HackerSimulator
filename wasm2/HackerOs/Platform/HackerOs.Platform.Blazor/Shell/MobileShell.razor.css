@@ -21,6 +21,10 @@
     min-height: 0;
 }
 
+.mobile-home-layer, .mobile-app-layer { position: absolute; inset: 0; }
+.mobile-home-layer[hidden], .mobile-app-layer[hidden] { display: none; }
+.mobile-launch-error { position: absolute; bottom: 1rem; left: 1rem; right: 1rem; z-index: 1050; padding: .8rem; border-radius: .8rem; color: var(--hos-error, #fda4af); background: var(--hos-bg-surface, #151c20); }
+
 .mobile-shade-handle {
     position: absolute;
     top: env(safe-area-inset-top);

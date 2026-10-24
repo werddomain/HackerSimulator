@@ -465,4 +465,5 @@
   <data name="Error.TrashMove" xml:space="preserve">
     <value>Impossible de mettre {0} à la corbeille : {1}</value>
   </data>
+  <data name="View.ShowHidden" xml:space="preserve"><value>Afficher les fichiers et dossiers cachés</value></data>
 </root>

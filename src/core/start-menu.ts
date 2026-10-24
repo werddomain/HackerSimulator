@@ -215,7 +215,8 @@ export class StartMenuController {
     const pinnedApps = document.createElement('div');
     pinnedApps.className = 'pinned-apps';    // Add app tiles
     this.pinnedAppsEl = pinnedApps;
-    this.buildPinedApps();
+    // Tile colors are stored in IndexedDB; the menu DOM exists before the OS opens it.
+    this.os.Ready(() => { void this.buildPinedApps(); });
 
     pinnedAppsView.appendChild(pinnedApps);
     content.appendChild(pinnedAppsView);

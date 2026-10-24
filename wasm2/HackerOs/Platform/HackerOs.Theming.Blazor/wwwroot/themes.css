@@ -141,6 +141,7 @@
     --hos-titlebar-font-size: 0.86rem;
     --hos-titlebar-font-weight: 650;
     --hos-window-identity-order: 0;
+    --hos-window-icon-display: inline-flex;
     --hos-window-actions-order: 1;
     --hos-window-actions-direction: row;
     --hos-window-actions-margin-inline-start: auto;
@@ -964,6 +965,7 @@
     --hos-titlebar-font-size: 0.82rem;
     --hos-titlebar-font-weight: 600;
     --hos-window-identity-order: 1;
+    --hos-window-icon-display: none;
     --hos-window-actions-order: 0;
     --hos-window-actions-direction: row;
     --hos-window-actions-margin-inline-start: 0;
@@ -1268,6 +1270,8 @@
 
 /* iOS: luminous wallpaper, white content, and heavily blurred glass navigation. */
 :where([data-theme="ios"], [data-hos-theme="ios"]) {
+    --hos-mobile-home-icon-display: none;
+    --hos-mobile-home-indicator-display: block;
     --hos-color-scheme: light;
     --hos-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
     --hos-font-mono: "SFMono-Regular", Menlo, Monaco, monospace;

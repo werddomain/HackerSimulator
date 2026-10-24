@@ -7,7 +7,8 @@
             <polygon points="16,4 6,12 16,20" />
         </svg>
     </button>
-    <button type="button" class="mobile-nav-button" aria-label="@HomeLabel" title="@HomeLabel" @onclick="HandleHome">
+    <button type="button" class="mobile-nav-button" data-shell-gesture="drawer" aria-label="@HomeLabel" title="@HomeLabel" @onclick="HandleHome">
+        <span class="mobile-home-indicator" aria-hidden="true"></span>
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <circle cx="12" cy="12" r="8" />
         </svg>

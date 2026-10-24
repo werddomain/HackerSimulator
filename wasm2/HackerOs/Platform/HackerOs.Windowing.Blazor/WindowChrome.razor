@@ -6,9 +6,7 @@
 
 <div class="chrome-interaction-layer" @ref="_interactionLayer" @onpointerdown:stopPropagation>
 <header class="window-chrome @(Window.IsFocused ? "is-focused" : "is-background")"
-        data-window-gesture="@(Window.Constraints.IsMovable ? "move" : null)"
-        @oncontextmenu="OpenWindowMenuAtPointerAsync"
-        @oncontextmenu:preventDefault="true">
+        data-window-gesture="@(Window.Constraints.IsMovable ? "move" : null)">
     <div class="window-identity">
         @if (Window.SupportsBack)
         {
@@ -20,8 +18,12 @@
         }
         @if (OnWindowMenu.HasDelegate)
         {
-            @* The window menu button (ADR 0095 §3): every window command stays reachable without a shortcut. *@
-            <button type="button" class="chrome-button chrome-button-menu" aria-label="@L["Chrome.WindowMenu"]" title="@L["Chrome.WindowMenuHint"]" aria-haspopup="menu" @onclick="OpenWindowMenuFromButtonAsync">
+            @* The app icon opens its system menu on right click; left click only activates the window. *@
+            <button type="button" class="chrome-button chrome-button-menu" aria-label="@L["Chrome.WindowMenu"]" title="@L["Chrome.WindowMenuHint"]" aria-haspopup="menu"
+                    @onclick="FocusIconAsync"
+                    @oncontextmenu="OpenWindowMenuAtPointerAsync"
+                    @oncontextmenu:preventDefault="true"
+                    @oncontextmenu:stopPropagation="true">
                 @if (!string.IsNullOrWhiteSpace(Window.IconAssetPath))
                 {
                     <img class="window-icon" src="@Window.IconAssetPath" alt="" />
@@ -29,9 +31,8 @@
                 else
                 {
                     <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
-                        <line x1="2" y1="3" x2="10" y2="3" />
-                        <line x1="2" y1="6" x2="10" y2="6" />
-                        <line x1="2" y1="9" x2="10" y2="9" />
+                        <rect x="1" y="1" width="10" height="10" rx="1" />
+                        <line x1="1" y1="4" x2="11" y2="4" />
                     </svg>
                 }
             </button>
@@ -171,11 +172,7 @@
         await OnWindowMenu.InvokeAsync(new WindowMenuRequest(Window.Id, args.ClientX, args.ClientY));
     }
 
-    private async Task OpenWindowMenuFromButtonAsync()
-    {
-        await OnFocus.InvokeAsync(Window.Id);
-        await OnWindowMenu.InvokeAsync(new WindowMenuRequest(Window.Id, null, null));
-    }
+    private Task FocusIconAsync() => OnFocus.InvokeAsync(Window.Id);
 
     private async Task BackAsync()
     {

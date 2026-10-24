@@ -530,6 +530,10 @@ export class SettingsApp extends GuiApplication {  private userSettings: UserSet
                   <div class="info-value">HackerOS 1.0</div>
                 </div>
                 <div class="info-item">
+                  <div class="info-label">GitHub repository</div>
+                  <div class="info-value"><a href="https://github.com/Kazo-ca/HackerOs" target="_blank" rel="noopener noreferrer">https://github.com/Kazo-ca/HackerOs</a></div>
+                </div>
+                <div class="info-item">
                   <div class="info-label">Processor</div>
                   <div class="info-value">Quantum Core i9</div>
                 </div>

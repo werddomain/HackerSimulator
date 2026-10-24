@@ -1,5 +1,14 @@
 # Paramètres en fichiers
 
+L'accueil mobile utilise `~/Desktop/.mobile/layout.conf` (sections et clés texte,
+ADR 0166 ; migration en lecture de l'ancien JSON) pour les pages
+et le dock. Le document OS à couches `mobile.config` expose `mouseHelpers`
+(défaut `true`) à Paramètres par `HackSettings.OpenSystemAsync(AppContext, "mobile")`.
+Voir [mobile-home-screen.md](mobile-home-screen.md) et les ADR 0165/0166.
+`OsSettingsFile` peut désormais utiliser `OsSettingsLocation.UserHome` pour
+résoudre un chemin sous le dossier personnel de la session ; les accès restent
+ceux de cet utilisateur, comme pour `UserConfig` et `UserState`.
+
 Mise en œuvre de la section 5.2 du [plan de refonte](ecosystem-rebuild-plan.md)
 selon l'[ADR 0044](adr/0044-settings-as-files.md). Ce document décrit le code
 livré ; l'ADR reste la référence des décisions.

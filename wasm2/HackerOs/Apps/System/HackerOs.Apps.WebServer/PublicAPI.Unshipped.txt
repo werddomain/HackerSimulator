@@ -30,3 +30,6 @@ static HackerOs.Apps.WebServer.Manager.WebSiteRow.operator !=(HackerOs.Apps.WebS
 static HackerOs.Apps.WebServer.Manager.WebSiteRow.operator ==(HackerOs.Apps.WebServer.Manager.WebSiteRow? left, HackerOs.Apps.WebServer.Manager.WebSiteRow? right) -> bool
 ~override HackerOs.Apps.WebServer.Daemon.StaticFileResult.Equals(object obj) -> bool
 ~override HackerOs.Apps.WebServer.Daemon.StaticFileResult.ToString() -> string
+override HackerOs.Apps.WebServer.WebServerManagerApp.Icons.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Apps.WebServer.WebServerManagerApp.Assets.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AssetManifest!>!
+override HackerOs.Apps.WebServer.WebServerManagerApp.MobileEntryPoint.get -> System.Type?

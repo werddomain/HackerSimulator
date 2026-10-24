@@ -1,4 +1,9 @@
 #nullable enable
+HackerOs.Ecosystem.ProjectInformation
+HackerOs.Ecosystem.ProjectInformation.ProjectInformation() -> void
+HackerOs.Ecosystem.ProjectInformation.ShowLegacyNotice.get -> bool
+HackerOs.Ecosystem.ProjectInformation.ShowLegacyNotice.set -> void
+~override HackerOs.Ecosystem.ProjectInformation.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 HackerOs.Ecosystem.CpuAccountingRegistration.<Clone>$() -> HackerOs.Ecosystem.CpuAccountingRegistration!
 HackerOs.Ecosystem.CpuAccountingRegistration.Deconstruct(out System.IDisposable! Registration) -> void
 HackerOs.Ecosystem.CpuAccountingRegistration.Equals(HackerOs.Ecosystem.CpuAccountingRegistration? other) -> bool

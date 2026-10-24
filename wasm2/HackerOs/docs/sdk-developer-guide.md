@@ -144,7 +144,8 @@ plus utiles :
 | `SingleInstancePerUser` | Une seule fenêtre ; un second lancement l'active. |
 | `AutoStart` | Pour un service : démarré à la connexion. |
 | `LaunchVisibility` | `Hidden` pour ne pas apparaître dans le menu Démarrer (commandes, services). |
-| `Icons`, `Category`, `Version` | Présentation dans le lanceur. |
+| `Icons` | Images relatives à `wwwroot/`, aussi déclarées dans `Assets` ; la première apparaît dans la barre de titre et la taskbar (ADR 0164). macOS masque celle du titre. Le build calcule l'empreinte de l'asset. |
+| `Category`, `Version` | Présentation et classement de l'app. |
 | `OomScoreAdjust` | `oom_score_adj` de départ (SDK 1.2) ; une valeur négative, qui protège de l'OOM killer, est réservée aux apps système (`HOSAPP0024`, [`oom-killer.md`](oom-killer.md)). |
 
 Règles imposées par le générateur : classe publique, non abstraite, avec un

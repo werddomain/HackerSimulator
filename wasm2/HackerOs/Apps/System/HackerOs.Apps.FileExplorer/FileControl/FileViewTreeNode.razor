@@ -54,7 +54,7 @@
     @if (Node.Item.IsDirectory && Node.IsExpanded && Node.Children is not null)
     {
         <ul class="file-view-tree-group" role="group">
-            @foreach (FileViewTreeNodeState child in Node.Children)
+            @foreach (FileViewTreeNodeState child in Node.Children.Where(child => Owner.Filter?.Invoke(child.Item) != false))
             {
                 <FileViewTreeNode Owner="Owner" Root="Root" Node="child" Depth="Depth + 1" />
             }

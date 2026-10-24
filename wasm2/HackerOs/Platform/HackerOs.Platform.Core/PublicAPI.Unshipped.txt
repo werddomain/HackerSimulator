@@ -1,4 +1,5 @@
 #nullable enable
+HackerOs.Platform.Core.Settings.OsSettingsLocation.UserHome = 4 -> HackerOs.Platform.Core.Settings.OsSettingsLocation
 abstract HackerOs.Platform.Core.Shell.ShellCommand.<Clone>$() -> HackerOs.Platform.Core.Shell.ShellCommand!
 abstract HackerOs.Platform.Core.Shell.ShellWordPart.<Clone>$() -> HackerOs.Platform.Core.Shell.ShellWordPart!
 const HackerOs.Platform.Core.FileSystem.TestDemoFixtureSeeder.SiteIndexContent = "<!DOCTYPE html>\r\n<html>\r\n<head><meta charset=\"utf-8\"><title>E2E local site</title><link rel=\"stylesheet\" href=\"style.css\"></head>\r\n<body>\r\n<h1 id=\"title\">Local site</h1>\r\n<p id=\"script-status\">script not run</p>\r\n<p id=\"storage-status\"></p>\r\n<p id=\"fetch-status\">fetch pending</p>\r\n<a id=\"about-link\" href=\"about.html\">About</a>\r\n<script src=\"app.js\"></script>\r\n</body>\r\n</html>" -> string!
@@ -986,3 +987,7 @@ virtual HackerOs.Platform.Core.Shell.ShellWordPart.PrintMembers(System.Text.Stri
 ~override HackerOs.Platform.Core.Processes.ProcessMemoryReading.ToString() -> string
 ~override HackerOs.Platform.Core.Processes.SystemMemorySnapshot.Equals(object obj) -> bool
 ~override HackerOs.Platform.Core.Processes.SystemMemorySnapshot.ToString() -> string
+HackerOs.Platform.Core.Shell.MobileSettingsDocuments
+const HackerOs.Platform.Core.Shell.MobileSettingsDocuments.MouseHelpersKey = "mouseHelpers" -> string!
+static HackerOs.Platform.Core.Shell.MobileSettingsDocuments.Schema.get -> HackerOs.Simulation.Abstractions.Settings.SettingsSchema!
+static HackerOs.Platform.Core.Shell.MobileSettingsDocuments.Document.get -> HackerOs.Platform.Core.Settings.OsSettingsDocument!

@@ -45,7 +45,7 @@ public sealed class PlatformShellSwitchTests(ITestOutputHelper output)
             // No reload: the shell swap is live, driven by UiPlatformPreferenceService.Changed.
             ILocator backButton = page.GetByRole(AriaRole.Button, new() { Name = "Back" });
             await backButton.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
-            await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Home" })).ToBeVisibleAsync();
+            await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Home", Exact = true })).ToBeVisibleAsync();
             await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Recent" })).ToBeVisibleAsync();
             await Assertions.Expect(appLauncher).ToHaveCountAsync(0);
             output.WriteLine("[test] Mobile shell swapped in live — system navigation bar visible, Desktop taskbar gone.");

@@ -34,6 +34,13 @@ le legacy (`src/apps/file-explorer.ts`) et la dépasse :
 
 ## Fournisseur du contrôle de fichiers (ADR 0148, ADR 0155)
 
+La fenêtre masque par défaut les noms commençant par un point, notamment la
+configuration de l'accueil mobile `~/Desktop/.mobile/layout.conf`
+(ADR 0166). Le bouton œil **Afficher les fichiers et dossiers cachés** de la
+barre de vue active/désactive leur affichage pour cette fenêtre. Le prédicat
+est combiné à la recherche via `Filter`, sans modifier les fichiers ni les
+droits ; les descendants de l'arbre et sa navigation clavier suivent ce filtre.
+
 Le manifeste (`FileExplorerApp.Components`) inscrit deux composants :
 
 | Contrat | Composant | Rôle |

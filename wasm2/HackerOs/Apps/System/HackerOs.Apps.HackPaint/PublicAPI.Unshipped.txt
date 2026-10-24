@@ -15,3 +15,6 @@ static HackerOs.Apps.HackPaint.ImageFileHeader.operator !=(HackerOs.Apps.HackPai
 static HackerOs.Apps.HackPaint.ImageFileHeader.operator ==(HackerOs.Apps.HackPaint.ImageFileHeader? left, HackerOs.Apps.HackPaint.ImageFileHeader? right) -> bool
 static HackerOs.Apps.HackPaint.PaintFileReadResult.operator !=(HackerOs.Apps.HackPaint.PaintFileReadResult? left, HackerOs.Apps.HackPaint.PaintFileReadResult? right) -> bool
 static HackerOs.Apps.HackPaint.PaintFileReadResult.operator ==(HackerOs.Apps.HackPaint.PaintFileReadResult? left, HackerOs.Apps.HackPaint.PaintFileReadResult? right) -> bool
+override HackerOs.Apps.HackPaint.HackPaintApp.Icons.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Apps.HackPaint.HackPaintApp.Assets.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AssetManifest!>!
+override HackerOs.Apps.HackPaint.HackPaintApp.MobileEntryPoint.get -> System.Type?

@@ -195,6 +195,8 @@
     color: var(--hos-text-secondary, #a8bac4);
 }
 
+.info-line a { color: var(--hos-accent, #42d392); overflow-wrap: anywhere; text-align: right; }
+
 .danger-zone {
     border-color: var(--hos-error, #ff8f87);
 }

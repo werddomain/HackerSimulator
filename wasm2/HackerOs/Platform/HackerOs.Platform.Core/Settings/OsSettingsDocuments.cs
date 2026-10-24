@@ -49,12 +49,14 @@ public enum OsSettingsLocation
     UserConfig = 2,
 
     /// <summary><c>~/.local/state/hackeros/</c>: device-local user state, never synchronized (ADR 0044 section 10).</summary>
-    UserState = 3
+    UserState = 3,
+
+    /// <summary>The session user's home, for documents whose location is defined relative to it.</summary>
+    UserHome = 4
 }
 
 /// <summary>
-/// One whole-file OS document that is not layered: the strict JSON documents of ADR 0044 section 8
-/// and per-app state files such as window geometry.
+/// One whole-file OS document that is not layered, such as mobile Home layout or window geometry.
 /// </summary>
 /// <param name="Location">Root directory the file lives under.</param>
 /// <param name="RelativePath">Path below that root, e.g. <c>file-associations.json</c> or <c>windows/org.x.y.config</c>.</param>
@@ -70,6 +72,7 @@ public sealed record OsSettingsFile(OsSettingsLocation Location, string Relative
             OsSettingsLocation.System => OsSettingsDocument.SystemDirectory,
             OsSettingsLocation.UserConfig => $"{RequireHome(homeDirectory)}/.config/hackeros",
             OsSettingsLocation.UserState => $"{RequireHome(homeDirectory)}/.local/state/hackeros",
+            OsSettingsLocation.UserHome => RequireHome(homeDirectory),
             _ => throw new ArgumentOutOfRangeException(nameof(Location), Location, "Unknown OS settings location.")
         };
         return VirtualPath.Parse($"{root}/{RelativePath.TrimStart('/')}");

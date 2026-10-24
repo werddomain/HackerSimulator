@@ -14,6 +14,29 @@ namespace HackerOs.Apps.FileExplorer.FileControl.Tests;
 public sealed class FileViewTreeTests
 {
     [Fact]
+    public async Task Hidden_descendants_follow_filter_changes_even_after_the_tree_is_cached()
+    {
+        FileViewTestFixture fixture = await FileViewTestFixture.CreateAsync();
+        await fixture.CreateDirectoryAsync("/home/user/Documents");
+        await fixture.CreateDirectoryAsync("/home/user/Documents/.mobile");
+        await fixture.CreateFileAsync("/home/user/Documents/report.txt");
+        TestComponentRenderer renderer = new(EmptyServices());
+        TestableFileView view = await RenderViewAsync(fixture, renderer);
+        bool showHidden = false;
+        view.Filter = item => showHidden || !item.FileName.StartsWith('.');
+        FileViewTree tree = new() { Owner = view };
+        FileViewTreeNodeState node = tree.RootNodes.Single();
+        TestableFileViewTreeNode treeNode = await RenderNodeAsync(renderer, view, tree, node);
+        await renderer.RunAsync(treeNode.ToggleExpandAsync);
+
+        Assert.DoesNotContain(tree.GetVisibleNodesInOrder(), child => child.Item.FileName == ".mobile");
+        showHidden = true;
+        Assert.Contains(tree.GetVisibleNodesInOrder(), child => child.Item.FileName == ".mobile");
+        showHidden = false;
+        Assert.DoesNotContain(tree.GetVisibleNodesInOrder(), child => child.Item.FileName == ".mobile");
+    }
+
+    [Fact]
     public async Task RootNodes_mirrors_Owner_Items()
     {
         FileViewTestFixture fixture = await FileViewTestFixture.CreateAsync();

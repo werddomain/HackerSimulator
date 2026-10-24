@@ -47,6 +47,7 @@
 }
 
 .window-icon {
+    display: var(--hos-window-icon-display, block);
     width: 1.15rem;
     height: 1.15rem;
     flex: 0 0 auto;
@@ -202,9 +203,9 @@
 .resize-bottom-right { right: 0; bottom: 0; cursor: nwse-resize; }
 .resize-bottom-left { bottom: 0; left: 0; cursor: nesw-resize; }
 
-/* ADR 0095 §3: the window icon doubles as the window menu button, like the system menu of
-   classic window managers. It keeps the look of the bare icon until hovered or focused. */
+/* The icon's context menu stays separate from left-click activation and dragging the title. */
 .chrome-button-menu {
+    display: var(--hos-window-icon-display, inline-flex);
     width: auto;
     min-width: 1.35rem;
     height: 1.35rem;

@@ -660,4 +660,33 @@
   <data name="Launcher.Menu.Desktop" xml:space="preserve">
     <value>Desktop (create shortcut)</value>
   </data>
+<data name="MobileHome.Label" xml:space="preserve"><value>Mobile home screen</value></data>
+<data name="MobileHome.Title" xml:space="preserve"><value>Home</value></data>
+<data name="MobileHome.Edit" xml:space="preserve"><value>Edit</value></data>
+<data name="MobileHome.Done" xml:space="preserve"><value>Done</value></data>
+<data name="MobileHome.Page" xml:space="preserve"><value>Page {0}</value></data>
+<data name="MobileHome.Pages" xml:space="preserve"><value>Home screen pages</value></data>
+<data name="MobileHome.Empty" xml:space="preserve"><value>Add applications from the app drawer to make this page yours.</value></data>
+<data name="MobileHome.MoveEarlier" xml:space="preserve"><value>Move {0} earlier</value></data>
+<data name="MobileHome.MoveLater" xml:space="preserve"><value>Move {0} later</value></data>
+<data name="MobileHome.Remove" xml:space="preserve"><value>Remove {0} from Home</value></data>
+<data name="MobileHome.PreviousPageFor" xml:space="preserve"><value>Move {0} to the previous page</value></data>
+<data name="MobileHome.NextPageFor" xml:space="preserve"><value>Move {0} to the next page</value></data>
+<data name="MobileHome.AddPage" xml:space="preserve"><value>New page</value></data>
+<data name="MobileHome.RemovePage" xml:space="preserve"><value>Remove empty page</value></data>
+<data name="MobileHome.PreviousPage" xml:space="preserve"><value>Previous Home page</value></data>
+<data name="MobileHome.NextPage" xml:space="preserve"><value>Next Home page</value></data>
+<data name="MobileHome.Dock" xml:space="preserve"><value>Mobile application dock</value></data>
+<data name="MobileHome.AllApps" xml:space="preserve"><value>All applications</value></data>
+<data name="MobileHome.CloseDrawer" xml:space="preserve"><value>Close application drawer</value></data>
+<data name="MobileHome.Search" xml:space="preserve"><value>Search applications</value></data>
+<data name="MobileHome.GestureHint" xml:space="preserve"><value>Swipe up from Home or the dock for all apps. Swipe sideways to change pages.</value></data>
+<data name="MobileHome.DrawerHint" xml:space="preserve"><value>Tap an app to open it. + adds it to Home; the star pins it to the dock.</value></data>
+<data name="MobileHome.AddHome" xml:space="preserve"><value>Add {0} to Home</value></data>
+<data name="MobileHome.PinDock" xml:space="preserve"><value>Pin {0} to the dock</value></data>
+<data name="MobileHome.UnpinDock" xml:space="preserve"><value>Unpin {0} from the dock</value></data>
+<data name="MobileHome.NoApps" xml:space="preserve"><value>No matching applications.</value></data>
+<data name="MobileHome.StorageError" xml:space="preserve"><value>The Home layout could not be saved or loaded. Your last saved layout is retained.</value></data>
+<data name="MobileHome.EditHint" xml:space="preserve"><value>Drag icons or use their arrows to arrange them. Removing a shortcut does not uninstall the app.</value></data>
+<data name="MobileHome.Saved" xml:space="preserve"><value>Layout saved</value></data>
 </root>

@@ -124,3 +124,6 @@ static HackerOs.Apps.SystemMonitor.Processes.ProcessRow.operator ==(HackerOs.App
 ~override HackerOs.Apps.SystemMonitor.Metrics.ProcessIoRate.ToString() -> string
 ~override HackerOs.Apps.SystemMonitor.Metrics.ProcessIoSample.Equals(object obj) -> bool
 ~override HackerOs.Apps.SystemMonitor.Metrics.ProcessIoSample.ToString() -> string
+override HackerOs.Apps.SystemMonitor.SystemMonitorApp.Icons.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Apps.SystemMonitor.SystemMonitorApp.Assets.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AssetManifest!>!
+override HackerOs.Apps.SystemMonitor.SystemMonitorApp.MobileEntryPoint.get -> System.Type?

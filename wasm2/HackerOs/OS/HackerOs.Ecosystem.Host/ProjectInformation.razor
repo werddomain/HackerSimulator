@@ -1,0 +1,20 @@
+@using HackerOs.App.Abstractions
+@inject NavigationManager Navigation
+@inject IStringLocalizer<Strings> L
+
+<footer class="project-information">
+    <span class="project-release">HackerOS @HackerOsSdk.Version</span>
+    <a href="https://github.com/Kazo-ca/HackerOs" target="_blank" rel="noopener noreferrer">https://github.com/Kazo-ca/HackerOs</a>
+    @if (ShowLegacyNotice && IsPublicDomain)
+    {
+        <p class="legacy-notice">@L["Project.LegacyMoved"] <a href="https://hackos.kazo.ca/legacy/">https://hackos.kazo.ca/legacy</a></p>
+    }
+</footer>
+
+@code {
+    /// <summary>Shows the original-version notice on authentication pages, on the public domain only.</summary>
+    [Parameter] public bool ShowLegacyNotice { get; set; } = true;
+
+    // Compare the actual host, never a substring: a query string or lookalike domain is insufficient.
+    private bool IsPublicDomain => string.Equals(new Uri(Navigation.Uri).Host, "hackos.kazo.ca", StringComparison.OrdinalIgnoreCase);
+}

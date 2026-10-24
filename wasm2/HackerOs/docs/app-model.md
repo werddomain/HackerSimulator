@@ -41,6 +41,13 @@ Valeurs par défaut des membres facultatifs :
 | `Resources` | `AppResourceProfileManifest.None` |
 | `Window` | `null` : la fenêtre prend `WindowOptions.Default` (800×560, minimum 360×240) ; l'objet `window` est alors omis du manifeste (ADR 0095, [`window-model.md`](window-model.md)). Déclaré seulement par une app de genre `Window` (`manifest.window.*`). |
 
+Depuis l'ADR 0165, les quatorze apps système fenêtrées déclarent
+`MobileEntryPoint` avec le même composant que `EntryPoint`. Le générateur
+produit donc la forme `platform` (`desktop`, `mobile`) pour ces apps ; le
+tiroir mobile ne contourne jamais une déclaration de compatibilité absente.
+Les apps tierces restent desktop seulement tant qu'elles ne déclarent pas
+leur point d'entrée mobile.
+
 Exemple :
 
 ```csharp
@@ -51,6 +58,7 @@ public sealed class TextEditorApp : AppDefinition
     public override string Name => "Text Editor";
     public override AppKind Kind => AppKind.Window;
     public override Type EntryPoint => typeof(TextEditorWindow);
+    public override Type? MobileEntryPoint => typeof(TextEditorWindow);
     public override string PublisherId => "pub.hackeros";
     public override IReadOnlyList<string> Capabilities =>
         [AppCapabilities.FileSystemUserHomeRead, AppCapabilities.FileSystemUserHomeWrite];
@@ -66,6 +74,11 @@ public sealed class TextEditorApp : AppDefinition
   Si c'est le même type que `EntryPoint`, une seule entrée couvre les deux
   plateformes ; sinon, une entrée par plateforme.
 - `Icons` devient `presentation.iconAssetPaths`.
+  Pour le chrome et la taskbar (ADR 0164), la première image est résolue sous
+  `_content/<assembly>/…` ; le fichier doit être dans `wwwroot/` et déclaré dans
+  `Assets`. Les apps système fenêtrées déclarent chacune `icons/app.svg`, avec
+  une empreinte calculée au build. macOS masque seulement l'icône de la barre
+  de titre ; son dock garde l'icône de l'app.
 - `TerminalCommand.Aliases` nul devient une liste vide.
 - `sdkCompatibility` (ADR 0098 §3) : par défaut, `minimumVersion` est la version
   du SDK contre laquelle l'app a été compilée. Le générateur la lit dans

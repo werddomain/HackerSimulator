@@ -14,6 +14,7 @@ public static class OsSettingsDocumentRegistry
     private static readonly Dictionary<string, OsSettingsDocument> Documents = new(StringComparer.Ordinal)
     {
         [AppearanceSettingsDocuments.Document.DocumentId] = AppearanceSettingsDocuments.Document,
+        [MobileSettingsDocuments.Document.DocumentId] = MobileSettingsDocuments.Document,
         [AccessibilitySettingsDocuments.Document.DocumentId] = AccessibilitySettingsDocuments.Document,
         [UiPlatformPreferenceSettingsDocuments.Document.DocumentId] = UiPlatformPreferenceSettingsDocuments.Document,
         [SecuritySettingsDocuments.Document.DocumentId] = SecuritySettingsDocuments.Document,

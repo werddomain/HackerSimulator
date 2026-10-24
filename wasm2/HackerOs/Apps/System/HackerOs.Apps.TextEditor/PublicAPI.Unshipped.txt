@@ -20,3 +20,6 @@ static HackerOs.Apps.TextEditor.TextEditorReplaceResult.operator ==(HackerOs.App
 ~override HackerOs.Apps.TextEditor.TextEditorReplaceAllResult.ToString() -> string
 ~override HackerOs.Apps.TextEditor.TextEditorReplaceResult.Equals(object obj) -> bool
 ~override HackerOs.Apps.TextEditor.TextEditorReplaceResult.ToString() -> string
+override HackerOs.Apps.TextEditor.TextEditorApp.Icons.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Apps.TextEditor.TextEditorApp.Assets.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AssetManifest!>!
+override HackerOs.Apps.TextEditor.TextEditorApp.MobileEntryPoint.get -> System.Type?

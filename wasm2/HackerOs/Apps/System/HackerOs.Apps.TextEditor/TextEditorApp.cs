@@ -10,6 +10,12 @@ namespace HackerOs.Apps.TextEditor;
 public sealed class TextEditorApp : AppDefinition
 {
     /// <inheritdoc />
+    public override IReadOnlyList<string> Icons => ["icons/app.svg"];
+
+    /// <inheritdoc />
+    public override IReadOnlyList<AssetManifest> Assets =>
+        [new("icons/app.svg", AssetKind.Image, new string('0', 64), "app-icon")];
+    /// <inheritdoc />
     public override string Id => "org.hackeros.text-editor";
 
     /// <inheritdoc />
@@ -20,6 +26,9 @@ public sealed class TextEditorApp : AppDefinition
 
     /// <inheritdoc />
     public override Type EntryPoint => typeof(TextEditorWindow);
+
+    /// <inheritdoc />
+    public override Type? MobileEntryPoint => typeof(TextEditorWindow);
 
     /// <inheritdoc />
     public override string PublisherId => "pub.hackeros";

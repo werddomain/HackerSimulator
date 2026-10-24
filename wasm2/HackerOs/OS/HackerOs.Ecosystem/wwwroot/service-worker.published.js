@@ -8,7 +8,15 @@ self.importScripts('./service-worker-assets.js');
 
 self.addEventListener('install', event => event.waitUntil(onInstall(event)));
 self.addEventListener('activate', event => event.waitUntil(onActivate(event)));
-self.addEventListener('fetch', event => event.respondWith(onFetch(event)));
+self.addEventListener('fetch', event => {
+    const url = new URL(event.request.url);
+    const legacyPath = new URL('legacy/', self.registration.scope).pathname;
+    // Pages also hosts the original application. Let its requests reach the network:
+    // the WASM navigation fallback must never replace legacy HTML with index.html.
+    if (url.origin === self.location.origin
+        && (url.pathname === legacyPath.slice(0, -1) || url.pathname.startsWith(legacyPath))) return;
+    event.respondWith(onFetch(event));
+});
 self.addEventListener('message', event => onMessage(event));
 
 const cacheNamePrefix = 'hackeros-cache-';

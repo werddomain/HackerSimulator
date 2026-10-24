@@ -1,18 +1,18 @@
-name: Verify and deploy HackerOS WASM
+name: Verify HackerOS WASM
 
 on:
   push:
     branches: [ "main", "Wasm" ]
+    paths: [ 'wasm2/HackerOs/**', '.github/workflows/deploy-wasm.yml' ]
   pull_request:
+    paths: [ 'wasm2/HackerOs/**', '.github/workflows/deploy-wasm.yml' ]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: "pages-hackeros-wasm-${{ github.ref }}"
+  group: "verify-hackeros-wasm-${{ github.ref }}"
   cancel-in-progress: true
 
 env:
@@ -105,20 +105,9 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Upload Pages artifact
+      - name: Upload verified WASM publish
         if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
+          name: hackeros-wasm-publish-${{ github.run_attempt }}
           path: wasm2/HackerOs/artifacts/publish/wwwroot
-
-  deploy:
-    if: github.event_name != 'pull_request'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: verify
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4

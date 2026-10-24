@@ -2,7 +2,12 @@
 
 A simulator game that recreates the experience of being a hacker, featuring multiple applications including a terminal, code editor, and system monitoring tools.
 
-View the current working version [(Here)](https://werddomain.github.io/HackerSimulator/)
+Source repository: [Kazo-ca/HackerOs](https://github.com/Kazo-ca/HackerOs).
+
+Run [HackerOS WebAssembly](https://hackos.kazo.ca/) or the
+[original TypeScript version](https://hackos.kazo.ca/legacy/).
+Both are published by one [GitHub Pages workflow](.github/workflows/deploy-to-pages.yml),
+with independent cached builds; see the [deployment guide](wasm2/HackerOs/docs/github-pages-deployment.md).
 
 ## Active codebase: HackerOS (C# / Blazor WebAssembly)
 
@@ -22,7 +27,7 @@ Hacker Simulator is an interactive web-based application that simulates various 
 
 ### Prerequisites
 
-- Node.js (v12 or higher)
+- Node.js 20 (the legacy publishing workflow uses this version)
 - npm (v6 or higher)
 
 ### Installation

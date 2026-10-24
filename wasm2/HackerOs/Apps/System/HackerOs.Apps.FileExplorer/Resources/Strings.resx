@@ -465,4 +465,5 @@
   <data name="Error.TrashMove" xml:space="preserve">
     <value>Could not move {0} to the trash: {1}</value>
   </data>
+  <data name="View.ShowHidden" xml:space="preserve"><value>Show hidden files and folders</value></data>
 </root>

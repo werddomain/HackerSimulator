@@ -203,3 +203,24 @@ HackerOs.Platform.Blazor.LazyLoading.IHostBuildProbe.GetRunningBuildAsync(System
 HackerOs.Platform.Blazor.LazyLoading.IHostBuildProbe.GetServedBuildAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<string?>
 static HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome.HostBuildChanged(string! name) -> HackerOs.Platform.Blazor.LazyLoading.BuildKnownAssemblyLoadOutcome!
 static HackerOs.Platform.Blazor.LazyLoading.HostBuildIdentity.FromMarkup(string? markup) -> string?
+HackerOs.Platform.Blazor.Shell.MobileAppIcon
+HackerOs.Platform.Blazor.Shell.MobileAppIcon.MobileAppIcon() -> void
+HackerOs.Platform.Blazor.Shell.MobileAppIcon.App.get -> HackerOs.App.Abstractions.AppManifest!
+HackerOs.Platform.Blazor.Shell.MobileAppIcon.App.set -> void
+~override HackerOs.Platform.Blazor.Shell.MobileAppIcon.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+HackerOs.Platform.Blazor.Shell.MobileHomeScreen
+HackerOs.Platform.Blazor.Shell.MobileHomeScreen.MobileHomeScreen() -> void
+HackerOs.Platform.Blazor.Shell.MobileHomeScreen.IsDrawerOpen.get -> bool
+HackerOs.Platform.Blazor.Shell.MobileHomeScreen.IsDrawerOpen.set -> void
+HackerOs.Platform.Blazor.Shell.MobileHomeScreen.OnDrawerChanged.get -> Microsoft.AspNetCore.Components.EventCallback<bool>
+HackerOs.Platform.Blazor.Shell.MobileHomeScreen.OnDrawerChanged.set -> void
+HackerOs.Platform.Blazor.Shell.MobileHomeScreen.OnAppSelected.get -> Microsoft.AspNetCore.Components.EventCallback<HackerOs.App.Abstractions.AppManifest!>
+HackerOs.Platform.Blazor.Shell.MobileHomeScreen.OnAppSelected.set -> void
+override HackerOs.Platform.Blazor.Shell.MobileHomeScreen.OnInitializedAsync() -> System.Threading.Tasks.Task!
+override HackerOs.Platform.Blazor.Shell.MobileHomeScreen.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.Shell.MobileHomeScreen.ReportHomeGestureAsync(string! surface, double dx, double dy) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.Shell.MobileHomeScreen.ReportHomeLongPress(string! appId) -> void
+HackerOs.Platform.Blazor.Shell.MobileHomeScreen.DisposeAsync() -> System.Threading.Tasks.ValueTask
+~override HackerOs.Platform.Blazor.Shell.MobileHomeScreen.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+HackerOs.Platform.Blazor.Shell.MobileShell.ReportShellGestureAsync(string! surface, double dx, double dy) -> System.Threading.Tasks.Task!
+HackerOs.Platform.Blazor.Shell.MobileShell.ReportMobileWorkspaceSize(double width, double height) -> void

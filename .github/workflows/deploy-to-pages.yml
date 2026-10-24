@@ -3,15 +3,20 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'src/**'
+      - 'wasm2/HackerOs/**'
+      - 'package*.json'
+      - 'tsconfig*.json'
+      - 'webpack.config.js'
+      - '.github/workflows/deploy-to-pages.yml'
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: true
@@ -22,30 +27,67 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
+      # Exact content keys keep the builds independent. No prefix restore: stale
+      # releases must never be mistaken for the output of changed source files.
+      - name: Restore published legacy
+        id: legacy
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: pages-legacy-v1-${{ runner.os }}-${{ hashFiles('src/**', 'package*.json', 'tsconfig*.json', 'webpack.config.js') }}
+
+      - name: Restore published WASM
+        id: wasm
+        uses: actions/cache@v4
+        with:
+          path: wasm2/HackerOs/artifacts/pages-publish/wwwroot
+          key: pages-wasm-v1-${{ runner.os }}-${{ hashFiles('wasm2/HackerOs/**', '!wasm2/HackerOs/**/bin/**', '!wasm2/HackerOs/**/obj/**', '!wasm2/HackerOs/artifacts/**', '!wasm2/HackerOs/**/node_modules/**', '!wasm2/HackerOs/**/TestResults/**') }}
+
       - name: Setup Node.js
+        if: steps.legacy.outputs.cache-hit != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-      
-      - name: Build
-        run: npm run build:prod
-      
+
+      - name: Install legacy dependencies
+        if: steps.legacy.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Build legacy for /legacy/
+        if: steps.legacy.outputs.cache-hit != 'true'
+        run: npm run build:prod -- --output-public-path /legacy/
+
+      - name: Setup .NET 10
+        if: steps.wasm.outputs.cache-hit != 'true'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install WASM workload
+        if: steps.wasm.outputs.cache-hit != 'true'
+        working-directory: wasm2/HackerOs
+        run: dotnet workload install wasm-tools
+
+      - name: Publish standalone WASM for /
+        if: steps.wasm.outputs.cache-hit != 'true'
+        working-directory: wasm2/HackerOs
+        run: >-
+          dotnet publish OS/HackerOs.Ecosystem/HackerOs.Ecosystem.csproj
+          --configuration Release --output artifacts/pages-publish -m:1
+
+      - name: Assemble WASM root and legacy subdirectory
+        shell: pwsh
+        run: ./wasm2/HackerOs/build/assemble-pages.ps1
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
-      
-      - name: Upload artifact
+
+      - name: Upload combined Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: wasm2/HackerOs/artifacts/pages
 
   deploy:
     environment:

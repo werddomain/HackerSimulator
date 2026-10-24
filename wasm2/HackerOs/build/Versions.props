@@ -20,6 +20,6 @@
     the manifest generator writes it as the app's sdkCompatibility.minimumVersion (ADR 0098 §3).
   -->
   <PropertyGroup>
-    <HackerOsVersion>2.0.0</HackerOsVersion>
+    <HackerOsVersion>2.0.3</HackerOsVersion>
   </PropertyGroup>
 </Project>

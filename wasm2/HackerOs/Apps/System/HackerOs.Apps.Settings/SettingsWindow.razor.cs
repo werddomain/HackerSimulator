@@ -137,6 +137,7 @@ public partial class SettingsWindow : IAsyncDisposable
     {
         ShowAppPage(LaunchArguments);
         await OpenAppearanceAsync();
+        await OpenMobilePreferencesAsync();
         await RefreshUserThemesAsync();
 
         await RefreshConnectionAsync();
@@ -230,6 +231,11 @@ public partial class SettingsWindow : IAsyncDisposable
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        if (_mobilePreferences is not null)
+        {
+            _mobilePreferences.Changed -= MobilePreferencesChanged;
+            await _mobilePreferences.DisposeAsync();
+        }
         if (_appearance is not null)
         {
             _appearance.Changed -= OnAppearanceChanged;
@@ -316,7 +322,7 @@ public partial class SettingsWindow : IAsyncDisposable
     /// just made is either fully saved or reported, never half applied.
     /// </summary>
     protected override Task OnAppStopRequestedAsync(HackerOs.AppSdk.Diagnostics.HackStopRequestedEventArgs e) =>
-        _appearanceWrite ?? Task.CompletedTask;
+        Task.WhenAll(_appearanceWrite ?? Task.CompletedTask, _mobileWrite ?? Task.CompletedTask);
 
     /// <summary>
     /// Writes one changed key to the user layer, or the whole look to the system layer in one edit

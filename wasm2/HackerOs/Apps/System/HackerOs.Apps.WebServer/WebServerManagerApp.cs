@@ -14,6 +14,12 @@ namespace HackerOs.Apps.WebServer;
 [AppManifest]
 public sealed class WebServerManagerApp : AppDefinition
 {
+    /// <inheritdoc />
+    public override IReadOnlyList<string> Icons => ["icons/app.svg"];
+
+    /// <inheritdoc />
+    public override IReadOnlyList<AssetManifest> Assets =>
+        [new("icons/app.svg", AssetKind.Image, new string('0', 64), "app-icon")];
     /// <summary>The app id.</summary>
     public const string AppId = "org.hackeros.web-server-manager";
 
@@ -35,6 +41,9 @@ public sealed class WebServerManagerApp : AppDefinition
 
     /// <inheritdoc />
     public override Type EntryPoint => typeof(WebServerManagerWindow);
+
+    /// <inheritdoc />
+    public override Type? MobileEntryPoint => typeof(WebServerManagerWindow);
 
     /// <inheritdoc />
     public override string PublisherId => "pub.hackeros";

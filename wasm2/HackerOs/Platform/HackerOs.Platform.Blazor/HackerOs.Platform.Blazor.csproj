@@ -1,4 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
+  <ItemGroup>
+    <InternalsVisibleTo Include="HackerOs.Platform.Blazor.Tests" />
+  </ItemGroup>
 
   <Import Project="../Packaging.props" />
 

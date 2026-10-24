@@ -175,8 +175,9 @@ qui a le focus. Une lettre est reconnue par sa touche physique quand Alt change 
 - **Déplacer / redimensionner** : un bandeau indique le mode ; les flèches déplacent ou
   redimensionnent de 10 px (1 px avec Ctrl), Entrée garde, Échap remet la fenêtre où elle était.
 - **Ancrer** : moitié gauche ou droite de la zone de travail.
-- **Menu de fenêtre** : `Alt+Space`/`Alt+F3`, bouton de menu dans la barre de titre, ou clic
-  droit sur la barre de titre. Il contient toutes les actions avec leur raccourci actif :
+- **Menu de fenêtre** (ADR 0164) : `Alt+Space`/`Alt+F3` ou clic droit sur l'icône
+  de l'app dans la barre de titre. Un clic gauche sur l'icône active seulement la
+  fenêtre ; le reste de la barre de titre n'ouvre pas le menu. Il contient toutes les actions avec leur raccourci actif :
   Agrandir/Restaurer, Réduire, Déplacer, Redimensionner, Ancrer à gauche/droite, Plein écran,
   Fermer. Flèches, Entrée et Échap y fonctionnent.
 - **Fermer** suit le chemin du bouton Fermer (`IWindowCloseGuard` compris).
@@ -198,6 +199,22 @@ qui a le focus. Une lettre est reconnue par sa touche physique quand Alt change 
   le verrouillage du clavier.
 
 ## 4. Titre de fenêtre (ADR 0117, ADR 0123)
+
+### Icône de l'application (ADR 0164)
+
+La première image déclarée dans `AppDefinition.Icons` devient l'icône de la
+fenêtre et de sa taskbar. Elle doit aussi figurer dans `Assets` et exister sous
+`wwwroot/` dans le projet de l'app. `WindowLaunchCoordinator` transforme son
+chemin relatif au paquet en URL `_content/<assembly>/<chemin>` (segments échappés),
+partagée par le chrome, la taskbar et le sélecteur. Les quatorze apps système
+fenêtrées fournissent chacune leur `icons/app.svg` ; le build calcule l'empreinte
+de l'asset. Sans déclaration, un symbole de fenêtre sert de repli.
+
+Tous les thèmes de bureau affichent l'icône de titre sauf macOS, qui masque
+l'icône et son bouton contextuel avec `--hos-window-icon-display: none`.
+Le dock macOS garde les icônes d'apps. Le menu demeure accessible au clavier.
+Le choix Lucide du lanceur et des raccourcis reste indépendant des images du chrome.
+Voir l'[ADR 0164](adr/0164-app-icons-and-window-icon-context-menu.md).
 
 Chantier `v3.1/3-window-title` de la [série v3.1](v3-1-series-plan.md).
 
@@ -289,6 +306,11 @@ les récents du bureau mobile et le nom accessible du cadre (`aria-labelledby`).
 
 ## Tests
 
+- `WindowAppIconTests` (UI.E2E) : images des apps décodées et identiques dans
+  chrome/taskbar, sept thèmes et exception macOS, menu au clic droit sur l'icône
+  seulement, clic gauche et clavier. `WindowLaunchCoordinatorTests` couvre la
+  résolution des chemins relatifs et l'échappement des segments.
+
 - `WindowPointerGestureTests` (UI.E2E) : module de pointeur et projection du cadre
   réels dans Chromium ; échantillonnage des positions sur plusieurs images avec
   projection avant/après le retour interop, avec ou sans correction des contraintes,
@@ -326,7 +348,8 @@ les récents du bureau mobile et le nom accessible du cadre (`aria-labelledby`).
 - [x] Tailles appliquées à l'ouverture ; bouton Agrandir masqué si non redimensionnable.
 - [x] `keybindings.config` (schéma, couches, défaut commenté, rechargement).
 - [x] `WindowKeyboardCommands` : sélecteur, fermer, menu, déplacer, redimensionner, réduire, agrandir, ancrer, plein écran.
-- [x] Menu de fenêtre (clavier, bouton, clic droit) et surcouches.
+- [x] Menu de fenêtre et surcouches : clavier et clic droit sur l'icône (ADR 0164).
+- [x] Icônes déclarées des apps système, URLs RCL et exception macOS (ADR 0164).
 - [x] App d'exemple WindowApp : tailles déclarées et journal des événements.
 - [x] Tests unitaires et E2E.
 - [x] Documentation et index.

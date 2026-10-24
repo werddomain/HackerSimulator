@@ -111,3 +111,6 @@ static HackerOs.Apps.CodeEditor.CodeEditorWorkspaceFile.operator !=(HackerOs.App
 static HackerOs.Apps.CodeEditor.CodeEditorWorkspaceFile.operator ==(HackerOs.Apps.CodeEditor.CodeEditorWorkspaceFile? left, HackerOs.Apps.CodeEditor.CodeEditorWorkspaceFile? right) -> bool
 static HackerOs.Apps.CodeEditor.CodeEditorWorkspaceListing.operator !=(HackerOs.Apps.CodeEditor.CodeEditorWorkspaceListing? left, HackerOs.Apps.CodeEditor.CodeEditorWorkspaceListing? right) -> bool
 static HackerOs.Apps.CodeEditor.CodeEditorWorkspaceListing.operator ==(HackerOs.Apps.CodeEditor.CodeEditorWorkspaceListing? left, HackerOs.Apps.CodeEditor.CodeEditorWorkspaceListing? right) -> bool
+override HackerOs.Apps.CodeEditor.CodeEditorApp.Icons.get -> System.Collections.Generic.IReadOnlyList<string!>!
+override HackerOs.Apps.CodeEditor.CodeEditorApp.Assets.get -> System.Collections.Generic.IReadOnlyList<HackerOs.App.Abstractions.AssetManifest!>!
+override HackerOs.Apps.CodeEditor.CodeEditorApp.MobileEntryPoint.get -> System.Type?

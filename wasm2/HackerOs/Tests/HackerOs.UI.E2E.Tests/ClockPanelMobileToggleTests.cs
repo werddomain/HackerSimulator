@@ -71,7 +71,7 @@ public sealed class ClockPanelMobileToggleTests(ITestOutputHelper output)
             // taskbar/App launcher is gone, replaced by the Mobile system navigation bar.
             ILocator backButton = page.GetByRole(AriaRole.Button, new() { Name = "Back" });
             await backButton.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
-            await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Home" })).ToBeVisibleAsync();
+            await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Home", Exact = true })).ToBeVisibleAsync();
             await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Recent" })).ToBeVisibleAsync();
             await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "App launcher" })).ToHaveCountAsync(0);
             output.WriteLine("[test] Mobile shell reached after reload — system navigation bar visible, Desktop taskbar gone.");

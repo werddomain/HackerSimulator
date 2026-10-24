@@ -8,7 +8,7 @@ public sealed class MobileNotificationShadeSwipeTests(ITestOutputHelper output)
 {
     /// <summary>
     /// End-to-end proof that the Mobile notification shade actually opens from a pointer swipe
-    /// down past the open threshold (<c>MobileShell.razor.js</c>'s <c>attachSwipeDownGesture</c>),
+    /// down past the open threshold (<c>mobileGestures.js</c>'s <c>attachMobileGestures</c>),
     /// not only from the handle's click fallback — <c>PlatformShellSwitchTests</c> only exercises
     /// the click path.
     /// </summary>
@@ -52,7 +52,7 @@ public sealed class MobileNotificationShadeSwipeTests(ITestOutputHelper output)
             // set the way setPointerCapture and this gesture's move handler need) to a
             // pointerCapture-based custom listener in headless Chromium -- confirmed by direct
             // experimentation. Constructing real `new PointerEvent(...)` instances and dispatching
-            // them from page script is what actually exercises MobileShell.razor.js's listener.
+            // them from page script also exercises the shared mobileGestures.js listener.
             bool shadeOpened = await page.EvaluateAsync<bool>(
                 """
                 async () => {

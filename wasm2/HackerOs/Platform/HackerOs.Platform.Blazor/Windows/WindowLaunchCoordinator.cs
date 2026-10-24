@@ -6,7 +6,7 @@ using HackerOs.Windowing.Abstractions;
 
 namespace HackerOs.Platform.Blazor.Windows;
 
-/// <summary>Projects a successful window-app process launch into the visible desktop runtime.</summary>
+/// <summary>Projects a successful window-app process launch into the window runtime shared by both shells.</summary>
 public sealed class WindowLaunchCoordinator
 {
     /// <summary>Offset between two windows of the same app, and between two cascade slots, in CSS pixels.</summary>
@@ -200,12 +200,16 @@ public sealed class WindowLaunchCoordinator
             WindowBounds bounds = saved is null
                 ? InitialBounds(options, cascadeIndex, _windows.WorkArea)
                 : RestoredBounds(options, saved.Width, saved.Height, cascadeIndex, _windows.WorkArea);
+            // Icons are package-relative in the manifest. All shell surfaces consume this resolved
+            // RCL URL from the window snapshot instead of requesting icons/app.svg from the host.
             WindowRuntimeState state = new(
                 WindowId.FromGuid(Guid.NewGuid()),
                 manifest.Id,
                 ownerInstanceId,
                 _title(manifest),
-                manifest.Presentation.IconAssetPaths.FirstOrDefault(),
+                manifest.Presentation.IconAssetPaths.FirstOrDefault() is { } iconPath
+                    ? LazyLoading.StaticWebAssetAppAssetSource.RelativeUrl(manifest, iconPath)
+                    : null,
                 bounds,
                 restoreBounds: null,
                 zOrder: 0,

@@ -12,10 +12,8 @@ public sealed class MobileRecentAndOverlayBackTests(ITestOutputHelper output)
     /// harmless no-op once nothing remains to dismiss. The multi-window Back-history/Recent-
     /// activation logic itself is proven at the unit level (<c>MobileNavigationHistoryTests</c>,
     /// <c>MobileNavigationCommandsAdapterTests</c>, <c>MobileRecentProjectionTests</c> against a
-    /// real <see cref="HackerOs.Windowing.Core.WindowRuntime"/>) rather than here: no app in the
-    /// current catalog declares Mobile support, and the Desktop launcher that would open one isn't
-    /// composed into the Mobile shell at all, so no real application window can exist while Mobile
-    /// is active today.
+    /// real <see cref="HackerOs.Windowing.Core.WindowRuntime"/>). This scenario intentionally
+    /// starts without apps; <see cref="MobileHomeScreenTests"/> covers actual mobile app launches.
     /// </summary>
     [Fact]
     public async Task Back_dismisses_shell_overlays_before_anything_else_and_recent_shows_its_empty_state()
@@ -57,8 +55,7 @@ public sealed class MobileRecentAndOverlayBackTests(ITestOutputHelper output)
             await Assertions.Expect(mobilePanel).ToHaveCountAsync(0);
             output.WriteLine("[test] Back dismissed the open notification shade.");
 
-            // Recent renders its empty state: no app in the current catalog declares Mobile
-            // support, so nothing can be open to list.
+            // No app has been launched in this session, so Recent starts empty.
             await recentButton.ClickAsync();
             ILocator recentDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Recent" });
             await Assertions.Expect(recentDialog).ToBeVisibleAsync();

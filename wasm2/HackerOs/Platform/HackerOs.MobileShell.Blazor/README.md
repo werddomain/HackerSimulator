@@ -2,13 +2,13 @@
 
 Mobile shell chrome Razor components, driven by host-supplied contracts the
 same way `HackerOs.Taskbar.Blazor` drives the Desktop taskbar. Mobile has no
-taskbar (docs/mobile-interface-platform-plan.md §7.2), so this is a sibling
+taskbar ([archived mobile plan](../../docs/old/mobile-interface-platform-plan.md) §7.2), so this is a sibling
 package rather than a modification of `HackerOs.Taskbar.Blazor`.
 
 ## `MobileSystemNavigationBar`
 
 An Android-inspired bottom bar with three buttons — Triangle/Back,
-Circle/Home, Square/Recent — each at least 44×44 CSS pixels and respecting
+Circle/Home (a pill with the iOS theme), Square/Recent — each at least 44×44 CSS pixels and respecting
 `env(safe-area-inset-*)`. The bar owns only the trigger buttons; what
 Back/Home/Recent actually do is entirely up to the host's
 `IMobileNavigationCommands` implementation.
@@ -25,10 +25,12 @@ not a legitimately reduced state.
 `MobileSystemNavigationBarOptions` carries only the three buttons' accessible
 labels, mirroring `TaskbarOptions`.
 
-This is `MOB-010` from the mobile platform plan. It does not yet implement
-Back's ordered semantics (dialog → app handler → nav stack → Home, plan §7.3)
-or the Recent surface itself (`MOB-011`/`MOB-012`) — those are a host
-concern the dispatched `IMobileNavigationCommands` methods fulfill.
+This package supplies the navigation controls and Recent surface. The host owns
+Back's ordered semantics (overlay → app handler → navigation history → Home).
+HackerOS also recognizes an upward gesture starting on the Home control to open
+its application drawer. Home pages, the pinned app dock and mouse assistance
+belong to Platform Blazor; see [mobile Home](../../docs/mobile-home-screen.md)
+and [ADR 0165](../../docs/adr/0165-mobile-home-drawer-and-mouse-controls.md).
 
 ## Localization
 

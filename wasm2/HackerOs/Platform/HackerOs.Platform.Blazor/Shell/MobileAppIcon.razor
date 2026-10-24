@@ -1,0 +1,18 @@
+@using HackerOs.AppSdk.Icons
+@using HackerOs.AppSdk.Apps
+
+<span class="mobile-app-icon" aria-hidden="true">
+    @if (App.Presentation.IconAssetPaths.FirstOrDefault() is { } path)
+    {
+        <img src="@LazyLoading.StaticWebAssetAppAssetSource.RelativeUrl(App, path)" alt="" draggable="false" />
+    }
+    else
+    {
+        <HackerIcon Library="IconLibrary.Lucide" Name="@HackAppIcons.LucideName(App.Id, App.Presentation.Category)" Size="30" Title="" />
+    }
+</span>
+
+@code {
+    /// <summary>The app whose declared image (or shared category fallback) is displayed.</summary>
+    [Parameter, EditorRequired] public AppManifest App { get; set; } = null!;
+}

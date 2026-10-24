@@ -1,5 +1,10 @@
 # Plan de plateforme et d’interface Mobile
 
+> Mise à jour du 2026-10-23 : accueil paginé, dock, tiroir et aides souris sont
+> décrits dans [mobile-home-screen.md](../mobile-home-screen.md) et
+> l'[ADR 0165](../adr/0165-mobile-home-drawer-and-mouse-controls.md), qui
+> complètent les primitives de navigation de ce plan archivé.
+
 **Statut :** Phase 0 (fondation) faite le 2026-08-18, Phase 1 (manifeste et
 résolution de point d’entrée) faite le 2026-08-18, Phase 2a (primitives shell
 Mobile), Phase 2b (`MOB-008`, changement de shell contrôlé), Phase 2c

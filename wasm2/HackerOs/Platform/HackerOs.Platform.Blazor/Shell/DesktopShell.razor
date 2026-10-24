@@ -376,7 +376,7 @@
         FileDialogAdapter.Changed += Rerender;
         _closeWindow = HandleClose;
         KeyboardCommands.CloseWindow = _closeWindow;
-        _processSubscription = EventBus.Subscribe<ProcessStateChangedEvent>(OnProcessStateChanged);
+        _processSubscription = new WindowProcessObserver(EventBus, ProcessManager, Orchestrator, WindowRuntime, LaunchCoordinator, work => InvokeAsync(work));
 
         _taskbarWindowSource = new TaskbarWindowSourceAdapter(WindowRuntime);
         _taskbarCommands = new TaskbarCommandDispatcherAdapter(WindowRuntime, CloseCoordinator, CloseGuards);
@@ -391,65 +391,6 @@
     private void Rerender()
     {
         InvokeAsync(StateHasChanged);
-    }
-
-    private void OnProcessStateChanged(ProcessStateChangedEvent e)
-    {
-        if (e.NewState is ProcessState.Stopped or ProcessState.Faulted)
-        {
-            if (TryGetInstanceId(e.Pid, out AppInstanceId instanceId))
-            {
-                WindowOwnerId ownerInstanceId = WindowOwnerId.FromGuid(instanceId.Value);
-                WindowRuntimeState? matchingWindow = WindowRuntime.Windows.FirstOrDefault(w => w.OwnerInstanceId == ownerInstanceId);
-                if (matchingWindow is not null)
-                {
-                    WindowRuntime.Apply(new ForceWindowCloseCommand(matchingWindow.Id));
-                }
-            }
-        }
-        else if (e.NewState == ProcessState.Running)
-        {
-            // A window-kind app can reach Running via any caller that goes through
-            // AppLifecycleOrchestrator.LaunchAsync -- not just this shell's own app launcher
-            // (e.g. another app opening a file through IAppIntentGateway.OpenFileAsync). The
-            // orchestrator only owns process state, not window presentation, so this shell
-            // presents any such process itself; PresentAsync() is a no-op if it was already
-            // presented directly (e.g. by HandleAppSelected).
-            if (Orchestrator.TryGetRunningInstance(e.Pid, out AppDescriptor? descriptor, out _)
-                && descriptor.Manifest.Kind == AppKind.Window
-                && ProcessManager.TryGetActive(e.Pid, out ProcessRecord process))
-            {
-                // Reads the app's saved geometry first (ADR 0116), so present on the renderer's
-                // context and re-render once the window exists.
-                AppManifest manifest = descriptor.Manifest;
-                _ = InvokeAsync(async () =>
-                {
-                    await LaunchCoordinator.PresentAsync(manifest, process);
-                    StateHasChanged();
-                });
-            }
-        }
-
-        InvokeAsync(StateHasChanged);
-    }
-
-    private bool TryGetInstanceId(ProcessId pid, out AppInstanceId instanceId)
-    {
-        if (ProcessManager.TryGetActive(pid, out ProcessRecord active))
-        {
-            instanceId = active.AppInstanceId;
-            return true;
-        }
-
-        ProcessRecord? historical = ProcessManager.GetHistory().LastOrDefault(record => record.Pid == pid);
-        if (historical is not null)
-        {
-            instanceId = historical.AppInstanceId;
-            return true;
-        }
-
-        instanceId = default;
-        return false;
     }
 
     private void HandleShellKeyDown(KeyboardEventArgs args)

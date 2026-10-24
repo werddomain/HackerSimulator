@@ -25,7 +25,7 @@
     <NoWarn>$(NoWarn);RS0041;RS0026;RS0027</NoWarn>
     <IsPackable>true</IsPackable>
     <Authors>Benoit Robin</Authors>
-    <RepositoryUrl>https://github.com/werddomain/HackerSimulator</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Kazo-ca/HackerOs</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>hackeros;blazor;webassembly;os-simulation</PackageTags>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
