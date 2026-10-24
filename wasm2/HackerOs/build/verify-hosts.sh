@@ -73,10 +73,10 @@ for tool in dotnet python3 curl setsid; do
 done
 
 # Known container workarounds (docs/building-and-testing.md): NuGet audit advisories on build-only
-# packages, and the Windows-style local feed path of the windowing sample host.
+# packages, and the local feed directory required by the windowing sample host.
 export NuGetAudit="${NuGetAudit:-false}"
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
-mkdir -p "$ROOT/artifacts/local-nupkg" "$ROOT/Samples/HackerOs.Windowing.SampleHost/..\\..\\artifacts\\local-nupkg"
+mkdir -p "$ROOT/artifacts/local-nupkg"
 
 [[ $KEEP -eq 1 ]] || rm -rf "$OUT"
 mkdir -p "$LOGS"

@@ -40,6 +40,11 @@ ligne interdits, manifestes régénérés, frontière du SDK) : voir
 [`project-overview.md`](project-overview.md#règles-vérifiées-au-build). Un
 `manifest.json` d'app modifié par le build est un changement à committer.
 
+Les constantes publiques des fixtures utilisent des échappements `\n` explicites :
+les chaînes brutes multilignes héritent des fins de ligne du checkout et produisent
+des valeurs différentes entre Windows et Linux, ce qui invalide les baselines
+`PublicAPI.Unshipped.txt`.
+
 ### Mesure des ressources (ADR 0066)
 
 Deux propriétés MSBuild choisissent le code de mesure livré par les hôtes
@@ -68,7 +73,7 @@ recompiler : voir [`resource-accounting.md`](resource-accounting.md).
 | Symptôme | Cause | Contournement |
 |---|---|---|
 | `NU1902` sur `Microsoft.Build.Tasks.Git` traité en erreur | avis de sécurité NuGet sur une dépendance de build | `export NuGetAudit=false` (ou `-p:NuGetAudit=false`) |
-| `NU1301` sur la source `local-nupkg` | `Samples/HackerOs.Windowing.SampleHost/nuget.config` cite un dossier local absent ; sous Linux, son chemin `..\..\artifacts\local-nupkg` est lu littéralement | `mkdir -p artifacts/local-nupkg 'Samples/HackerOs.Windowing.SampleHost/..\..\artifacts\local-nupkg'` (dossiers vides, ignorés par git) |
+| `NU1301` sur la source `local-nupkg` | le dossier du feed local manque sur un checkout neuf | `mkdir -p artifacts/local-nupkg` pour le mode `ProjectReference` ; le workflow de vérification des packages remplit ce feed avant son restore. Le chemin du `nuget.config` utilise `/`, compatible Windows/Linux. |
 | Page blanche de `test/test` ou de `HackerOs.Server` lancé avec `dotnet run --no-build --urls …` (journal : « Static Web Assets are not enabled ») | sans profil de lancement, l'hôte démarre en `Production` et ne sert pas les actifs des projets référencés hors d'une publication | `ASPNETCORE_ENVIRONMENT=Development` |
 | `IOException … being used by another process` dans `obj/…/compressed/` d'Ecosystem | `test/test` et `HackerOs.Server` compilés en même temps : ils partagent Ecosystem | compiler la solution une fois, puis lancer les hôtes avec `--no-build` |
 
