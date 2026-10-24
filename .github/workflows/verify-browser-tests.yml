@@ -1,0 +1,54 @@
+name: Verify HackerOS browser tests (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "verify-hackeros-browser-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  browser-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: wasm2/HackerOs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install WASM workload
+        run: dotnet workload install wasm-tools
+
+      - name: Build Release test assemblies
+        run: |
+          mkdir -p artifacts/local-nupkg
+          dotnet build HackerOs.sln --configuration Release -m:1
+
+      - name: Install Playwright Chromium
+        shell: pwsh
+        run: ./Tests/HackerOs.E2E.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: Test browser suites
+        shell: pwsh
+        run: ./build/run-test-suite.ps1 -Suite Browser
+
+      - name: Upload browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hackeros-browser-tests-${{ github.run_attempt }}
+          path: |
+            wasm2/HackerOs/artifacts/test-results/Browser
+            wasm2/HackerOs/artifacts/playwright
+          if-no-files-found: warn
+          retention-days: 14

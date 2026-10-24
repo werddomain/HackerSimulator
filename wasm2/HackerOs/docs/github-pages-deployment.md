@@ -27,9 +27,24 @@ la sortie absente, même sans nouvelle modification de cette partie. Les fichier
 de build communs au legacy comptent aussi comme changements de cette version.
 Modifier le préfixe `v1` d'une clé permet d'invalider volontairement son cache.
 
-`deploy-wasm.yml` conserve les vérifications complètes du WASM et son artefact
-de diagnostic. Il ne déploie plus Pages et ne demande plus les droits Pages/OIDC.
-Ses déclencheurs sont limités au WASM et à son propre workflow.
+`deploy-wasm.yml` conserve la compilation, le scan Razor, l'audit des dépendances,
+les tests sans navigateur et l'artefact WASM téléchargeable. Il ne déploie pas
+Pages et ne demande pas les droits Pages/OIDC. Ses déclencheurs sont limités
+au WASM et à son propre workflow.
+
+Playwright n'est exécuté ni par Pages, ni par les vérifications automatiques
+sur `main`. Les six projets de tests navigateur restent disponibles dans
+`.github/workflows/verify-browser-tests.yml`, lancé uniquement par
+**Actions → Verify HackerOS browser tests (manual) → Run workflow**. Ce workflow
+conserve ses diagnostics et n'effectue aucun déploiement. Voir
+[les suites de tests](building-and-testing.md#tester) pour les commandes locales.
+
+### Tâches de séparation des tests
+
+- [x] Publication Pages indépendante de Playwright.
+- [x] Vérification automatique des 41 projets sans navigateur.
+- [x] Six projets Playwright conservés dans un workflow manuel dédié.
+- [x] Sélection des projets vérifiée avec `run-test-suite.ps1 -ListOnly`.
 
 ## Assemblage et routage
 

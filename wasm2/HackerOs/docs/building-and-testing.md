@@ -295,6 +295,31 @@ Détails : [`sdk-packages.md`](sdk-packages.md).
 
 ## Tester
 
+La vérification automatique sur `main` lance les tests sans navigateur. Après
+une compilation Release, le même sélecteur s'utilise localement :
+
+```powershell
+./build/run-test-suite.ps1 -Suite NonBrowser
+./build/run-test-suite.ps1 -Suite Browser -ListOnly
+./build/run-test-suite.ps1 -Suite Browser
+```
+
+Le script choisit les projets référençant `Microsoft.NET.Test.Sdk`, puis sépare
+ceux dépendant de `Microsoft.Playwright` ou du support E2E partagé. Il exécute
+les projets séquentiellement, conserve tous les résultats TRX et échoue si un
+projet échoue. Il attend des assemblies déjà compilées (`--no-build`,
+`--no-restore`). Actuellement, 41 projets sont sans navigateur et six utilisent
+Playwright. Un nouveau projet Playwright est ainsi exclu automatiquement du
+contrôle sans navigateur.
+
+Dans GitHub Actions, les suites Playwright se lancent uniquement via
+**Verify HackerOS browser tests (manual)** (`verify-browser-tests.yml`,
+`workflow_dispatch`). Elles n'appartiennent pas au déploiement Pages.
+Les scénarios conditionnels des hôtes déjà lancés ou de la publication élaguée
+gardent leurs variables d'activation documentées ci-dessous.
+
+Pour demander explicitement toutes les suites, y compris Playwright :
+
 ```bash
 dotnet test HackerOs.sln
 ```
