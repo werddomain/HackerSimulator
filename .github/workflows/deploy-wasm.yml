@@ -52,6 +52,11 @@ jobs:
         working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
         run: dotnet build HackerOs.sln --configuration Release --no-restore
 
+      - name: Install Razor source scan tool
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ripgrep
+
       - name: Verify production Razor assets
         working-directory: ${{ env.HACKEROS_SOLUTION_DIR }}
         shell: pwsh

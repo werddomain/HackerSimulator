@@ -40,6 +40,10 @@ ligne interdits, manifestes régénérés, frontière du SDK) : voir
 [`project-overview.md`](project-overview.md#règles-vérifiées-au-build). Un
 `manifest.json` d'app modifié par le build est un changement à committer.
 
+Le workflow de vérification installe explicitement `ripgrep` avant le scan
+supplémentaire des sources Razor ; cet outil n'est pas garanti sur les runners
+GitHub Ubuntu.
+
 Les constantes publiques des fixtures utilisent des échappements `\n` explicites :
 les chaînes brutes multilignes héritent des fins de ligne du checkout et produisent
 des valeurs différentes entre Windows et Linux, ce qui invalide les baselines
