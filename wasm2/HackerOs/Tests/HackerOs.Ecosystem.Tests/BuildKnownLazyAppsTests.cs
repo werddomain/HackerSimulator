@@ -82,12 +82,22 @@ public sealed class BuildKnownLazyAppsTests
         Assert.Equal(
             builtIn.Select(item => item.Manifest.Id).Order(StringComparer.Ordinal),
             BuildKnownLazyApps.Catalog.Manifests.Keys.Order(StringComparer.Ordinal));
+        // Desktop/mobile apps use platform.entryPoints instead of the legacy entryPoint.
+        // The host's default lazy list must still include every desktop assembly.
         Assert.Equal(
-            builtIn.Select(item => item.Manifest.EntryPoint!.Assembly).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal),
+            builtIn.Select(item => Assert.IsType<AppManifestPlatformResolution>(
+                AppManifestPlatformSupport.Resolve(item.Manifest))
+                .EntryPointsByPlatform[WellKnownAppPlatforms.Desktop].Assembly)
+                .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal),
             BuildKnownLazyAssemblies.Names.Order(StringComparer.Ordinal));
 
         BuiltInApplication calculator = Assert.Single(builtIn, item => item.Manifest.Id == "org.hackeros.calculator");
-        Assert.Equal("HackerOs.Apps.Calculator.dll", calculator.Manifest.EntryPoint!.Assembly);
+        AppManifestPlatformResolution calculatorPlatforms = Assert.IsType<AppManifestPlatformResolution>(
+            AppManifestPlatformSupport.Resolve(calculator.Manifest));
+        Assert.Equal("HackerOs.Apps.Calculator.dll",
+            calculatorPlatforms.EntryPointsByPlatform[WellKnownAppPlatforms.Desktop].Assembly);
+        Assert.Equal("HackerOs.Apps.Calculator.dll",
+            calculatorPlatforms.EntryPointsByPlatform[WellKnownAppPlatforms.Mobile].Assembly);
 
         // Calculator's ProjectReference has no IsSystemApp metadata (ADR 0048 §1).
         Assert.False(calculator.IsSystemApp);

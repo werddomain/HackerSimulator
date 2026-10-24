@@ -112,6 +112,9 @@ le moteur de paramètres à couches. La désactivation masque les aides, jamais 
   laissées intactes, limites/doublons, éditions sérialisées et absence de session,
   commentaires/espaces, migration unique du JSON et priorité d'un conf existant.
 - Tests de navigation mobile existants : historique, Retour et fermeture des panneaux.
+- `BuildKnownLazyAppsTests` : le catalogue agrégé conserve toutes les assemblies
+  desktop lorsque les apps adoptent `platform.entryPoints` ; la calculatrice
+  déclare la même assembly pour desktop et mobile.
 - `MobileHomeScreenTests` (UI.E2E) : clic du haut, retour desktop, tiroir par geste
   depuis Accueil, ajout/dock, édition, pagination, option souris en direct et
   persistance après rechargement, Android/souris et iOS/toucher émulés dans Chromium ;
